@@ -1,14 +1,6 @@
-# Decision log — Cross Stitch Lens
+# Decision log — StitchLive
 
-<!-- Append-only. Newest at the bottom. Don't edit old entries. -->
-<!-- Use this during the design phase of each task to record what you chose and why. -->
-<!-- Hot sectional. Agents scan the latest 10 HEADINGS by default and
-     open only the bodies relevant to the task. -->
-<!-- Keep each entry tight: Decision / Rationale / Alternatives, not an essay.
-     The live log is budgeted by WORDS as well as entry count (see
-     pm_skills/memory-policy.md), so verbose entries trip a prune sooner. -->
-<!-- This is the home of the WHY. The backlog/trajectory only point here;
-     never paste an entry's prose into those files. -->
+Append-only. Newest at the bottom.
 
 ## D1 — Web platform, not Max/MSP, not native (2026-07-16)
 
@@ -91,17 +83,3 @@ migrate forward, never reject.
 **Why:** Wider distribution later (requirements §26 Q11/Q13) makes
 format stability a product feature; retrofitting versioning is
 painful.
-
-## D9 — Product name "Cross Stitch Lens"; provisional defaults confirmed (2026-07-16)
-
-**Decision:** Adopt "Cross Stitch Lens" as the product name (replacing
-the working title "StitchLive" everywhere). Confirm all four
-`docs/init-answers.md` (provisional) defaults: (7) MVP ships one
-preset palette as a DMC-subset placeholder until the owner's hex
-spreadsheet is supplied; (9) alpha below 50% = empty stitch (renders
-as fabric colour, excluded from colour counts); (17) chart
-coordinates start at 1; (18) tick marks align to grid boundaries.
-**Why:** Settled during init — renaming later is not a clean
-find-and-replace, and the provisional defaults are the sensible MVP
-positions, each revisable post-MVP (0-origin and centre-aligned ticks
-are wish-list items).

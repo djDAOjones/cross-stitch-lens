@@ -32,20 +32,73 @@ spacing, sizing, and visual conventions.
 
 ### Token systems
 
-<!-- CUSTOMISE: Define the token systems used by this project and how
-     they relate to Carbon conventions. If the project uses a brand
-     palette alongside Carbon structural tokens, describe both systems
-     and state that they must not be collapsed into one. Example:
-
-Two token systems run side by side:
+Two token systems run side by side and must not be collapsed into one:
 
 | System | Governs | Source |
 | --- | --- | --- |
-| **Project tokens** (`tokens.css`) | Brand palette, semantic UI colours | `styles/tokens.css` |
-| **Carbon conventions** | Spacing scale, typography scale, layout grid, layer tokens, border tokens, interaction state tokens | Implemented to match Carbon spec |
+| **Project tokens** (`tokens.css`) | App chrome brand/semantic colours, capture-region border states, backend/status indicators | `src/ui/styles/tokens.css` |
+| **Carbon conventions** | Spacing scale, typography scale, layout grid, layer tokens, border tokens, interaction state tokens | Implemented in project code to match Carbon spec |
 
-Do not collapse one into the other. When adding new tokens, decide
-which system owns it based on the table above. -->
+A third, distinct colour concern exists that is **neither** token
+system: **thread palette colours and preview pixel colours** are
+*content/data*, colour-managed sRGB, and must never be routed through UI
+tokens or distorted by CSS filters (see "Colour fidelity" below). When
+adding a new token, decide which system owns it; never fold thread
+colours into either.
+
+---
+
+## Cross Stitch Lens specifics
+
+A canvas-centric, live image-processing app. These additions cover what
+the Carbon/WCAG/Nielsen defaults above do not.
+
+### Layout model
+
+- Single-window app: large central preview canvas; Carbon side panel
+  for controls grouped as **Source / Grid / Colour / Dither / Pipeline
+  / Export**; info strip (stitch & colour stats) docked below the
+  preview.
+- The preview canvas is the product. Panels collapse; the canvas never
+  does.
+
+### Canvas accessibility
+
+- The canvas is excluded from Carbon styling but not from
+  accessibility: keyboard zoom (+/−/0), pan (arrow keys), and a visible
+  focus ring on the canvas host.
+- All information shown on the canvas must also exist in the DOM: the
+  stats panel mirrors counts; grid/tick settings are reflected in
+  labelled controls, not only in pixels.
+- Never encode meaning in colour alone (Carbon rule) — applies to
+  capture-region border states and any backend/status indicators.
+
+### Live-processing UX
+
+- Controls apply immediately (requirements §5.4); no Apply buttons.
+  Sliders throttle to the pipeline, never block the UI thread.
+- Show processing state honestly: a subtle busy indicator when the
+  pipeline is behind; "paused" and "source unchanged" states named
+  explicitly.
+- Draft-quality preview must be visibly labelled as draft so exports
+  are never mistaken for it.
+- Destructive actions (palette overwrite, project overwrite) get Carbon
+  confirm dialogs; everything else is undoable or regenerable and gets
+  none.
+
+### Colour fidelity
+
+- Preview rendering is colour-managed sRGB end-to-end; no CSS filters
+  or opacity on the preview canvas that would distort perceived thread
+  colours.
+- Thread-colour swatches show hex + name on hover/focus (tooltip and
+  `aria-label`).
+
+### Capture UX
+
+- Permission prompt is user-initiated (button), never on load.
+- Crop rectangle: draggable, resizable via handles and arrow keys,
+  lockable; dimensions readout in source pixels and resulting stitches.
 
 ---
 

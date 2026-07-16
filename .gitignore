@@ -12,6 +12,17 @@ Thumbs.db
 node_modules/
 npm-debug.log*
 
+# Cross Stitch Lens build output & generated artifacts (from M0/M5).
+dist/
+.vite/
+crates/stitch-engine/pkg/
+
+# Environment / secrets (none required today; ignore pre-emptively).
+# .env.example is committed with placeholders only.
+.env
+.env.*
+!.env.example
+
 # The repo's own pm-skills deployment (self/) is TRACKED — contract,
 # living project memory, and archived history (versioned backup on a
 # cloud-synced path). It is source-only (never distributed). The living

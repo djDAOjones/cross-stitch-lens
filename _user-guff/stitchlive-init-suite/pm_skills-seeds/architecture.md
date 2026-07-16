@@ -1,7 +1,4 @@
-# Architecture — Cross Stitch Lens
-
-<!-- Hot whole-file read. See pm_skills/memory-policy.md for limits. -->
-<!-- Describe current structure only. Move historical batch notes to decision-log.md. -->
+# Architecture — StitchLive
 
 ## Stack (decided — do not relitigate; see decision-log.md)
 
@@ -21,7 +18,7 @@
 
 ## Repository layout
 
-```text
+```
 src/
   core/            # Pure engine. No DOM, no Worker, no UI imports. Ever.
     types.ts       # PixelBuffer, Palette, StageParams, ProjectFile

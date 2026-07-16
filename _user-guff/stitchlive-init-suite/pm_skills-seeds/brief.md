@@ -1,14 +1,11 @@
-# Brief — Cross Stitch Lens
-
-<!-- Hot whole-file read. See pm_skills/memory-policy.md for limits. -->
+# Brief — StitchLive (working title)
 
 ## What we're building
 
 A macOS-first web application that converts visual artwork into
 cross-stitch designs in real time. The user edits artwork in another
-application (typically Photoshop); Cross Stitch Lens continuously
-captures a selected screen region and renders a live cross-stitch
-interpretation.
+application (typically Photoshop); StitchLive continuously captures a
+selected screen region and renders a live cross-stitch interpretation.
 
 Two core reductions define the product:
 

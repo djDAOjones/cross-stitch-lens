@@ -1,16 +1,22 @@
 # AI Agent Rules
 
-<!-- NOTE: This file is a template. Complete init.md Step 6 to populate
-     the CUSTOMISE placeholders. Until then, the project memory files
-     in pm_skills/project/ are the primary references. -->
-
-<!-- CUSTOMISE: Replace [Project Name] and write a 2–4 sentence product
-     description. State what the app IS and what mental model is canonical.
-     Optionally state what it is NOT, to prevent the wrong assumptions. -->
-
 ## Product identity
 
-**[Project Name]** — _[short product description]_.
+**Cross Stitch Lens** — a macOS-first TypeScript web app that converts
+visual artwork into cross-stitch designs in real time. The user edits
+artwork in another application (typically Photoshop); Cross Stitch Lens
+captures a chosen screen region via `getDisplayMedia` and continuously
+renders a live cross-stitch interpretation through two reductions:
+spatial (source → fixed stitch grid) and colour (source colours → a
+selected thread palette, with dithering as a first-class tool).
+
+The canonical mental model is a **pure staged image-processing
+pipeline** running in a Web Worker: ordered stages
+(`adjust → resize → reduce(+dither)`) each a pure function over a
+`PixelBuffer`, with a TypeScript reference implementation as ground
+truth and WASM/WebGPU as profiled drop-in backends. It is **not** a
+Photoshop plugin (UXP is explicitly rejected — see decision-log D2) and
+**not** a document-scale processor (resize-to-grid comes first — D3).
 
 ---
 
@@ -23,9 +29,6 @@ explain concepts back unless asked.
 ---
 
 ## Before every task
-
-<!-- CUSTOMISE: README.md below refers to the project's own root README
-     (created at init Step 5). If init is incomplete, skip this section. -->
 
 ### Read tiers
 
@@ -256,34 +259,133 @@ asks — capturing the one line is the whole interaction.
   exclude `.git`. See `pm_skills/prompts/memory-maintenance.md` →
   "Environment preflight (shared)".
 
-<!-- CUSTOMISE: Add project-specific invariants below. See init.md Step 6 for example shapes. -->
+### Engine purity
+
+- Nothing in `src/core/` may import from outside `src/core/`, touch the
+  DOM, `window`, Workers, or perform I/O. If a task seems to need it,
+  stop and ask.
+- Pipeline stages are pure: no argument mutation, no hidden state,
+  explicit seeds for any randomness. Same input + params → same output,
+  always.
+- No per-pixel object allocation inside processing loops. Pixel data
+  travels as typed arrays and crosses thread boundaries as
+  transferables, never structured-clone copies.
+
+### Backend discipline
+
+- The TypeScript implementation of a stage is ground truth. It is never
+  deleted, stubbed out, or left failing while a WASM/WebGPU backend
+  passes.
+- A WASM or WebGPU backend may only be added for a stage after a
+  recorded profile shows the TS backend missing its budget, and it must
+  pass the same golden suite (bit-exact for error diffusion; documented
+  tolerance for GPU float math).
+- Feature-detect and fall back: the app must run correctly with WebGPU
+  and WASM both unavailable.
+
+### Performance
+
+- No processing on the main thread. Main thread = capture + UI.
+- The benchmark test's budgets (`architecture.md`) are part of `check`.
+  A change that regresses a budget does not merge; either fix it or
+  bring a decision-log entry proposing the new budget.
+- Never optimise ahead of the profiler. Adding WebAssembly, shaders,
+  SharedArrayBuffer, etc. without a profile is out of scope by
+  definition.
+
+### Correctness & data
+
+- Golden fixtures are protected files: regenerating them requires
+  explicit owner approval with a stated reason (algorithm change),
+  never to make a failing test pass.
+- Project files are user data: loaders migrate old `schemaVersion`s
+  forward and never destroy fields they don't understand. Export must
+  round-trip: save → load → save is byte-identical.
+- Exports always re-run the pipeline at full quality; preview quality
+  settings must be unable to leak into exported output.
+
+### Scope guards
+
+- MVP scope is `brief.md`; anything else goes to the wish-list via "Park
+  it" — including tempting spec sections (§25 second-stage features are
+  the main drift risk).
+- No new runtime dependencies without approval. Current allowlist:
+  Carbon web components, pdf-lib. (Dev deps per `DEV-INFRASTRUCTURE.md`.)
+- UXP / Photoshop-plugin approaches are rejected (decision-log D2); do
+  not reintroduce them.
 
 ---
 
-<!-- CUSTOMISE: Add a "Core data model" section if the project has canonical
-     entities. See init.md Step 6 for example shape. -->
+## Core data model
+
+The canonical entities (full definitions in `architecture.md`):
+
+- **`PixelBuffer`** — `{ width, height, data: Uint8ClampedArray }`
+  (RGBA, length `w*h*4`). The unit of currency between stages.
+- **`Palette`** — an ordered set of thread colours (hex + RGB + name +
+  number + manufacturer per entry); index 0.. maps to output cells.
+- **`Stage<P>`** — `{ name, backends: { ts, wasm?, webgpu? } }`; `ts` is
+  mandatory and is the reference.
+- **`Pipeline`** — an ordered list of stage instances + params. Order is
+  **data, not code**: stored in the project file, reorderable in the UI.
+- **`ProjectFile`** — versioned JSON
+  (`{ schemaVersion, grid, source, palette, pipeline[], preview, chart,
+  export }`).
+
+Do **not** represent pixel data as arrays of objects, mutate a stage's
+input buffer, or encode pipeline order as hard-coded call sequences.
 
 ---
 
-<!-- CUSTOMISE: Add a section per domain-specific subsystem (simulation,
-     rendering pipeline, data pipeline, etc.) if the project has any. -->
+## Processing pipeline (domain subsystem)
+
+The one domain subsystem is the staged pipeline (`src/core/pipeline/`,
+executed in `src/worker/`). Its full contract — stage purity, the
+`Backend` interface, LUT-based colour reduction, worker scheduling and
+frame coalescing, and the performance budgets — lives in
+`architecture.md`. The invariants that must never be violated are in
+"Engine purity", "Backend discipline", and "Performance" above.
 
 ---
 
-<!-- CUSTOMISE: Add a "Relationship to [Original]" section if this project
-     was forked from or shares history with another codebase. -->
+## Relationship to prior work
+
+This is a clean rebuild, not a fork, of an earlier prototype
+(**Photoshop-Live-Ditherer**). That prototype ran inside Photoshop via
+UXP and dithered at document scale; it was slow for exactly those two
+reasons. Cross Stitch Lens keeps none of its code and deliberately
+reverses both choices: screen capture instead of a plugin (D2), and
+resize-to-grid before per-pixel work (D3). Do not treat the prototype
+as a design reference.
 
 ---
 
-<!-- CUSTOMISE: Add a "Protected infrastructure" table for modules that
-     must not be deleted, renamed, or restructured without approval.
-     See init.md Step 6 for example shape. -->
+## Protected infrastructure
+
+| Module | Role | Notes |
+| --- | --- | --- |
+| `src/core/` (TS reference engine) | Ground-truth pipeline implementation | Never deleted or allowed to rot; the universal fallback |
+| `tests/golden/**` | Golden fixtures | Regeneration needs owner approval + stated reason (hard rule) |
+| `src/core/palettes/*.json` | Owner-supplied palette source data | User data; do not edit or invent entries |
+| `pm_skills/project/decision-log.md` | The why-record | Append-only; never rewrite existing entries |
+
+Do not delete, rename, or restructure protected modules without
+explicit approval.
 
 ---
 
-<!-- CUSTOMISE: If the project uses an event bus, define event namespaces here.
-     If it uses hooks, direct imports, or another pattern, state that instead.
-     See init.md Step 6 for example shape. -->
+## Communication pattern
+
+This project does **not** use an application-wide event bus. Modules
+communicate by:
+
+- **Direct imports** within a layer (pure function calls in `src/core/`).
+- **Worker `postMessage`** across the main-thread ↔ processing-Worker
+  boundary, carrying typed-array transferables (never structured-clone
+  copies of pixel data).
+
+Do not introduce a global pub-sub layer to route pipeline data; keep the
+hot path framework- and bus-free.
 
 ---
 
@@ -301,8 +403,9 @@ asks — capturing the one line is the whole interaction.
 
 ## Code documentation
 
-<!-- CUSTOMISE: JSDoc is the default for JS/TS. Adjust for other languages
-     (e.g. docstrings for Python). -->
+<!-- Cross Stitch Lens is TypeScript; JSDoc on every exported symbol is
+     the standard. Engine functions additionally document units and value
+     ranges (e.g. "0–255 sRGB", "Lab, D65"). See conventions.md. -->
 
 - New and modified functions, classes, and modules should have
   meaningful comments explaining **why**, not restating **what**.
@@ -360,18 +463,28 @@ in `pm_skills/project/conventions.md`.
 
 ## Files to never edit
 
-<!-- CUSTOMISE: List paths agents must never hand-edit. See
-     DEV-INFRASTRUCTURE.md for the concrete project list. -->
-
-- Build output directories.
+- `dist/` — build output, overwritten on every build.
+- `tests/golden/**` — golden fixtures; regeneration needs owner approval.
+- `src/core/palettes/*.json` — owner-supplied palette data.
+- `crates/stitch-engine/pkg/` — generated `wasm-pack` output.
+- `package-lock.json` — managed by npm (commit, but do not hand-edit).
 
 See `DEV-INFRASTRUCTURE.md` for the concrete list of protected paths.
 
 ---
 
-<!-- CUSTOMISE: If the project has a persistence layer, add a checklist
-     covering every step needed for a new property to survive reload.
-     See init.md Step 6 for example shapes (manual serialisation, ORM). -->
+## Persistence checklist
+
+Project state persists as versioned JSON (and IndexedDB autosave). When
+adding any property that should survive save/reload:
+
+1. Add a default in the relevant model/params type (`<Stage>Params` or
+   `ProjectFile`).
+2. Include it in serialisation (`project.ts` `toJSON`/equivalent).
+3. Handle it in deserialisation with a fallback default, and bump
+   `schemaVersion` + add a forward migration if the shape changed.
+4. Confirm the round-trip invariant still holds: save → load → save is
+   byte-identical (golden/round-trip test).
 
 ---
 
@@ -441,4 +554,10 @@ Project-specific anti-patterns are in
 `pm_skills/project/conventions.md` under
 "Patterns to avoid".
 
-<!-- CUSTOMISE: Add project-specific anti-patterns below. -->
+- Dithering or reducing colour at document scale before resizing to the
+  stitch grid (defeats the core performance lever — D3).
+- Letting preview-quality settings leak into exported output.
+- Adding a WASM/WebGPU backend without a recorded profile justifying it.
+- Representing pixel data as arrays of objects, or allocating per pixel
+  inside a processing loop.
+- Reintroducing a UXP / Photoshop-plugin integration path (D2).

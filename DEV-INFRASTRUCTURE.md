@@ -1,11 +1,5 @@
 # Dev Infrastructure
 
-<!-- NOTE: This file is a template. It contains CUSTOMISE placeholders
-     that must be populated before it can serve as an authoritative reference.
-     Complete the kickstart process (init.md Step 8) to fill them in.
-     If this project has no build step, dev server, or package manager,
-     this file can be removed from the boilerplate. -->
-
 This file defines the permanent rules for how the project is built,
 run, tested, versioned, and shipped. `AGENTS.md` references this file.
 Read it before any task that involves the build system, dev server,
@@ -15,323 +9,258 @@ scripts, configuration, or deployment.
 
 ## Package management
 
-<!-- CUSTOMISE: Define the package manager and dependency policy.
-     See init.md Step 8 for example shape. -->
+Package manager: **npm** (Node LTS).
+
+- `package.json` lives in the project root. Run `npm install` after
+  cloning. Do not commit `node_modules/`.
+- **Runtime dependencies** require explicit approval. Current
+  allowlist: **Carbon** web components and **pdf-lib**. Default is to
+  add nothing further.
+- **Dev dependencies** (Vite, Vitest, ESLint, Prettier, typescript)
+  can be added when justified by the architecture.
+- **Rust toolchain** (stable + `wasm-pack`) is needed only from M5;
+  Vite dev/build and `check` must pass without it (feature-detected).
 
 ---
 
 ## Canonical scripts
 
-<!-- CUSTOMISE: List every script in package.json as a table.
-     See init.md Step 8 for example shape. -->
+| Script | Command | Purpose | When to use |
+| --- | --- | --- | --- |
+| `dev` | `vite` | Dev server (default port 5173) | Day-to-day development |
+| `build` | `vite build` | Production build to `dist/` | Before deploy |
+| `build:wasm` | `wasm-pack build crates/stitch-engine` | Rust→WASM release build (M5+) | When touching the Rust crate |
+| `test` | `vitest run` | Vitest incl. golden suite | After every change |
+| `bench` | `vitest bench` | Benchmark test with budget assertions | Perf-sensitive changes, pre-release |
+| `check` | typecheck + lint + test + build | **Quality gate** | Before calling a task done |
+| `lint:fix` | `eslint . --fix` | Auto-fix (separate from the gate) | Cleanup, never the CI pass/fail |
+
+Do not add scripts without updating this table.
+
+<!-- Until M0 wires up Vite/TS/Vitest, the repo's `check` is the docs
+     lint baseline (markdownlint + link/doc checks). M0 replaces it with
+     the full pipeline above. -->
 
 ---
 
 ## Dev server
 
-<!-- CUSTOMISE: Define the canonical dev URL, how to start it, and what
-     it serves. See init.md Step 8 for example shape. -->
+- **URL:** `http://localhost:5173` (Vite default)
+- **Start:** `npm run dev`
+- **Serves:** the app from `src/` via `index.html`, with hot module
+  reload.
+- **Secure context:** `localhost` is a secure context, so
+  `getDisplayMedia` and WebGPU work in dev without HTTPS.
+
+All development and testing should use this URL. Do not hard-code
+alternative ports or URLs.
+
+<!-- `?backend=ts|wasm|webgpu` URL override forces a backend for manual
+     testing (see "Maintainer diagnostics"). -->
 
 ---
 
 ## Runtime lifecycle
 
-<!-- CUSTOMISE: Define how to boot, reboot, inspect, and recover the app
-     locally so the maintainer never has to remember ports, processes,
-     env, generated outputs, or startup order. Implementation scales with
-     complexity (see init.md Appendix B) — but the documented capability
-     is required at every tier, even pure-static ("open this file" /
-     "serve this directory"). Populate:
-     1. Command surface — the canonical verbs this project implements
-        (dev, reboot/dev:restart, boot, stop, status, logs, reset,
-        reset:hard). Reference the Canonical scripts table above; don't
-        duplicate it. dev + reboot is the minimum for a dev-server app.
-     2. Canonical dev URL and port (cross-ref Dev server above).
-     3. Runtime components started, and startup order if it matters.
-     4. Process ownership — PID and log file locations (if any
-        background processes).
-     5. Env prerequisites and the .env workflow (composition, secrets
-        sidecar, what is gitignored).
-     6. Generated outputs cleaned/rebuilt by reboot/reset — the explicit
-        allowlist of paths (never source, never persistent data).
-     7. Health / readiness checks — the endpoint or signal that proves
-        the app is READY, not merely that a process launched.
-     8. Recovery playbook — the common "it's broken, get me back"
-        commands.
-     9. Exposure controls — flags that widen surface (public tunnel,
-        LAN, operator/rehearsal modes) and the default (safe/local)
-        posture.
-     10. Protected paths scripts must never delete or hand-edit
-         (cross-ref "Files agents must not hand-edit" below).
+Single Vite dev server — `dev` + `reboot`:
 
-     Safety rules these scripts must honour: kill only owned
-     processes/ports (no blanket killall); graceful shutdown before
-     force; allowlist cleanup (never delete source); never wipe
-     persistent data without an explicit reset:hard flag; never hide a
-     failed health check (exit non-zero, print the log tail and next
-     command); require an explicit flag + printed warning for anything
-     that exposes a private or operator surface.
+| Verb | Command | Does |
+| --- | --- | --- |
+| `dev` | `npm run dev` | Foreground dev server at `http://localhost:5173` |
+| `reboot` | clear port 5173, remove `dist/`, restart `dev` | Get back to a known-good running state |
 
-     If this project is pure static files with no runtime to manage,
-     replace this section with the single command to view it, or remove
-     it and cover "how to run" in README.md. -->
+- **Owns:** port 5173 only. `reboot` kills just the process on that
+  port — no blanket `killall`.
+- **Components:** one process (Vite). The app then spawns a processing
+  Web Worker in the browser — no server-side background processes, no
+  PID/log files to manage.
+- **Env:** none required. The app is fully offline at runtime (no
+  network calls); there is no `.env` and no secrets sidecar.
+- **Cleans:** `dist/` only (generated). Never source, never
+  `tests/golden/`, never owner-supplied palette data.
+- **Ready when:** the dev URL serves HTTP 200 and the app shell renders
+  — not merely that the process started.
+- **Exposure:** local-only by default. Do not enable Vite `--host`
+  (LAN exposure) or a public tunnel without an explicit flag and a
+  printed warning.
+- **Protected paths:** see "Files agents must not hand-edit" below.
 
 ---
 
 ## Maintainer diagnostics
 
-<!-- CUSTOMISE: Define how the app makes its own behaviour legible while
-     it is being built, and how a maintainer hands a diagnostic snapshot
-     to an AI agent. The goal is to collapse "reproduce → open DevTools
-     → preserve logs → copy the right messages → paste" into "click →
-     copy → paste". A page cannot read the browser's native DevTools
-     console history, so diagnostics must flow through an app-owned logger
-     and buffer, not the native console. Implementation scales with
-     complexity (see init.md Appendix B) -- but the documented capability
-     is required at every tier, even a static page (a global error hook +
-     a console helper). Populate:
-     1. Diagnostic logger -- the single structured entry point all notable
-        runtime behaviour routes through (levels: debug / info / warn /
-        error). It writes to the browser console AND a bounded in-memory
-        ring buffer. No scattered ad-hoc console.log. The console is one
-        output sink, not the store of record.
-     2. Log record shape -- the local schema each entry carries. A lean
-        default: time, level, scope, event, message, data, error (+ an
-        optional interactionId to correlate one user action's logs). The
-        OpenTelemetry log data model and W3C Trace Context inspire the
-        shape; do not pull in those packages by default.
-     3. Ring buffer -- bounded size (e.g. the last N entries; oldest
-        evicted). This buffer, not the native console, is what the copy
-        affordance reads from.
-     4. Global capture -- window 'error' and 'unhandledrejection' hooks
-        that funnel into the logger, so nothing fails silently.
-     5. Copy-diagnostics bundle -- what the dev-only affordance copies
-        (the control itself lives in UI-STANDARDS.md → "Diagnostics
-        affordance"). INCLUDE: app name, product version + build identity
-        (+ commit), timestamp + timezone, current URL / route / view,
-        user agent + viewport, dev-mode / feature flags, the last N
-        redacted log entries,
-        uncaught errors and rejections, recent network failures if
-        tracked, recent interaction IDs, and a redaction notice. EXCLUDE
-        by default: passwords, tokens, cookies, raw request bodies, full
-        local / sessionStorage, secret env values, and personal data
-        unless explicitly safe.
-     6. Redaction -- the default-on filter applied before anything is
-        logged or copied. Redaction is a safety invariant, not a
-        nice-to-have (see AGENTS.md → "Self-explaining runtime" and the
-        OWASP logging guidance it follows).
-     7. Environment gating -- the diagnostics affordance and verbose
-        levels are DEV-ONLY by default. Production requires an explicit
-        opt-in AND a redaction review; name the flag and its default here.
-     8. Optional: forward to the dev / server console -- e.g. Vite's
-        server.forwardConsole forwards browser runtime events (errors and
-        selected console levels) to the dev server so a coding agent sees
-        them automatically. Name the mechanism your stack offers, or n/a.
+Tier 1. Diagnostics flow through an app-owned logger and buffer, not the
+native DevTools console.
 
-     Safety rules these mechanisms must honour: redact by default and fail
-     closed (when unsure whether a field is sensitive, omit it); never
-     enable the copy affordance or verbose logging in production without an
-     explicit flag plus a reviewed redaction notice; keep the logger
-     quietable / removable from one place; and do not log inside hot loops
-     in a way that floods the buffer.
-
-     Tiered shape (populate only the tier this project is at):
-     - Tier 0 (static / no-UI / scripts): a console log helper with
-       consistent levels + a global error / unhandledrejection hook. No
-       buffer, no panel. Floor: uncaught errors are legible.
-     - Tier 1 (typical dev-server app): logger → console + bounded ring
-       buffer + global capture + a dev-only copy-diagnostics affordance
-       that copies the redacted bundle above.
-     - Tier 2 (operator-facing / multi-surface): add interactionId
-       correlation, recent network-failure capture, User Timing marks /
-       measures for slow operations, and optional forward-to-server.
-
-     If this project is pure static files with nothing to instrument,
-     collapse this section to one line -- e.g. "Tier 0: errors logged via
-     a console helper; no copy affordance" -- or remove it. -->
+- **Logger:** `src/diagnostics/log.ts` — one structured entry point
+  (`log.debug/info/warn/error`). Writes to the console **and** a
+  bounded in-memory ring buffer. No scattered ad-hoc `console.log`.
+- **Record shape:** `{ time, level, scope, event, message, data,
+  error }` (+ optional `interactionId`).
+- **Ring buffer:** last ~200 entries, oldest evicted. This buffer — not
+  the native console — is what the copy affordance reads.
+- **Global capture:** `window` `error` + `unhandledrejection` funnel
+  into the logger so nothing fails silently.
+- **Debug panel (dev builds):** per-stage timings, active backend per
+  stage, frames processed/skipped, LUT rebuild count. `?backend=ts|`
+  `wasm|webgpu` URL override forces a backend for manual testing.
+- **Copy-diagnostics bundle:** dev-only affordance (control defined in
+  `UI-STANDARDS.md` → "Diagnostics affordance"). Copies app name,
+  `appVersion` + `buildId` (+ commit), timestamp + timezone, route/view,
+  UA + viewport, dev flags + active backends, the last N **redacted**
+  log entries, uncaught errors, and a redaction notice.
+- **Redaction:** default-on, fail-closed. Never tokens, cookies, raw
+  bodies, full storage, or PII (this app has no secrets or PII at
+  runtime, but the rule stands).
+- **Gating:** affordance + verbose levels are dev-only; production needs
+  an explicit opt-in flag (`DIAG=1`) and a redaction review.
+- **Forward-to-server (optional):** Vite `server.forwardConsole` can
+  forward browser runtime events to the dev server for the coding agent.
 
 ---
 
 ## Quality gate
 
-<!-- CUSTOMISE: Define the project's one-command quality gate — the
-     `check` command an agent runs to answer "did I break anything?"
-     before calling a task done (see AGENTS.md → "One-command quality
-     gate"). Reference the Canonical scripts table above; don't duplicate
-     it. Populate:
-     1. The command — the single canonical verb (e.g. `npm run check`).
-        NON-MUTATING and CI-safe: it reports, never reformats or writes.
-        Auto-fix lives in a separate verb (lint:fix / format), never the
-        gate.
-     2. What it runs, in order — format/lint check, type check, unit
-        tests, build, and doc/link integrity where relevant. Fast enough
-        to run on every change; prefer the hermetic, no-network subset.
-     3. What it deliberately omits — slow or non-deterministic checks
-        (e2e, visual regression) and where they run instead.
-     4. CI parity — CI runs the same `check`, so local green = CI green.
+| Script | Command | Purpose |
+| --- | --- | --- |
+| `check` | `tsc --noEmit && eslint . && vitest run && vite build` | The quality gate — run before calling a task done |
+| `lint:fix` | `eslint . --fix` | Auto-fix (separate from the gate; never the CI pass/fail) |
 
-     Choose rules that protect trust, not taste: prefer catching broken
-     imports, dead code, unused exports, malformed config or docs, broken
-     links, accessibility hazards, edits to generated files, and
-     dependency drift, over style-only rules — unless auto-fix makes the
-     style rule invisible. A lint failure is design feedback. Tool choices
-     (which linter, type checker, runner) belong in conventions.md.
-     The framework ships a stack-agnostic Markdown lint + link-check
-     baseline (`pm_skills/scaffold/.markdownlint.json` +
-     `check-links.mjs`) — the Tier 0 floor for any project, since project
-     memory is Markdown. Keep formatting out of the gate's pass/fail: run
-     it as auto-fix-on-save, not a `check` failure.
-
-     Tiered shape (populate only the tier this project is at):
-     - Tier 0 (docs / static / scripts): a placeholder/CUSTOMISE scan +
-       Markdown lint + relative-link check, or "n/a — no build step".
-     - Tier 1 (typical app): format/lint + type check + unit tests +
-       build, all non-mutating, mirrored in CI.
-     - Tier 2 (mature / multi-surface): add a coverage threshold,
-       automated accessibility checks, and a dependency/security audit;
-       keep slow suites out of `check` and name where they run.
-
-     If there is nothing to verify mechanically, collapse to one line or
-     state "n/a". -->
+- **Runs, in order:** type check (`tsc --noEmit`), ESLint (incl. the
+  `src/core/` isolation rule), Vitest (incl. the golden suite), and a
+  production `vite build`. Plus the Markdown lint + link-check baseline
+  on project memory.
+- **Non-mutating:** `check` only reports; fixes live in `lint:fix` and
+  format-on-save. Formatting is never a gate failure.
+- **CI parity:** the CI workflow runs `npm run check`, so local green =
+  CI green. Benchmarks run with a ×3 tolerance multiplier in CI
+  (`CI=true`).
+- **Omits:** `bench` (its own verb; runs on perf-sensitive changes and
+  pre-release) and any future e2e — slow, kept out of `check`. `check`
+  must stay under ~2 minutes locally.
+- **Pre-M0:** until M0 wires up Vite/TS/Vitest, `check` is the docs lint
+  baseline only. Deferring the full gate to M0 is deliberate.
 
 ---
 
 ## Security baseline
 
-<!-- CUSTOMISE: Define how THIS project keeps secrets out of the repo,
-     audits its dependencies, and responds to a leaked credential (see
-     AGENTS.md → "Security baseline"). This is the security analogue of
-     the Quality gate: slots and named options, never a mandated scanner,
-     and the secret scan stays non-mutating like `check`. Do NOT restate
-     the diagnostics-redaction rule — cross-reference "Maintainer
-     diagnostics" above. Populate:
-     1. Secret storage — where secrets actually live (environment, a
-        gitignored sidecar, a platform secret store). Never in source,
-        URLs, logs, QR codes, or the diagnostics bundle.
-     2. .env workflow — the committed template (`.env.example`, all
-        placeholders), the gitignored real values, and how they compose.
-        Cross-ref "Runtime lifecycle" env prerequisites; don't duplicate.
-     3. .gitignore coverage — the env / secret paths that must never be
-        committed.
-     4. Secret scan — the report-only, dependency-free key-shape grep
-        folded into `check` (see "Quality gate"): flag obvious shapes
-        (`sk-`, `AKIA`, `ghp_`, PEM headers) in tracked files.
-        Non-mutating; report-only.
-     5. Dependency audit — the command and the stated cadence (at minimum
-        on every upgrade); how an approved pin is protected (dependency
-        overrides, not a blanket `--force`).
-     6. Leaked-credential response playbook — rotation-first (below).
+This is a fully offline, client-side app with **no runtime secrets and
+no backend** — the surface is small. The baseline is therefore Tier 0:
 
-     Response playbook (rotation-first, never history-rewrite-first):
-     1. Rotate the credential at the provider immediately — assume it is
-        already public.
-     2. Replace it in the sidecar / secret store; recompose `.env`.
-     3. Verify the app runs on the new credential.
-     4. Only then decide on a history rewrite — usually not worth it once
-        the key is dead, and a rewrite rewrites shared history and breaks
-        every existing clone.
-     5. Record the incident and the decision in decision-log.md.
-
-     Tiered shape (populate only the tier this project is at):
-     - Tier 0 (static / docs / scripts): `.gitignore` covers env files;
-       `.env.example` placeholder discipline; the report-only key-shape
-       grep folded into `check`. Costs nothing beyond greps.
-     - Tier 1 (typical app): a gitignored `.env.secrets` sidecar composed
-       into `.env`; a dependency audit run on every upgrade;
-       secret-surface rows in the scripts table.
-     - Tier 2 (mature / multi-surface): a pre-commit secret scanner
-       (named options, not bundled); the dependency audit wired into CI;
-       a periodic key-rotation note.
-
-     If the project has no secrets and no third-party dependencies,
-     collapse this to one line — but keep the .gitignore + placeholder
-     discipline. See init.md Step 8 (Appendix B) for a worked example. -->
+- **Secret storage:** n/a at runtime. Should any tooling ever need a
+  token (e.g. a deploy key), it lives in the environment / CI secret
+  store — never in source, URLs, logs, or the diagnostics bundle (see
+  "Maintainer diagnostics").
+- **.env / .gitignore:** no `.env` is required today. `.gitignore`
+  covers `.env`, `.env.*`, and `node_modules/` pre-emptively; any future
+  template is `.env.example` with placeholder values only.
+- **Secret scan:** `check` includes a report-only, dependency-free grep
+  for obvious key shapes (`sk-`, `AKIA`, `ghp_`, PEM headers) in tracked
+  files. Non-mutating.
+- **Dependency audit:** `npm audit` on every dependency upgrade;
+  approved pins held via `overrides`, never a blanket `--force`.
+- **Secure context:** `getDisplayMedia` and WebGPU require a secure
+  context (fine on `localhost` and any HTTPS deploy). If
+  `SharedArrayBuffer` is ever adopted (WASM threads), dev and deploy
+  must send COOP/COEP headers — record that as a decision first.
+- **Leaked-credential response:** rotate at the provider first, replace
+  in the secret store, verify, then decide on history rewrite (usually
+  skip once the key is dead). Record the decision in `decision-log.md`.
 
 ---
 
 ## Build system
 
-<!-- CUSTOMISE: Define bundler, entry point, output directory, source
-     maps, minification, and static-file handling. State that the output
-     directory is read-only. See init.md Step 8 for example shape. -->
+- **Bundler:** Vite (Rollup under the hood).
+- **Entry point:** `index.html` → `src/main.ts`.
+- **Output directory:** `dist/`.
+- **Format/target:** ESM, target ES2020+.
+- **Source maps:** enabled in dev and production.
+- **Minification:** production builds only.
+- **WASM:** `crates/stitch-engine/pkg` (from `build:wasm`) is imported
+  by `src/backends/wasm/`; guarded by feature detection so builds
+  without the Rust toolchain still succeed.
+- **Static files:** assets under `public/`/`src` are handled by Vite.
+
+The output directory `dist/` is **read-only** — never hand-edit it; it
+is overwritten on every build.
 
 ---
 
 ## Version management
 
-<!-- CUSTOMISE: Record how THIS project realises the two-part version
-     identity that AGENTS.md → "Traceable version identity" requires. The
-     invariant is fixed — a human-readable product version plus a
-     machine-traceable build identity; this section records the
-     project-specific mechanics. Populate:
-     1. Product version — the release name, default format
-        `vMAJOR.MINOR.PATCH` (SemVer-shaped, v-prefixed). Name the single
-        source of truth (a VERSION file, package.json, or the git tag)
-        and the bump rule: MAJOR = product era / breaking
-        data-or-workflow change / real users now depend on it; MINOR = a
-        shipped milestone or feature batch; PATCH = fix, polish, copy.
-        Start at v0.1.0; reserve v1.0.0 for "users can trust it".
-     2. Build identity — the trace, default format
-        `vMAJOR.MINOR.PATCH+YYYYMMDD.shortsha` (SemVer build metadata).
-        State how it is derived (commit + date) and, for Tier 1+,
-        injected at build time. It is regenerated per build, never
-        hand-edited (add it to "Files agents must not hand-edit" below).
-     3. Exposure — product version and build identity both reach
-        production and both appear in the diagnostics bundle as
-        `appVersion` / `buildId` (+ `commit` where available). See
-        "Maintainer diagnostics" above; these fields are non-secret.
-     4. Tags & deploys — git tags use the product version (e.g. v0.3.0);
-        deploys map to a known commit (see "Deployment" below); multiple
-        deploys of one product version are told apart by build identity.
+| Part | Format | Source | Updated | Example |
+| --- | --- | --- | --- | --- |
+| Product version | `vMAJOR.MINOR.PATCH` | `package.json` `version`, tagged in git | Manually — MAJOR era/breaking, MINOR milestone (M0–M5), PATCH fix | `v0.2.0` |
+| Build identity | `product+YYYYMMDD.shortsha` | Commit + date, injected at build via Vite `define` | Automatically, every build | `v0.2.0+20260716.a1b2c3d` |
 
-     NOT in scope here: branch naming, PR rules, Conventional Commits, or
-     an app changelog format — the invariant is identity only. The
-     framework's OWN version (pm_skills/VERSION, prompts/release.md) is a
-     separate concern this section does not govern.
-
-     Tiered shape (populate only the tier this project is at):
-     - Tier 0 (static / no build / pre-deploy): product version = a git
-       tag; build identity = the commit SHA. No injection.
-     - Tier 1 (typical deploying app): product version in one source;
-       build identity injected at build; both in the diagnostics bundle.
-     - Tier 2 (multi-surface / real users): build identity surfaced at
-       runtime (footer or /version), commit + build time in diagnostics,
-       and a live-vs-built assertion on deploy.
-
-     See init.md Step 8 (Appendix B) for a worked example shape. -->
+- Start at `v0.1.0`; each shipped milestone (M0–M5) is a MINOR bump;
+  reserve `v1.0.0` for "users can trust it".
+- Both reach production and both appear in the diagnostics bundle as
+  `appVersion` / `buildId` (+ `commit`). These fields are non-secret.
+- Git tags use the product version (e.g. `v0.2.0`); multiple deploys of
+  one product version are told apart by build identity.
+- The generated build identity is never hand-edited (see "Files agents
+  must not hand-edit").
 
 ---
 
 ## Deployment
 
-<!-- CUSTOMISE: Define the deploy target, pipeline, and post-deploy
-     verification. See init.md Step 8 for example shape. -->
+- **Target:** static hosting (GitHub Pages / Netlify) — the app is a
+  static bundle. **Post-MVP**; nothing ships until the MVP milestones
+  land.
+- **Requirement:** HTTPS (secure context) for `getDisplayMedia` and
+  WebGPU.
+- **Pipeline:** `npm run build` → `dist/`, published by the host.
+- **Post-deploy:** verify the live URL serves the `buildId` just built
+  (compare the diagnostics bundle).
+- Tauri packaging is a **separate future pipeline** — nothing in the
+  build may assume it.
 
 ---
 
 ## Utility scripts
 
-<!-- CUSTOMISE: Describe helper scripts beyond the standard dev/build/test
-     cycle. See init.md Step 8 for example shape. -->
+- **`build:wasm`** — `wasm-pack` release build of `crates/stitch-engine`
+  into `crates/stitch-engine/pkg` (M5+). Not required for pre-M5
+  checkouts or CI without Rust.
+- **`bench`** — runs the benchmark test that asserts the
+  `architecture.md` performance budgets (×3 tolerance in CI).
 
 ---
 
 ## Configuration strategy
 
-<!-- CUSTOMISE: Define where tuneable values, tokens, and user-facing
-     config live. See init.md Step 8 for example shape. -->
+- **Constants:** tuneable engine values (grid limits, LUT bit depth,
+  default budgets, dirty-frame hash size) live in `src/core/` constants
+  modules, grouped by domain — not scattered across service files.
+- **Stage params:** each stage's `<Stage>Params` type is the single
+  source of truth for both its UI controls and its project-file schema.
+- **Design tokens:** project brand/semantic colours in
+  `src/ui/styles/tokens.css`; Carbon structural conventions (spacing,
+  type, layer) implemented to match Carbon spec. See `UI-STANDARDS.md`.
+- **Pipeline order** is user data (stored in the project file), not a
+  constant.
 
 ---
 
 ## Editor config
 
-<!-- CUSTOMISE: If the project uses .editorconfig, describe what it
-     enforces. Copy `pm_skills/scaffold/.editorconfig` to the project
-     root if one does not already exist. -->
+The project root contains `.editorconfig` for mechanical style
+enforcement: UTF-8, LF line endings, 2-space indentation, trailing
+whitespace trimmed (except in Markdown). Single quotes in TypeScript are
+an ESLint/Prettier concern, not `.editorconfig`.
 
 ---
 
 ## Files agents must not hand-edit
 
-<!-- CUSTOMISE: List concrete paths agents must never hand-edit
-     (build output, lockfiles, generated version files, etc.). -->
+- `dist/` — build output, overwritten on every build.
+- `crates/stitch-engine/pkg/` — generated `wasm-pack` output.
+- `tests/golden/**` — golden fixtures; regeneration needs owner
+  approval with a stated reason.
+- `src/core/palettes/*.json` — owner-supplied palette source data.
+- The injected build identity — generated per build.
+- `package-lock.json` — managed by npm (commit, but do not hand-edit).

@@ -30,7 +30,7 @@ line passes and `check` is green. Requirements references are to
 - [ ] Image import (file picker, drag-drop, clipboard paste)
 - [ ] Resize stage: fit/contain/cover/stretch to grid, 1×1–1024×1024
 - [ ] Colour: sRGB↔linear↔Lab conversions + Euclidean-RGB and CIELAB metrics (golden-tested against published reference values)
-- [ ] Palette model + one preset palette imported from owner's hex spreadsheet (placeholder DMC-subset until supplied)
+- [ ] Palette model + load the owner DMC palette from `src/core/palettes/dmc.json` (533 colours, generated from `dmc-anchor-map.csv` by `scripts/build-palette.mjs`)
 - [ ] LUT builder (15-bit RGB → palette index) in worker
 - [ ] Reduce stage (LUT path + exact path used by dither)
 - [ ] Floyd–Steinberg dither stage (serpentine option), seedable

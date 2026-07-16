@@ -58,10 +58,11 @@ refer to `docs/requirements.md`.
 - Cloud/collaborative projects (§25)
 - Export presets system (§21)
 
-## Open questions (spec §26 residue — see docs/init-answers.md)
+## Open questions (spec §26 residue — see decision-log D9/D10)
 
-- Which thread manufacturers beyond the first palette? Depends on
-  owner's spreadsheet data.
+- Which thread manufacturers beyond DMC? The supplied map carries an
+  Anchor cross-reference (and room for per-thread metadata); an Anchor
+  preset is a natural second palette.
 - Maximum *useful* grid size — revisit the 1024 cap after M5
   benchmarks.
 - Optimisation modes (accuracy vs perception vs stitchability, §6) —

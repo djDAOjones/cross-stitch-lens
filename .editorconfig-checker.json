@@ -5,6 +5,7 @@
     "self/archive",
     "self/evaluations",
     "self/_transcripts",
-    "node_modules"
+    "node_modules",
+    "_user-guff"
   ]
 }

@@ -96,7 +96,7 @@ painful.
 
 **Decision:** Adopt "Cross Stitch Lens" as the product name (replacing
 the working title "StitchLive" everywhere). Confirm all four
-`docs/init-answers.md` (provisional) defaults: (7) MVP ships one
+init-interview (provisional) defaults: (7) MVP ships one
 preset palette as a DMC-subset placeholder until the owner's hex
 spreadsheet is supplied; (9) alpha below 50% = empty stitch (renders
 as fabric colour, excluded from colour counts); (17) chart
@@ -105,3 +105,23 @@ coordinates start at 1; (18) tick marks align to grid boundaries.
 find-and-replace, and the provisional defaults are the sensible MVP
 positions, each revisable post-MVP (0-origin and centre-aligned ticks
 are wish-list items).
+
+## D10 — MVP palette: owner DMC/Anchor map, generated to JSON (2026-07-16)
+
+**Decision:** The MVP preset palette is the owner's supplied
+DMC/Anchor thread map. The raw CSV is tracked at
+`src/core/palettes/dmc-anchor-map.csv` (the source of truth);
+`scripts/build-palette.mjs` derives `src/core/palettes/dmc.json`, which
+the engine ships. This supersedes the D9 (7) "DMC-subset placeholder".
+Generation rules: one entry per unique DMC code (first occurrence
+wins, since the CSV lists a DMC once per Anchor equivalent); rows
+without a valid `#rrggbb` hex are skipped; Anchor "NA" becomes null;
+descriptions kept verbatim. First run: 533 colours from 679 rows
+(4 skipped, 142 duplicate DMC codes collapsed).
+**Why:** A tracked, mechanically-generated palette is reproducible and
+avoids inventing colour data. Keeping the CSV as source lets the map be
+re-derived if the owner updates it.
+**Provisional:** the JSON schema (`{ code, name, hex, rgb, anchor }`) is
+minimal and may be revised by the M1 palette model; the Anchor cross-
+reference and per-manufacturer thread metadata are carried but not yet
+used.

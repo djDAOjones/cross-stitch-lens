@@ -18,7 +18,6 @@ line passes and `check` is green. Requirements references are to
 ### M1 — Engine core (TS reference, §4–§8) (current milestone)
 
 - [ ] Image import (file picker, drag-drop, clipboard paste)
-- [ ] Resize stage: fit/contain/cover/stretch to grid, 1×1–1024×1024
 - [ ] Pipeline executor in Worker with configurable stage order; two order presets: adjust→resize→reduce+dither vs adjust→reduce+dither→resize (§7 comparison)
 - [ ] Stats: colour count, stitch counts, per-colour counts, % usage (§11 subset)
 

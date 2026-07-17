@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 45 file(s) across 9 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 49 file(s) across 9 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 10 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
@@ -23,8 +23,8 @@
 - `.windsurf` — 1 file(s)
 - `docs` — 1 file(s)
 - `scripts` — 4 file(s)
-- `src` — 14 file(s)
-- `tests` — 12 file(s)
+- `src` — 15 file(s)
+- `tests` — 15 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -79,6 +79,7 @@
 - `src/core/pipeline/identity.ts` — identity stage: hello-world purity demo
 - `src/core/pipeline/index.ts` — pipeline executor: backend pick + ts fallback
 - `src/core/pipeline/reduce.ts` — reduce stage: LUT + exact paths, alpha passthrough
+- `src/core/pipeline/resize.ts` — resize stage: area-average, 4 modes, empty cells
 - `src/core/types.ts` — core contracts: PixelBuffer, Palette, Stage, ProjectFile
 - `src/diagnostics/log.ts` — structured logger: console + ring buffer + global capture
 - `src/main.ts` — app entry: M0 shell, version display, logger boot
@@ -94,7 +95,10 @@
 - `tests/golden/hello-4x4.input.json` — golden fixture: 4x4 gradient input (protected)
 - `tests/golden/reduce-2x2.expected.json` — golden fixture: reduce expected, hand-derived (protected)
 - `tests/golden/reduce-2x2.input.json` — golden fixture: reduce input, hand-derived (protected)
+- `tests/golden/resize-9x5-contain-4x4.expected.json` — golden fixture: resize expected, TS-generated (protected)
+- `tests/golden/resize-9x5-contain-4x4.input.json` — golden fixture: resize input (protected)
 - `tests/helpers/golden.ts` — golden harness: fixture load + tolerance compare
 - `tests/palette.test.ts` — DMC load invariants (533, unique, hex↔rgb)
 - `tests/pipeline-hello.test.ts` — M0 acceptance: identity golden + purity invariants
 - `tests/reduce.test.ts` — reduce golden + invariants (membership, fixed point, LUT↔exact)
+- `tests/resize.test.ts` — resize golden + geometry/average/bounds invariants

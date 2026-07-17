@@ -19,6 +19,11 @@
 
 ## M1 — Engine core (in progress)
 
+- M1-RESIZE (2026-07-18) — resize stage: pure area-average resampler
+  in premultiplied alpha; stretch/contain/cover/fit (fit = scale-down
+  contain), grid-sized output with empty cells, 1–1024 validation;
+  golden fixture + hand-derived geometry/average invariants. See
+  decision-log D15.
 - M1-DITHER (2026-07-18) — Floyd–Steinberg dither stage: exact error
   terms in a float working buffer, serpentine option, seed carried in
   the params schema for future stochastic variants; golden fixture

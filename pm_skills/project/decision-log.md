@@ -236,3 +236,25 @@ temporary vitest file, then committed; generator deleted), a
 hand-derived 1x4 diffusion trace, palette membership, cross-metric
 determinism, mean preservation on a uniform field (±3), serpentine ≠
 raster, alpha/purity.
+
+## D15 — Resize: pure area-average reference, grid-always output (2026-07-18)
+
+**Decision:** The resize TS reference is a pure exact-area resampler
+(premultiplied alpha) — no canvas/drawImage in core. Output is always
+grid-sized; uncovered cells are RGBA(0,0,0,0) empty stitches (D9),
+placement centred. Modes: stretch / contain / cover, and `fit` defined
+as scale-down contain (never enlarges — CSS scale-down semantics),
+since plain aspect-fit is already `contain`. Grid dimensions validate
+as integers 1–1024 (`RangeError` otherwise).
+**Why:** Core purity forbids the GPU `drawImage` path in the budget
+table — that arrives later as an accelerated backend behind the same
+stage contract, exactly like WASM/WebGPU elsewhere (D4/D5). Area
+averaging is deterministic and golden-testable where bilinear kernels
+vary by implementation; premultiplication stops transparent pixels
+bleeding colour into edges, which matters when alpha means "empty
+stitch". Manual positioning/padding within the grid stay post-MVP
+(§4 extras, wish-list).
+**Tests:** committed golden (9x5 → contain 4x4, translucency included)
+plus hand-derived exact cases: checkerboard average, letterbox rows,
+symmetric crop, unscaled centring, no-bleed premultiply, bounds,
+determinism/purity.

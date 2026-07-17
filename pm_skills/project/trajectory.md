@@ -17,6 +17,21 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
+## M1 — Engine core (in progress)
+
+- M1-COLOR (2026-07-18) — sRGB↔linear↔Lab conversions (D65, CIE 1976)
+  plus Euclidean-RGB / ΔE76 metrics, golden-tested against published
+  reference values; round-trip within 1/255. See decision-log D13.
+- M1-PALETTE (2026-07-18) — Palette model over the generated DMC data
+  (533 colours) with typed-array rgb/Lab flattening. See decision-log D13.
+- M1-LUT (2026-07-18) — 15-bit RGB → palette-index LUT builder
+  (bit-replicated bin representatives); worker hosting lands with the
+  executor item. See decision-log D13.
+- M1-REDUCE (2026-07-18) — reduce stage, LUT + exact paths under one
+  contract, alpha passthrough; golden fixture + invariant suite
+  (palette membership, fixed point, LUT↔exact agreement). See
+  decision-log D13.
+
 ## M0 — Scaffold & quality gate (shipped 2026-07-17, v0.1.0)
 
 - M0 — Vite 8 + TS 6 strict + ESLint 10 (core-isolation rule) + Vitest 4;

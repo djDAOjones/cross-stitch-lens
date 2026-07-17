@@ -184,3 +184,33 @@ cspell, editorconfig), and a report-only secret scan
   single sanctioned disable, and Node CLI scripts are exempt.
 - Product version v0.1.0 (M0); build identity injected at build via
   Vite `define` (`v0.1.0+YYYYMMDD.shortsha`).
+
+## D13 — Colour-reduction vertical: conversions, palette, LUT, reduce (2026-07-18)
+
+**Decision:** Shipped the M1 colour-reduction foundation as one batch:
+`src/core/color/` (conversions + metrics), the palette model over the
+generated DMC data, the 15-bit LUT builder, and the reduce stage with
+LUT and exact paths.
+**Why (notable calls):**
+
+- Conversions use the IEC 61966-2-1 sRGB curve/matrix and CIE 1976 Lab
+  (D65/2°), pinned by golden tests against published reference values
+  (tolerance 0.1) and a 1/255 round-trip invariant. Out-parameter API
+  (`Float32Array` + offset) keeps hot loops allocation-free.
+- Metrics return SQUARED distances — nearest-neighbour search only
+  compares, so sqrt is never taken. CIE76 is the MVP metric; CIEDE2000
+  stays on the wish-list (§6).
+- LUT bins map to representative colours by bit replication
+  ((v<<3)|(v>>2)) so pure black/white are exact; LUT[key] is computed
+  against those representatives, making LUT↔exact agreement on bin
+  centres a testable invariant. The LUT builder is pure core; hosting
+  it in the worker belongs to the executor item.
+- Reduce keeps both paths behind one params contract
+  (`path: 'lut' | 'exact'`, optional precomputed `lut`): LUT for
+  preview speed, exact for dither error terms and full-quality export.
+  Alpha passes through untouched.
+- The reduce golden fixture is hand-derived (2x2 vs an unambiguous
+  4-colour palette, verifiable by inspection) rather than generated,
+  so no generator script duplicates the algorithm under test.
+- `ReduceParams` carries the palette object for now; palette-by-name
+  serialisation is deferred to the project-file work (M3).

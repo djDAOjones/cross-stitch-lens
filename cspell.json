@@ -23,6 +23,7 @@
     "cooldown",
     "descope",
     "descoped",
+    "coalescer",
     "deserialisation",
     "resampler",
     "Dockerfiles",

@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 49 file(s) across 9 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 59 file(s) across 9 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 10 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
@@ -23,8 +23,8 @@
 - `.windsurf` — 1 file(s)
 - `docs` — 1 file(s)
 - `scripts` — 4 file(s)
-- `src` — 15 file(s)
-- `tests` — 15 file(s)
+- `src` — 23 file(s)
+- `tests` — 17 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -75,6 +75,8 @@
 - `src/core/palette.ts` — Palette model, DMC preset load, rgb/Lab flattening
 - `src/core/palettes/dmc-anchor-map.csv` — owner-supplied DMC/Anchor map (protected)
 - `src/core/palettes/dmc.json` — generated DMC palette, 533 colours (protected)
+- `src/core/pipeline/adjust.ts` — adjust hook stage: identity until §9 ops land
+- `src/core/pipeline/config.ts` — PipelineConfig → stage list; §7 order presets
 - `src/core/pipeline/dither.ts` — Floyd–Steinberg dither: exact errors, serpentine
 - `src/core/pipeline/identity.ts` — identity stage: hello-world purity demo
 - `src/core/pipeline/index.ts` — pipeline executor: backend pick + ts fallback
@@ -84,6 +86,12 @@
 - `src/diagnostics/log.ts` — structured logger: console + ring buffer + global capture
 - `src/main.ts` — app entry: M0 shell, version display, logger boot
 - `src/vite-env.d.ts` — ambient types for injected version/build globals
+- `src/worker/client.ts` — main-thread client: Worker + coalescing + transfer
+- `src/worker/coalesce.ts` — latest-wins scheduler (no queue), drop counter
+- `src/worker/execute.ts` — timed frame execution; errors become responses
+- `src/worker/lut-cache.ts` — one LUT per palette+metric, built on miss
+- `src/worker/pipeline-worker.ts` — worker entry: two-line postMessage shell
+- `src/worker/protocol.ts` — main↔worker message types, transferred buffers
 
 ## tests
 
@@ -99,6 +107,8 @@
 - `tests/golden/resize-9x5-contain-4x4.input.json` — golden fixture: resize input (protected)
 - `tests/helpers/golden.ts` — golden harness: fixture load + tolerance compare
 - `tests/palette.test.ts` — DMC load invariants (533, unique, hex↔rgb)
+- `tests/pipeline-config.test.ts` — preset order, full-RGB, dither-replaces-reduce
 - `tests/pipeline-hello.test.ts` — M0 acceptance: identity golden + purity invariants
 - `tests/reduce.test.ts` — reduce golden + invariants (membership, fixed point, LUT↔exact)
 - `tests/resize.test.ts` — resize golden + geometry/average/bounds invariants
+- `tests/worker-executor.test.ts` — executor end-to-end, LUT cache, coalescer

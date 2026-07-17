@@ -258,3 +258,26 @@ stitch". Manual positioning/padding within the grid stay post-MVP
 plus hand-derived exact cases: checkerboard average, letterbox rows,
 symmetric crop, unscaled centring, no-bleed premultiply, bounds,
 determinism/purity.
+
+## D16 — Worker executor: config over stages, thin shell, latest-wins (2026-07-18)
+
+**Decision:** The serialisable `PipelineConfig` — not a stage array —
+crosses the worker boundary; `buildStages()` in core turns it into the
+executable list, with both §7 presets (`resize-first` default per D3,
+`reduce-first` for comparison). The `adjust` stage ships as the
+identity hook (brief excludes ops beyond the hook; the slot exists so
+presets and future project files already carry it). When dithering is
+on, the dither stage IS the quantiser — reduce is not also run. The
+worker entry is a two-line postMessage shell; executeRequest,
+the LUT cache (one build per palette+metric), and the latest-wins
+`Coalescer` are plain modules tested hermetically. Frames fail as
+error *responses*, never worker crashes. Pixel data crosses as
+transferred ArrayBuffers both ways.
+**Why:** Config-as-data keeps order in the project file (§7,
+non-destructive), keeps postMessage payloads serialisable, and lets
+the worker own LUT lifetime (the D13 deferral, now closed). A thin
+shell means the only untested code is two lines of glue — the real-
+browser pass is named a manual-gate item for M2's preview UI.
+**LUT cache key** is palette name + entry count: sufficient while
+palettes are built-in presets; user-defined palettes (post-MVP) must
+revisit it.

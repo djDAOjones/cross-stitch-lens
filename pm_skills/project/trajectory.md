@@ -19,6 +19,12 @@
 
 ## M1 — Engine core (in progress)
 
+- M1-WORKER (2026-07-18) — worker pipeline executor: serialisable
+  PipelineConfig with both §7 order presets (order is data), adjust
+  hook stage (identity until §9 ops), worker-side LUT cache, exact
+  latest-wins coalescing, transferred-buffer protocol, error-as-
+  response; hermetic tests, browser exercise lands with M2. See
+  decision-log D16.
 - M1-RESIZE (2026-07-18) — resize stage: pure area-average resampler
   in premultiplied alpha; stretch/contain/cover/fit (fit = scale-down
   contain), grid-sized output with empty cells, 1–1024 validation;

@@ -1,0 +1,122 @@
+/**
+ * Floyd–Steinberg error-diffusion dither against the active palette.
+ *
+ * Error terms use exact arithmetic in a float working buffer (D6:
+ * quantisation shortcuts are for the LUT path; diffusion quality
+ * depends on exact errors), so palette matching here always uses the
+ * exact path — never the LUT. Deterministic: same input + params →
+ * same output, bit-exact; this is the reference future WASM backends
+ * must match exactly.
+ *
+ * Kernel (raster order):        serpentine mirrors the row direction
+ *        x    7/16               and the horizontal offsets on
+ * 3/16  5/16  1/16               right-to-left rows.
+ */
+
+import { nearestIndex } from '../color/lut.ts';
+import type { ColorMetric } from '../color/metrics.ts';
+import { paletteLab, paletteRgb } from '../palette.ts';
+import type { Palette, PixelBuffer, Stage } from '../types.ts';
+
+/** Parameters for {@link ditherStage}; the UI + project-file shape. */
+export interface DitherParams {
+  palette: Palette;
+  /** 'lab' (CIELAB ΔE76) or 'rgb' (Euclidean) — see metrics.ts. */
+  metric: ColorMetric;
+  /** Alternate row direction (reduces directional worm artefacts). */
+  serpentine: boolean;
+  /**
+   * Seed for stochastic dither variants (conventions.md: randomised
+   * algorithms take an explicit seed). Floyd–Steinberg is fully
+   * deterministic, so the seed is carried in the params schema but
+   * unused until a random/blue-noise variant ships (wish-list §8).
+   */
+  seed?: number;
+}
+
+/** Diffuse `error * weight` into the working buffer at (x, y). */
+function diffuse(
+  work: Float32Array,
+  width: number,
+  height: number,
+  x: number,
+  y: number,
+  errR: number,
+  errG: number,
+  errB: number,
+  weight: number,
+): void {
+  if (x < 0 || x >= width || y >= height) return;
+  const i = (y * width + x) * 3;
+  work[i] = (work[i] ?? 0) + errR * weight;
+  work[i + 1] = (work[i + 1] ?? 0) + errG * weight;
+  work[i + 2] = (work[i + 2] ?? 0) + errB * weight;
+}
+
+/** Clamp a working value to displayable sRGB range. */
+function clamp255(v: number): number {
+  return v < 0 ? 0 : v > 255 ? 255 : v;
+}
+
+function ditherTs(input: PixelBuffer, params: DitherParams): PixelBuffer {
+  const { width, height } = input;
+  const src = input.data;
+  const out = new Uint8ClampedArray(src.length);
+  const palRgb = paletteRgb(params.palette);
+  const palLab =
+    params.metric === 'lab' ? paletteLab(params.palette) : new Float32Array(0);
+  const labScratch = new Float32Array(3);
+
+  // Float working copy of the RGB channels; alpha never diffuses.
+  const work = new Float32Array(width * height * 3);
+  for (let p = 0; p < width * height; p++) {
+    work[p * 3] = src[p * 4] ?? 0;
+    work[p * 3 + 1] = src[p * 4 + 1] ?? 0;
+    work[p * 3 + 2] = src[p * 4 + 2] ?? 0;
+  }
+
+  for (let y = 0; y < height; y++) {
+    const rightward = !params.serpentine || y % 2 === 0;
+    const xStart = rightward ? 0 : width - 1;
+    const xEnd = rightward ? width : -1;
+    const xStep = rightward ? 1 : -1;
+    // Horizontal kernel offsets mirror with the scan direction.
+    const ahead = xStep;
+
+    for (let x = xStart; x !== xEnd; x += xStep) {
+      const wi = (y * width + x) * 3;
+      const r = clamp255(work[wi] ?? 0);
+      const g = clamp255(work[wi + 1] ?? 0);
+      const b = clamp255(work[wi + 2] ?? 0);
+
+      const idx =
+        nearestIndex(r, g, b, params.metric, palRgb, palLab, labScratch) * 3;
+      const pr = palRgb[idx] ?? 0;
+      const pg = palRgb[idx + 1] ?? 0;
+      const pb = palRgb[idx + 2] ?? 0;
+
+      const oi = (y * width + x) * 4;
+      out[oi] = pr;
+      out[oi + 1] = pg;
+      out[oi + 2] = pb;
+      out[oi + 3] = src[oi + 3] ?? 255;
+
+      const errR = r - pr;
+      const errG = g - pg;
+      const errB = b - pb;
+
+      diffuse(work, width, height, x + ahead, y, errR, errG, errB, 7 / 16);
+      diffuse(work, width, height, x - ahead, y + 1, errR, errG, errB, 3 / 16);
+      diffuse(work, width, height, x, y + 1, errR, errG, errB, 5 / 16);
+      diffuse(work, width, height, x + ahead, y + 1, errR, errG, errB, 1 / 16);
+    }
+  }
+
+  return { width, height, data: out };
+}
+
+/** The Floyd–Steinberg dither stage (TS reference; WASM post-profile). */
+export const ditherStage: Stage<DitherParams> = {
+  name: 'dither',
+  backends: { ts: ditherTs },
+};

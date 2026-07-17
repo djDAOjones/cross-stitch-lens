@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 41 file(s) across 9 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 45 file(s) across 9 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 10 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
@@ -23,8 +23,8 @@
 - `.windsurf` — 1 file(s)
 - `docs` — 1 file(s)
 - `scripts` — 4 file(s)
-- `src` — 13 file(s)
-- `tests` — 9 file(s)
+- `src` — 14 file(s)
+- `tests` — 12 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -75,6 +75,7 @@
 - `src/core/palette.ts` — Palette model, DMC preset load, rgb/Lab flattening
 - `src/core/palettes/dmc-anchor-map.csv` — owner-supplied DMC/Anchor map (protected)
 - `src/core/palettes/dmc.json` — generated DMC palette, 533 colours (protected)
+- `src/core/pipeline/dither.ts` — Floyd–Steinberg dither: exact errors, serpentine
 - `src/core/pipeline/identity.ts` — identity stage: hello-world purity demo
 - `src/core/pipeline/index.ts` — pipeline executor: backend pick + ts fallback
 - `src/core/pipeline/reduce.ts` — reduce stage: LUT + exact paths, alpha passthrough
@@ -86,6 +87,9 @@
 ## tests
 
 - `tests/color-convert.test.ts` — golden: Lab reference values + round-trips
+- `tests/dither.test.ts` — dither golden + determinism/mean/serpentine invariants
+- `tests/golden/dither-8x8.expected.json` — golden fixture: dither expected, TS-generated (protected)
+- `tests/golden/dither-8x8.input.json` — golden fixture: dither input (protected)
 - `tests/golden/hello-4x4.expected.json` — golden fixture: identity expected output (protected)
 - `tests/golden/hello-4x4.input.json` — golden fixture: 4x4 gradient input (protected)
 - `tests/golden/reduce-2x2.expected.json` — golden fixture: reduce expected, hand-derived (protected)

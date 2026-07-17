@@ -77,8 +77,9 @@ Before reading anything else:
   not overwrite existing memory.
   - **Exception — the framework source tree itself.** If the repo *is*
     pm-skills (a clone or fork of the framework: `pm_skills/CHANGELOG.md`
-    and `MANIFEST.md` present, the root templates still carrying their
-    placeholders, and no populated `pm_skills/project/*`), that
+    and `MANIFEST.md` present, the templates in `pm_skills/templates/`
+    (repo root before 4.0.0) still carrying their placeholders, and no
+    populated `pm_skills/project/*`), that
     `VERSION` is the *product*, not a prior deployment — do not route to
     upgrade. Self-hosting a framework fork is an adoption into a
     **parallel** memory home (e.g. `self/`) by maintainer direction; the
@@ -89,8 +90,9 @@ Before reading anything else:
   no pm-skills memory, and continue.
 
 Also read the framework context this run must honour: `AGENTS.md`,
-`UI-STANDARDS.md`, `DEV-INFRASTRUCTURE.md` (the root templates) and
-`pm_skills/init.md`.
+`UI-STANDARDS.md`, `DEV-INFRASTRUCTURE.md` (the root rulebooks — if
+absent, copy them from `pm_skills/templates/` first, per
+`pm_skills/init.md` Step 0) and `pm_skills/init.md`.
 
 ---
 

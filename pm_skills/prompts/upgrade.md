@@ -7,8 +7,10 @@ description: Upgrade an existing project from an older pm-skills version
 Run this when a project is on an older version of pm-skills and needs
 the latest framework files (prompts, integrations, init, GUIDE,
 memory-policy, scaffold, and the metadata files `VERSION`,
-`CHANGELOG.md`, `MANIFEST.md`) plus any new sections in the root templates
-(`AGENTS.md`, `UI-STANDARDS.md`, `DEV-INFRASTRUCTURE.md`).
+`CHANGELOG.md`, `MANIFEST.md`) plus any new sections in the root
+templates (`AGENTS.md`, `UI-STANDARDS.md`, `DEV-INFRASTRUCTURE.md` —
+shipped in `pm_skills/templates/` since 4.0.0, populated copies at the
+project root).
 
 This procedure is version-aware. It reads the framework's own
 metadata first and only does real work when there is a version gap —
@@ -144,6 +146,10 @@ project falsely claiming the new version.
 Only if the work list touches `AGENTS.md`, `UI-STANDARDS.md`, or
 `DEV-INFRASTRUCTURE.md`:
 
+- The merge target is always the project's **populated root copy**;
+  the base structure comes from the source template —
+  `pm_skills/templates/<file>` in sources at 4.0.0 or later, the
+  source repo root in older sources.
 - Use the latest template as the base structure.
 - Port every populated section from this project into the matching
   section of the new template. **Preserve wording exactly.** Do not

@@ -1,7 +1,7 @@
 {
-  "name": "pm-skills",
+  "name": "cross-stitch-lens",
   "private": true,
-  "description": "Tooling and CI for the PM Skills framework repository. Source-repo-only: this package is NOT part of the distributed framework and is never copied into consuming projects. The canonical framework version is pm_skills/VERSION.",
+  "description": "Cross Stitch Lens. Interim docs-lint gate inherited from the pm-skills source repo; replaced by the app's own scaffold (Vite/TS/ESLint/Vitest) in M0.",
   "scripts": {
     "lint": "npm run lint:md && npm run lint:docs && npm run lint:spell && npm run lint:editorconfig",
     "lint:md": "npx --yes markdownlint-cli2 \"**/*.md\"",
@@ -26,6 +26,6 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/djDAOjones/PM-Skills.git"
+    "url": "https://github.com/djDAOjones/cross-stitch-lens.git"
   }
 }

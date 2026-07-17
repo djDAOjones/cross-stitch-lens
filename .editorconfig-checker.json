@@ -2,9 +2,6 @@
   "Exclude": [
     "\\.md$",
     "package-lock\\.json",
-    "self/archive",
-    "self/evaluations",
-    "self/_transcripts",
     "node_modules",
     "_user-guff"
   ]

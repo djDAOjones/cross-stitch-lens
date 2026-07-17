@@ -76,13 +76,13 @@ const IGNORE = [/(^|\/)archive(\/|$)/, /(^|\/)tickets(\/|$)/];
 const PATH_SOURCE_EXCLUDE = new Set(['pm_skills/CHANGELOG.md']);
 
 /**
- * Directories whose files are not checked at all: the cold self/
- * tiers (see the header note).
+ * Directories whose files are not checked at all: distributed
+ * framework docs (framework-class, never edited here; they may
+ * reference paths that only exist in the framework source repo).
+ * Project memory under pm_skills/project/ IS checked.
  */
 const FILE_EXCLUDE = [
-  /^self\/archive\//,
-  /^self\/evaluations\//,
-  /^self\/_transcripts\//,
+  /^pm_skills\/(?!project\/)/,
 ];
 
 /**

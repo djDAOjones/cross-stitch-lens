@@ -22,9 +22,10 @@ the end of every task**:
 - **Project memory** (`project/`) — the living state: what you're
   building, what's next, what shipped, and why choices were made.
 - **Rulebooks** (`AGENTS.md`, `UI-STANDARDS.md`,
-  `DEV-INFRASTRUCTURE.md` in your project root) — the permanent rules:
-  invariants, UI and accessibility standards, build and deploy facts.
-  Populated once during setup; updated only when big decisions change.
+  `DEV-INFRASTRUCTURE.md` in your project root — copied out of
+  `templates/` at init) — the permanent rules: invariants, UI and
+  accessibility standards, build and deploy facts. Populated once
+  during setup; updated only when big decisions change.
 - **Workflows** (`integrations/` and `prompts/`) — the procedures:
   how to scope, design, plan, validate, implement, and close a task.
 
@@ -54,6 +55,11 @@ MANIFEST.md      Path classes: framework / template / memory / scaffold.
 GUIDE.md         This guide.
 init.md          Project setup, step by step (manual or agent-run).
 memory-policy.md Memory size budgets + overrun actions (read at task close only).
+
+templates/       Rulebook templates. Copied to your project root at init
+  AGENTS.md          (init.md Step 0), then populated there — the copies
+  UI-STANDARDS.md    are yours; upgrades merge new sections in, never
+  DEV-INFRASTRUCTURE.md  overwrite.
 
 project/         Your living project memory. Fill once, maintain ongoing.
   brief.md         What we're building, for whom, what's out of scope.

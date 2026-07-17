@@ -27,11 +27,3 @@ crates/stitch-engine/pkg/
 # Not a project deliverable; the canonical palette data lives tracked in
 # src/core/palettes/. Kept on disk, out of version control and linting.
 _user-guff/
-
-# The repo's own pm-skills deployment (self/) is TRACKED — contract,
-# living project memory, and archived history (versioned backup on a
-# cloud-synced path). It is source-only (never distributed). The living
-# memory is lint-gated; only the cold tiers (self/archive/,
-# self/evaluations/, self/_transcripts/) are excluded, via
-# .markdownlint-cli2.jsonc, cspell.json, .editorconfig-checker.json,
-# and scripts/check-docs.mjs.

@@ -4,9 +4,6 @@
   "useGitignore": true,
   "ignorePaths": [
     "node_modules/**",
-    "self/archive/**",
-    "self/evaluations/**",
-    "self/_transcripts/**",
     "package-lock.json",
     "_user-guff/**",
     "docs/requirements.md",

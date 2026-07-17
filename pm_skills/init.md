@@ -11,7 +11,7 @@ Total time: ~30 minutes.
 
 This file doubles as the agent workflow (it replaces the former
 init-project integration). If you are an AI agent running this:
-execute Steps 1–10 in order yourself — gather the Step 1 answers
+execute Steps 0–10 in order yourself — gather the Step 1 answers
 conversationally instead of having the user paste prompts, generate
 each artifact, and **present it for review before writing it**. Write
 files only after approval, step by step. Everything else in this file
@@ -31,9 +31,10 @@ This process populates two kinds of project memory:
 - **`project/`** — living project memory (brief, backlog, file map,
   decisions). Read at the start of every task session.
 - **`AGENTS.md` + `UI-STANDARDS.md` + `DEV-INFRASTRUCTURE.md`** —
-  permanent behavioral contracts. Loaded automatically by AI tools that
-  support global rules, or read manually at session start for other
-  tools.
+  permanent behavioral contracts at the project root. They start as
+  copies of the templates in `pm_skills/templates/` (Step 0). Loaded
+  automatically by AI tools that support global rules, or read
+  manually at session start for other tools.
 
 Both are kept in sync. The kickoff process gathers information once and
 writes it to the right places.
@@ -53,6 +54,7 @@ to this guide whenever you want to drive the setup yourself.
 
 If you want to start fast, complete only these now:
 
+- Step 0 (copy the rulebook templates)
 - Step 1 (`brief.md`)
 - Step 2 (`architecture.md`)
 - Step 3 (`backlog.md`)
@@ -64,6 +66,24 @@ Everything else (conventions, UI standards, dev infrastructure,
 scaffold, full readiness check) can be deferred to first use. Picking
 up deferred items as you encounter them produces no rework: each step
 only adds content, it does not rewrite earlier choices.
+
+---
+
+## Step 0: Copy the rulebook templates
+
+The three rulebooks ship inside the framework at
+`pm_skills/templates/`. Copy them to your project root once — they
+are yours to populate from here on and are never overwritten by an
+upgrade (upgrades merge new template sections into your copies):
+
+```sh
+cp -n pm_skills/templates/AGENTS.md \
+  pm_skills/templates/UI-STANDARDS.md \
+  pm_skills/templates/DEV-INFRASTRUCTURE.md .
+```
+
+Skip any file that already exists at the root — never overwrite a
+populated rulebook (`cp -n` does this for you).
 
 ---
 

@@ -133,9 +133,11 @@ gates — do not write product code until steps 5 and 6 are approved.
 
 2. Read framework context.
    Read `AGENTS.md`, `UI-STANDARDS.md`, and `DEV-INFRASTRUCTURE.md`
-   (the root templates) and `pm_skills/init.md`. These carry the
-   rigour and opinions this run must honour. There is no project
-   memory to read yet — this run creates it.
+   (the root rulebooks — if absent, copy them from
+   `pm_skills/templates/` first, per `pm_skills/init.md` Step 0) and
+   `pm_skills/init.md`. These carry the rigour and opinions this run
+   must honour. There is no project memory to read yet — this run
+   creates it.
 
 3. Capture the wants and read the interpretation back. (gate)
    Gather the wants from, in order of preference: the user's message;

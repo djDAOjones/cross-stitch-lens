@@ -25,6 +25,65 @@ add an entry here. See `prompts/release.md`.
 
 ---
 
+## 4.0.0 — 2026-07-17
+
+DIST-BOUNDARY: the three rulebook templates lived at the framework
+repo's root, so the natural acquisition act — cloning or downloading
+the repo — carried the maintainer's own tree (repo README, tooling,
+CI, self-hosted memory) into consuming projects, and IDE global-rule
+loading in the source repo picked up the placeholder template instead
+of the operative contract (both observed on a real consuming project,
+2026-07-16). The distributable is now exactly one folder: `pm_skills/`
+contains everything, including the templates. Major: distributed
+files moved (root → `pm_skills/templates/`).
+
+### Changed
+
+- `pm_skills/templates/AGENTS.md`, `pm_skills/templates/UI-STANDARDS.md`,
+  `pm_skills/templates/DEV-INFRASTRUCTURE.md` — the three root-template
+  files move from the source repo root into the distributed tree.
+  Content unchanged; class unchanged (`root-template`).
+- `pm_skills/MANIFEST.md` — root-template path rows moved to
+  `pm_skills/templates/*`; the `root-template` class description now
+  states the ship-in-templates / populate-at-root split; new files
+  under `pm_skills/templates/` default to `root-template`.
+- `pm_skills/init.md` — new **Step 0: Copy the rulebook templates**
+  (`cp -n` from `pm_skills/templates/` to the project root); agent
+  mode executes Steps 0–10; preamble and minimum-viable list updated.
+- `pm_skills/GUIDE.md` — folder tree gains `templates/`; the rulebooks
+  bullet notes they are copied out of `templates/` at init.
+- `pm_skills/prompts/upgrade.md` — intro and Step 7 name the template
+  source location (`pm_skills/templates/` at 4.0.0+, the source repo
+  root in older sources); the merge target is always the project's
+  populated root copy.
+- `pm_skills/integrations/adopt.md` — framework-source-tree detection
+  heuristic updated for the new template location; the framework
+  context read copies missing root rulebooks from
+  `pm_skills/templates/` per init Step 0.
+- `pm_skills/integrations/init-mvp.md` — same framework context read
+  update.
+
+### Upgrade actions
+
+- Framework sync (Step 6): overwrite `init.md`, `GUIDE.md`,
+  `MANIFEST.md`, `prompts/upgrade.md`, `integrations/adopt.md`,
+  `integrations/init-mvp.md`, `VERSION`, `CHANGELOG.md`; **add** the
+  new `pm_skills/templates/` directory (three files) from the source.
+- Your populated root `AGENTS.md`, `UI-STANDARDS.md`, and
+  `DEV-INFRASTRUCTURE.md` are your project's own copies — **no
+  action**; nothing moves, merges, or is overwritten at the project
+  root. Future template merges (upgrade Step 7) read the base
+  structure from `pm_skills/templates/` instead of the source root.
+- Housekeeping (optional, propose per file — never batch-delete): if
+  an earlier whole-repo copy left framework-repo files in your
+  project that were never part of the distribution (the framework's
+  own `README.md`/`CONTRIBUTING.md`, a `scripts/check-docs.mjs`, a
+  `.github/workflows/lint.yml`, a `package.json` named `pm-skills`,
+  `self/` ignores), confirm each is unused in your project and remove
+  it.
+
+---
+
 ## 3.17.1 — 2026-07-16
 
 ARCH-INTEG: the append-only doctrine had no integrity check — content

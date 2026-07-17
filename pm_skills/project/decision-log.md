@@ -125,3 +125,31 @@ re-derived if the owner updates it.
 minimal and may be revised by the M1 palette model; the Anchor cross-
 reference and per-manufacturer thread metadata are carried but not yet
 used.
+
+## D11 — Upgraded pm-skills framework 3.17.1 → 4.0.0 (2026-07-17)
+
+**Decision:** Upgraded pm-skills framework.
+**Version:** 3.17.1 → 4.0.0.
+**Source:** `https://github.com/djDAOjones/PM-Skills.git` (fresh clone).
+**What changed:** Framework sync per the 4.0.0 (DIST-BOUNDARY) upgrade
+actions — overwrote `init.md`, `GUIDE.md`, `MANIFEST.md`,
+`prompts/upgrade.md`, `integrations/adopt.md`,
+`integrations/init-mvp.md`, `VERSION`, `CHANGELOG.md`; added
+`pm_skills/templates/` (the three rulebook templates, now shipped
+inside the distributable). Root rulebooks untouched (project-owned).
+Housekeeping per the same entry — removed framework-source-repo files
+never meant for consuming projects: `self/` (maintainer memory),
+`CONTRIBUTING.md`, `scripts/gen-file-map.mjs` (source-repo fork; the
+scaffold copy at `pm_skills/scaffold/gen-file-map.mjs` is the one
+`AGENTS.md` already names), and the dead `self/` ignore rules in
+`.gitignore`, `.markdownlintignore`, `.markdownlint-cli2.jsonc`,
+`cspell.json`, `.editorconfig-checker.json`. Kept (in active use as
+the interim docs-lint gate until M0): `package.json` (renamed
+`pm-skills` → `cross-stitch-lens`, repository URL corrected),
+`scripts/check-docs.mjs` (path validation now skips framework-class
+`pm_skills/` docs, still checks `pm_skills/project/`),
+`.github/workflows/lint.yml`, `.githooks/pre-commit`.
+`.windsurf/workflows/next.md` rewritten from the source repo's
+self-hosted mapping to the standard consuming-project form.
+**Local framework customisations:** none found (Step 4 diff clean).
+**Gate:** `npm run check` green (all four steps) after the change.

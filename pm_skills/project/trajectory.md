@@ -17,14 +17,14 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
-<!--
-Example phase (delete when you add your first real one):
+## M0 — Scaffold & quality gate (shipped 2026-07-17, v0.1.0)
 
-## Phase 1 — Text-only skeleton (shipped 2026-04-20)
+- M0 — Vite 8 + TS 6 strict + ESLint 10 (core-isolation rule) + Vitest 4;
+  `check` = typecheck + lint + test + build + docs baseline + secret scan;
+  CI runs `check`; core types (`PixelBuffer`, `Palette`, `Stage`,
+  `ProjectFile` v1 stub) + minimal pipeline executor; golden harness with
+  per-test tolerance + hello-world identity test (4 tests); app shell with
+  build identity + structured logger. See decision-log 2026-07-17 (D12).
 
-- A1-1 — Hub control plane + event-log projections. See decision-log 2026-04-12.
-- A1-2 — Audience submit (anonymous, cooldown). See decision-log 2026-04-14.
-- A1-3 — Moderator console v0 (four-pane shell). See decision-log 2026-04-15.
-
-Outcome: an end-to-end text path runs locally; submit → moderate → display.
--->
+Outcome: `npm run check` green end-to-end; dev server boots and renders
+the shell with version identity.

@@ -15,17 +15,7 @@ line passes and `check` is green. Requirements references are to
 
 ## Active
 
-### M0 — Scaffold & quality gate (current milestone)
-
-- [ ] Vite + TS strict + ESLint (incl. core-isolation rule) + Vitest
-- [ ] `check` script: typecheck + lint + test + build
-- [ ] CI workflow running `check`
-- [ ] Core types: `PixelBuffer`, `Palette`, `Stage`, `ProjectFile` (v1 schema stub)
-- [ ] Golden-test harness (fixture load/compare with per-test tolerance)
-
-*Acceptance: `npm run check` green on a hello-world pipeline test.*
-
-### M1 — Engine core (TS reference, §4–§8)
+### M1 — Engine core (TS reference, §4–§8) (current milestone)
 
 - [ ] Image import (file picker, drag-drop, clipboard paste)
 - [ ] Resize stage: fit/contain/cover/stretch to grid, 1×1–1024×1024

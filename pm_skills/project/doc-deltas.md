@@ -24,5 +24,5 @@
 
 ## Open
 
-<!-- Append captured deltas below, one checkbox line each. Delete this comment
-     once you add the first real item. -->
+- [ ] 2026-07-17 DEV-INFRASTRUCTURE — pre-M0 comments stale (full gate now
+  live); scripts table missing the shipped script surface (source: M0)

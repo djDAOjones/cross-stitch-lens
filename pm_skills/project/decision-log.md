@@ -153,3 +153,34 @@ the interim docs-lint gate until M0): `package.json` (renamed
 self-hosted mapping to the standard consuming-project form.
 **Local framework customisations:** none found (Step 4 diff clean).
 **Gate:** `npm run check` green (all four steps) after the change.
+
+## D12 — M0 toolchain and gate composition (2026-07-17)
+
+**Decision:** M0 shipped on current majors — Vite 8, TypeScript 6
+(strict + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes`),
+ESLint 10 flat config, Vitest 4, `@types/node`, Prettier (format only,
+never the gate). All dev dependencies; zero runtime dependencies.
+`check` composes six non-mutating steps: typecheck, ESLint, Vitest,
+production build, the docs-lint baseline (markdownlint, check-docs,
+cspell, editorconfig), and a report-only secret scan
+(`scripts/check-secrets.mjs`). CI (`.github/workflows/lint.yml`) runs
+`npm run check` on Node 22 — local green = CI green.
+**Why (notable calls):**
+
+- Core isolation is enforced with `no-restricted-imports` (layer-dir
+  patterns + a regex banning package imports) plus
+  `no-restricted-globals` in `src/core/` — tsc cannot express the
+  boundary; ESLint can.
+- `Stage<P>` is invariant in `P`, so heterogeneous pipelines use a
+  `stageInstance()` helper that erases `P` only after stage+params are
+  verified together — the one sanctioned erasure; `any` stays banned.
+- Initial golden fixtures were generated (not regenerated) by the
+  committed `scripts/gen-golden-hello.mjs`; the protected-file rule
+  applies from this commit forward.
+- `check-docs` no longer validates paths in the decision log: an
+  append-only record legitimately references paths that later vanish
+  (same class as the framework CHANGELOG exclusion).
+- `no-console` is on app-wide; `src/diagnostics/log.ts` carries the
+  single sanctioned disable, and Node CLI scripts are exempt.
+- Product version v0.1.0 (M0); build identity injected at build via
+  Vite `define` (`v0.1.0+YYYYMMDD.shortsha`).

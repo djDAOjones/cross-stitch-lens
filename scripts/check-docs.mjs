@@ -73,7 +73,12 @@ const IGNORE = [/(^|\/)archive(\/|$)/, /(^|\/)tickets(\/|$)/];
  * Source files whose backticked paths are NOT checked (append-only
  * history naming legitimately-removed files). Links are still checked.
  */
-const PATH_SOURCE_EXCLUDE = new Set(['pm_skills/CHANGELOG.md']);
+// Append-only historical records legitimately reference paths that no
+// longer exist; their backticked paths are not validated.
+const PATH_SOURCE_EXCLUDE = new Set([
+  'pm_skills/CHANGELOG.md',
+  'pm_skills/project/decision-log.md',
+]);
 
 /**
  * Directories whose files are not checked at all: distributed

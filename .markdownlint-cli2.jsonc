@@ -1,0 +1,16 @@
+{
+  // markdownlint-cli2 options. This is separate from the rule config in
+  // .markdownlint.json, which markdownlint-cli2 still reads and merges.
+  //
+  // gitignore:true makes the linter skip everything .gitignore skips
+  // (node_modules/, installed deps) so the "**/*.md" glob never descends
+  // into them. markdownlint-cli2 does NOT honour a .markdownlintignore
+  // file, so relying on one silently lints node_modules.
+  "gitignore": true,
+  // The repo's living memory (self/) IS gated (SELF-HOST 2026-07-16).
+  // Only its cold storage stays out: the frozen pre-adoption archive,
+  // and evaluations/transcripts (working outputs with unchecked
+  // exported content). Keep in step with .markdownlintignore,
+  // cspell.json, .editorconfig-checker.json, and scripts/check-docs.mjs.
+  "ignores": ["self/archive/**", "self/evaluations/**", "self/_transcripts/**"]
+}

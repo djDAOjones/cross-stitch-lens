@@ -1,0 +1,31 @@
+{
+  "name": "pm-skills",
+  "private": true,
+  "description": "Tooling and CI for the PM Skills framework repository. Source-repo-only: this package is NOT part of the distributed framework and is never copied into consuming projects. The canonical framework version is pm_skills/VERSION.",
+  "scripts": {
+    "lint": "npm run lint:md && npm run lint:docs && npm run lint:spell && npm run lint:editorconfig",
+    "lint:md": "npx --yes markdownlint-cli2 \"**/*.md\"",
+    "lint:fix": "npx --yes markdownlint-cli2 --fix \"**/*.md\"",
+    "lint:docs": "node scripts/check-docs.mjs",
+    "lint:spell": "npx --yes cspell \"**/*.md\"",
+    "lint:editorconfig": "npx --yes editorconfig-checker",
+    "check": "npm run lint",
+    "prepare": "git config core.hooksPath .githooks"
+  },
+  "devDependencies": {
+    "cspell": "^10.0.1",
+    "editorconfig-checker": "^6.1.1",
+    "markdownlint-cli2": "^0.22.1"
+  },
+  "overrides": {
+    "js-yaml": "^4.2.0",
+    "markdown-it": "^14.2.0"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/djDAOjones/PM-Skills.git"
+  }
+}

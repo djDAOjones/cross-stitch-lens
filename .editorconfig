@@ -1,0 +1,26 @@
+# EditorConfig for the PM Skills *source repo*. https://editorconfig.org
+#
+# This governs THIS repository's own files. It is deliberately separate
+# from the distributable template at pm_skills/scaffold/.editorconfig,
+# which is copied into consuming projects and owned by them thereafter.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# Markdown: trailing spaces can be a meaningful hard line break, so do not
+# auto-trim. markdownlint (MD009) governs intentional vs accidental cases.
+[*.md]
+trim_trailing_whitespace = false
+
+[*.{yml,yaml}]
+indent_size = 2
+
+[*.json]
+indent_size = 2

@@ -1,0 +1,21 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor state
+*.swp
+*.swo
+*~
+
+# Node tooling (dev-only; never committed, never distributed).
+# package-lock.json IS committed for reproducible CI installs.
+node_modules/
+npm-debug.log*
+
+# The repo's own pm-skills deployment (self/) is TRACKED — contract,
+# living project memory, and archived history (versioned backup on a
+# cloud-synced path). It is source-only (never distributed). The living
+# memory is lint-gated; only the cold tiers (self/archive/,
+# self/evaluations/, self/_transcripts/) are excluded, via
+# .markdownlint-cli2.jsonc, cspell.json, .editorconfig-checker.json,
+# and scripts/check-docs.mjs.

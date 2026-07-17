@@ -1,0 +1,10 @@
+# For the EDITOR extension only (vscode-markdownlint honours this file).
+# The CLI gate (markdownlint-cli2) ignores .markdownlintignore entirely —
+# it skips these paths via `gitignore: true` in .markdownlint-cli2.jsonc.
+# This file exists so the IDE Problems panel matches the CLI gate:
+# without it the extension lints gitignored scratch and node_modules.
+# Do not remove as "unused" — see CONTRIBUTING.md → Configuration.
+node_modules/
+self/archive/
+self/evaluations/
+self/_transcripts/

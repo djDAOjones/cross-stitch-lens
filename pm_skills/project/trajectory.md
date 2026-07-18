@@ -17,6 +17,15 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
+## M2 — Preview & info UI (in progress)
+
+- M2-PREVIEW (2026-07-18) — worker-rendered preview surface: canvas
+  control transferred to the worker (bitmap redraw on view change, no
+  reprocessing), pure viewport maths (fit, cursor-anchored zoom 5%–
+  6400%, pan clamping), wheel/drag/keyboard (+/−/0/arrows) input,
+  44px toolbar, auto-fit per new image; browser-verified. See
+  decision-log D19.
+
 ## M1 — Engine core (shipped 2026-07-18, v0.2.0)
 
 - M1-STATS (2026-07-18) — design stats (§11 subset): stitch/empty

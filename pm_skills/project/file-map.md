@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 64 file(s) across 9 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 67 file(s) across 9 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 10 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
@@ -23,8 +23,8 @@
 - `.windsurf` — 1 file(s)
 - `docs` — 1 file(s)
 - `scripts` — 4 file(s)
-- `src` — 26 file(s)
-- `tests` — 19 file(s)
+- `src` — 28 file(s)
+- `tests` — 20 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -87,13 +87,15 @@
 - `src/diagnostics/log.ts` — structured logger: console + ring buffer + global capture
 - `src/main.ts` — app entry: M1 dev shell — import → worker → preview
 - `src/ui/import.ts` — import routes → decode: filter (pure) + blob→PixelBuffer
-- `src/ui/render.ts` — 1:1 canvas render; pixels are content, no filters
+- `src/ui/preview.ts` — preview controller: toolbar, wheel/drag/keys → worker
+- `src/ui/viewport.ts` — pure viewport maths: fit, anchored zoom, pan clamp
 - `src/vite-env.d.ts` — ambient types for injected version/build globals
 - `src/worker/client.ts` — main-thread client: Worker + coalescing + transfer
 - `src/worker/coalesce.ts` — latest-wins scheduler (no queue), drop counter
 - `src/worker/execute.ts` — timed frame execution; errors become responses
 - `src/worker/lut-cache.ts` — one LUT per palette+metric, built on miss
 - `src/worker/pipeline-worker.ts` — worker entry: two-line postMessage shell
+- `src/worker/preview-surface.ts` — worker: OffscreenCanvas + bitmap + view redraw
 - `src/worker/protocol.ts` — main↔worker message types, transferred buffers
 
 ## tests
@@ -116,4 +118,5 @@
 - `tests/resize.test.ts` — resize golden + geometry/average/bounds invariants
 - `tests/stats.test.ts` — stats partition/sum/sort/reference invariants
 - `tests/ui-import.test.ts` — image-file filtering (pure half of import)
+- `tests/viewport.test.ts` — viewport maths exact cases (fit/anchor/clamp)
 - `tests/worker-executor.test.ts` — executor end-to-end, LUT cache, coalescer

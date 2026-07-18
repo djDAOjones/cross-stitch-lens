@@ -18,6 +18,34 @@ export interface ProcessRequest {
   config: PipelineConfig;
 }
 
+/** Main → worker: adopt this preview surface (transferred once). */
+export interface CanvasRequest {
+  type: 'canvas';
+  canvas: OffscreenCanvas;
+}
+
+/** Main → worker: apply a view transform and redraw the last frame. */
+export interface ViewRequest {
+  type: 'view';
+  /** Device px per stitch. */
+  scale: number;
+  tx: number;
+  ty: number;
+}
+
+/** Main → worker: the preview surface changed size (device px). */
+export interface SurfaceResizeRequest {
+  type: 'resize';
+  width: number;
+  height: number;
+}
+
+export type WorkerRequest =
+  | ProcessRequest
+  | CanvasRequest
+  | ViewRequest
+  | SurfaceResizeRequest;
+
 /** Per-stage wall-clock timing (diagnostics / future debug panel). */
 export interface StageTiming {
   stage: string;

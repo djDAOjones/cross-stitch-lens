@@ -328,3 +328,26 @@ that clause is deferred to M3, not silently claimed. (3) Golden
 fixtures cover resize/reduce/dither/identity; the adjust hook shares
 the identity implementation and gets its own fixtures when §9 ops
 land.
+
+## D19 — Preview surface: worker-owned canvas, main-owned viewport (2026-07-18)
+
+**Decision:** The preview canvas transfers control to the processing
+worker (`transferControlToOffscreen`) — the architecture's "one
+worker owns the pipeline and an OffscreenCanvas". The worker keeps an
+ImageBitmap of the last processed frame (snapshotted before the
+pixels transfer back for stats) and redraws on view/resize messages
+without reprocessing; smoothing is off, so stitches stay square. All
+viewport mathematics — fit-to-window, cursor-anchored zoom clamped to
+5%–6400%, pan clamped to keep ≥32 device px visible — lives main-side
+in pure, hermetically tested functions; the worker applies a finished
+transform blindly. Input per UI-STANDARDS canvas accessibility:
+focusable host with visible ring, `+`/`−`/`0` keys, arrow-key pan
+(Shift ×4), wheel zoom anchored at the cursor, drag pan with pointer
+capture, 44px toolbar buttons with a zoom readout. Auto-fit applies
+per new image and disengages on any manual view change.
+**Why:** Worker-side redraw makes pan/zoom independent of pipeline
+cost (the 60 fps acceptance bar); main-side maths keeps the testable
+logic out of the untestable-in-node worker context; device-pixel
+transforms keep the surface DPR-crisp.
+**Verified in-browser:** auto-fit 296%, buttons ×1.25² → 462%, `0`
+refits, focus lands on the host, crisp pixel squares at 1127%.

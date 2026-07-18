@@ -44,6 +44,25 @@ export class PipelineClient {
   }
 
   /**
+   * Hand the preview canvas to the worker (one-way: the main thread
+   * can no longer draw on it). Call once, before the first frame.
+   */
+  attachCanvas(canvas: HTMLCanvasElement): void {
+    const offscreen = canvas.transferControlToOffscreen();
+    this.worker.postMessage({ type: 'canvas', canvas: offscreen }, [offscreen]);
+  }
+
+  /** Apply a view transform (device px per stitch + offsets). */
+  setView(scale: number, tx: number, ty: number): void {
+    this.worker.postMessage({ type: 'view', scale, tx, ty });
+  }
+
+  /** Resize the preview backing store (device px). */
+  resizeSurface(width: number, height: number): void {
+    this.worker.postMessage({ type: 'resize', width, height });
+  }
+
+  /**
    * Submit a frame. If the worker is busy the frame waits as the
    * single pending slot; superseded frames are dropped silently
    * (latest-wins — there is no queue).

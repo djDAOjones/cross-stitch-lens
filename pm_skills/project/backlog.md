@@ -17,7 +17,6 @@ line passes and `check` is green. Requirements references are to
 
 ### M2 — Preview & info UI (§10 subset) (current milestone)
 
-- [ ] OffscreenCanvas preview in worker; zoom, pan, fit-to-window
 - [ ] Grid overlay: show/hide, minor/major interval, line colour/thickness (§15 subset)
 - [ ] Basic tick marks + row/column numbering, origin at 1 (§16 subset)
 - [ ] Source vs output split compare

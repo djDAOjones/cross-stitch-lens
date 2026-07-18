@@ -1,9 +1,9 @@
 /**
- * App entry point — the M1 dev shell: import an image (file picker,
- * drag-drop, or paste), process it through the worker pipeline at a
- * fixed demo config, and render the dithered result 1:1. The M2
- * milestone replaces this with the Carbon panel layout and the real
- * preview; the import plumbing and worker wiring carry forward.
+ * App entry point — M2 shell: import an image (file picker,
+ * drag-drop, or paste), process it through the worker pipeline, and
+ * view it on the worker-rendered preview surface with zoom, pan and
+ * fit-to-window. Control panels and the info panel arrive with the
+ * remaining M2 items.
  */
 
 import { installGlobalCapture, log } from './diagnostics/log.ts';
@@ -11,7 +11,7 @@ import type { PipelineConfig } from './core/pipeline/config.ts';
 import { loadDmcPalette } from './core/palette.ts';
 import { computeStats } from './core/stats.ts';
 import { decodeImageBlob, imageFiles } from './ui/import.ts';
-import { renderPixelBuffer } from './ui/render.ts';
+import { PreviewController } from './ui/preview.ts';
 import { PipelineClient } from './worker/client.ts';
 
 installGlobalCapture(window);
@@ -27,6 +27,14 @@ const DEMO_CONFIG: PipelineConfig = {
   dither: true,
   serpentine: true,
 };
+
+function toolbarButton(text: string, onClick: () => void): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.textContent = text;
+  button.addEventListener('click', onClick);
+  return button;
+}
 
 function build(app: HTMLElement): void {
   const heading = document.createElement('h1');
@@ -59,24 +67,47 @@ function build(app: HTMLElement): void {
   status.setAttribute('role', 'status');
   status.textContent = 'No image yet — the preview appears here after import.';
 
-  const figure = document.createElement('figure');
+  // Preview: toolbar (zoom in/out, fit, zoom readout) + the
+  // keyboard-operable canvas host. The canvas itself is worker-owned.
+  const previewSection = document.createElement('section');
+  previewSection.hidden = true;
+  const toolbar = document.createElement('div');
+  toolbar.className = 'toolbar';
+  const zoomLabel = document.createElement('span');
+  zoomLabel.className = 'meta';
+  zoomLabel.setAttribute('aria-label', 'Zoom level');
+  const host = document.createElement('div');
+  host.className = 'preview-host';
+  host.tabIndex = 0;
+  host.setAttribute('role', 'img');
+  host.setAttribute(
+    'aria-label',
+    'Cross-stitch preview. Zoom with plus and minus, fit with zero, pan with arrow keys.',
+  );
   const canvas = document.createElement('canvas');
-  canvas.className = 'preview';
-  const caption = document.createElement('figcaption');
-  caption.className = 'meta';
-  figure.append(canvas, caption);
-  figure.hidden = true;
+  host.append(canvas);
 
-  app.replaceChildren(heading, version, importSection, status, figure);
+  const caption = document.createElement('p');
+  caption.className = 'meta';
+  caption.id = 'design-stats';
 
   const client = new PipelineClient();
+  client.attachCanvas(canvas);
+  const preview = new PreviewController(client, host, zoomLabel);
+
+  toolbar.append(
+    toolbarButton('Zoom in', () => preview.zoomCentred(1.25)),
+    toolbarButton('Zoom out', () => preview.zoomCentred(1 / 1.25)),
+    toolbarButton('Fit', () => preview.fit()),
+    zoomLabel,
+  );
+  previewSection.append(toolbar, host, caption);
+  app.replaceChildren(heading, version, importSection, status, previewSection);
+  preview.initSurface();
+
   client.setOnResult((frame) => {
-    renderPixelBuffer(canvas, frame.buffer);
-    canvas.setAttribute(
-      'aria-label',
-      `Dithered cross-stitch preview, ${String(frame.buffer.width)} by ${String(frame.buffer.height)} stitches`,
-    );
-    figure.hidden = false;
+    previewSection.hidden = false;
+    preview.onFrame(frame.buffer.width, frame.buffer.height);
     const total = frame.timings.reduce((sum, t) => sum + t.ms, 0);
     const stats = computeStats(frame.buffer, DEMO_CONFIG.palette ?? undefined);
     caption.textContent =
@@ -88,7 +119,6 @@ function build(app: HTMLElement): void {
       timings: frame.timings,
       totalMs: Math.round(total * 100) / 100,
       colours: stats.colorCount,
-      topColour: stats.perColor[0]?.code ?? stats.perColor[0]?.hex,
     });
   });
 

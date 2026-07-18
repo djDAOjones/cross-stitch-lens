@@ -15,14 +15,7 @@ line passes and `check` is green. Requirements references are to
 
 ## Active
 
-### M1 — Engine core (TS reference, §4–§8) (current milestone)
-
-- [ ] Stats: colour count, stitch counts, per-colour counts, % usage (§11 subset)
-
-*Acceptance: import PNG → 200×200, 16-colour dithered output renders
-correctly; golden tests for every stage; save→load→save byte-identical.*
-
-### M2 — Preview & info UI (§10 subset)
+### M2 — Preview & info UI (§10 subset) (current milestone)
 
 - [ ] OffscreenCanvas preview in worker; zoom, pan, fit-to-window
 - [ ] Grid overlay: show/hide, minor/major interval, line colour/thickness (§15 subset)

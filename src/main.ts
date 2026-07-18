@@ -9,6 +9,7 @@
 import { installGlobalCapture, log } from './diagnostics/log.ts';
 import type { PipelineConfig } from './core/pipeline/config.ts';
 import { loadDmcPalette } from './core/palette.ts';
+import { computeStats } from './core/stats.ts';
 import { decodeImageBlob, imageFiles } from './ui/import.ts';
 import { renderPixelBuffer } from './ui/render.ts';
 import { PipelineClient } from './worker/client.ts';
@@ -77,11 +78,17 @@ function build(app: HTMLElement): void {
     );
     figure.hidden = false;
     const total = frame.timings.reduce((sum, t) => sum + t.ms, 0);
-    caption.textContent = `${String(frame.buffer.width)} × ${String(frame.buffer.height)} stitches · DMC palette · dithered`;
+    const stats = computeStats(frame.buffer, DEMO_CONFIG.palette ?? undefined);
+    caption.textContent =
+      `${String(stats.width)} × ${String(stats.height)} · ` +
+      `${String(stats.stitchCount)} stitches (${String(stats.emptyCount)} empty) · ` +
+      `${String(stats.colorCount)} DMC colours · dithered`;
     status.textContent = 'Preview updated.';
     log.info('pipeline', 'frame processed', {
       timings: frame.timings,
       totalMs: Math.round(total * 100) / 100,
+      colours: stats.colorCount,
+      topColour: stats.perColor[0]?.code ?? stats.perColor[0]?.hex,
     });
   });
 

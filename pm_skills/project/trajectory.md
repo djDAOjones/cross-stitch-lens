@@ -17,8 +17,12 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
-## M1 — Engine core (in progress)
+## M1 — Engine core (shipped 2026-07-18, v0.2.0)
 
+- M1-STATS (2026-07-18) — design stats (§11 subset): stitch/empty
+  partition on the D9 alpha-50% rule, distinct colours, per-colour
+  counts + % of stitches sorted by usage, thread references attached;
+  wired into the shell caption. See decision-log D18.
 - M1-IMPORT (2026-07-18) — image import (file picker, drag-drop,
   paste) through one decode path into the worker pipeline, plus the
   minimal M1 dev shell rendering the dithered 200×200 DMC preview 1:1
@@ -52,6 +56,10 @@
   contract, alpha passthrough; golden fixture + invariant suite
   (palette membership, fixed point, LUT↔exact agreement). See
   decision-log D13.
+
+Outcome: the whole engine path runs — import a PNG in the browser,
+worker-process it (resize → reduce/dither against the real DMC
+palette), render 200×200 with live stats. Acceptance caveats in D18.
 
 ## M0 — Scaffold & quality gate (shipped 2026-07-17, v0.1.0)
 

@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 62 file(s) across 9 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 64 file(s) across 9 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 10 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
@@ -23,8 +23,8 @@
 - `.windsurf` — 1 file(s)
 - `docs` — 1 file(s)
 - `scripts` — 4 file(s)
-- `src` — 25 file(s)
-- `tests` — 18 file(s)
+- `src` — 26 file(s)
+- `tests` — 19 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -82,6 +82,7 @@
 - `src/core/pipeline/index.ts` — pipeline executor: backend pick + ts fallback
 - `src/core/pipeline/reduce.ts` — reduce stage: LUT + exact paths, alpha passthrough
 - `src/core/pipeline/resize.ts` — resize stage: area-average, 4 modes, empty cells
+- `src/core/stats.ts` — design stats §11 subset: counts, %, thread refs
 - `src/core/types.ts` — core contracts: PixelBuffer, Palette, Stage, ProjectFile
 - `src/diagnostics/log.ts` — structured logger: console + ring buffer + global capture
 - `src/main.ts` — app entry: M1 dev shell — import → worker → preview
@@ -113,5 +114,6 @@
 - `tests/pipeline-hello.test.ts` — M0 acceptance: identity golden + purity invariants
 - `tests/reduce.test.ts` — reduce golden + invariants (membership, fixed point, LUT↔exact)
 - `tests/resize.test.ts` — resize golden + geometry/average/bounds invariants
+- `tests/stats.test.ts` — stats partition/sum/sort/reference invariants
 - `tests/ui-import.test.ts` — image-file filtering (pure half of import)
 - `tests/worker-executor.test.ts` — executor end-to-end, LUT cache, coalescer

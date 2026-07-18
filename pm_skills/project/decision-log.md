@@ -304,3 +304,27 @@ items, not a gap.
 *render*, so a render surface is in scope now; keeping it deliberately
 throwaway (one canvas, no zoom) avoids pre-building M2. Fixed config
 because controls without Carbon panels would be rework.
+
+## D18 — Stats subset + M1 milestone close (2026-07-18, v0.2.0)
+
+**Decision:** `computeStats` runs one pass over an OUTPUT buffer:
+stitch/empty partition at alpha ≥ 128 (the D9 50% rule; empty cells'
+colours are ignored), distinct-colour count, per-colour counts and
+percentage OF STITCHES (not cells), sorted by count with a hex
+tiebreak for determinism; thread references attach when the colour
+matches the active palette, so full-RGB mode simply carries none.
+Runs on the main thread over the returned frame for now — M2's "info
+panel bound to stats" decides whether it moves into the worker.
+Physical dimensions / thread length / skeins stay post-MVP (§11
+remainder, wish-list).
+**M1 closes at v0.2.0** (milestone MINOR bump). Verified in-browser:
+320×240 PNG → 200×150 in a 200×200 grid = 30,000 stitches + 10,000
+empty (sums to the cell count), 111 DMC colours, dithered.
+**Acceptance caveats (seed-backlog drift, for maintainer sign-off):**
+(1) "16-colour" output — MVP scope is one preset palette (DMC 533) or
+full RGB; no 16-colour palette exists by design (D9/D10). (2)
+"save→load→save byte-identical" — the project file is M3's own item;
+that clause is deferred to M3, not silently claimed. (3) Golden
+fixtures cover resize/reduce/dither/identity; the adjust hook shares
+the identity implementation and gets its own fixtures when §9 ops
+land.

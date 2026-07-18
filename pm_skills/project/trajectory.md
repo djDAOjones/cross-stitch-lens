@@ -17,8 +17,30 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
-## M2 — Preview & info UI (in progress)
+## M2 — Preview & info UI (shipped 2026-07-19, v0.3.0)
 
+- M2-CLOSE (2026-07-19) — milestone close: both acceptance legs
+  verified (controls 3.3 ms against 150 ms; worst-case preview redraw
+  0.32 ms at a 1024×1024 grid against the 16.7 ms frame budget),
+  version bumped to v0.3.0. See decision-log D25.
+
+- M2-PANELS (2026-07-18) — Carbon-style control panels: Grid /
+  Colour / Dither / Pipeline `fieldset` groups of native controls (toggle
+  switches, clamped number fields, colour picker, selects), instant
+  apply; pipeline changes reprocess a main-side master copy through
+  latest-wins, grid changes stay view-only; dither disabled in
+  full-RGB; browser-verified at 3.3 ms/frame. See decision-log D24.
+- M2-INFO (2026-07-18) — info panel bound to stats (§11): summary
+  line + colours-by-usage table (swatch, thread ref, count, %) below
+  the preview, live per frame; pure node-tested row model, top-30 cap
+  with aggregate row, en-GB counts, empty state; browser-verified.
+  See decision-log D23.
+- M2-COMPARE (2026-07-18) — source vs output split compare (§10):
+  full-RGB twin pipeline pass at grid scale (cell-aligned halves),
+  worker-cached source frame, divider + native Split slider behind a
+  Compare toggle; clip-free draw after a Chromium compositor stall
+  (no ctx.clip on the transferred OffscreenCanvas); browser-verified.
+  See decision-log D22.
 - M2-TICKS (2026-07-18) — tick marks + row/column numbering (§16
   subset): boundary-aligned numbers at the major interval, origin 1,
   top/left edges, collision-free label thinning, theme-aware text
@@ -36,6 +58,11 @@
   6400%, pan clamping), wheel/drag/keyboard (+/−/0/arrows) input,
   44px toolbar, auto-fit per new image; browser-verified. See
   decision-log D19.
+
+Outcome: the app is a usable interactive tool — import an image,
+tune colour mode / dither / pipeline order / grid styling from a
+Carbon-style panel, compare source against output, and read live
+per-colour stats, all at single-digit-millisecond latencies.
 
 ## M1 — Engine core (shipped 2026-07-18, v0.2.0)
 

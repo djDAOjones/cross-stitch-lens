@@ -34,6 +34,17 @@ export interface PipelineConfig {
   serpentine: boolean;
 }
 
+/**
+ * The full-RGB twin of a config: same geometry (preset, grid, resize
+ * mode), no colour stage. This is what the "source" half of the
+ * split compare (§10) runs — the resized source at grid size, so it
+ * aligns cell-for-cell with the reduced output and the difference
+ * shown is exactly the colour reduction.
+ */
+export function fullRgbVariant(config: PipelineConfig): PipelineConfig {
+  return { ...config, palette: null, dither: false };
+}
+
 /** Optional LUT supplier so a host (the worker) can inject its cache. */
 export type LutProvider = (palette: Palette, metric: ColorMetric) => Uint16Array;
 

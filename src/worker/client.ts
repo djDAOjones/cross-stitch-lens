@@ -68,6 +68,11 @@ export class PipelineClient {
     this.worker.postMessage({ type: 'grid', style });
   }
 
+  /** Toggle/position the source-vs-output split (0–1 of design width). */
+  setCompare(enabled: boolean, position: number): void {
+    this.worker.postMessage({ type: 'compare', enabled, position });
+  }
+
   /**
    * Submit a frame. If the worker is busy the frame waits as the
    * single pending slot; superseded frames are dropped silently

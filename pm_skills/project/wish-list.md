@@ -67,3 +67,4 @@ refer to `docs/requirements.md`.
   benchmarks.
 - Optimisation modes (accuracy vs perception vs stitchability, §6) —
   needs real stitching feedback before designing.
+- Grid size (width/height) controls UI (§4) — engine supports it since M1; panel slot next to the M2 grid controls (from: 2026-07-19 M2-PANELS)

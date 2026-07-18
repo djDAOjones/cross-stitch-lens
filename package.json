@@ -1,6 +1,6 @@
 {
   "name": "cross-stitch-lens",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Cross Stitch Lens \u2014 converts visual artwork into cross-stitch designs in real time.",

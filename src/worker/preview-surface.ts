@@ -25,6 +25,55 @@ let canvas: OffscreenCanvas | null = null;
 let bitmap: ImageBitmap | null = null;
 let view: View | null = null;
 let grid: GridStyle = DEFAULT_GRID_STYLE;
+let sourceBitmap: ImageBitmap | null = null;
+let compareOn = false;
+/** Split position as a fraction of the design width (0–1). */
+let comparePos = 0.5;
+
+/**
+ * Split compare (§10): the full-RGB source bitmap covers the left
+ * `comparePos` fraction of the design; a divider line in the tick
+ * text colour marks the seam. Both bitmaps share grid dimensions, so
+ * one transform serves both. Drawn as a source-rect drawImage rather
+ * than a clip: ctx.clip() on the transferred OffscreenCanvas stalled
+ * Chromium's compositor (page rAF stopped until compare was
+ * disabled), so no clipping in this path.
+ */
+function drawCompare(
+  ctx: OffscreenCanvasRenderingContext2D,
+  img: ImageBitmap,
+  v: View,
+): void {
+  if (sourceBitmap === null) return;
+  const srcW = comparePos * sourceBitmap.width;
+  if (srcW <= 0) return;
+  ctx.imageSmoothingEnabled = false;
+  ctx.setTransform(v.scale, 0, 0, v.scale, v.tx, v.ty);
+  ctx.drawImage(
+    sourceBitmap,
+    0,
+    0,
+    srcW,
+    sourceBitmap.height,
+    0,
+    0,
+    srcW,
+    sourceBitmap.height,
+  );
+}
+
+function drawDivider(
+  ctx: OffscreenCanvasRenderingContext2D,
+  img: ImageBitmap,
+  v: View,
+): void {
+  const w = img.width * v.scale;
+  const h = img.height * v.scale;
+  const span = snapSpan(v.tx + comparePos * w, Math.max(2, grid.majorThickness));
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = grid.tickColor;
+  ctx.fillRect(span.start, Math.round(v.ty), span.size, Math.round(h));
+}
 
 function drawGrid(
   ctx: OffscreenCanvasRenderingContext2D,
@@ -95,8 +144,10 @@ function draw(): void {
   ctx.imageSmoothingEnabled = false;
   ctx.setTransform(view.scale, 0, 0, view.scale, view.tx, view.ty);
   ctx.drawImage(bitmap, 0, 0);
+  if (compareOn) drawCompare(ctx, bitmap, view);
   drawGrid(ctx, bitmap, view);
   if (grid.show && grid.ticks) drawTicks(ctx, bitmap, view);
+  if (compareOn && sourceBitmap !== null) drawDivider(ctx, bitmap, view);
 }
 
 /** Adopt the transferred surface. */
@@ -121,6 +172,20 @@ export function setView(next: View): void {
 /** Restyle the grid overlay and redraw. */
 export function setGridStyle(next: GridStyle): void {
   grid = next;
+  draw();
+}
+
+/** Replace the full-RGB source bitmap (closes the previous one). */
+export function setSourceFrame(next: ImageBitmap | null): void {
+  sourceBitmap?.close();
+  sourceBitmap = next;
+  draw();
+}
+
+/** Toggle/position the split compare and redraw. */
+export function setCompare(enabled: boolean, position: number): void {
+  compareOn = enabled;
+  comparePos = Math.min(1, Math.max(0, position));
   draw();
 }
 

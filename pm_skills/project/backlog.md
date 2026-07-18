@@ -15,16 +15,7 @@ line passes and `check` is green. Requirements references are to
 
 ## Active
 
-### M2 — Preview & info UI (§10 subset) (current milestone)
-
-- [ ] Source vs output split compare
-- [ ] Info panel bound to stats (live update)
-- [ ] Carbon-based control panels for grid, palette/colour mode, dither on/off, pipeline order preset
-
-*Acceptance: 60 fps pan/zoom at 1024×1024; controls update preview
-< 150 ms end-to-end at 200×200.*
-
-### M3 — Exports (§12–§14, §18–§19 subsets)
+### M3 — Exports (§12–§14, §18–§19 subsets) (current milestone)
 
 - [ ] Clean PNG at 1 px/stitch; transparent or solid background
 - [ ] Enlarged PNG, integer nearest-neighbour scale

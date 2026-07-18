@@ -1,16 +1,25 @@
 /**
  * App entry point — M2 shell: import an image (file picker,
  * drag-drop, or paste), process it through the worker pipeline, and
- * view it on the worker-rendered preview surface with zoom, pan and
- * fit-to-window. Control panels and the info panel arrive with the
- * remaining M2 items.
+ * view it on the worker-rendered preview surface with zoom, pan,
+ * fit, grid overlay, split compare, a live stats panel, and a
+ * Carbon-style side panel of pipeline controls (UI-STANDARDS →
+ * "Layout model").
  */
 
 import { installGlobalCapture, log } from './diagnostics/log.ts';
 import type { PipelineConfig } from './core/pipeline/config.ts';
 import { loadDmcPalette } from './core/palette.ts';
 import { computeStats } from './core/stats.ts';
+import type { PixelBuffer } from './core/types.ts';
+import {
+  colorField,
+  numberField,
+  selectField,
+  toggleField,
+} from './ui/controls.ts';
 import { decodeImageBlob, imageFiles } from './ui/import.ts';
+import { createInfoPanel } from './ui/info-panel.ts';
 import { PreviewController } from './ui/preview.ts';
 import { PipelineClient } from './worker/client.ts';
 import { DEFAULT_GRID_STYLE, type GridStyle } from './worker/grid.ts';
@@ -18,16 +27,7 @@ import { DEFAULT_GRID_STYLE, type GridStyle } from './worker/grid.ts';
 installGlobalCapture(window);
 log.info('boot', `Cross Stitch Lens ${__APP_VERSION__} (${__BUILD_ID__})`);
 
-/** Fixed demo config until the M2 control panels land (D17). */
-const DEMO_CONFIG: PipelineConfig = {
-  preset: 'resize-first',
-  grid: { width: 200, height: 200 },
-  resizeMode: 'contain',
-  palette: loadDmcPalette(),
-  metric: 'lab',
-  dither: true,
-  serpentine: true,
-};
+const DMC = loadDmcPalette();
 
 function toolbarButton(text: string, onClick: () => void): HTMLButtonElement {
   const button = document.createElement('button');
@@ -44,6 +44,20 @@ function build(app: HTMLElement): void {
   const version = document.createElement('p');
   version.className = 'meta';
   version.textContent = `${__APP_VERSION__} · build ${__BUILD_ID__}`;
+
+  // Current pipeline config: controls mutate it and reprocess the
+  // retained master image. Grid-style changes bypass this — they are
+  // view-only worker messages, no pipeline run.
+  const config: PipelineConfig = {
+    preset: 'resize-first',
+    grid: { width: 200, height: 200 },
+    resizeMode: 'contain',
+    palette: DMC,
+    metric: 'lab',
+    dither: true,
+    serpentine: true,
+  };
+  let masterImage: PixelBuffer | null = null;
 
   // Import controls: labelled native file input; drop and paste are
   // alternatives to it, never the only route (UI-STANDARDS).
@@ -68,8 +82,8 @@ function build(app: HTMLElement): void {
   status.setAttribute('role', 'status');
   status.textContent = 'No image yet — the preview appears here after import.';
 
-  // Preview: toolbar (zoom in/out, fit, zoom readout) + the
-  // keyboard-operable canvas host. The canvas itself is worker-owned.
+  // Preview: toolbar (zoom, fit, compare) + the keyboard-operable
+  // canvas host. The canvas itself is worker-owned.
   const previewSection = document.createElement('section');
   previewSection.hidden = true;
   const toolbar = document.createElement('div');
@@ -88,21 +102,30 @@ function build(app: HTMLElement): void {
   const canvas = document.createElement('canvas');
   host.append(canvas);
 
-  const caption = document.createElement('p');
-  caption.className = 'meta';
-  caption.id = 'design-stats';
+  const info = createInfoPanel(document);
 
   const client = new PipelineClient();
   client.attachCanvas(canvas);
   const preview = new PreviewController(client, host, zoomLabel);
 
+  function reprocess(): void {
+    if (masterImage === null) return;
+    status.textContent = 'Processing…';
+    client.submit(
+      {
+        width: masterImage.width,
+        height: masterImage.height,
+        data: new Uint8ClampedArray(masterImage.data),
+      },
+      config,
+    );
+  }
+
   // Grid overlay: style state lives here (CSS px); thicknesses and
   // the tick font are scaled to device px at send time so the worker
   // stays DPR-blind, matching the view-transform contract. The tick
   // numbering uses the page's computed text colour so it stays
-  // legible in both schemes (the worker is theme-blind). Interim
-  // show/hide toggle — the full Carbon grid panel is a separate M2
-  // item.
+  // legible in both schemes (the worker is theme-blind).
   const gridStyle: GridStyle = { ...DEFAULT_GRID_STYLE };
   function sendGridStyle(): void {
     const dpr = window.devicePixelRatio;
@@ -117,34 +140,190 @@ function build(app: HTMLElement): void {
   window
     .matchMedia('(prefers-color-scheme: dark)')
     .addEventListener('change', sendGridStyle);
-  const gridToggle = toolbarButton('Grid', () => {
-    gridStyle.show = !gridStyle.show;
-    gridToggle.setAttribute('aria-pressed', String(gridStyle.show));
+  sendGridStyle();
+
+  // Control panel: Grid / Colour / Dither / Pipeline groups
+  // (UI-STANDARDS layout model). Controls apply immediately — no
+  // Apply buttons (§5.4).
+  const controls = document.createElement('aside');
+  controls.className = 'controls';
+  controls.setAttribute('aria-label', 'Controls');
+
+  const gridGroup = document.createElement('fieldset');
+  const gridLegend = document.createElement('legend');
+  gridLegend.textContent = 'Grid';
+  const gridShow = toggleField(document, 'grid-show', 'Show grid', gridStyle.show, (on) => {
+    gridStyle.show = on;
     sendGridStyle();
   });
-  gridToggle.setAttribute('aria-pressed', String(gridStyle.show));
-  sendGridStyle();
+  const gridTicks = toggleField(
+    document,
+    'grid-ticks',
+    'Row and column numbers',
+    gridStyle.ticks,
+    (on) => {
+      gridStyle.ticks = on;
+      sendGridStyle();
+    },
+  );
+  gridGroup.append(
+    gridLegend,
+    gridShow.element,
+    gridTicks.element,
+    numberField(
+      document,
+      'grid-minor',
+      'Minor interval',
+      { min: 1, max: 50, value: gridStyle.minorInterval },
+      (value) => {
+        gridStyle.minorInterval = value;
+        sendGridStyle();
+      },
+    ),
+    numberField(
+      document,
+      'grid-major',
+      'Major interval',
+      { min: 0, max: 100, value: gridStyle.majorInterval, helper: '0 hides major lines' },
+      (value) => {
+        gridStyle.majorInterval = value;
+        sendGridStyle();
+      },
+    ),
+    colorField(document, 'grid-color', 'Line colour', gridStyle.color, (value) => {
+      gridStyle.color = value;
+      sendGridStyle();
+    }),
+    numberField(
+      document,
+      'grid-minor-thickness',
+      'Minor thickness',
+      { min: 1, max: 4, value: gridStyle.minorThickness },
+      (value) => {
+        gridStyle.minorThickness = value;
+        sendGridStyle();
+      },
+    ),
+    numberField(
+      document,
+      'grid-major-thickness',
+      'Major thickness',
+      { min: 1, max: 6, value: gridStyle.majorThickness },
+      (value) => {
+        gridStyle.majorThickness = value;
+        sendGridStyle();
+      },
+    ),
+  );
+
+  const colourGroup = document.createElement('fieldset');
+  const colourLegend = document.createElement('legend');
+  colourLegend.textContent = 'Colour';
+  const ditherToggle = toggleField(document, 'dither-on', 'Dithering', config.dither, (on) => {
+    config.dither = on;
+    reprocess();
+  });
+  colourGroup.append(
+    colourLegend,
+    selectField(
+      document,
+      'colour-mode',
+      'Colour mode',
+      [
+        ['dmc', 'DMC palette'],
+        ['rgb', 'Full RGB'],
+      ],
+      'dmc',
+      (mode) => {
+        config.palette = mode === 'dmc' ? DMC : null;
+        // Dithering only applies when reducing to a palette.
+        ditherToggle.input.disabled = mode === 'rgb';
+        reprocess();
+      },
+    ),
+  );
+
+  const ditherGroup = document.createElement('fieldset');
+  const ditherLegend = document.createElement('legend');
+  ditherLegend.textContent = 'Dither';
+  ditherGroup.append(ditherLegend, ditherToggle.element);
+
+  const pipelineGroup = document.createElement('fieldset');
+  const pipelineLegend = document.createElement('legend');
+  pipelineLegend.textContent = 'Pipeline';
+  pipelineGroup.append(
+    pipelineLegend,
+    selectField(
+      document,
+      'order-preset',
+      'Order preset',
+      [
+        ['resize-first', 'Resize first'],
+        ['reduce-first', 'Reduce first'],
+      ],
+      config.preset,
+      (preset) => {
+        config.preset = preset as PipelineConfig['preset'];
+        reprocess();
+      },
+    ),
+  );
+
+  controls.append(gridGroup, colourGroup, ditherGroup, pipelineGroup);
+
+  // Split compare (§10): source (full-RGB resize) left of the
+  // divider, reduced output right. Native range slider = keyboard
+  // and pointer operable for free; shown only while comparing.
+  let compareOn = false;
+  const splitWrap = document.createElement('span');
+  splitWrap.className = 'split-control';
+  splitWrap.hidden = true;
+  const splitLabel = document.createElement('label');
+  splitLabel.textContent = 'Split';
+  splitLabel.htmlFor = 'split-position';
+  const splitRange = document.createElement('input');
+  splitRange.type = 'range';
+  splitRange.id = 'split-position';
+  splitRange.min = '0';
+  splitRange.max = '100';
+  splitRange.value = '50';
+  splitRange.addEventListener('input', () => {
+    client.setCompare(compareOn, Number(splitRange.value) / 100);
+  });
+  splitWrap.append(splitLabel, splitRange);
+  const compareToggle = toolbarButton('Compare', () => {
+    compareOn = !compareOn;
+    compareToggle.setAttribute('aria-pressed', String(compareOn));
+    splitWrap.hidden = !compareOn;
+    client.setCompare(compareOn, Number(splitRange.value) / 100);
+  });
+  compareToggle.setAttribute('aria-pressed', 'false');
 
   toolbar.append(
     toolbarButton('Zoom in', () => preview.zoomCentred(1.25)),
     toolbarButton('Zoom out', () => preview.zoomCentred(1 / 1.25)),
     toolbarButton('Fit', () => preview.fit()),
-    gridToggle,
+    compareToggle,
+    splitWrap,
     zoomLabel,
   );
-  previewSection.append(toolbar, host, caption);
-  app.replaceChildren(heading, version, importSection, status, previewSection);
+  previewSection.append(toolbar, host, info.element);
+
+  const content = document.createElement('div');
+  content.className = 'content';
+  content.append(importSection, status, previewSection);
+  const layout = document.createElement('div');
+  layout.className = 'app-layout';
+  layout.append(controls, content);
+  app.replaceChildren(heading, version, layout);
   preview.initSurface();
 
   client.setOnResult((frame) => {
     previewSection.hidden = false;
     preview.onFrame(frame.buffer.width, frame.buffer.height);
     const total = frame.timings.reduce((sum, t) => sum + t.ms, 0);
-    const stats = computeStats(frame.buffer, DEMO_CONFIG.palette ?? undefined);
-    caption.textContent =
-      `${String(stats.width)} × ${String(stats.height)} · ` +
-      `${String(stats.stitchCount)} stitches (${String(stats.emptyCount)} empty) · ` +
-      `${String(stats.colorCount)} DMC colours · dithered`;
+    const stats = computeStats(frame.buffer, config.palette ?? undefined);
+    info.update(stats);
     status.textContent = 'Preview updated.';
     log.info('pipeline', 'frame processed', {
       timings: frame.timings,
@@ -161,7 +340,8 @@ function build(app: HTMLElement): void {
         width: buffer.width,
         height: buffer.height,
       });
-      client.submit(buffer, DEMO_CONFIG);
+      masterImage = buffer;
+      reprocess();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       status.textContent = `Could not read that image (${message}). Try a PNG or JPEG.`;

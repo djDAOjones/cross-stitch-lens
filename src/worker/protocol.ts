@@ -47,12 +47,21 @@ export interface GridStyleRequest {
   style: GridStyle;
 }
 
+/** Main → worker: toggle/position the source-vs-output split (§10). */
+export interface CompareRequest {
+  type: 'compare';
+  enabled: boolean;
+  /** Split position as a fraction of the design width (0–1). */
+  position: number;
+}
+
 export type WorkerRequest =
   | ProcessRequest
   | CanvasRequest
   | ViewRequest
   | SurfaceResizeRequest
-  | GridStyleRequest;
+  | GridStyleRequest
+  | CompareRequest;
 
 /** Per-stage wall-clock timing (diagnostics / future debug panel). */
 export interface StageTiming {

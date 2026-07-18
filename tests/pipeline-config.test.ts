@@ -5,7 +5,11 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { buildStages, type PipelineConfig } from '../src/core/pipeline/config.ts';
+import {
+  buildStages,
+  fullRgbVariant,
+  type PipelineConfig,
+} from '../src/core/pipeline/config.ts';
 import type { Palette } from '../src/core/types.ts';
 
 const PALETTE: Palette = {
@@ -61,6 +65,15 @@ describe('pipeline config builder', () => {
       'adjust',
       'resize',
     ]);
+  });
+
+  it('full-RGB variant keeps geometry and drops every colour stage', () => {
+    const variant = fullRgbVariant(config({ dither: true, resizeMode: 'contain' }));
+    expect(variant.palette).toBeNull();
+    expect(variant.grid).toEqual({ width: 8, height: 8 });
+    expect(variant.resizeMode).toBe('contain');
+    expect(variant.preset).toBe('resize-first');
+    expect(names(variant)).toEqual(['adjust', 'resize']);
   });
 
   it('injects the provided LUT into the reduce params', () => {

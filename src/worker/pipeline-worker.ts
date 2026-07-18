@@ -10,11 +10,14 @@
  * reprocessing.
  */
 
+import { fullRgbVariant, type PipelineConfig } from '../core/pipeline/config.ts';
 import { executeRequest } from './execute.ts';
 import {
   resizeSurface,
+  setCompare,
   setFrame,
   setGridStyle,
+  setSourceFrame,
   setSurface,
   setView,
 } from './preview-surface.ts';
@@ -27,6 +30,39 @@ interface WorkerScope {
 }
 
 const scope = self as unknown as WorkerScope;
+
+/**
+ * Last source frame, kept for the split compare: stages are pure, so
+ * the request buffer survives processing and a late compare-enable
+ * can build its full-RGB bitmap without a main-thread round-trip.
+ */
+let lastFrame: {
+  width: number;
+  height: number;
+  pixels: ArrayBuffer;
+  config: PipelineConfig;
+} | null = null;
+let compareEnabled = false;
+
+/** Run the full-RGB twin of the last frame and hand it to the surface. */
+function refreshSourceFrame(): void {
+  if (lastFrame === null) return;
+  const response = executeRequest({
+    type: 'process',
+    id: -1,
+    width: lastFrame.width,
+    height: lastFrame.height,
+    pixels: lastFrame.pixels,
+    config: fullRgbVariant(lastFrame.config),
+  });
+  if (response.type !== 'result') return;
+  const image = new ImageData(
+    new Uint8ClampedArray(response.pixels),
+    response.width,
+    response.height,
+  );
+  void createImageBitmap(image).then(setSourceFrame);
+}
 
 scope.onmessage = (event: MessageEvent): void => {
   const request = event.data as WorkerRequest;
@@ -43,8 +79,22 @@ scope.onmessage = (event: MessageEvent): void => {
     case 'grid':
       setGridStyle(request.style);
       break;
+    case 'compare': {
+      const enabling = request.enabled && !compareEnabled;
+      compareEnabled = request.enabled;
+      setCompare(request.enabled, request.position);
+      if (enabling) refreshSourceFrame();
+      break;
+    }
     case 'process': {
+      lastFrame = {
+        width: request.width,
+        height: request.height,
+        pixels: request.pixels,
+        config: request.config,
+      };
       const response = executeRequest(request);
+      if (compareEnabled) refreshSourceFrame();
       if (response.type === 'result') {
         const image = new ImageData(
           new Uint8ClampedArray(response.pixels),

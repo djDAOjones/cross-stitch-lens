@@ -402,3 +402,107 @@ cross-stitch chart convention; the thinning rule keeps the default
 legible at any zoom with zero controls.
 **Verified in-browser:** full 10-step numbering at 286% fit, thinned
 to 20s at 146%, white labels in dark scheme, console clean.
+
+## D22 — Split compare: full-RGB twin pass, clip-free draw (2026-07-18)
+
+**Decision:** The split compare (§10) shows the *resized, unreduced*
+source — `fullRgbVariant(config)` strips the palette, keeping preset,
+grid and resize mode — not the native-resolution original. Both
+halves then share grid dimensions and one transform, aligning
+cell-for-cell, so the difference on screen is exactly what colour
+reduction does. The worker caches the last source frame (stages are
+pure, the request buffer survives processing) and reruns the cheap
+full-RGB pass on frame arrival while comparing, or once on a late
+compare-enable — no main-thread round-trip. Split position crosses
+the protocol as a design-width fraction; UI is a Compare toggle plus
+a native labelled range slider (keyboard-operable for free), shown
+only while comparing. **Hard-won constraint: no `ctx.clip()` on the
+transferred OffscreenCanvas.** The first implementation clipped the
+source half; enabling compare then stalled Chromium's compositor —
+page rAF stopped entirely (screenshots/scroll hung; worker and main
+JS stayed alive) and recovered the instant compare was disabled,
+reproduced in two tabs. The draw now uses a source-rect `drawImage`
+(no clip, no save/restore) and the stall is gone.
+**Why:** Comparing at grid scale isolates the reduction decision the
+user is actually tuning; the twin-config approach reuses the whole
+executor rather than growing a second render path.
+**Verified in-browser:** smooth source left / dithered DMC right at
+50%, divider tracks the slider to 25%, rAF probe healthy with
+compare on, console clean.
+
+## D23 — Info panel: pure row model, capped table, content swatches (2026-07-18)
+
+**Decision:** The stats info panel (§11 bound to the preview) is a
+summary line plus a colours-by-usage table docked below the canvas,
+re-rendered per processed frame. The module splits per the project's
+test convention: `buildRows` / `formatPercent` / `summaryText` are
+pure and node-tested; `createInfoPanel` is the thin DOM half,
+verified in-browser. The table caps at the top 30 colours with an
+aggregated "+N more colours · M stitches" row — full-RGB mode can
+emit thousands of distinct colours, and an unbounded per-frame table
+rebuild would be both unreadable and slow. Swatches are decorative
+(`aria-hidden`) beside the text label (thread "code name", else hex);
+the hex always rides the row tooltip (colour-fidelity rule); swatch
+backgrounds are content colours, never UI tokens. No `aria-live` on
+the table — per-frame announcements would be noise; the existing
+status line covers state changes. Counts use a fixed en-GB locale for
+deterministic tests; singular/plural handled ("1 colour").
+**Why:** Binding the already-computed M1 stats to a real panel closes
+the §11 display loop before the Carbon panels land; the cap keeps the
+live-update path frame-rate-safe by construction.
+**Verified in-browser:** 95-colour gradient shows 30 DMC rows + "+65
+more · 4,804 stitches" (sums check), black square updates live to
+"1 colour", empty state renders after reload, console clean.
+
+## D24 — Control panels: native fields, Carbon-productive, master-copy reprocess (2026-07-18)
+
+**Decision:** The M2 control panel is a side `aside` of four
+`fieldset` groups — Grid / Colour / Dither / Pipeline (UI-STANDARDS layout
+model) — built from native form controls styled to Carbon's
+productive language in project code (no Carbon packages, per the
+hard rule): switch-role checkboxes drawn as toggle tracks with
+On/Off state text (never colour-only), labelled number inputs whose
+values snap back in-range via a pure tested `clampInt`, a native
+colour picker, and selects for colour mode (DMC / full RGB) and the
+§7 order preset. Controls apply immediately — no Apply buttons
+(§5.4). Pipeline-affecting changes reprocess by cloning a main-side
+**master copy** of the decoded image into the existing latest-wins
+submit path — chosen over a worker-side reconfigure message because
+it reuses coalescing wholesale at the cost of one buffer copy per
+change (~ms at MVP sizes; profile before optimising). Grid-style
+changes stay view-only worker messages (no pipeline run). The dither
+toggle disables in full-RGB mode (disable impossible actions).
+"Grid" here means the §15 overlay styling; grid *dimensions* UI (§4)
+is parked to the wish-list, not silently dropped.
+**Why:** Native-first controls meet the accessibility bar for free
+and the Carbon look is CSS; the master-copy path keeps the worker
+protocol small while M4 live capture will naturally replace it with
+a frame stream.
+**Verified in-browser:** full RGB → 1,410 hex colours + disabled
+dither; DMC without dithering → 45; reduce-first → 1,034 (quantise-then-
+resize blending, the §7 comparison working); pipeline 3.3 ms
+(< 150 ms acceptance); major-interval 5 redraws instantly; zero
+uncaught errors.
+
+## D25 — M2 milestone close: acceptance evidence, v0.3.0 (2026-07-19)
+
+**Decision:** M2 closes with both acceptance legs verified and the
+product version bumped to v0.3.0 (milestone = MINOR, per
+DEV-INFRASTRUCTURE → "Version management"; lock synced via
+`npm install --package-lock-only`, 0 advisories). Evidence:
+controls-to-preview latency **3.3 ms** end-to-end at 200×200 (bar:
+150 ms), measured through the real pipeline via the timings the
+worker already reports. The 60 fps pan/zoom leg was measured by
+driving the **real `preview-surface` draw code** (dev-server module
+import, main-thread instance of the same module) with a 1024×1024
+bitmap on a 2800×1800 device-pixel surface: worst case **0.32
+ms/full redraw** (deep zoom, dense minor grid + ticks), 0.07 ms at
+fit — ~52× inside the 16.7 ms frame budget. Caveat recorded: the
+probe times the draw path, not the worker's message loop; message
+overhead is micro-scale and the headroom absorbs it. README status
+rewritten (was still "M0 not yet landed"); M3 (exports) becomes the
+current milestone.
+**Why:** The one unmeasured acceptance leg needed real-code evidence
+before calling the milestone done; a probe through the actual module
+beats a synthetic canvas benchmark and needed no instrumentation
+code.

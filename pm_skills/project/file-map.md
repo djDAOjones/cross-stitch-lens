@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 69 file(s) across 9 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 73 file(s) across 9 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 10 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
@@ -23,8 +23,8 @@
 - `.windsurf` — 1 file(s)
 - `docs` — 1 file(s)
 - `scripts` — 4 file(s)
-- `src` — 29 file(s)
-- `tests` — 21 file(s)
+- `src` — 31 file(s)
+- `tests` — 23 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -76,7 +76,7 @@
 - `src/core/palettes/dmc-anchor-map.csv` — owner-supplied DMC/Anchor map (protected)
 - `src/core/palettes/dmc.json` — generated DMC palette, 533 colours (protected)
 - `src/core/pipeline/adjust.ts` — adjust hook stage: identity until §9 ops land
-- `src/core/pipeline/config.ts` — PipelineConfig → stage list; §7 order presets
+- `src/core/pipeline/config.ts` — PipelineConfig → stage list; §7 presets; full-RGB twin
 - `src/core/pipeline/dither.ts` — Floyd–Steinberg dither: exact errors, serpentine
 - `src/core/pipeline/identity.ts` — identity stage: hello-world purity demo
 - `src/core/pipeline/index.ts` — pipeline executor: backend pick + ts fallback
@@ -85,8 +85,10 @@
 - `src/core/stats.ts` — design stats §11 subset: counts, %, thread refs
 - `src/core/types.ts` — core contracts: PixelBuffer, Palette, Stage, ProjectFile
 - `src/diagnostics/log.ts` — structured logger: console + ring buffer + global capture
-- `src/main.ts` — app entry: M1 dev shell — import → worker → preview
+- `src/main.ts` — app entry: M2 shell — import, control panel, preview, info panel
+- `src/ui/controls.ts` — Carbon-style field builders: toggle/number/colour/select + clampInt
 - `src/ui/import.ts` — import routes → decode: filter (pure) + blob→PixelBuffer
+- `src/ui/info-panel.ts` — stats info panel: pure row model + thin DOM half
 - `src/ui/preview.ts` — preview controller: toolbar, wheel/drag/keys → worker
 - `src/ui/viewport.ts` — pure viewport maths: fit, anchored zoom, pan clamp
 - `src/vite-env.d.ts` — ambient types for injected version/build globals
@@ -95,13 +97,14 @@
 - `src/worker/execute.ts` — timed frame execution; errors become responses
 - `src/worker/grid.ts` — pure grid/tick geometry: line placement, auto-hide, label thinning
 - `src/worker/lut-cache.ts` — one LUT per palette+metric, built on miss
-- `src/worker/pipeline-worker.ts` — worker entry: two-line postMessage shell
-- `src/worker/preview-surface.ts` — worker: OffscreenCanvas + bitmap + view/grid/tick redraw
+- `src/worker/pipeline-worker.ts` — worker entry: postMessage routing + compare source cache
+- `src/worker/preview-surface.ts` — worker: OffscreenCanvas; view/grid/tick/compare redraw (no clip)
 - `src/worker/protocol.ts` — main↔worker message types, transferred buffers
 
 ## tests
 
 - `tests/color-convert.test.ts` — golden: Lab reference values + round-trips
+- `tests/controls.test.ts` — number-input clamping (pure half of controls)
 - `tests/dither.test.ts` — dither golden + determinism/mean/serpentine invariants
 - `tests/golden/dither-8x8.expected.json` — golden fixture: dither expected, TS-generated (protected)
 - `tests/golden/dither-8x8.input.json` — golden fixture: dither input (protected)
@@ -113,6 +116,7 @@
 - `tests/golden/resize-9x5-contain-4x4.input.json` — golden fixture: resize input (protected)
 - `tests/grid.test.ts` — grid-line placement, tick numbering/thinning, auto-hide rule
 - `tests/helpers/golden.ts` — golden harness: fixture load + tolerance compare
+- `tests/info-panel.test.ts` — row cap/overflow, thread-vs-hex labels, percent format
 - `tests/palette.test.ts` — DMC load invariants (533, unique, hex↔rgb)
 - `tests/pipeline-config.test.ts` — preset order, full-RGB, dither-replaces-reduce
 - `tests/pipeline-hello.test.ts` — M0 acceptance: identity golden + purity invariants

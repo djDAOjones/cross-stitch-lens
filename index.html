@@ -4,6 +4,61 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cross Stitch Lens</title>
+    <style>
+      /* Minimal M1 dev-shell styling; the M2 Carbon layout replaces
+        this. Text colours meet the 7:1 AAA contrast bar in both
+        schemes. */
+      :root {
+        color-scheme: light dark;
+        --text: #161616;
+        --bg: #ffffff;
+        --border: #8d8d8d;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --text: #f4f4f4;
+          --bg: #161616;
+          --border: #6f6f6f;
+        }
+      }
+      body {
+        margin: 0;
+        padding: 2rem;
+        font-family: system-ui, sans-serif;
+        line-height: 1.5;
+        color: var(--text);
+        background: var(--bg);
+      }
+      main {
+        max-width: 40rem;
+        margin: 0 auto;
+      }
+      .meta {
+        font-size: 0.875rem;
+      }
+      label {
+        display: block;
+        margin-bottom: 0.5rem;
+      }
+      input[type='file'] {
+        min-height: 44px;
+        padding: 0.5rem 0;
+      }
+      :focus-visible {
+        outline: 3px solid currentColor;
+        outline-offset: 2px;
+      }
+      figure {
+        margin: 1.5rem 0 0;
+      }
+      /* Preview pixels are content: pixelated upscale, no filters. */
+      canvas.preview {
+        display: block;
+        width: min(100%, 600px);
+        image-rendering: pixelated;
+        border: 1px solid var(--border);
+      }
+    </style>
   </head>
   <body>
     <main id="app"></main>

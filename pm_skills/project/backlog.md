@@ -17,7 +17,6 @@ line passes and `check` is green. Requirements references are to
 
 ### M1 — Engine core (TS reference, §4–§8) (current milestone)
 
-- [ ] Image import (file picker, drag-drop, clipboard paste)
 - [ ] Stats: colour count, stitch counts, per-colour counts, % usage (§11 subset)
 
 *Acceptance: import PNG → 200×200, 16-colour dithered output renders

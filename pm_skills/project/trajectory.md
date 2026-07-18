@@ -19,6 +19,11 @@
 
 ## M1 — Engine core (in progress)
 
+- M1-IMPORT (2026-07-18) — image import (file picker, drag-drop,
+  paste) through one decode path into the worker pipeline, plus the
+  minimal M1 dev shell rendering the dithered 200×200 DMC preview 1:1
+  (pixelated upscale); browser-verified end-to-end, closing the D16
+  worker manual gate. See decision-log D17.
 - M1-WORKER (2026-07-18) — worker pipeline executor: serialisable
   PipelineConfig with both §7 order presets (order is data), adjust
   hook stage (identity until §9 ops), worker-side LUT cache, exact

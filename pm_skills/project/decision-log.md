@@ -281,3 +281,26 @@ browser pass is named a manual-gate item for M2's preview UI.
 **LUT cache key** is palette name + entry count: sufficient while
 palettes are built-in presets; user-defined palettes (post-MVP) must
 revisit it.
+
+## D17 — Image import + minimal M1 dev shell (2026-07-18)
+
+**Decision:** All three import routes (§3: file picker, drag-drop,
+clipboard paste) funnel one decode path — `createImageBitmap` →
+`OffscreenCanvas` → `PixelBuffer` — into the worker client at a fixed
+demo config (200×200 contain, DMC, Lab, serpentine dither,
+resize-first). The shell renders the result 1:1 with CSS pixelated
+upscale; thread colours stay unfiltered content. The pure half
+(file-list filtering) is hermetically tested; decode/render were
+verified in the running browser, which also exercised the worker
+round-trip with transferred buffers — the D16 manual-gate item, now
+closed.
+**Documented deviation (UI-STANDARDS):** this is the minimal M1 dev
+shell — plain semantic HTML honouring the AAA basics (visible label,
+7:1 text contrast both schemes, focus rings, ≥44px file-input target,
+role="status" live region, drop/paste never the only route). The
+Carbon panel layout, controls, and real preview are M2's own backlog
+items, not a gap.
+**Why:** M1's acceptance line requires the dithered output to
+*render*, so a render surface is in scope now; keeping it deliberately
+throwaway (one canvas, no zoom) avoids pre-building M2. Fixed config
+because controls without Carbon panels would be rework.

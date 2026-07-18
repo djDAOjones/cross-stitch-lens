@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 59 file(s) across 9 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 62 file(s) across 9 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 10 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
@@ -23,8 +23,8 @@
 - `.windsurf` — 1 file(s)
 - `docs` — 1 file(s)
 - `scripts` — 4 file(s)
-- `src` — 23 file(s)
-- `tests` — 17 file(s)
+- `src` — 25 file(s)
+- `tests` — 18 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -35,7 +35,7 @@
 - `UI-STANDARDS.md` — Carbon-first UI + WCAG 2.2 AAA rulebook
 - `cspell.json` — spelling dictionary + ignore paths for the docs gate
 - `eslint.config.js` — flat config; core-isolation + no-console rules
-- `index.html` — Vite entry document; mounts `src/main.ts` at `#app`
+- `index.html` — Vite entry; dev-shell styles (AAA contrast, pixelated preview)
 - `package.json` — scripts (dev/build/test/check) + dev dependencies
 - `tsconfig.json` — strict TS config (ES2022, bundler resolution)
 - `vite.config.ts` — Vite + Vitest config; injects version/build identity
@@ -84,7 +84,9 @@
 - `src/core/pipeline/resize.ts` — resize stage: area-average, 4 modes, empty cells
 - `src/core/types.ts` — core contracts: PixelBuffer, Palette, Stage, ProjectFile
 - `src/diagnostics/log.ts` — structured logger: console + ring buffer + global capture
-- `src/main.ts` — app entry: M0 shell, version display, logger boot
+- `src/main.ts` — app entry: M1 dev shell — import → worker → preview
+- `src/ui/import.ts` — import routes → decode: filter (pure) + blob→PixelBuffer
+- `src/ui/render.ts` — 1:1 canvas render; pixels are content, no filters
 - `src/vite-env.d.ts` — ambient types for injected version/build globals
 - `src/worker/client.ts` — main-thread client: Worker + coalescing + transfer
 - `src/worker/coalesce.ts` — latest-wins scheduler (no queue), drop counter
@@ -111,4 +113,5 @@
 - `tests/pipeline-hello.test.ts` — M0 acceptance: identity golden + purity invariants
 - `tests/reduce.test.ts` — reduce golden + invariants (membership, fixed point, LUT↔exact)
 - `tests/resize.test.ts` — resize golden + geometry/average/bounds invariants
+- `tests/ui-import.test.ts` — image-file filtering (pure half of import)
 - `tests/worker-executor.test.ts` — executor end-to-end, LUT cache, coalescer

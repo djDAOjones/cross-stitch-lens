@@ -13,6 +13,7 @@ import { computeStats } from './core/stats.ts';
 import { decodeImageBlob, imageFiles } from './ui/import.ts';
 import { PreviewController } from './ui/preview.ts';
 import { PipelineClient } from './worker/client.ts';
+import { DEFAULT_GRID_STYLE, type GridStyle } from './worker/grid.ts';
 
 installGlobalCapture(window);
 log.info('boot', `Cross Stitch Lens ${__APP_VERSION__} (${__BUILD_ID__})`);
@@ -95,10 +96,40 @@ function build(app: HTMLElement): void {
   client.attachCanvas(canvas);
   const preview = new PreviewController(client, host, zoomLabel);
 
+  // Grid overlay: style state lives here (CSS px); thicknesses and
+  // the tick font are scaled to device px at send time so the worker
+  // stays DPR-blind, matching the view-transform contract. The tick
+  // numbering uses the page's computed text colour so it stays
+  // legible in both schemes (the worker is theme-blind). Interim
+  // show/hide toggle — the full Carbon grid panel is a separate M2
+  // item.
+  const gridStyle: GridStyle = { ...DEFAULT_GRID_STYLE };
+  function sendGridStyle(): void {
+    const dpr = window.devicePixelRatio;
+    client.setGridStyle({
+      ...gridStyle,
+      minorThickness: gridStyle.minorThickness * dpr,
+      majorThickness: gridStyle.majorThickness * dpr,
+      tickFontPx: Math.round(gridStyle.tickFontPx * dpr),
+      tickColor: getComputedStyle(document.body).color,
+    });
+  }
+  window
+    .matchMedia('(prefers-color-scheme: dark)')
+    .addEventListener('change', sendGridStyle);
+  const gridToggle = toolbarButton('Grid', () => {
+    gridStyle.show = !gridStyle.show;
+    gridToggle.setAttribute('aria-pressed', String(gridStyle.show));
+    sendGridStyle();
+  });
+  gridToggle.setAttribute('aria-pressed', String(gridStyle.show));
+  sendGridStyle();
+
   toolbar.append(
     toolbarButton('Zoom in', () => preview.zoomCentred(1.25)),
     toolbarButton('Zoom out', () => preview.zoomCentred(1 / 1.25)),
     toolbarButton('Fit', () => preview.fit()),
+    gridToggle,
     zoomLabel,
   );
   previewSection.append(toolbar, host, caption);

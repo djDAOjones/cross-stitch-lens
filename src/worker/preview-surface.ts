@@ -1,9 +1,19 @@
 /**
  * Worker-side preview surface: owns the transferred OffscreenCanvas,
- * the ImageBitmap of the last processed frame, and the current view
- * transform. Redraws whenever any of the three changes. Pixels stay
- * crisp (no smoothing) — stitches are squares, not blurs.
+ * the ImageBitmap of the last processed frame, the current view
+ * transform, and the grid overlay style. Redraws whenever any of them
+ * changes. Pixels stay crisp (no smoothing) — stitches are squares,
+ * not blurs. The grid draws above the stitches (§15 default) in
+ * device space so line thickness is zoom-independent.
  */
+
+import {
+  DEFAULT_GRID_STYLE,
+  gridLines,
+  snapSpan,
+  tickLabels,
+  type GridStyle,
+} from './grid.ts';
 
 interface View {
   scale: number;
@@ -14,6 +24,66 @@ interface View {
 let canvas: OffscreenCanvas | null = null;
 let bitmap: ImageBitmap | null = null;
 let view: View | null = null;
+let grid: GridStyle = DEFAULT_GRID_STYLE;
+
+function drawGrid(
+  ctx: OffscreenCanvasRenderingContext2D,
+  img: ImageBitmap,
+  v: View,
+): void {
+  const lines = [
+    { axis: 'x' as const, all: gridLines(img.width, grid, v.scale) },
+    { axis: 'y' as const, all: gridLines(img.height, grid, v.scale) },
+  ];
+  if (lines.every((l) => l.all.length === 0)) return;
+  const w = img.width * v.scale;
+  const h = img.height * v.scale;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = grid.color;
+  for (const { axis, all } of lines) {
+    for (const line of all) {
+      const thickness = line.major ? grid.majorThickness : grid.minorThickness;
+      const origin = axis === 'x' ? v.tx : v.ty;
+      const span = snapSpan(origin + line.offset, thickness);
+      if (axis === 'x') ctx.fillRect(span.start, Math.round(v.ty), span.size, Math.round(h));
+      else ctx.fillRect(Math.round(v.tx), span.start, Math.round(w), span.size);
+    }
+  }
+}
+
+function drawTicks(
+  ctx: OffscreenCanvasRenderingContext2D,
+  img: ImageBitmap,
+  v: View,
+): void {
+  const cols = tickLabels(img.width, grid.majorInterval, v.scale);
+  const rows = tickLabels(img.height, grid.majorInterval, v.scale);
+  if (cols.length === 0 && rows.length === 0) return;
+  const tickLen = Math.round(grid.tickFontPx / 2);
+  const gap = Math.round(grid.tickFontPx / 3);
+  const top = Math.round(v.ty);
+  const left = Math.round(v.tx);
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.font = `${String(grid.tickFontPx)}px system-ui, sans-serif`;
+  for (const { offset, label } of cols) {
+    const span = snapSpan(v.tx + offset, grid.minorThickness);
+    ctx.fillStyle = grid.color;
+    ctx.fillRect(span.start, top - tickLen, span.size, tickLen);
+    ctx.fillStyle = grid.tickColor;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(label, v.tx + offset, top - tickLen - gap);
+  }
+  for (const { offset, label } of rows) {
+    const span = snapSpan(v.ty + offset, grid.minorThickness);
+    ctx.fillStyle = grid.color;
+    ctx.fillRect(left - tickLen, span.start, tickLen, span.size);
+    ctx.fillStyle = grid.tickColor;
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, left - tickLen - gap, v.ty + offset);
+  }
+}
 
 function draw(): void {
   if (canvas === null) return;
@@ -25,6 +95,8 @@ function draw(): void {
   ctx.imageSmoothingEnabled = false;
   ctx.setTransform(view.scale, 0, 0, view.scale, view.tx, view.ty);
   ctx.drawImage(bitmap, 0, 0);
+  drawGrid(ctx, bitmap, view);
+  if (grid.show && grid.ticks) drawTicks(ctx, bitmap, view);
 }
 
 /** Adopt the transferred surface. */
@@ -43,6 +115,12 @@ export function setFrame(next: ImageBitmap): void {
 /** Apply a view transform from the main thread. */
 export function setView(next: View): void {
   view = next;
+  draw();
+}
+
+/** Restyle the grid overlay and redraw. */
+export function setGridStyle(next: GridStyle): void {
+  grid = next;
   draw();
 }
 

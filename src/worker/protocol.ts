@@ -5,6 +5,7 @@
  */
 
 import type { PipelineConfig } from '../core/pipeline/config.ts';
+import type { GridStyle } from './grid.ts';
 
 /** Main → worker: process one frame under a config. */
 export interface ProcessRequest {
@@ -40,11 +41,18 @@ export interface SurfaceResizeRequest {
   height: number;
 }
 
+/** Main → worker: restyle the grid overlay (thicknesses in device px). */
+export interface GridStyleRequest {
+  type: 'grid';
+  style: GridStyle;
+}
+
 export type WorkerRequest =
   | ProcessRequest
   | CanvasRequest
   | ViewRequest
-  | SurfaceResizeRequest;
+  | SurfaceResizeRequest
+  | GridStyleRequest;
 
 /** Per-stage wall-clock timing (diagnostics / future debug panel). */
 export interface StageTiming {

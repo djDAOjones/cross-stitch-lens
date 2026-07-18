@@ -19,6 +19,17 @@
 
 ## M2 — Preview & info UI (in progress)
 
+- M2-TICKS (2026-07-18) — tick marks + row/column numbering (§16
+  subset): boundary-aligned numbers at the major interval, origin 1,
+  top/left edges, collision-free label thinning, theme-aware text
+  colour, fit margin reserving room; rides the GridStyle message and
+  the Grid toggle; browser-verified. See decision-log D21.
+- M2-GRID (2026-07-18) — grid overlay (§15 subset): pure line
+  geometry with minor/major intervals, device-px snapping and a
+  spacing-based auto-hide, drawn worker-side above the stitches at
+  zoom-independent thickness; GridStyle over the protocol (DPR-blind
+  worker), interim toolbar toggle; browser-verified. See decision-log
+  D20.
 - M2-PREVIEW (2026-07-18) — worker-rendered preview surface: canvas
   control transferred to the worker (bitmap redraw on view change, no
   reprocessing), pure viewport maths (fit, cursor-anchored zoom 5%–

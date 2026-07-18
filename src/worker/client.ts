@@ -9,6 +9,7 @@ import { log } from '../diagnostics/log.ts';
 import type { PipelineConfig } from '../core/pipeline/config.ts';
 import type { PixelBuffer } from '../core/types.ts';
 import { Coalescer } from './coalesce.ts';
+import type { GridStyle } from './grid.ts';
 import type { ProcessRequest, StageTiming, WorkerResponse } from './protocol.ts';
 
 /** A processed frame delivered to the UI. */
@@ -60,6 +61,11 @@ export class PipelineClient {
   /** Resize the preview backing store (device px). */
   resizeSurface(width: number, height: number): void {
     this.worker.postMessage({ type: 'resize', width, height });
+  }
+
+  /** Restyle the grid overlay (thicknesses already in device px). */
+  setGridStyle(style: GridStyle): void {
+    this.worker.postMessage({ type: 'grid', style });
   }
 
   /**

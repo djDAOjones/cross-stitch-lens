@@ -351,3 +351,54 @@ logic out of the untestable-in-node worker context; device-pixel
 transforms keep the surface DPR-crisp.
 **Verified in-browser:** auto-fit 296%, buttons ×1.25² → 462%, `0`
 refits, focus lands on the host, crisp pixel squares at 1127%.
+
+## D20 — Grid overlay: pure geometry, worker draw, legibility auto-hide (2026-07-18)
+
+**Decision:** The grid overlay (§15 subset) renders worker-side in
+`preview-surface.ts`, above the stitches, in device space — line
+thickness is zoom-independent, matching chart convention. Geometry
+lives in a pure module (`src/worker/grid.ts`, D19 pattern: testable
+maths + a blind drawing shell): lines on cell boundaries at minor/major
+intervals, both outer edges always present, minor never duplicating
+major, spans snapped to whole device pixels. A line class auto-hides
+when its spacing falls under 4× its thickness, so a zoomed-out preview
+never smears into a solid wash. `GridStyle` (show, minor/major
+interval, one line colour, per-class thickness) crosses the protocol as
+a `grid` message with thicknesses pre-scaled to device px by the main
+thread — the worker stays DPR-blind, same contract as the view
+transform. Interim UI is a toolbar "Grid" toggle (aria-pressed +
+inverted-fill on state); the full Carbon grid panel and the remaining
+§15 controls (opacity, border, above/below, dashed, empty-cell
+visibility) stay with their own backlog items. GridStyle joins
+`ProjectFile` when M3 save/load lands.
+**Why:** Device-space drawing keeps grid redraw on the existing
+view-message path (no reprocessing, 60 fps bar intact); the legibility
+rule makes the default grid safe at any zoom without a control.
+**Verified in-browser:** majors-only at 216%, minors appear at 422%,
+toggle hides/shows instantly, console clean.
+
+## D21 — Tick marks + numbering: boundary labels, origin 1, thinning (2026-07-18)
+
+**Decision:** Basic §16 subset: outward tick marks with numbers on
+the top and left edges only, aligned to grid boundaries at the major
+interval, counting whole stitches with origin at 1 (the boundary
+after stitch 10 reads "10"; the 0 edge is never labelled). Geometry
+joins the pure grid module: `labelInterval` doubles the major
+interval until neighbouring labels sit ≥ 48 device px apart, so
+zoomed-out numbering thins (10 → 20 → 40…) instead of colliding.
+Ticks ride the existing `GridStyle` message and the interim Grid
+toggle — one switch for all chart furniture until the Carbon panel
+splits controls. Label text uses the page's computed text colour,
+sent from main and re-sent on a `prefers-color-scheme` change (the
+worker stays theme-blind); tick strokes reuse the grid line colour.
+`fitView` gained an optional margin (24 CSS px × DPR at the call
+site) reserving room for the furniture — it changes only the scale;
+centring symmetry leaves the offsets untouched, so existing viewport
+behaviour is preserved. The rest of §16 (per-edge placement, fonts,
+directions, centre alignment, presets) stays parked; tick settings
+join `ProjectFile` with M3 save/load alongside GridStyle.
+**Why:** Boundary-aligned numbering at the major interval is the
+cross-stitch chart convention; the thinning rule keeps the default
+legible at any zoom with zero controls.
+**Verified in-browser:** full 10-step numbering at 286% fit, thinned
+to 20s at 146%, white labels in dark scheme, console clean.

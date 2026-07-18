@@ -29,6 +29,15 @@ describe('fitView', () => {
     const view = fitView(2, 2, 10000, 10000);
     expect(view.scale).toBe(MAX_SCALE);
   });
+
+  it('reserves the margin via scale while staying centred', () => {
+    // 100×100 into 800×800 with 40px margin: scale (800−80)/100 = 7.2,
+    // image 720×720, still centred in the full view.
+    const view = fitView(100, 100, 800, 800, 40);
+    expect(view.scale).toBe(7.2);
+    expect(view.tx).toBe(40);
+    expect(view.ty).toBe(40);
+  });
 });
 
 describe('zoomAt', () => {

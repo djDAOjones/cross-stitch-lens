@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 67 file(s) across 9 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 69 file(s) across 9 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 10 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
@@ -23,8 +23,8 @@
 - `.windsurf` — 1 file(s)
 - `docs` — 1 file(s)
 - `scripts` — 4 file(s)
-- `src` — 28 file(s)
-- `tests` — 20 file(s)
+- `src` — 29 file(s)
+- `tests` — 21 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -93,9 +93,10 @@
 - `src/worker/client.ts` — main-thread client: Worker + coalescing + transfer
 - `src/worker/coalesce.ts` — latest-wins scheduler (no queue), drop counter
 - `src/worker/execute.ts` — timed frame execution; errors become responses
+- `src/worker/grid.ts` — pure grid/tick geometry: line placement, auto-hide, label thinning
 - `src/worker/lut-cache.ts` — one LUT per palette+metric, built on miss
 - `src/worker/pipeline-worker.ts` — worker entry: two-line postMessage shell
-- `src/worker/preview-surface.ts` — worker: OffscreenCanvas + bitmap + view redraw
+- `src/worker/preview-surface.ts` — worker: OffscreenCanvas + bitmap + view/grid/tick redraw
 - `src/worker/protocol.ts` — main↔worker message types, transferred buffers
 
 ## tests
@@ -110,6 +111,7 @@
 - `tests/golden/reduce-2x2.input.json` — golden fixture: reduce input, hand-derived (protected)
 - `tests/golden/resize-9x5-contain-4x4.expected.json` — golden fixture: resize expected, TS-generated (protected)
 - `tests/golden/resize-9x5-contain-4x4.input.json` — golden fixture: resize input (protected)
+- `tests/grid.test.ts` — grid-line placement, tick numbering/thinning, auto-hide rule
 - `tests/helpers/golden.ts` — golden harness: fixture load + tolerance compare
 - `tests/palette.test.ts` — DMC load invariants (533, unique, hex↔rgb)
 - `tests/pipeline-config.test.ts` — preset order, full-RGB, dither-replaces-reduce

@@ -19,6 +19,8 @@ import {
 const ZOOM_STEP = 1.25;
 /** Arrow-key pan step in device px (Shift multiplies by 4). */
 const PAN_STEP = 40;
+/** CSS px reserved around a fitted design for the tick numbering. */
+const FIT_MARGIN = 24;
 
 export class PreviewController {
   private readonly client: PipelineClient;
@@ -76,7 +78,7 @@ export class PreviewController {
     if (this.imgW === 0) return;
     const { w, h } = this.surfaceSize();
     this.autoFit = true;
-    this.setView(fitView(this.imgW, this.imgH, w, h));
+    this.setView(fitView(this.imgW, this.imgH, w, h, FIT_MARGIN * window.devicePixelRatio));
   }
 
   /** Zoom by a factor anchored at the view centre (buttons / keys). */

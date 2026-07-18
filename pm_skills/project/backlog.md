@@ -17,8 +17,6 @@ line passes and `check` is green. Requirements references are to
 
 ### M2 — Preview & info UI (§10 subset) (current milestone)
 
-- [ ] Grid overlay: show/hide, minor/major interval, line colour/thickness (§15 subset)
-- [ ] Basic tick marks + row/column numbering, origin at 1 (§16 subset)
 - [ ] Source vs output split compare
 - [ ] Info panel bound to stats (live update)
 - [ ] Carbon-based control panels for grid, palette/colour mode, dither on/off, pipeline order preset

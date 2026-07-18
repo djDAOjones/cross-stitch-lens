@@ -58,6 +58,13 @@
         border: 1px solid var(--border);
         cursor: pointer;
       }
+      /* Toggle-button on state: inverted fill keeps the 7:1 bar in
+        both schemes and is not colour-only (the fill is a shape cue
+        alongside aria-pressed). */
+      button[aria-pressed='true'] {
+        color: var(--bg);
+        background: var(--text);
+      }
       .toolbar {
         display: flex;
         align-items: center;

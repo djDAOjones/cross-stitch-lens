@@ -20,14 +20,22 @@ export const MAX_SCALE = 64;
 /** Image must stay visible by at least this many device px per axis. */
 const VISIBLE_MARGIN = 32;
 
-/** Scale-and-centre `img` inside `view` (letterboxed, never cropped). */
+/**
+ * Scale-and-centre `img` inside `view` (letterboxed, never cropped).
+ * `margin` reserves device px on every edge — room for the tick
+ * numbering drawn outside the design — and only affects the scale:
+ * centring is symmetric, so the offsets fall out unchanged.
+ */
 export function fitView(
   imgW: number,
   imgH: number,
   viewW: number,
   viewH: number,
+  margin = 0,
 ): ViewState {
-  const scale = clampScale(Math.min(viewW / imgW, viewH / imgH));
+  const availW = Math.max(1, viewW - 2 * margin);
+  const availH = Math.max(1, viewH - 2 * margin);
+  const scale = clampScale(Math.min(availW / imgW, availH / imgH));
   return {
     scale,
     tx: (viewW - imgW * scale) / 2,

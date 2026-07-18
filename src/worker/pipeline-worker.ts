@@ -14,6 +14,7 @@ import { executeRequest } from './execute.ts';
 import {
   resizeSurface,
   setFrame,
+  setGridStyle,
   setSurface,
   setView,
 } from './preview-surface.ts';
@@ -38,6 +39,9 @@ scope.onmessage = (event: MessageEvent): void => {
       break;
     case 'resize':
       resizeSurface(request.width, request.height);
+      break;
+    case 'grid':
+      setGridStyle(request.style);
       break;
     case 'process': {
       const response = executeRequest(request);

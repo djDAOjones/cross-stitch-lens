@@ -19,13 +19,15 @@ WebGPU as profiled drop-in backends.
 
 Pre-MVP. Work is organised into milestones **M0–M5** in
 [`pm_skills/project/backlog.md`](pm_skills/project/backlog.md).
-**M0–M2 have shipped (v0.3.0)**: the quality-gated scaffold, the full
+**M0–M3 have shipped (v0.4.0)**: the quality-gated scaffold, the full
 TypeScript engine core (resize, CIELAB palette reduction, Floyd–
-Steinberg dithering, stats), still-image import, and the preview UI —
+Steinberg dithering, stats), still-image import, the preview UI —
 worker-rendered canvas with zoom/pan/fit, grid overlay with row/column
 numbering, source-vs-output split compare, a live stats panel, and
-Carbon-style control panels. Next up: **M3 exports** (PNGs, PDF chart,
-project save/load).
+Carbon-style control panels — and the export suite: clean/enlarged
+PNGs, a styled PNG chart, a single-page PDF chart, and project
+save/load as versioned JSON. Next up: **M4 live capture**
+(`getDisplayMedia`, crop rectangle, frame pump).
 
 ## How to run
 

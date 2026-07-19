@@ -17,8 +17,13 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
-## M3 — Exports (in progress)
+## M3 — Exports (shipped 2026-07-19, v0.4.0)
 
+- M3-CLOSE (2026-07-19) — milestone close: clean-PNG acceptance leg
+  green (export re-runs the pipeline and encodes the engine buffer;
+  pixel-exact, tested); the printed-A4 legibility leg **waived at
+  close** by maintainer decision — see decision-log D31. v0.4.0
+  bumped and tagged.
 - M3-PROJECT (2026-07-19) — project save/load as JSON schema v1 (§20
   subset): settings-only (pipeline config with palette by name,
   grid/chart style, export prefs), canonical serialisation for the
@@ -40,6 +45,11 @@
   background; a dedicated worker export message re-runs the pipeline at
   full quality (never the preview frame); pure scale/flatten helpers
   unit-tested, browser-verified pixel-exact. See decision-log D27.
+
+Outcome: a captured design leaves the app on paper and disk — clean
+and enlarged PNGs, a styled chart PNG, a single-page A4/Letter PDF
+with thread key, and a versioned JSON project that round-trips
+byte-identically. Print-legibility check waived at close (D31).
 
 ## M2 — Preview & info UI (shipped 2026-07-19, v0.3.0)
 

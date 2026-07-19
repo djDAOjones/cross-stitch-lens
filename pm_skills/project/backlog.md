@@ -15,17 +15,7 @@ line passes and `check` is green. Requirements references are to
 
 ## Active
 
-### M3 — Exports (§12–§14, §18–§19 subsets) (current milestone)
-
-- [ ] M3-CLOSE Milestone close [maintainer] (2026-07-19)
-  Intent: verify the acceptance line and cut v0.4.0.
-  Done when: printed A4 PDF of a 100×100 design confirmed legible and
-  stitchable (manual print check — see D29); version bumped and tagged.
-
-*Acceptance: printed A4 PDF of a 100×100 design is legible and
-stitchable; clean PNG pixel-equal to engine output buffer.*
-
-### M4 — Live capture (§3, §22)
+### M4 — Live capture (§3, §22) (current milestone)
 
 - [ ] `getDisplayMedia` screen/window session with permission UX
 - [ ] User-drawn crop rectangle over live thumbnail; move/resize/lock

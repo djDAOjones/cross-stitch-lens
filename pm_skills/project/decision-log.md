@@ -501,3 +501,22 @@ the control bounds.
 human-readable and lets future preset palettes resolve by name;
 canonical serialisation makes the byte-identical guarantee structural
 rather than accidental.
+
+## D31 — M3 milestone close: print check waived, v0.4.0 (2026-07-19)
+
+**Decision:** M3 closed at v0.4.0 with one acceptance leg verified
+and one waived. The clean-PNG leg — export pixel-equal to the engine
+output buffer — holds structurally (the worker export message re-runs
+the pipeline at full quality and the encoder writes that buffer
+directly, D27) and is covered by the export test suites (39 export +
+project tests). The printed-A4 legibility leg (D29's named manual
+check) was **waived at close by the maintainer** — recorded here as
+the residual risk of the milestone: chart print legibility at 100×100
+has not been physically verified. If a first real print shows a
+legibility problem, treat it as an M3 defect (PATCH), not new scope.
+Also tagged the missing `v0.3.0` on the M2 close commit (`fc2294c`) —
+the tag ritual was skipped at that close; DEV-INFRASTRUCTURE requires
+every product version to carry its git tag.
+**Why:** The maintainer chose shipping the milestone over blocking on
+a printer; naming the waived check here keeps the acceptance line
+honest rather than silently green.

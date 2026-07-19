@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 98 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 102 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 10 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
@@ -24,8 +24,8 @@
 - `crates` — 4 file(s)
 - `docs` — 1 file(s)
 - `scripts` — 5 file(s)
-- `src` — 41 file(s)
-- `tests` — 33 file(s)
+- `src` — 44 file(s)
+- `tests` — 34 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -78,6 +78,9 @@
 
 ## src
 
+- `src/backends/wasm/dither.ts` — wasm dither adapter: init + StageFn wrap + backends.wasm registration
+- `src/backends/wasm/stitch-engine-wasm.d.ts` — ambient types for the stitch-engine-wasm alias (tsc without pkg)
+- `src/backends/wasm/stub.ts` — alias stand-in when the pkg is unbuilt; never called at runtime
 - `src/capture/crop.ts` — pure crop-rect geometry: clamp/move/resize, hit-test, stitch span
 - `src/capture/dirty.ts` — dirty-frame skip: 64×64 sampler, FNV-1a hash, region signature
 - `src/capture/draft.ts` — draft-quality governor: pure hysteresis over frame times
@@ -154,4 +157,5 @@
 - `tests/stats.test.ts` — stats partition/sum/sort/reference invariants
 - `tests/ui-import.test.ts` — image-file filtering (pure half of import)
 - `tests/viewport.test.ts` — viewport maths exact cases (fit/anchor/clamp)
+- `tests/wasm-dither.test.ts` — wasm↔TS bit-exact parity: golden fixture, metrics/scan modes, full DMC Lab
 - `tests/worker-executor.test.ts` — executor end-to-end, LUT cache, coalescer

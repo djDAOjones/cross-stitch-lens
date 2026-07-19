@@ -10,6 +10,7 @@
  * reprocessing.
  */
 
+import { registerWasmDither } from '../backends/wasm/dither.ts';
 import { fullRgbVariant, type PipelineConfig } from '../core/pipeline/config.ts';
 import { executeRequest } from './execute.ts';
 import {
@@ -30,6 +31,11 @@ interface WorkerScope {
 }
 
 const scope = self as unknown as WorkerScope;
+
+// Fire-and-forget: frames arriving before the wasm module is ready
+// (or when it is unavailable) run on the ts backend via the
+// executor's fallback — registration is additive, never blocking.
+void registerWasmDither();
 
 /**
  * Last source frame, kept for the split compare: stages are pure, so

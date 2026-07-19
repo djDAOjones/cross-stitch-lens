@@ -19,6 +19,11 @@
 
 ## M5 — WASM + WebGPU backends (in progress)
 
+- M5-WASM (2026-07-19) — wasm dither backend registered (worker
+  startup, assignment onto `ditherStage.backends`, ts fallback);
+  alias/stub build-time feature detection; **bit-exact parity proven**
+  vs TS at tolerance 0 incl. full DMC under CIELAB (6 golden tests).
+  See decision-log D40.
 - M5-CRATE (2026-07-19) — `stitch-engine` Rust crate: bit-exact
   Floyd–Steinberg port (f32/f64 JS semantics, libm math, simd128
   codegen), 6 Rust tests; wasm-pack build + toolchain-aware

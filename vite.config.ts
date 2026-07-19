@@ -1,5 +1,7 @@
 /// <reference types="vitest/config" />
 import { execSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 
 import pkg from './package.json' with { type: 'json' };
@@ -21,10 +23,30 @@ function buildId(): string {
   return `v${pkg.version}+${date}.${sha}`;
 }
 
+/**
+ * The wasm-pack output, aliased so dev/build/test succeed without the
+ * Rust toolchain: when the pkg is missing the alias points at a stub
+ * and `__WASM_AVAILABLE__` turns the adapter into a logged no-op
+ * (DEV-INFRASTRUCTURE.md → "Build system").
+ */
+const WASM_PKG = fileURLToPath(
+  new URL('./crates/stitch-engine/pkg/stitch_engine.js', import.meta.url),
+);
+const WASM_AVAILABLE = existsSync(WASM_PKG);
+const WASM_STUB = fileURLToPath(
+  new URL('./src/backends/wasm/stub.ts', import.meta.url),
+);
+
 export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(`v${pkg.version}`),
     __BUILD_ID__: JSON.stringify(buildId()),
+    __WASM_AVAILABLE__: JSON.stringify(WASM_AVAILABLE),
+  },
+  resolve: {
+    alias: {
+      'stitch-engine-wasm': WASM_AVAILABLE ? WASM_PKG : WASM_STUB,
+    },
   },
   server: {
     // Honour a harness-assigned port (parallel sessions); default 5173.

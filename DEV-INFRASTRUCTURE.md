@@ -130,15 +130,16 @@ native DevTools console.
 
 | Script | Command | Purpose |
 | --- | --- | --- |
-| `check` | `tsc --noEmit && eslint . && vitest run && check:wasm && vite build` | The quality gate — run before calling a task done |
+| `check` | `tsc --noEmit && eslint . && check:wasm && vitest run && vite build` | The quality gate — run before calling a task done |
 | `check:wasm` | `node scripts/check-wasm.mjs` | Rust crate tests + wasm-pack build; skips (warns) without the toolchain locally, hard-fails in CI |
 | `lint:fix` | `eslint . --fix` | Auto-fix (separate from the gate; never the CI pass/fail) |
 
 - **Runs, in order:** type check (`tsc --noEmit`), ESLint (incl. the
-  `src/core/` isolation rule), Vitest (incl. the golden suite), the
-  Rust crate step (`cargo test` + `wasm-pack build`, toolchain-aware),
-  and a production `vite build`. Plus the Markdown lint + link-check
-  baseline on project memory.
+  `src/core/` isolation rule), the Rust crate step (`cargo test` +
+  `wasm-pack build`, toolchain-aware — **before** Vitest so the
+  wasm-parity suite has a fresh pkg), Vitest (incl. the golden and
+  wasm-parity suites), and a production `vite build`. Plus the
+  Markdown lint + link-check baseline on project memory.
 - **Non-mutating:** `check` only reports; fixes live in `lint:fix` and
   format-on-save. Formatting is never a gate failure.
 - **CI parity:** the CI workflow runs `npm run check`, so local green =
@@ -188,8 +189,11 @@ no backend** — the surface is small. The baseline is therefore Tier 0:
 - **Source maps:** enabled in dev and production.
 - **Minification:** production builds only.
 - **WASM:** `crates/stitch-engine/pkg` (from `build:wasm`) is imported
-  by `src/backends/wasm`; guarded by feature detection so builds
-  without the Rust toolchain still succeed.
+  by `src/backends/wasm` through the `stitch-engine-wasm` alias
+  (vite.config.ts): when the pkg is missing the alias resolves to
+  `src/backends/wasm/stub.ts` and the `__WASM_AVAILABLE__` define makes
+  registration a logged no-op, so dev/build/test succeed without the
+  Rust toolchain and the pipeline stays on the TS backend.
 - **Static files:** assets under `public` and `src` are handled by Vite.
 
 The output directory `dist` is **read-only** — never hand-edit it; it

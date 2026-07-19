@@ -709,3 +709,33 @@ machines without Rust while CI stays the backstop.
 missing toolchain (user chose install) and the Cargo dependency
 approval (user approved both). Clippy/rustfmt in the gate parked to
 the wish-list.
+
+## D40 — WASM dither registered: alias/stub feature detection, parity proven (2026-07-19)
+
+**Decision:** The wasm dither backend registers by assignment —
+`src/backends/wasm/dither.ts` sets `ditherStage.backends.wasm` after
+async module init — so core stays untouched and the executor's
+`?? backends.ts` fallback covers not-yet-ready and unavailable alike.
+The worker fires registration at startup (never blocking a frame).
+Feature detection is build-time: a `stitch-engine-wasm` Vite alias
+resolves to the wasm-pack pkg when built, else to a committed stub,
+with a `__WASM_AVAILABLE__` define gating the adapter — verified by
+building with the pkg renamed away (tsc, vite build, and the test
+suite all pass; the parity suite skips visibly). Ambient types for the
+alias keep `tsc` independent of the generated pkg. The gate reordered
+(`check:wasm` before `check:test`) so Vitest always sees a fresh pkg.
+**Parity result: bit-exact.** Six golden tests match wasm against TS
+at tolerance 0 — the committed 8×8 fixture, both metrics × both scan
+modes, and 64×64 seeded noise against the full 533-colour DMC palette
+under CIELAB and RGB — confirming D39's libm/fdlibm bet on
+`pow`/`cbrt` parity with V8. Registration routes nothing by itself:
+stage instances still default to `ts`; routing arrives with the
+automatic-selection item.
+**Why:** Assignment-registration keeps the core dependency arrow
+one-way (backends import core, never the reverse); the alias/stub
+pattern makes the "builds succeed without the toolchain" promise real
+instead of aspirational.
+**Run notes (auto-jazz via /next):** no gates stopped at; assumptions —
+per-call palette flattening (cache deferred to the selection item),
+node tests init the module from disk bytes via an optional adapter
+parameter.

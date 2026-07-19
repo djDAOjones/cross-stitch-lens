@@ -19,6 +19,11 @@
 
 ## M4 — Live capture (in progress)
 
+- M4-PUMP (2026-07-19) — frame pump (§22 subset): live updates via
+  `requestVideoFrameCallback` (rAF fallback) with a pure latest-wins
+  gate at the grab — one readback+pipeline run in flight, newest
+  frame wins; quiet per-frame path, pump failure degrades to manual
+  Capture frame; starts/stops with the session. See decision-log D34.
 - M4-CROP (2026-07-19) — user-drawn crop rectangle over the live
   thumbnail (§3 subset): pure geometry model (clamp/move/resize/
   hit-test) in source pixels, draw/move/resize by pointer, arrow-key

@@ -18,6 +18,7 @@ import {
   type CropRect,
   type Handle,
 } from './capture/crop.ts';
+import { PumpGate, startFramePump } from './capture/pump.ts';
 import {
   captureErrorMessage,
   startCapture,
@@ -815,6 +816,9 @@ function build(app: HTMLElement): void {
   preview.initSurface();
 
   client.setOnResult((frame) => {
+    // Pump continuation: the returned result frees the gate; grab
+    // again if a newer video frame arrived meanwhile.
+    if (stopPump !== null && pumpGate.grabDone()) void pumpGrab();
     previewSection.hidden = false;
     exportButton.disabled = false;
     chartButton.disabled = false;
@@ -854,6 +858,8 @@ function build(app: HTMLElement): void {
   let capture: CaptureSession | null = null;
   let cropRect: CropRect | null = null;
   let cropLocked = false;
+  const pumpGate = new PumpGate();
+  let stopPump: (() => void) | null = null;
 
   function captureBounds(): { width: number; height: number } | null {
     if (capture === null || capture.video.videoWidth === 0) return null;
@@ -879,6 +885,12 @@ function build(app: HTMLElement): void {
   }
 
   function endCaptureUi(message: string): void {
+    if (stopPump !== null) {
+      log.info('capture', 'frame pump stopped', { dropped: pumpGate.droppedCount });
+      stopPump();
+      stopPump = null;
+    }
+    pumpGate.reset();
     capture?.video.remove();
     capture = null;
     cropRect = null;
@@ -907,6 +919,31 @@ function build(app: HTMLElement): void {
       const message = error instanceof Error ? error.message : String(error);
       status.textContent = `Could not capture a frame (${message}).`;
       log.error('capture', 'frame grab failed', { message });
+    }
+  }
+
+  // Live pump grab: quiet (no per-frame status or logging — the ring
+  // buffer must not fill with routine ticks). On failure the pump
+  // stops but the session stays usable via Capture frame.
+  async function pumpGrab(): Promise<void> {
+    if (capture === null) {
+      pumpGate.reset();
+      return;
+    }
+    try {
+      const buffer = await capture.grabFrame(cropRect ?? undefined);
+      masterImage = buffer;
+      client.submit(
+        { width: buffer.width, height: buffer.height, data: new Uint8ClampedArray(buffer.data) },
+        config,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      stopPump?.();
+      stopPump = null;
+      pumpGate.reset();
+      status.textContent = `Live update stopped (${message}). Capture is still running — use Capture frame.`;
+      log.error('capture', 'pump grab failed', { message });
     }
   }
 
@@ -946,6 +983,12 @@ function build(app: HTMLElement): void {
       });
       log.info('capture', 'session started', { label: session.label });
       await grabCaptureFrame();
+      // Live updates: one grab in flight, newest frame wins — the
+      // same policy the worker applies to processing.
+      stopPump = startFramePump(session.video, () => {
+        if (pumpGate.frameArrived()) void pumpGrab();
+      });
+      log.info('capture', 'frame pump started');
     } catch (error) {
       const message = captureErrorMessage(error);
       status.textContent = message;

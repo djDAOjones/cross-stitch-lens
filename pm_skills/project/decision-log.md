@@ -566,3 +566,25 @@ Outside-region dimming (box-shadow) is a thumbnail affordance only —
 the preview canvas stays unfiltered (colour-fidelity rule). Auto-jazz
 assumptions: full frame selected on session start; stitches readout
 assumes contain mapping; frame pump stays out of scope.
+
+## D34 — Frame pump: rVFC ticks, latest-wins gate at the grab (2026-07-19)
+
+**Decision:** Live updates ship as `src/capture/pump.ts`: a pure
+`PumpGate` (busy/pending/dropped — the worker `Coalescer` policy,
+payload-free) plus `startFramePump`, a `requestVideoFrameCallback`
+subscription with a `requestAnimationFrame` fallback. The gate sits
+**at the grab**, not just at processing: at most one
+grab-readback+pipeline run is in flight; new video frames only set a
+pending flag, and the worker's result callback triggers the next grab.
+Pump grabs are quiet (no per-frame status or ring-buffer logging);
+grab failure stops the pump but keeps the session usable via Capture
+frame. The pump stops with the session and its drop count is logged.
+**Why:** `getImageData` readback is the expensive main-thread step, so
+gating only at the worker (which already coalesces) would still pay a
+readback per 60 Hz tick; gating the grab holds main-thread cost to the
+pipeline's own rate. A shared `Coalescer<T>` reuse was rejected — its
+payload slot is meaningless when "pending" always means "the newest
+frame". Auto-jazz assumptions: pump starts automatically with the
+session (pause/resume is the remaining M4 item); worker results from
+manual reprocesses may advance the gate early — harmless, latest-wins
+holds; per-frame logging omitted by design.

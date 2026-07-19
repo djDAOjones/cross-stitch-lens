@@ -15,14 +15,15 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 93 file(s) across 9 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 98 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 10 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
 - `.github` — 1 file(s)
 - `.windsurf` — 1 file(s)
+- `crates` — 4 file(s)
 - `docs` — 1 file(s)
-- `scripts` — 4 file(s)
+- `scripts` — 5 file(s)
 - `src` — 41 file(s)
 - `tests` — 33 file(s)
 <!-- /file-map-index -->
@@ -56,6 +57,13 @@
 
 - `.windsurf/workflows/next.md` — `/next` wiring to the pm-skills loop
 
+## crates
+
+- `crates/stitch-engine/.cargo/config.toml` — simd128 rustflags for the wasm target only
+- `crates/stitch-engine/Cargo.lock` — pinned crate dependency graph (committed, CI cache key)
+- `crates/stitch-engine/Cargo.toml` — crate manifest: wasm-bindgen + libm (approved allowlist)
+- `crates/stitch-engine/src/lib.rs` — Floyd–Steinberg WASM backend: bit-exact port of the TS reference
+
 ## docs
 
 - `docs/requirements.md` — full combined requirements spec (reference only)
@@ -65,6 +73,7 @@
 - `scripts/build-palette.mjs` — derives `dmc.json` from the owner CSV
 - `scripts/check-docs.mjs` — docs gate: backticked path/link validation
 - `scripts/check-secrets.mjs` — report-only credential-shape scan (gate step)
+- `scripts/check-wasm.mjs` — gate step: cargo test + wasm-pack build; toolchain-aware skip (hard-fails in CI)
 - `scripts/gen-golden-hello.mjs` — one-time generator of the M0 hello fixtures
 
 ## src

@@ -18,8 +18,15 @@ Package manager: **npm** (Node LTS).
   add nothing further.
 - **Dev dependencies** (Vite, Vitest, ESLint, Prettier, typescript)
   can be added when justified by the architecture.
-- **Rust toolchain** (stable + `wasm-pack`) is needed only from M5;
-  Vite dev/build and `check` must pass without it (feature-detected).
+- **Rust toolchain** (stable via rustup + the `wasm32-unknown-unknown`
+  target + `wasm-pack`) is required for M5 crate work. Vite dev/build
+  and `check` still pass without it: `check:wasm` skips with a visible
+  warning locally, but **fails hard in CI** (which always installs the
+  toolchain), so the skip can never green-wash a mainline break.
+- **Cargo dependencies** follow the same approval rule as npm runtime
+  dependencies (they compile into the shipped `.wasm`). Current
+  allowlist: **wasm-bindgen** (the JS↔Rust interface) and **libm**
+  (fdlibm-lineage `pow`/`cbrt` for bit-exact parity with V8 `Math`).
 
 ---
 
@@ -29,7 +36,7 @@ Package manager: **npm** (Node LTS).
 | --- | --- | --- | --- |
 | `dev` | `vite` | Dev server (default port 5173) | Day-to-day development |
 | `build` | `vite build` | Production build to `dist` | Before deploy |
-| `build:wasm` | `wasm-pack build crates/stitch-engine` | Rust→WASM release build (M5+) | When touching the Rust crate |
+| `build:wasm` | `wasm-pack build crates/stitch-engine --target web` | Rust→WASM release build into `crates/stitch-engine/pkg` (gitignored) | When touching the Rust crate |
 | `test` | `vitest run` | Vitest incl. golden suite | After every change |
 | `bench` | `vitest bench` | Benchmark test with budget assertions | Perf-sensitive changes, pre-release |
 | `check` | typecheck + lint + test + build | **Quality gate** | Before calling a task done |
@@ -123,13 +130,15 @@ native DevTools console.
 
 | Script | Command | Purpose |
 | --- | --- | --- |
-| `check` | `tsc --noEmit && eslint . && vitest run && vite build` | The quality gate — run before calling a task done |
+| `check` | `tsc --noEmit && eslint . && vitest run && check:wasm && vite build` | The quality gate — run before calling a task done |
+| `check:wasm` | `node scripts/check-wasm.mjs` | Rust crate tests + wasm-pack build; skips (warns) without the toolchain locally, hard-fails in CI |
 | `lint:fix` | `eslint . --fix` | Auto-fix (separate from the gate; never the CI pass/fail) |
 
 - **Runs, in order:** type check (`tsc --noEmit`), ESLint (incl. the
-  `src/core/` isolation rule), Vitest (incl. the golden suite), and a
-  production `vite build`. Plus the Markdown lint + link-check baseline
-  on project memory.
+  `src/core/` isolation rule), Vitest (incl. the golden suite), the
+  Rust crate step (`cargo test` + `wasm-pack build`, toolchain-aware),
+  and a production `vite build`. Plus the Markdown lint + link-check
+  baseline on project memory.
 - **Non-mutating:** `check` only reports; fixes live in `lint:fix` and
   format-on-save. Formatting is never a gate failure.
 - **CI parity:** the CI workflow runs `npm run check`, so local green =

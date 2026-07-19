@@ -17,7 +17,6 @@ line passes and `check` is green. Requirements references are to
 
 ### M5 — WASM + WebGPU backends (§22, §23.5) (current milestone)
 
-- [ ] Rust crate: Floyd–Steinberg (SIMD), wasm-pack build wired into Vite + `check`
 - [ ] WASM backend registered for dither stage; golden tests bit-exact vs TS
 - [ ] WebGPU compute: LUT build + palette mapping (WGSL); tolerance-tested
 - [ ] Automatic backend selection (feature-detect + profile); TS fallback verified by disabling both in tests

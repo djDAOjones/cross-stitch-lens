@@ -16,6 +16,7 @@ npm-debug.log*
 dist/
 .vite/
 crates/stitch-engine/pkg/
+crates/stitch-engine/target/
 
 # Environment / secrets (none required today; ignore pre-emptively).
 # .env.example is committed with placeholders only.

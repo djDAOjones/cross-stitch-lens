@@ -34,15 +34,17 @@ dithering, WebGPU colour reduction, profiling harness).
 
 ## How to run
 
-Prerequisites: Node LTS + npm. (Rust + `wasm-pack` are needed only from
-M5.)
+Prerequisites: Node LTS + npm. For the M5 Rust crate: rustup (stable +
+the `wasm32-unknown-unknown` target) and `wasm-pack` — without them
+`check` skips the crate step with a warning (CI still runs it).
 
 ```sh
 npm install
-npm run dev      # Vite dev server at http://localhost:5173
-npm run build    # production build to dist/
-npm test         # Vitest, including the golden suite
-npm run check    # quality gate: typecheck + lint + test + build
+npm run dev        # Vite dev server at http://localhost:5173
+npm run build      # production build to dist/
+npm run build:wasm # Rust→WASM crate build (crates/stitch-engine)
+npm test           # Vitest, including the golden suite
+npm run check      # quality gate: typecheck + lint + test + wasm + build
 ```
 
 `localhost` is a secure context, so screen capture and WebGPU work in

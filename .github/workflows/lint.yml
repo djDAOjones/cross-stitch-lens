@@ -2,8 +2,9 @@ name: CI
 
 # Runs the one-command quality gate (`npm run check`) — typecheck,
 # ESLint (incl. the src/core isolation rule), Vitest golden suite,
-# production build, the docs-lint baseline, and the report-only secret
-# scan — on every push to the default branch and every pull request.
+# Rust crate tests + wasm-pack build (M5), production build, the
+# docs-lint baseline, and the report-only secret scan — on every push
+# to the default branch and every pull request.
 # CI parity rule (DEV-INFRASTRUCTURE.md): local green = CI green.
 
 on:
@@ -39,6 +40,24 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # Rust for the stitch-engine crate (check:wasm). The hosted
+      # runner ships rustup + stable; we only add the wasm target and
+      # wasm-pack (binary installer — no compile).
+      - name: Set up Rust wasm target
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            crates/stitch-engine/target
+          key: cargo-${{ runner.os }}-${{ hashFiles('crates/stitch-engine/Cargo.lock') }}
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Quality gate
         run: npm run check

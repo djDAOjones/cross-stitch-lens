@@ -678,3 +678,34 @@ across preset flips.
 **Run notes (auto-jazz via /next):** assumptions — dev-only panel
 (diagnostics rule), preview-only timings, `info-panel.ts` pure-model
 pattern. No gates were stopped at; gate green (194 tests).
+
+## D39 — stitch-engine crate: libm for bit-exact parity, toolchain-aware gate step (2026-07-19)
+
+**Decision:** The M5 Rust crate (`crates/stitch-engine`) is a
+line-for-line port of the TS dither reference: f32 storage widened to
+f64 for arithmetic (mirroring Float32Array semantics), strict-`<`
+first-min-wins nearest search, exact-binary kernel weights, and
+**libm** (fdlibm lineage — the same ancestry as V8's `Math.pow` /
+`Math.cbrt`) instead of platform intrinsics, so bit-exactness vs the
+TS backend is credible by construction; the next item's golden suite
+verifies it. Cargo deps approved by the maintainer: wasm-bindgen +
+libm (they compile into the shipped `.wasm`, so they follow the
+runtime-dependency approval rule — allowlist recorded in
+DEV-INFRASTRUCTURE). SIMD lands as `+simd128` codegen via a
+crate-local cargo config (wasm target only, IEEE semantics unchanged);
+explicit hand-vectorisation is deferred until the benchmark item
+demands it. The gate gains `check:wasm` (`scripts/check-wasm.mjs`):
+`cargo test` + `wasm-pack build`, **skipping with a visible warning
+when the toolchain is absent locally but hard-failing in CI**, which
+now installs rustup's wasm target + wasm-pack — this preserves the
+existing "check passes without Rust" rule without letting the skip
+green-wash a break. The Rust toolchain was installed on the dev Mac
+this task (rustup stable 1.97.1, wasm-pack 0.15 via Homebrew).
+**Why:** Bit-exactness is the milestone's hardest constraint; choosing
+fdlibm-lineage math up front avoids discovering ULP drift after the
+adapter lands. The toolchain-aware skip keeps the gate honest on
+machines without Rust while CI stays the backstop.
+**Run notes (auto-jazz via /next):** stopped at two gates — the
+missing toolchain (user chose install) and the Cargo dependency
+approval (user approved both). Clippy/rustfmt in the gate parked to
+the wish-list.

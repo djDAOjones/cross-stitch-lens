@@ -1,0 +1,6 @@
+# SIMD codegen for the wasm target only (native `cargo test` builds are
+# unaffected). simd128 lets LLVM vectorise the palette-distance loops;
+# float semantics are unchanged, so bit-exactness vs the TS reference
+# holds (WASM SIMD float lanes are IEEE 754, no fast-math).
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "target-feature=+simd128"]

@@ -19,6 +19,11 @@
 
 ## M5 — WASM + WebGPU backends (in progress)
 
+- M5-CRATE (2026-07-19) — `stitch-engine` Rust crate: bit-exact
+  Floyd–Steinberg port (f32/f64 JS semantics, libm math, simd128
+  codegen), 6 Rust tests; wasm-pack build + toolchain-aware
+  `check:wasm` gate step, CI installs the toolchain. Rust installed on
+  the dev Mac. See decision-log D39.
 - M5-PROFILE (2026-07-19) — profiling harness: per-stage last/median/max
   timings over a rolling 120-frame window (stage-change reset) in a
   dev-only "Profiling" disclosure below the info panel; stripped from

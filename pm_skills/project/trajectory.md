@@ -19,6 +19,13 @@
 
 ## M4 — Live capture (in progress)
 
+- M4-PAUSE (2026-07-19) — pause/resume + draft mode (§22 subset):
+  pump-lifecycle pause toggle (session and manual refresh stay live,
+  preview holds the last frame, named states), pure hysteresis
+  governor dropping dithering under sustained load with a visible
+  "Draft quality" label; exports untouched (full quality by
+  construction). Feature work complete — acceptance measurement
+  pending (M4-ACCEPT). See decision-log D36.
 - M4-DIRTY (2026-07-19) — dirty-frame skip (§22 subset): pre-readback
   64×64 downsample + FNV-1a hash + crop-region signature; unchanged
   frames skip the full grab and pipeline run ("Source unchanged."

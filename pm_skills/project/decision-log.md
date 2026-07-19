@@ -609,3 +609,26 @@ one update until the next change. Auto-jazz assumptions: 64×64 is the
 architecture-specified sample size; a same-hash different-region frame
 must re-process (hence the composite signature); skipped frames are
 counted, not logged per-tick.
+
+## D36 — Pause/resume + draft mode: pump lifecycle toggle, dither-drop governor (2026-07-19)
+
+**Decision:** Pause/resume ships as a pressed-state toggle that stops
+and restarts the frame pump only — the session, thumbnail, crop rect,
+and manual Capture frame stay live, and the preview holds the last
+frame (named "Capture paused" state). Draft mode ships as a pure
+`DraftGovernor` (`src/capture/draft.ts`): hysteresis over per-frame
+pipeline times (enter after 2 consecutive frames > 200 ms, exit after
+5 consecutive < 100 ms) that drops **dithering only** from the live
+config, with a persistent visible "Draft quality" label plus a status
+announcement. Only live-pump results feed the governor; manual
+reprocesses never flip quality. Mode flips clear the dirty signature
+so the new quality applies even over static content. Exports keep the
+untouched config — full quality by construction.
+**Why:** Dithering is the priciest stage and dropping it degrades
+gracefully; downscaling the grid instead was rejected because it
+changes the stitch geometry the user is designing against. Hysteresis
+with a 2:1 threshold gap prevents flapping at the boundary. Pausing
+resets the governor so a stale draft state can't survive a pause.
+Auto-jazz assumptions: thresholds 200/100 ms and 2/5 counts are
+starting values (tunable constructor params, revisit with M5
+profiling); pause holds the last frame rather than blanking.

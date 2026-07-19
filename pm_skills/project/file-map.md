@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 89 file(s) across 9 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 91 file(s) across 9 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 10 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
@@ -23,8 +23,8 @@
 - `.windsurf` — 1 file(s)
 - `docs` — 1 file(s)
 - `scripts` — 4 file(s)
-- `src` — 39 file(s)
-- `tests` — 31 file(s)
+- `src` — 40 file(s)
+- `tests` — 32 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -71,6 +71,7 @@
 
 - `src/capture/crop.ts` — pure crop-rect geometry: clamp/move/resize, hit-test, stitch span
 - `src/capture/dirty.ts` — dirty-frame skip: 64×64 sampler, FNV-1a hash, region signature
+- `src/capture/draft.ts` — draft-quality governor: pure hysteresis over frame times
 - `src/capture/pump.ts` — frame pump: rVFC subscription + pure latest-wins grab gate
 - `src/capture/session.ts` — getDisplayMedia session: start/grab/stop + pure error/label helpers
 - `src/core/color/convert.ts` — sRGB↔linear↔Lab conversions (D65, CIE 1976)
@@ -113,6 +114,7 @@
 
 - `tests/capture-crop.test.ts` — crop geometry: bounds/min-size, handles, hit-test, span
 - `tests/capture-dirty.test.ts` — hash determinism/sensitivity, region-aware signatures
+- `tests/capture-draft.test.ts` — governor hysteresis: enter/exit runs, gap, reset
 - `tests/capture-pump.test.ts` — pump gate policy: busy/pending/drop/reset transitions
 - `tests/capture-session.test.ts` — capture pure half: error messages, surface labels
 - `tests/color-convert.test.ts` — golden: Lab reference values + round-trips

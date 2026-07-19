@@ -19,6 +19,7 @@ import {
   type Handle,
 } from './capture/crop.ts';
 import { frameSignature, hashPixels, sampleVideo } from './capture/dirty.ts';
+import { DraftGovernor } from './capture/draft.ts';
 import { PumpGate, startFramePump } from './capture/pump.ts';
 import {
   captureErrorMessage,
@@ -135,6 +136,18 @@ function build(app: HTMLElement): void {
   lockButton.textContent = 'Lock region';
   lockButton.setAttribute('aria-pressed', 'false');
   lockButton.hidden = true;
+  const pauseButton = document.createElement('button');
+  pauseButton.type = 'button';
+  pauseButton.textContent = 'Pause capture';
+  pauseButton.setAttribute('aria-pressed', 'false');
+  pauseButton.hidden = true;
+  // Draft state is a visible, persistent label — never colour-only,
+  // never silent (UI-STANDARDS: draft preview must be labelled so
+  // exports are never mistaken for it).
+  const draftBadge = document.createElement('p');
+  draftBadge.className = 'meta';
+  draftBadge.textContent = 'Draft quality — dithering off while the pipeline catches up.';
+  draftBadge.hidden = true;
   const captureMeta = document.createElement('p');
   captureMeta.className = 'meta';
   captureMeta.hidden = true;
@@ -165,8 +178,17 @@ function build(app: HTMLElement): void {
   const cropReadout = document.createElement('p');
   cropReadout.className = 'meta';
   cropReadout.hidden = true;
-  captureRow.append(captureButton, captureFrameButton, lockButton, stopCaptureButton);
-  importSection.append(label, input, hint, captureRow, captureMeta, thumbWrap, cropReadout);
+  captureRow.append(captureButton, captureFrameButton, pauseButton, lockButton, stopCaptureButton);
+  importSection.append(
+    label,
+    input,
+    hint,
+    captureRow,
+    captureMeta,
+    thumbWrap,
+    cropReadout,
+    draftBadge,
+  );
 
   // Status is text in an aria-live region — never colour-only, never
   // silent (UI-STANDARDS → "System status").
@@ -826,6 +848,9 @@ function build(app: HTMLElement): void {
     pdfButton.disabled = false;
     preview.onFrame(frame.buffer.width, frame.buffer.height);
     const total = frame.timings.reduce((sum, t) => sum + t.ms, 0);
+    // Draft governor: only live-pump frames inform the load signal
+    // (a one-off manual reprocess should not flip preview quality).
+    if (stopPump !== null) setDraftMode(draftGovernor.sample(total));
     const stats = computeStats(frame.buffer, config.palette ?? undefined);
     info.update(stats);
     status.textContent = 'Preview updated.';
@@ -863,6 +888,30 @@ function build(app: HTMLElement): void {
   let stopPump: (() => void) | null = null;
   let lastFrameSignature: string | null = null;
   let skippedFrames = 0;
+  let capturePaused = false;
+  const draftGovernor = new DraftGovernor();
+  let draftMode = false;
+
+  function setDraftMode(on: boolean): void {
+    if (draftMode === on) return;
+    draftMode = on;
+    draftBadge.hidden = !on;
+    // Re-signature so the next tick re-processes at the new quality
+    // even when the source itself is unchanged.
+    lastFrameSignature = null;
+    status.textContent = on
+      ? 'Preview switched to draft quality (dithering off).'
+      : 'Full quality restored.';
+    log.info('capture', on ? 'draft quality entered' : 'draft quality exited');
+  }
+
+  /** Live config: draft drops dithering; exports never use this. */
+  function liveConfig(): PipelineConfig {
+    if (draftMode && config.palette !== null && config.dither) {
+      return { ...config, dither: false };
+    }
+    return config;
+  }
 
   function captureBounds(): { width: number; height: number } | null {
     if (capture === null || capture.video.videoWidth === 0) return null;
@@ -887,17 +936,33 @@ function build(app: HTMLElement): void {
     cropReadout.textContent = `Region ${String(cropRect.width)} × ${String(cropRect.height)} px → ${String(span.width)} × ${String(span.height)} stitches`;
   }
 
-  function endCaptureUi(message: string): void {
-    if (stopPump !== null) {
-      log.info('capture', 'frame pump stopped', {
-        dropped: pumpGate.droppedCount,
-        skipped: skippedFrames,
-      });
-      stopPump();
-      stopPump = null;
-    }
+  function stopPumpNow(): void {
+    if (stopPump === null) return;
+    log.info('capture', 'frame pump stopped', {
+      dropped: pumpGate.droppedCount,
+      skipped: skippedFrames,
+    });
+    stopPump();
+    stopPump = null;
     pumpGate.reset();
+  }
+
+  function startPumpNow(session: CaptureSession): void {
+    stopPump = startFramePump(session.video, () => {
+      if (pumpGate.frameArrived()) void pumpGrab();
+    });
+    log.info('capture', 'frame pump started');
+  }
+
+  function endCaptureUi(message: string): void {
+    stopPumpNow();
     lastFrameSignature = null;
+    draftGovernor.reset();
+    setDraftMode(false);
+    capturePaused = false;
+    pauseButton.textContent = 'Pause capture';
+    pauseButton.setAttribute('aria-pressed', 'false');
+    pauseButton.hidden = true;
     capture?.video.remove();
     capture = null;
     cropRect = null;
@@ -965,7 +1030,7 @@ function build(app: HTMLElement): void {
       masterImage = buffer;
       client.submit(
         { width: buffer.width, height: buffer.height, data: new Uint8ClampedArray(buffer.data) },
-        config,
+        liveConfig(),
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -987,6 +1052,7 @@ function build(app: HTMLElement): void {
       captureFrameButton.hidden = false;
       stopCaptureButton.hidden = false;
       lockButton.hidden = false;
+      pauseButton.hidden = false;
       captureMeta.hidden = false;
       captureMeta.textContent = `Capturing ${session.label}.`;
       // Mount the live thumbnail with the full frame selected; the
@@ -1015,10 +1081,7 @@ function build(app: HTMLElement): void {
       await grabCaptureFrame();
       // Live updates: one grab in flight, newest frame wins — the
       // same policy the worker applies to processing.
-      stopPump = startFramePump(session.video, () => {
-        if (pumpGate.frameArrived()) void pumpGrab();
-      });
-      log.info('capture', 'frame pump started');
+      startPumpNow(session);
     } catch (error) {
       const message = captureErrorMessage(error);
       status.textContent = message;
@@ -1038,6 +1101,23 @@ function build(app: HTMLElement): void {
     capture?.stop();
     endCaptureUi('Screen capture stopped.');
     log.info('capture', 'session stopped');
+  });
+  pauseButton.addEventListener('click', () => {
+    if (capture === null) return;
+    capturePaused = !capturePaused;
+    pauseButton.textContent = capturePaused ? 'Resume capture' : 'Pause capture';
+    pauseButton.setAttribute('aria-pressed', String(capturePaused));
+    if (capturePaused) {
+      stopPumpNow();
+      draftGovernor.reset();
+      setDraftMode(false);
+      status.textContent = 'Capture paused — the preview holds the last frame.';
+      log.info('capture', 'paused');
+    } else {
+      startPumpNow(capture);
+      status.textContent = 'Capture resumed.';
+      log.info('capture', 'resumed');
+    }
   });
   lockButton.addEventListener('click', () => {
     cropLocked = !cropLocked;

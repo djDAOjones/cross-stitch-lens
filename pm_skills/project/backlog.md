@@ -17,8 +17,12 @@ line passes and `check` is green. Requirements references are to
 
 ### M4 — Live capture (§3, §22) (current milestone)
 
-- [ ] Pause/resume, draft-quality mode under load (manual refresh
-      shipped with the session item — see D32)
+- [ ] **M4-ACCEPT M4 acceptance check** [maintainer] (2026-07-19)
+      Intent: verify the milestone acceptance line in a real session,
+      then close M4 (version bump + tag).
+      Done when: editing in Photoshop at a 200×200 grid sustains ≥ 4
+      preview updates/sec with < 250 ms latency, and idle frames cost
+      ~0 CPU (Activity Monitor while the source is static).
 
 *Acceptance: editing in Photoshop at 200×200 grid sustains ≥ 4
 preview updates/sec with < 250 ms latency; idle frames cost ~0 CPU.*

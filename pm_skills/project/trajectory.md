@@ -19,6 +19,11 @@
 
 ## M4 — Live capture (in progress)
 
+- M4-DIRTY (2026-07-19) — dirty-frame skip (§22 subset): pre-readback
+  64×64 downsample + FNV-1a hash + crop-region signature; unchanged
+  frames skip the full grab and pipeline run ("Source unchanged."
+  named state), region edits always re-process, skip count logged at
+  pump stop. See decision-log D35.
 - M4-PUMP (2026-07-19) — frame pump (§22 subset): live updates via
   `requestVideoFrameCallback` (rAF fallback) with a pure latest-wins
   gate at the grab — one readback+pipeline run in flight, newest

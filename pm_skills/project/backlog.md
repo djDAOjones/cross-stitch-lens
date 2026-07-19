@@ -17,7 +17,6 @@ line passes and `check` is green. Requirements references are to
 
 ### M4 — Live capture (§3, §22) (current milestone)
 
-- [ ] Dirty-frame skip via 64×64 downsample hash
 - [ ] Pause/resume, draft-quality mode under load (manual refresh
       shipped with the session item — see D32)
 

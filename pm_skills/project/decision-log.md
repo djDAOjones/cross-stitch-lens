@@ -588,3 +588,24 @@ frame". Auto-jazz assumptions: pump starts automatically with the
 session (pause/resume is the remaining M4 item); worker results from
 manual reprocesses may advance the gate early — harmless, latest-wins
 holds; per-frame logging omitted by design.
+
+## D35 — Dirty-frame skip: pre-readback 64×64 FNV hash + region signature (2026-07-19)
+
+**Decision:** The dirty check ships as `src/capture/dirty.ts` and runs
+**before** the full-resolution readback in the pump path: each tick
+draws the crop to a reused 64×64 OffscreenCanvas (a fixed 16 KB
+readback), hashes it with FNV-1a 32-bit, and combines it with the crop
+region into a string signature. A matching signature skips the grab
+and pipeline run entirely, releases the pump gate, and names the state
+("Source unchanged.") in the status region. Moving or resizing the
+crop changes the signature, so region edits always re-process even
+over static content. Manual Capture frame bypasses the skip but
+records the signature; the skip counter is logged at pump stop.
+**Why:** Hashing after the grab (or in the worker) would already have
+paid the full readback + transfer — the acceptance leg is "idle frames
+cost ~0 CPU", which only the pre-readback sample delivers. FNV-1a over
+16 K bytes is deterministic and cheap; a hash collision merely delays
+one update until the next change. Auto-jazz assumptions: 64×64 is the
+architecture-specified sample size; a same-hash different-region frame
+must re-process (hence the composite signature); skipped frames are
+counted, not logged per-tick.

@@ -18,6 +18,7 @@ import {
   type CropRect,
   type Handle,
 } from './capture/crop.ts';
+import { frameSignature, hashPixels, sampleVideo } from './capture/dirty.ts';
 import { PumpGate, startFramePump } from './capture/pump.ts';
 import {
   captureErrorMessage,
@@ -860,6 +861,8 @@ function build(app: HTMLElement): void {
   let cropLocked = false;
   const pumpGate = new PumpGate();
   let stopPump: (() => void) | null = null;
+  let lastFrameSignature: string | null = null;
+  let skippedFrames = 0;
 
   function captureBounds(): { width: number; height: number } | null {
     if (capture === null || capture.video.videoWidth === 0) return null;
@@ -886,11 +889,15 @@ function build(app: HTMLElement): void {
 
   function endCaptureUi(message: string): void {
     if (stopPump !== null) {
-      log.info('capture', 'frame pump stopped', { dropped: pumpGate.droppedCount });
+      log.info('capture', 'frame pump stopped', {
+        dropped: pumpGate.droppedCount,
+        skipped: skippedFrames,
+      });
       stopPump();
       stopPump = null;
     }
     pumpGate.reset();
+    lastFrameSignature = null;
     capture?.video.remove();
     capture = null;
     cropRect = null;
@@ -909,6 +916,12 @@ function build(app: HTMLElement): void {
     status.textContent = 'Processing…';
     try {
       const buffer = await capture.grabFrame(cropRect ?? undefined);
+      // A manual grab always processes, but records the signature so
+      // the pump doesn't immediately re-process the same content.
+      lastFrameSignature = frameSignature(
+        hashPixels(sampleVideo(capture.video, cropRect ?? undefined)),
+        cropRect,
+      );
       log.info('capture', 'frame grabbed', {
         width: buffer.width,
         height: buffer.height,
@@ -931,6 +944,23 @@ function build(app: HTMLElement): void {
       return;
     }
     try {
+      // Dirty check first: a 64×64 sample readback instead of the
+      // full frame. Unchanged content (and unchanged region) skips
+      // the expensive path entirely — the "idle frames cost ~0 CPU"
+      // acceptance leg. The named state is honest, never silent.
+      const signature = frameSignature(
+        hashPixels(sampleVideo(capture.video, cropRect ?? undefined)),
+        cropRect,
+      );
+      if (signature === lastFrameSignature) {
+        skippedFrames++;
+        if (status.textContent !== 'Source unchanged.') {
+          status.textContent = 'Source unchanged.';
+        }
+        if (pumpGate.grabDone()) void pumpGrab();
+        return;
+      }
+      lastFrameSignature = signature;
       const buffer = await capture.grabFrame(cropRect ?? undefined);
       masterImage = buffer;
       client.submit(

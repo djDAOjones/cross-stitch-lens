@@ -632,3 +632,24 @@ resets the governor so a stale draft state can't survive a pause.
 Auto-jazz assumptions: thresholds 200/100 ms and 2/5 counts are
 starting values (tunable constructor params, revisit with M5
 profiling); pause holds the last frame rather than blanking.
+
+## D37 — M4 milestone close: acceptance measurement waived, v0.5.0 (2026-07-19)
+
+**Decision:** M4 closed at v0.5.0 with all five feature items shipped
+(session D32, crop D33, pump D34, dirty-skip D35, pause/draft D36) and
+the quality gate green (186 tests). The acceptance line — ≥ 4 preview
+updates/sec at a 200×200 grid with < 250 ms latency while editing in
+Photoshop, and ~0 CPU on idle frames — was **waived at close by the
+maintainer** ("close out M4" without the live measurement): recorded
+here as the residual risk of the milestone. The structural case is
+strong (dirty-skip caps idle cost at one 16 KB readback per tick; M2
+measured the pipeline at 3.3 ms/frame at 200×200, far inside the
+250 ms bar) but no live Photoshop session has been measured. If a real
+session misses the bar, treat it as an M4 defect (PATCH), not new
+scope. The M4-ACCEPT tracking item was removed with this waiver. M5
+(WASM + WebGPU backends) becomes the current milestone; its profiling
+harness is the natural place to capture the live numbers this close
+waived.
+**Why:** The maintainer chose shipping over blocking on a manual
+measurement, same trade as the M3 print check (D31); naming the waived
+leg keeps the acceptance line honest rather than silently green.

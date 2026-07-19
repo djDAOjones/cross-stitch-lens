@@ -17,15 +17,19 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
-## M4 — Live capture (in progress)
+## M4 — Live capture (shipped 2026-07-19, v0.5.0)
 
+- M4-CLOSE (2026-07-19) — milestone close: all five feature items
+  shipped, gate green (186 tests); the live acceptance measurement
+  (≥ 4 updates/sec in Photoshop, ~0 idle CPU) **waived at close** by
+  maintainer decision — see decision-log D37. v0.5.0 bumped and
+  tagged.
 - M4-PAUSE (2026-07-19) — pause/resume + draft mode (§22 subset):
   pump-lifecycle pause toggle (session and manual refresh stay live,
   preview holds the last frame, named states), pure hysteresis
   governor dropping dithering under sustained load with a visible
   "Draft quality" label; exports untouched (full quality by
-  construction). Feature work complete — acceptance measurement
-  pending (M4-ACCEPT). See decision-log D36.
+  construction). See decision-log D36.
 - M4-DIRTY (2026-07-19) — dirty-frame skip (§22 subset): pre-readback
   64×64 downsample + FNV-1a hash + crop-region signature; unchanged
   frames skip the full grab and pipeline run ("Source unchanged."
@@ -48,6 +52,13 @@
   status, not an error), external stop-sharing handled, one-shot frame
   grab into the existing pipeline path; pure error/label helpers
   node-tested. See decision-log D32.
+
+Outcome: the product's defining loop runs — share a screen or window,
+draw/move/lock a crop region over the live thumbnail, and watch the
+cross-stitch preview follow edits in another app, with unchanged
+frames costing ~nothing, latest-wins everywhere, pause/resume, and an
+honest draft-quality mode under load. Live acceptance measurement
+waived at close (D37).
 
 ## M3 — Exports (shipped 2026-07-19, v0.4.0)
 

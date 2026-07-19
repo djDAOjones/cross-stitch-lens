@@ -15,19 +15,7 @@ line passes and `check` is green. Requirements references are to
 
 ## Active
 
-### M4 — Live capture (§3, §22) (current milestone)
-
-- [ ] **M4-ACCEPT M4 acceptance check** [maintainer] (2026-07-19)
-      Intent: verify the milestone acceptance line in a real session,
-      then close M4 (version bump + tag).
-      Done when: editing in Photoshop at a 200×200 grid sustains ≥ 4
-      preview updates/sec with < 250 ms latency, and idle frames cost
-      ~0 CPU (Activity Monitor while the source is static).
-
-*Acceptance: editing in Photoshop at 200×200 grid sustains ≥ 4
-preview updates/sec with < 250 ms latency; idle frames cost ~0 CPU.*
-
-### M5 — WASM + WebGPU backends (§22, §23.5)
+### M5 — WASM + WebGPU backends (§22, §23.5) (current milestone)
 
 - [ ] Profiling harness: per-stage timings surfaced in a debug panel
 - [ ] Rust crate: Floyd–Steinberg (SIMD), wasm-pack build wired into Vite + `check`

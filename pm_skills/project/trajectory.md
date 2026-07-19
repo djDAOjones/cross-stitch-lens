@@ -19,6 +19,26 @@
 
 ## M5 — WASM + WebGPU backends (in progress)
 
+- M5-PERF-01, M5-PERF-02, M5-PERF-03 (2026-07-19) — M5A measurement
+  truth: boundary contract **bv1** (six boundaries, versioned so a moved
+  mark invalidates comparison), a frozen 24-row workload matrix with
+  derived stable IDs, and a report schema keeping raw samples plus
+  build/environment identity — unmeasurable rows are `unsupported` with
+  a reason, never zero. `npm run bench` writes the JSON report *before*
+  asserting, so a missed budget still leaves evidence.
+  Baseline (M1 Max, 124 rows) reproduces every D43 figure; all five
+  budgets still miss. Decomposition overturned two leads: dither is
+  **conversion-bound** (Lab is ~70% of cost — pruning alone can address
+  ~22%), and **separable resize is challenged** (~1.5–2× available, not
+  the ~7× needed). `adjust` clone and stage-list build measured
+  immaterial. No browser numbers taken — rehearsal documented,
+  M5-PERF-18 owns it. See decision-log D44.
+- M5-BENCH (2026-07-19) — budget benchmark shipped (`npm run bench`,
+  BENCH=1-gated, ×3 CI stretch): asserts the architecture.md table at
+  1024×1024/64 DMC. **All five budgets miss** (whole pipeline 452 ms
+  vs 100; dither-wasm 412 ms vs 15) — recorded honestly, milestone
+  held open with a [sign-off] budget-gap item; architecture drift
+  captured as a doc-delta. See decision-log D43.
 - M5-SELECT (2026-07-19) — automatic backend selection: one-shot
   startup calibration (ts vs wasm dither, DMC workload, 10%
   hysteresis), executor order explicit > selected > ts with the

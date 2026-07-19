@@ -15,17 +15,17 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 109 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 119 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 10 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
 - `.github` — 1 file(s)
 - `.windsurf` — 1 file(s)
 - `crates` — 4 file(s)
-- `docs` — 1 file(s)
+- `docs` — 2 file(s)
 - `scripts` — 5 file(s)
 - `src` — 48 file(s)
-- `tests` — 37 file(s)
+- `tests` — 46 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -66,6 +66,7 @@
 
 ## docs
 
+- `docs/measurement-contract.md` — M5 boundary contract (bv1), workload matrix, report schema, browser rehearsal
 - `docs/requirements.md` — full combined requirements spec (reference only)
 
 ## scripts
@@ -130,6 +131,15 @@
 ## tests
 
 - `tests/backend-select.test.ts` — selection policy/calibration + ts fallback with both backends disabled
+- `tests/bench-matrix.test.ts` — workload-matrix invariants: unique/derived IDs, core cross-product, axis coverage
+- `tests/bench-report.test.ts` — boundary contract, percentile math, warm-up exclusion, schema round-trip
+- `tests/bench/boundaries.ts` — the six measurement boundaries + BOUNDARY_VERSION (code copy of the contract)
+- `tests/bench/env-node.ts` — node build/environment capture + report output dir
+- `tests/bench/harness.ts` — warm-up policy, sample collection, interleaved candidate timing
+- `tests/bench/report.ts` — report schema, percentiles, unmeasured-never-zero rows (pure)
+- `tests/bench/run-node.ts` — matrix runner + budget-to-row bindings
+- `tests/bench/workloads.ts` — the frozen M5 workload matrix + seeded source generators
+- `tests/benchmark.test.ts` — BENCH=1-gated: runs the matrix, writes the report, then asserts budgets
 - `tests/capture-crop.test.ts` — crop geometry: bounds/min-size, handles, hit-test, span
 - `tests/capture-dirty.test.ts` — hash determinism/sensitivity, region-aware signatures
 - `tests/capture-draft.test.ts` — governor hysteresis: enter/exit runs, gap, reset

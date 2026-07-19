@@ -800,3 +800,109 @@ worst possible outcome is the status quo (everything on ts).
 **Run notes (auto-jazz via /next):** no gates stopped at. Assumptions —
 dither is the only sync-selectable stage today; a user-facing override
 (debug panel / ?backend=) stays future work.
+
+## D43 — Benchmark shipped; every budget missed — recorded as signal, not green-washed (2026-07-19)
+
+**Decision:** The benchmark (`tests/benchmark.test.ts`, `npm run
+bench`) asserts the architecture.md budget table directly: per-stage
+medians (5 timed runs after warmup) at 1024×1024 / 64 DMC colours,
+whole pipeline at 1024 and 200 grids, ×3 budget stretch under CI.
+It is gated behind `BENCH=1` — visible skip in the plain gate — since
+a perf assertion in `check` would make every commit hostage to
+machine noise. The preview-render row is browser-only (profiling
+panel), not benchable in node.
+**Measured on the dev Mac (2026-07-19):** resize 36 ms (budget 5),
+reduce-LUT 13 ms (10), dither-wasm 412 ms (15), whole pipeline
+452 ms (100), 200×200 grid 29 ms (10). **All five miss.** The bench
+is red by design until the gap is closed — it was NOT weakened to
+pass. Probable causes, in order: exact per-pixel palette search in
+the dither hot loop (64 lab distances × 1M px; the budget row
+implies LUT-style acceleration), CPU box-average resize (the budget
+row assumes GPU `drawImage`), and reduce being within ~30% (closest
+to its budget). The 15 ms dither figure needs either a candidate-
+pruning structure (e.g. LUT-seeded search) or a budget revision.
+**Consequences:** M5's acceptance line (≤ 100 ms full pipeline) is
+NOT met — the milestone stays open with a new scoped perf item; the
+budget-vs-implementation drift in architecture.md is captured as a
+doc-delta for owner sign-off (never auto-edited). At the typical
+200×200 grid the app measures 29 ms/frame — interactive in practice
+(the M2 draft governor covers capture), so this is a budget breach,
+not a UX emergency.
+**Run notes (auto-jazz via /next):** no gates stopped at. Assumption:
+shipping the honest red benchmark and scoping the fix separately is
+the correct reading of "a failure is signal" — the alternative
+(tuning budgets myself) would be green-washing a protected doc.
+
+## D44 — M5A measurement truth: bv1 boundary contract, frozen workload matrix, reproducible reports (2026-07-19)
+
+**Decision:** Ship the M5A trio as one coupled measurement layer rather
+than three sequential items — a boundary contract without a workload
+matrix measures nothing, and a matrix without a report schema is not
+reproducible. Three artefacts: `docs/measurement-contract.md` (the
+canonical prose), `tests/bench/` (contract, matrix, harness, schema and
+runner as code), and `npm run bench` (runs the matrix, writes a JSON
+report, *then* asserts budgets).
+
+**Boundary contract bv1** defines six boundaries — `prepare`, `stage`,
+`pipeline-compute`, `preview-update`, `interaction`, `export` — each
+with an explicit start mark, end mark and exclusion list. The three
+sign-off questions M5-PERF-02 existed to settle were decided
+conservatively under auto-jazz: (1) budgets bind to **warm,
+steady-state** calls, with preparation budgeted separately; (2) the
+100 ms whole-pipeline row is **warm**, and cache misses are published as
+their own cold rows rather than averaged in or hidden; (3) preview
+completion is the **preview surface draw returning** — the last step the
+app controls. M5C revisits all three against evidence.
+
+**Why a version stamp:** moving a start mark changes whether a budget
+passes without changing the product. Every report carries
+`boundaryVersion`, and reports across versions must not be diffed. The
+pre-bv1 benchmark timed a 6.5 MB `slice()` and a fresh palette *inside*
+the whole-pipeline closure; bv1 builds the request once, outside the
+clock. That bias was real but worth only ~1 ms — it was never why the
+budgets miss.
+
+**Why raw samples and explicit gaps:** the schema keeps every timed
+sample plus median/p90/p95/stdDev/spread, and forces an unmeasurable row
+to be `unsupported`/`not-measured` **with a reason, never zero**. A
+median without its distribution cannot be compared; a zero silently
+reads as "fast". The three browser-only boundaries therefore appear in
+every node report as visible holes.
+
+**Measured (Apple M1 Max, 124 rows):** every D43 figure reproduced
+within noise, so the harness rebuild did not move ground truth. All five
+budgets still miss. The decomposition is the real deliverable, and it
+overturned two standing leads:
+
+- **Dither is conversion-bound, not search-bound.** `metric: lab`
+  424.5 ms vs `metric: rgb` 125.1 ms at 1024²/64 → sRGB→Lab is ~70% of
+  dither cost. Palette scaling agrees independently (~1.44 ms per
+  palette entry; ~332 ms fixed). Candidate pruning alone can address at
+  most ~22% and cannot reach the 15 ms row.
+- **Separable resize is challenged.** Exact area averaging already
+  visits each source pixel ~once under hard downscale; redundancy
+  appears only as the scale ratio nears 1. Expect ~1.5–2× from a CPU
+  candidate, not the ~7× the 5 ms row needs. Integral-image is the
+  better lead — M5-PERF-11 verifies before M5-PERF-21 commits.
+- **Two leads shrank:** the identity `adjust` clone is 0.15 ms and warm
+  stage-list construction 0.01–0.05 ms — both immaterial, not the "free
+  win" the analysis assumed.
+- **D3 emphatically confirmed:** `reduce-first` at 300²/64 costs 656 ms
+  against 51 ms for `resize-first`.
+
+**Consequences:** M5B audits start from confirmed/bounded/challenged
+verdicts instead of unverified hypotheses, and M5-PERF-13 is now the
+highest-value target in M5. `bench` stays out of `check` (noisy by
+nature), but matrix coverage, percentile math, warm-up exclusion and
+schema round-trip are unit-tested in the gate — 28 new tests. Reports go
+to gitignored `bench-reports/`. No pipeline behaviour changed; no golden
+fixture touched.
+
+**Run notes (auto-jazz, all gates skipped):** assumptions — ship M5A as
+one run because the three items are one deliverable; the M5-PERF-01
+spike output ships as code rather than throwaway because M5-PERF-03
+consumes it directly; the M5-PERF-02 sign-off decisions were taken
+conservatively and are flagged for M5C rather than deferred. **No
+browser numbers were taken** — the rehearsal procedure is written and
+M5-PERF-18 owns executing it; M5A's claim to cover transport and
+rendering latency is therefore procedural, not measured.

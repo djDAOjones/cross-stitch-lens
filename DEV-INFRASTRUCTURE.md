@@ -39,7 +39,7 @@ Package manager: **npm** (Node LTS).
 | `build` | `vite build` | Production build to `dist` | Before deploy |
 | `build:wasm` | `wasm-pack build crates/stitch-engine --target web` | Rust→WASM release build into `crates/stitch-engine/pkg` (gitignored) | When touching the Rust crate |
 | `test` | `vitest run` | Vitest incl. golden suite | After every change |
-| `bench` | `vitest bench` | Benchmark test with budget assertions | Perf-sensitive changes, pre-release |
+| `bench` | `BENCH=1 vitest run tests/benchmark.test.ts` | Workload matrix + JSON report to `bench-reports/`, then budget assertions | Perf-sensitive changes, pre-release |
 | `check` | typecheck + lint + test + build | **Quality gate** | Before calling a task done |
 | `lint:fix` | `eslint . --fix` | Auto-fix (separate from the gate) | Cleanup, never the CI pass/fail |
 
@@ -240,8 +240,20 @@ is overwritten on every build.
 - **`build:wasm`** — `wasm-pack` release build of `crates/stitch-engine`
   into `crates/stitch-engine/pkg` (M5+). Not required for pre-M5
   checkouts or CI without Rust.
-- **`bench`** — runs the benchmark test that asserts the
-  `architecture.md` performance budgets (×3 tolerance in CI).
+- **`bench`** — runs the M5 workload matrix under the boundary contract
+  in `docs/measurement-contract.md`, writes a machine-readable report to
+  `bench-reports/` (gitignored — regenerated, never committed), logs a
+  human summary, and only then asserts the `architecture.md` budgets
+  (×3 tolerance in CI). The report is written **before** the assertions,
+  so a missed budget still leaves complete evidence on disk. Gated
+  behind `BENCH=1` so the suite skips visibly in a plain `vitest run`.
+  The `preview-update`, `interaction` and `export` boundaries — and with
+  them the preview-render budget — are browser-only: they appear in
+  every node report as explicit `unsupported` rows and are measured by
+  the manual rehearsal in `docs/measurement-contract.md`. Report
+  schema, matrix coverage and warm-up policy are unit-tested in
+  `tests/bench-matrix.test.ts` and `tests/bench-report.test.ts`, which
+  **do** run in `check`.
 
 ---
 

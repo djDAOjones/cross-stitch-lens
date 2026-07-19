@@ -8,7 +8,7 @@
     "dev": "vite",
     "build": "vite build",
     "test": "vitest run",
-    "bench": "vitest bench",
+    "bench": "BENCH=1 vitest run tests/benchmark.test.ts",
     "build:wasm": "wasm-pack build crates/stitch-engine --target web",
     "check": "npm run check:types && npm run check:lint && npm run check:wasm && npm run check:test && npm run check:build && npm run check:docs && npm run check:secrets",
     "check:types": "tsc --noEmit",

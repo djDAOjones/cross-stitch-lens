@@ -28,3 +28,11 @@
   live); scripts table missing the shipped script surface (source: M0)
 - [ ] 2026-07-19 DEV-INFRASTRUCTURE — dev server port now env-overridable
   (`PORT` + launch.json `autoPort`) for parallel sessions (source: D27)
+- [ ] 2026-07-19 architecture — performance-budget table assumes GPU-backed
+  resize and a LUT-accelerated dither; implementation uses CPU box-average
+  resize and exact-search dither, and misses every budget (measured: D43) —
+  budgets and/or implementation strategy need an owner decision (source: D43)
+- [ ] 2026-07-19 architecture — budget table states no measurement boundary;
+  each row now binds to one workload at one boundary under contract bv1
+  (`docs/measurement-contract.md`), and the preview-render row is
+  browser-only (source: D44)

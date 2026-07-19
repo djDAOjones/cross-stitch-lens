@@ -770,3 +770,33 @@ browser-only claim.
 **Run notes (auto-jazz via /next):** stopped once (types package
 approval). Assumption: real-GPU CI coverage via a browser-mode runner
 is parked to the wish-list, not scoped here.
+
+## D42 — Automatic backend selection: one-shot calibration, hysteresis, ts safety net (2026-07-19)
+
+**Decision:** Selection lives in the worker layer
+(`src/worker/backend-select.ts`) — core's `runPipeline` and the Stage
+contract are untouched. Resolution order in the executor: explicit
+instance backend > automatic selection > 'ts', and a requested backend
+missing from the stage's map always falls back to the TS reference, so
+a stale selection can never break a frame. Feature-detect *is*
+registration (an unregistered backend can never be picked); the profile is a
+**one-shot calibration** at worker startup after the wasm module
+registers: ts vs wasm dither on a 96×96 synthetic frame against the
+real DMC palette, alternating runs, median compared with a **10%
+hysteresis margin** — the pipeline leaves ground truth only for a
+clear win, never on JIT noise or a near-tie. WebGPU is not selected
+here (async kernels; the LUT build already auto-selects GPU-first in
+the cache — D41). `StageTiming` gained a `backend` field: the
+profiling panel labels rows "dither (wasm)" and its stage-key reset
+starts a fresh window on a backend switch, so a selection change is
+visible and measurable. The backlog's acceptance clause is tested
+directly: with wasm unregistered and no `navigator.gpu` (node), a
+stale wasm selection still runs and reports 'ts', and `ensureLut`
+resolves the TS-built LUT.
+**Why:** Calibration-at-startup is the cheapest honest "profiled"
+implementation: it measures the real machine once, off the frame
+path, and the hysteresis margin plus the fallback chain mean the
+worst possible outcome is the status quo (everything on ts).
+**Run notes (auto-jazz via /next):** no gates stopped at. Assumptions —
+dither is the only sync-selectable stage today; a user-facing override
+(debug panel / ?backend=) stays future work.

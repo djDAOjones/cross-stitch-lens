@@ -19,6 +19,12 @@
 
 ## M5 — WASM + WebGPU backends (in progress)
 
+- M5-SELECT (2026-07-19) — automatic backend selection: one-shot
+  startup calibration (ts vs wasm dither, DMC workload, 10%
+  hysteresis), executor order explicit > selected > ts with the
+  missing-backend safety net; StageTiming carries the backend that ran
+  (profiling rows read "dither (wasm)"); ts fallback with both
+  backends disabled proven in tests. See decision-log D42.
 - M5-WEBGPU (2026-07-19) — WGSL LUT build + palette map as async GPU
   kernels; LUT build wired GPU-first into the worker cache
   (`ensureLut`, ts fallback), map kernel awaits the selection item;

@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 107 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 109 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 10 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
@@ -24,8 +24,8 @@
 - `crates` — 4 file(s)
 - `docs` — 1 file(s)
 - `scripts` — 5 file(s)
-- `src` — 47 file(s)
-- `tests` — 36 file(s)
+- `src` — 48 file(s)
+- `tests` — 37 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -117,6 +117,7 @@
 - `src/ui/preview.ts` — preview controller: toolbar, wheel/drag/keys → worker
 - `src/ui/viewport.ts` — pure viewport maths: fit, anchored zoom, pan clamp
 - `src/vite-env.d.ts` — ambient types for injected version/build globals
+- `src/worker/backend-select.ts` — auto backend pick: one-shot calibration + hysteresis policy + selection map
 - `src/worker/client.ts` — main-thread client: Worker + coalescing + transfer
 - `src/worker/coalesce.ts` — latest-wins scheduler (no queue), drop counter
 - `src/worker/execute.ts` — timed frame execution; errors become responses
@@ -128,6 +129,7 @@
 
 ## tests
 
+- `tests/backend-select.test.ts` — selection policy/calibration + ts fallback with both backends disabled
 - `tests/capture-crop.test.ts` — crop geometry: bounds/min-size, handles, hit-test, span
 - `tests/capture-dirty.test.ts` — hash determinism/sensitivity, region-aware signatures
 - `tests/capture-draft.test.ts` — governor hysteresis: enter/exit runs, gap, reset

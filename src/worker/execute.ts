@@ -6,7 +6,8 @@
  */
 
 import { buildStages } from '../core/pipeline/config.ts';
-import type { PixelBuffer } from '../core/types.ts';
+import type { Backend, PixelBuffer } from '../core/types.ts';
+import { selectedBackend } from './backend-select.ts';
 import { getLut } from './lut-cache.ts';
 import type { ProcessRequest, StageTiming, WorkerResponse } from './protocol.ts';
 
@@ -24,10 +25,17 @@ export function executeRequest(
     };
     const timings: StageTiming[] = [];
     for (const instance of stages) {
+      // Explicit instance backend > automatic selection > 'ts'; a
+      // requested backend that is not registered falls back to the
+      // TS reference (architecture.md → "Stage backends").
+      const requested: Backend =
+        instance.backend ?? selectedBackend(instance.stage.name) ?? 'ts';
+      const fn = instance.stage.backends[requested] ?? instance.stage.backends.ts;
+      const used: Backend =
+        instance.stage.backends[requested] === undefined ? 'ts' : requested;
       const start = now();
-      const fn = instance.stage.backends[instance.backend ?? 'ts'] ?? instance.stage.backends.ts;
       buffer = fn(buffer, instance.params);
-      timings.push({ stage: instance.stage.name, ms: now() - start });
+      timings.push({ stage: instance.stage.name, ms: now() - start, backend: used });
     }
     return {
       type: 'result',

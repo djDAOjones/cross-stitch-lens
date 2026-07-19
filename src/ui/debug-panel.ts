@@ -25,6 +25,16 @@ export function formatMs(ms: number): string {
   return ms.toFixed(2);
 }
 
+/**
+ * Row label for a timing: the stage name, suffixed with the backend
+ * that ran when it is not the TS reference — "dither (wasm)" — so an
+ * automatic backend switch is visible (and, via the stage-key reset,
+ * starts a fresh comparison window).
+ */
+export function timingLabel(timing: StageTiming): string {
+  return timing.backend === 'ts' ? timing.stage : `${timing.stage} (${timing.backend})`;
+}
+
 /** Median of a non-empty array (mean of the middle pair when even). */
 function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
@@ -61,20 +71,22 @@ export class TimingWindow {
 
   /** Record one processed frame's stage timings. */
   record(timings: StageTiming[]): void {
-    const key = timings.map((t) => t.stage).join('→');
+    const labels = timings.map(timingLabel);
+    const key = labels.join('→');
     if (key !== this.stageKey) {
       this.samples = new Map();
       this.totals = [];
       this.stageKey = key;
     }
     let total = 0;
-    for (const timing of timings) {
-      const series = this.samples.get(timing.stage) ?? [];
+    timings.forEach((timing, i) => {
+      const label = labels[i] ?? timing.stage;
+      const series = this.samples.get(label) ?? [];
       series.push(timing.ms);
       if (series.length > this.capacity) series.shift();
-      this.samples.set(timing.stage, series);
+      this.samples.set(label, series);
       total += timing.ms;
-    }
+    });
     this.totals.push(total);
     if (this.totals.length > this.capacity) this.totals.shift();
   }

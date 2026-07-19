@@ -17,7 +17,6 @@ line passes and `check` is green. Requirements references are to
 
 ### M5 — WASM + WebGPU backends (§22, §23.5) (current milestone)
 
-- [ ] Automatic backend selection (feature-detect + profile); TS fallback verified by disabling both in tests
 - [ ] Benchmark test asserting architecture.md budgets at 1024×1024
 
 *Acceptance: full pipeline ≤ 100 ms at 1024×1024/64 colours on the

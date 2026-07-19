@@ -12,6 +12,7 @@
 
 import { registerWasmDither } from '../backends/wasm/dither.ts';
 import { fullRgbVariant, type PipelineConfig } from '../core/pipeline/config.ts';
+import { calibrateDither } from './backend-select.ts';
 import { executeRequest } from './execute.ts';
 import { ensureLut } from './lut-cache.ts';
 import {
@@ -36,7 +37,11 @@ const scope = self as unknown as WorkerScope;
 // Fire-and-forget: frames arriving before the wasm module is ready
 // (or when it is unavailable) run on the ts backend via the
 // executor's fallback — registration is additive, never blocking.
-void registerWasmDither();
+// Once registered, a one-shot calibration picks the faster dither
+// backend for subsequent frames (backend-select.ts).
+void registerWasmDither().then((registered) => {
+  if (registered) calibrateDither();
+});
 
 /**
  * Fill the LUT cache (GPU-first) before a frame that needs one — a

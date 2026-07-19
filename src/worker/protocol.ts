@@ -5,6 +5,7 @@
  */
 
 import type { PipelineConfig } from '../core/pipeline/config.ts';
+import type { Backend } from '../core/types.ts';
 import type { GridStyle } from './grid.ts';
 
 /** Main → worker: process one frame under a config. */
@@ -81,10 +82,12 @@ export type WorkerRequest =
   | CompareRequest
   | ExportRequest;
 
-/** Per-stage wall-clock timing (diagnostics / future debug panel). */
+/** Per-stage wall-clock timing (diagnostics / debug panel). */
 export interface StageTiming {
   stage: string;
   ms: number;
+  /** The backend that actually ran (after selection + fallback). */
+  backend: Backend;
 }
 
 /** Worker → main: one processed frame (pixels transferred back). */

@@ -8,6 +8,11 @@
  */
 
 import { installGlobalCapture, log } from './diagnostics/log.ts';
+import {
+  captureErrorMessage,
+  startCapture,
+  type CaptureSession,
+} from './capture/session.ts';
 import type { PipelineConfig } from './core/pipeline/config.ts';
 import { loadDmcPalette } from './core/palette.ts';
 import {
@@ -96,7 +101,28 @@ function build(app: HTMLElement): void {
   hint.className = 'meta';
   hint.textContent =
     'Choose a file, drag and drop one anywhere on the page, or paste an image.';
-  importSection.append(label, input, hint);
+
+  // Screen capture (§3, M4): a live getDisplayMedia session as an
+  // alternative source. The permission prompt is user-initiated —
+  // button only, never on load (UI-STANDARDS → "Capture UX").
+  const captureRow = document.createElement('div');
+  captureRow.className = 'toolbar';
+  const captureButton = document.createElement('button');
+  captureButton.type = 'button';
+  captureButton.textContent = 'Start screen capture';
+  const captureFrameButton = document.createElement('button');
+  captureFrameButton.type = 'button';
+  captureFrameButton.textContent = 'Capture frame';
+  captureFrameButton.hidden = true;
+  const stopCaptureButton = document.createElement('button');
+  stopCaptureButton.type = 'button';
+  stopCaptureButton.textContent = 'Stop capture';
+  stopCaptureButton.hidden = true;
+  const captureMeta = document.createElement('p');
+  captureMeta.className = 'meta';
+  captureMeta.hidden = true;
+  captureRow.append(captureButton, captureFrameButton, stopCaptureButton);
+  importSection.append(label, input, hint, captureRow, captureMeta);
 
   // Status is text in an aria-live region — never colour-only, never
   // silent (UI-STANDARDS → "System status").
@@ -779,6 +805,77 @@ function build(app: HTMLElement): void {
       log.error('import', 'decode failed', { source, message });
     }
   }
+
+  // Capture session state: one live session at most; ending it (from
+  // the app or the browser's own stop-sharing UI) restores the idle
+  // controls and says so — never a silent state change.
+  let capture: CaptureSession | null = null;
+
+  function endCaptureUi(message: string): void {
+    capture = null;
+    captureButton.hidden = false;
+    captureFrameButton.hidden = true;
+    stopCaptureButton.hidden = true;
+    captureMeta.hidden = true;
+    status.textContent = message;
+  }
+
+  async function grabCaptureFrame(): Promise<void> {
+    if (capture === null) return;
+    status.textContent = 'Processing…';
+    try {
+      const buffer = await capture.grabFrame();
+      log.info('capture', 'frame grabbed', {
+        width: buffer.width,
+        height: buffer.height,
+      });
+      masterImage = buffer;
+      reprocess();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      status.textContent = `Could not capture a frame (${message}).`;
+      log.error('capture', 'frame grab failed', { message });
+    }
+  }
+
+  async function startScreenCapture(): Promise<void> {
+    status.textContent = 'Requesting screen capture…';
+    captureButton.disabled = true;
+    try {
+      const session = await startCapture();
+      capture = session;
+      captureButton.hidden = true;
+      captureFrameButton.hidden = false;
+      stopCaptureButton.hidden = false;
+      captureMeta.hidden = false;
+      captureMeta.textContent = `Capturing ${session.label}.`;
+      session.onEnded(() => {
+        if (capture !== session) return;
+        endCaptureUi('Screen capture ended (sharing was stopped).');
+        log.info('capture', 'session ended externally');
+      });
+      log.info('capture', 'session started', { label: session.label });
+      await grabCaptureFrame();
+    } catch (error) {
+      const message = captureErrorMessage(error);
+      status.textContent = message;
+      log.warn('capture', 'session not started', { message });
+    } finally {
+      captureButton.disabled = false;
+    }
+  }
+
+  captureButton.addEventListener('click', () => {
+    void startScreenCapture();
+  });
+  captureFrameButton.addEventListener('click', () => {
+    void grabCaptureFrame();
+  });
+  stopCaptureButton.addEventListener('click', () => {
+    capture?.stop();
+    endCaptureUi('Screen capture stopped.');
+    log.info('capture', 'session stopped');
+  });
 
   input.addEventListener('change', () => {
     const file = imageFiles(input.files ?? []).at(0);

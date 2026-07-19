@@ -17,11 +17,11 @@ line passes and `check` is green. Requirements references are to
 
 ### M4 — Live capture (§3, §22) (current milestone)
 
-- [ ] `getDisplayMedia` screen/window session with permission UX
 - [ ] User-drawn crop rectangle over live thumbnail; move/resize/lock
 - [ ] Frame pump: `requestVideoFrameCallback`, latest-wins coalescing
 - [ ] Dirty-frame skip via 64×64 downsample hash
-- [ ] Pause/resume, manual refresh, draft-quality mode under load
+- [ ] Pause/resume, draft-quality mode under load (manual refresh
+      shipped with the session item — see D32)
 
 *Acceptance: editing in Photoshop at 200×200 grid sustains ≥ 4
 preview updates/sec with < 250 ms latency; idle frames cost ~0 CPU.*

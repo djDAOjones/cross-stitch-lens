@@ -17,6 +17,15 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
+## M4 — Live capture (in progress)
+
+- M4-SESSION (2026-07-19) — `getDisplayMedia` screen/window capture
+  session (§3 subset): user-initiated Start/Capture frame/Stop buttons
+  in the source section, honest permission UX (declined prompt is a
+  status, not an error), external stop-sharing handled, one-shot frame
+  grab into the existing pipeline path; pure error/label helpers
+  node-tested. See decision-log D32.
+
 ## M3 — Exports (shipped 2026-07-19, v0.4.0)
 
 - M3-CLOSE (2026-07-19) — milestone close: clean-PNG acceptance leg

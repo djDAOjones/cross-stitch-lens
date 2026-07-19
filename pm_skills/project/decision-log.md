@@ -520,3 +520,25 @@ every product version to carry its git tag.
 **Why:** The maintainer chose shipping the milestone over blocking on
 a printer; naming the waived check here keeps the acceptance line
 honest rather than silently green.
+
+## D32 — M4 capture session: main-thread wrapper, one-shot grab included (2026-07-19)
+
+**Decision:** M4's first item ships as `src/capture/session.ts` — a
+small main-thread wrapper over `getDisplayMedia` exposing a session
+object (label, `grabFrame()`, `stop()`, `onEnded`) plus two pure,
+hermetically tested helpers (`captureErrorMessage`, `displayLabel`),
+mirroring the `ui/import.ts` pure/browser split. The session includes a
+**one-shot frame grab** (a detached muted `<video>` + `OffscreenCanvas`
+draw) feeding the existing `masterImage → reprocess` path, and the UI
+gets Start/Capture frame/Stop buttons in the source section — so the
+session is visibly useful before the crop rect and frame pump land.
+"Manual refresh" from the M4 item-5 line therefore shipped early as
+the Capture frame button; item 5 was trimmed accordingly.
+**Why:** A session with no frame path is not a shippable unit; the
+one-shot grab is the smallest slice that proves permission UX, stream
+handling, and external-end recovery (browser stop-sharing UI) end to
+end. `ImageCapture.grabFrame()` was rejected as less portable than the
+video-element draw. Capture stays off the worker per architecture
+("main thread: capture + UI only"). Auto-jazz assumptions: scope as
+above; buttons reuse existing dev-shell styles (44 px met); declined
+permission treated as a normal status, not an error.

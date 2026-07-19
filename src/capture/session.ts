@@ -1,0 +1,116 @@
+/**
+ * Screen/window capture session (§3, M4): wraps `getDisplayMedia`
+ * behind a small session object — start, one-shot frame grab, stop,
+ * and external-end notification. Capture stays on the main thread
+ * (architecture: "Main thread: capture + UI only"). The error and
+ * label mapping is pure and hermetically tested; the session itself
+ * needs browser APIs and is verified in the running app.
+ */
+
+import type { PixelBuffer } from '../core/types.ts';
+
+/**
+ * Map a `getDisplayMedia` failure to a human-readable status message
+ * (UI-STANDARDS: errors say what happened and what to do next).
+ * Declining the browser prompt is a normal outcome, not a fault.
+ */
+export function captureErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    switch (error.name) {
+      case 'NotAllowedError':
+        return 'Screen capture was declined — nothing was shared. Start capture again to retry.';
+      case 'NotFoundError':
+        return 'No screen or window was available to capture.';
+      case 'NotSupportedError':
+        return 'Screen capture is not supported in this browser.';
+      default:
+        return `Screen capture failed (${error.message}).`;
+    }
+  }
+  return `Screen capture failed (${String(error)}).`;
+}
+
+/**
+ * Human-friendly name for the shared surface. Track labels are
+ * sometimes internal identifiers (e.g. `web-contents-media-stream://5`)
+ * rather than names — fall back to a generic phrase for those.
+ */
+export function displayLabel(trackLabel: string): string {
+  const label = trackLabel.trim();
+  if (label === '' || label.includes('://')) return 'the shared screen';
+  return label;
+}
+
+/** A live capture session. Obtain via {@link startCapture}. */
+export interface CaptureSession {
+  /** Human-friendly name of the shared surface. */
+  readonly label: string;
+  /** Grab the current frame as a PixelBuffer (RGBA sRGB). */
+  grabFrame(): Promise<PixelBuffer>;
+  /** Stop sharing and release the stream. Idempotent. */
+  stop(): void;
+  /** Called once if sharing ends outside the app (browser stop UI). */
+  onEnded(callback: () => void): void;
+}
+
+/** Resolve once the video element has decodable frame data. */
+async function whenReady(video: HTMLVideoElement): Promise<void> {
+  if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) return;
+  await new Promise<void>((resolve) => {
+    video.addEventListener('loadeddata', () => resolve(), { once: true });
+  });
+}
+
+/**
+ * Ask the user to share a screen or window and return a live session.
+ * Must be called from a user gesture (UI-STANDARDS: the permission
+ * prompt is user-initiated, never on load). Throws the raw
+ * `getDisplayMedia` error — map it with {@link captureErrorMessage}.
+ */
+export async function startCapture(): Promise<CaptureSession> {
+  const stream = await navigator.mediaDevices.getDisplayMedia({
+    video: true,
+    audio: false,
+  });
+  const track = stream.getVideoTracks()[0];
+  if (track === undefined) {
+    for (const t of stream.getTracks()) t.stop();
+    throw new Error('the shared stream has no video track');
+  }
+
+  // A detached, muted video element decodes the stream for frame
+  // grabs; nothing is added to the document.
+  const video = document.createElement('video');
+  video.muted = true;
+  video.srcObject = stream;
+  await video.play();
+  await whenReady(video);
+
+  let stopped = false;
+  return {
+    label: displayLabel(track.label),
+    async grabFrame(): Promise<PixelBuffer> {
+      if (stopped) throw new Error('capture has stopped');
+      if (video.videoWidth === 0) throw new Error('no frame available yet');
+      const canvas = new OffscreenCanvas(video.videoWidth, video.videoHeight);
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (ctx === null) throw new Error('2d canvas context unavailable');
+      ctx.drawImage(video, 0, 0);
+      const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      return { width: image.width, height: image.height, data: image.data };
+    },
+    stop(): void {
+      if (stopped) return;
+      stopped = true;
+      for (const t of stream.getTracks()) t.stop();
+      video.srcObject = null;
+    },
+    onEnded(callback: () => void): void {
+      track.addEventListener('ended', () => {
+        stopped = true;
+        video.srcObject = null;
+        callback();
+      });
+    },
+  };
+}

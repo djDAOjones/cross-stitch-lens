@@ -17,6 +17,13 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
+## M5 — WASM + WebGPU backends (in progress)
+
+- M5-PROFILE (2026-07-19) — profiling harness: per-stage last/median/max
+  timings over a rolling 120-frame window (stage-change reset) in a
+  dev-only "Profiling" disclosure below the info panel; stripped from
+  production builds. See decision-log D38.
+
 ## M4 — Live capture (shipped 2026-07-19, v0.5.0)
 
 - M4-CLOSE (2026-07-19) — milestone close: all five feature items

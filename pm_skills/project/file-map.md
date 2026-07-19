@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 91 file(s) across 9 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 93 file(s) across 9 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 10 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
@@ -23,8 +23,8 @@
 - `.windsurf` — 1 file(s)
 - `docs` — 1 file(s)
 - `scripts` — 4 file(s)
-- `src` — 40 file(s)
-- `tests` — 32 file(s)
+- `src` — 41 file(s)
+- `tests` — 33 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -96,6 +96,7 @@
 - `src/export/png.ts` — clean PNG export (§13 subset): pure nearest-
 - `src/main.ts` — app entry: M2 shell — import, control panel, preview, info panel
 - `src/ui/controls.ts` — Carbon-style field builders: toggle/number/colour/select + clampInt
+- `src/ui/debug-panel.ts` — dev-only profiling panel: rolling timing window (pure) + disclosure DOM
 - `src/ui/import.ts` — import routes → decode: filter (pure) + blob→PixelBuffer
 - `src/ui/info-panel.ts` — stats info panel: pure row model + thin DOM half
 - `src/ui/preview.ts` — preview controller: toolbar, wheel/drag/keys → worker
@@ -119,6 +120,7 @@
 - `tests/capture-session.test.ts` — capture pure half: error messages, surface labels
 - `tests/color-convert.test.ts` — golden: Lab reference values + round-trips
 - `tests/controls.test.ts` — number-input clamping (pure half of controls)
+- `tests/debug-panel.test.ts` — timing-window aggregation, cap, stage-change reset, ms formatting
 - `tests/dither.test.ts` — dither golden + determinism/mean/serpentine invariants
 - `tests/export-chart.test.ts` — chart layout: label margin + edge pad,
 - `tests/export-pdf.test.ts` — PDF layout (page sizes, aspect fit, key

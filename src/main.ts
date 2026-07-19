@@ -59,6 +59,7 @@ import {
   pngFilename,
   scaleNearest,
 } from './export/png.ts';
+import { createDebugPanel } from './ui/debug-panel.ts';
 import { decodeImageBlob, imageFiles } from './ui/import.ts';
 import { createInfoPanel } from './ui/info-panel.ts';
 import { PreviewController } from './ui/preview.ts';
@@ -218,6 +219,10 @@ function build(app: HTMLElement): void {
   host.append(canvas);
 
   const info = createInfoPanel(document);
+
+  // Profiling panel (M5 harness): dev-only per UI-STANDARDS →
+  // "Diagnostics affordance" — never mounted in a production build.
+  const debugPanel = import.meta.env.DEV ? createDebugPanel(document) : null;
 
   const client = new PipelineClient();
   client.attachCanvas(canvas);
@@ -828,6 +833,7 @@ function build(app: HTMLElement): void {
     zoomLabel,
   );
   previewSection.append(toolbar, host, info.element);
+  if (debugPanel !== null) previewSection.append(debugPanel.element);
 
   const content = document.createElement('div');
   content.className = 'content';
@@ -853,6 +859,7 @@ function build(app: HTMLElement): void {
     if (stopPump !== null) setDraftMode(draftGovernor.sample(total));
     const stats = computeStats(frame.buffer, config.palette ?? undefined);
     info.update(stats);
+    debugPanel?.update(frame.timings, client.droppedFrames);
     status.textContent = 'Preview updated.';
     log.info('pipeline', 'frame processed', {
       timings: frame.timings,

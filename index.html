@@ -268,25 +268,55 @@
       }
       /* Info panel: summary + colours-by-usage table. Swatch colours
         are content (thread colours), never UI tokens. */
-      .info-panel table {
+      .info-panel table,
+      .debug-panel table {
         border-collapse: collapse;
         font-size: 0.875rem;
         margin-top: 0.5rem;
       }
-      .info-panel caption {
+      .info-panel caption,
+      .debug-panel caption {
         text-align: left;
         font-size: 0.875rem;
         margin-bottom: 0.25rem;
       }
       .info-panel th,
-      .info-panel td {
+      .info-panel td,
+      .debug-panel th,
+      .debug-panel td {
         text-align: left;
         padding: 0.25rem 1rem 0.25rem 0;
         border-bottom: 1px solid var(--border);
       }
       .info-panel th.num,
-      .info-panel td.num {
+      .info-panel td.num,
+      .debug-panel th.num,
+      .debug-panel td.num {
         text-align: right;
+      }
+      /* Profiling debug panel (dev-only): a native disclosure so the
+        timings table is keyboard operable for free. */
+      .debug-panel {
+        margin-top: 1rem;
+      }
+      .debug-panel summary {
+        display: flex;
+        align-items: center;
+        min-height: 44px;
+        cursor: pointer;
+        font-size: 0.875rem;
+      }
+      .debug-panel summary::before {
+        content: '\25B8';
+        margin-right: 0.5rem;
+      }
+      .debug-panel[open] summary::before {
+        content: '\25BE';
+      }
+      .debug-panel summary::-webkit-details-marker,
+      .debug-panel summary::marker {
+        display: none;
+        content: '';
       }
       .swatch {
         display: inline-block;

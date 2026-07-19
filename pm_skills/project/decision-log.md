@@ -653,3 +653,28 @@ waived.
 **Why:** The maintainer chose shipping over blocking on a manual
 measurement, same trade as the M3 print check (D31); naming the waived
 leg keeps the acceptance line honest rather than silently green.
+
+## D38 — Profiling harness: rolling timing window, dev-only disclosure panel (2026-07-19)
+
+**Decision:** The M5 profiling harness reuses the per-stage timings the
+worker already returns with every processed frame (`StageTiming[]`,
+wired since the M1 executor) — no new instrumentation, no protocol
+change. A pure `TimingWindow` (`src/ui/debug-panel.ts`) aggregates
+last / median / max per stage plus a whole-frame total over a rolling
+120-frame window, and **resets when the stage list changes** so the
+aggregates always describe one comparable pipeline configuration. The
+DOM half is a native `<details>` "Profiling" disclosure below the info
+panel — keyboard operable for free, 44 px summary target — mounted only
+under `import.meta.env.DEV` per UI-STANDARDS → "Diagnostics affordance"
+and verified stripped from the production bundle. The meta line carries
+frames-sampled and the client's dropped-frame count. Export runs are
+not profiled (they return no timings; preview timings are the
+optimisation target).
+**Why:** M5's backend items need a place to read TS-reference numbers
+before and after each WASM/WebGPU drop-in, and D37 named this harness
+as where the waived M4 live numbers get captured. Median-over-window
+resists one-off GC spikes; the stage-change reset keeps windows honest
+across preset flips.
+**Run notes (auto-jazz via /next):** assumptions — dev-only panel
+(diagnostics rule), preview-only timings, `info-panel.ts` pure-model
+pattern. No gates were stopped at; gate green (194 tests).

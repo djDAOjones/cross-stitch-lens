@@ -906,3 +906,89 @@ conservatively and are flagged for M5C rather than deferred. **No
 browser numbers were taken** — the rehearsal procedure is written and
 M5-PERF-18 owns executing it; M5A's claim to cover transport and
 rendering latency is therefore procedural, not measured.
+
+## D45 — M5B audits: three bit-exact wins, four bv1 leads overturned, one shipped GPU bug (2026-07-19)
+
+**Context:** M5A left ten component audits (M5-PERF-10…19) with a bv1
+baseline and a set of leads. The instruction was to verify, not
+re-discover — and to take the browser-only boundary numbers that had
+never been measured.
+
+**Decision:** ship the audits as code. `npm run audit` (AUDIT=1, gated
+exactly like `bench`) reruns every node measurement and writes JSON
+artefacts beside the bench reports; candidate prototypes live in
+`tests/audits/candidates/` and are explicitly not shipping code. The
+browser work is a written, repeatable procedure with recorded results
+(`docs/browser-measurement.md`) rather than a one-off session.
+
+**What the evidence changed:**
+
+- **Three bit-exact wins, none needing a mode contract or a golden
+  regeneration.** (1) The reference Lab scan re-reads its query from a
+  `Float32Array` on every palette iteration via `deltaE76Sq(labScratch,
+  0, …)`; hoisting those reads is a pure loop-invariant fix worth
+  888 → 273 ms at 1024²/64. (2) Per-bin candidate pruning, derived from
+  a monotone Lab bounding box per 15-bit bin and verified over 138,304
+  adversarial values with zero mismatches, takes it to 217 ms (and
+  15.4× at 300²/533). (3) A hoisted-coverage `sampleArea` is
+  byte-identical to the resize reference and ~1.5× faster on every case.
+- **"Dither is conversion-bound (~70%)" is a WASM statement.** Measured
+  per backend: wasm 70.1%, TS-as-shipped 11.4%, TS-hoisted ~0%. The
+  Rust port uses `libm` for bit-exact V8 parity (D39); V8 uses
+  builtins. One conversion strategy across both backends would be wrong.
+- **Separable resize is not merely challenged, it is harmful** — 0.51×
+  to 0.69× (slower) as the scale ratio approaches 1. Summed-area is
+  slower everywhere. M5-PERF-21 must not rewrite resize as separable.
+- **Closed as immaterial:** the wasm boundary (~8 MB of copies is
+  0.17–0.28% of a call, so zero-copy/persistent-memory/SIMD work is
+  premature) and the `?? 0` bounds-read tax (ratio 0.985–0.995 — V8
+  elides it, so strict TypeScript is not a performance cost).
+- **Node is not a proxy for the browser.** The same TS resize is ~3.5×
+  slower in-browser than in node on one machine while TS dither is only
+  ~1.1× slower — stage-dependent, verified inside a Worker. No global
+  multiplier fixes this; budgets must be re-measured in the browser.
+- **P0 defect found: the WebGPU LUT has never worked.**
+  `lutBuildShader` uses `target`, a reserved WGSL keyword. WebGPU
+  reports shader compilation errors asynchronously, so nothing throws,
+  the dispatch no-ops, and the zero-filled buffer reads back as a valid
+  all-zeros LUT that `ensureLut` caches **in preference to** the correct
+  TS build. Non-dithered reduction therefore renders a solid single
+  colour in every WebGPU browser, preview and export alike. Proven on
+  the real frame path. The real-GPU suite that would have caught it is
+  `skipIf(!isWebGpuAvailable())` and CI is node, so it has never run
+  anywhere.
+- **Three further defects:** the LUT cache key (`name:count:metric`)
+  collides on reordered palettes and serves indices — a red pixel comes
+  back green (M5-PERF-26); two floating async paths in the worker can
+  post no response at all and wedge the latest-wins gate permanently
+  (M5-PERF-29); and dirty detection's 64×64 downsample averages ~362
+  source pixels per cell, so small or low-contrast edits are never
+  detected — the live-capture promise failing silently (M5-PERF-30).
+
+**Consequences:** M5B closes and a new **M5B-FIX** milestone jumps the
+queue ahead of the M5C decision gate, because two of its four items are
+wrong-output bugs rather than performance work. M5C is narrowed: the
+three bit-exact wins land regardless of mode decisions, and the only
+remaining levers (rounded conversion, canvas resize) both change
+appearance — canvas `drawImage` differs from the oracle by mean 39/255
+per channel at the downscale ratios the product actually uses, so it can
+never be a quality-neutral backend. Both the 5 ms resize row and the
+15 ms dither row are unreachable on this evidence and M5C owns revising
+them. First browser numbers recorded: `preview-update` is 57.5 ms at
+200² and 85.9 ms at 300² (11.6–17.4 updates/sec), so the brief's ≥ 4/sec
+bar at ≤ 300² is met with margin; 1024² runs at 1.6/sec. Preview render
+components total ~2 ms against the 5 ms row. No pipeline behaviour
+changed in this batch and no golden fixture was touched.
+
+**Run notes (auto-jazz, all gates skipped):** assumptions — the audits
+ship as committed code rather than scratch, following M5A's precedent,
+because M5C needs to rerun them; the ten per-ticket detail files were
+deleted on close per the tickets policy and their evidence folded into
+`tickets/M5-PERF.md`, which is the M5C handoff; audits 16/17/19 were
+combined into one file because they share the frame-path surface; the
+browser probes were run against the dev server on one machine, so the
+node-vs-browser discrepancy is flagged for confirmation rather than
+treated as settled. The GPU LUT defect was found during M5-PERF-12's
+"record the boundaries node cannot observe" step and is reported as
+found — it was not in scope to fix, and fixing it inside an audit would
+have violated the spike boundary.

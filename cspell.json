@@ -30,6 +30,7 @@
     "coalescer",
     "deserialisation",
     "resampler",
+    "srgb",
     "Dockerfiles",
     "docstrings",
     "fdlibm",

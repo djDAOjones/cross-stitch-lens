@@ -15,17 +15,17 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 119 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 129 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 10 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
 - `.github` — 1 file(s)
 - `.windsurf` — 1 file(s)
 - `crates` — 4 file(s)
-- `docs` — 2 file(s)
+- `docs` — 3 file(s)
 - `scripts` — 5 file(s)
 - `src` — 48 file(s)
-- `tests` — 46 file(s)
+- `tests` — 55 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -66,6 +66,7 @@
 
 ## docs
 
+- `docs/browser-measurement.md` — browser-only boundary procedure + recorded results (M5-PERF-18)
 - `docs/measurement-contract.md` — M5 boundary contract (bv1), workload matrix, report schema, browser rehearsal
 - `docs/requirements.md` — full combined requirements spec (reference only)
 
@@ -130,6 +131,15 @@
 
 ## tests
 
+- `tests/audits/audit.ts` — audit harness: AUDIT=1 gate, timed/counted rows, JSON artefacts
+- `tests/audits/candidates/dither-candidates.ts` — dither prototypes: exact pruning table, hoisted scan, rounded conversion
+- `tests/audits/candidates/resize-candidates.ts` — resize prototypes: hoisted (bit-exact), separable, summed-area
+- `tests/audits/dither.audit.test.ts` — M5-PERF-13/14: conversion decomposition + exact-pruning proof
+- `tests/audits/lut-reduce.audit.test.ts` — M5-PERF-12: LUT build vs map, stale-cache-key repro
+- `tests/audits/orchestration.audit.test.ts` — M5-PERF-10: palette rebuild, `?? 0` tax, allocation inventory
+- `tests/audits/resize.audit.test.ts` — M5-PERF-11: candidate timings + byte-equality across the mode matrix
+- `tests/audits/runtime.audit.test.ts` — M5-PERF-16/17/19: compare cost, gate stalls, dirty sensitivity, export isolation
+- `tests/audits/wasm-boundary.audit.test.ts` — M5-PERF-15: boundary vs Rust split, calibration representativeness
 - `tests/backend-select.test.ts` — selection policy/calibration + ts fallback with both backends disabled
 - `tests/bench-matrix.test.ts` — workload-matrix invariants: unique/derived IDs, core cross-product, axis coverage
 - `tests/bench-report.test.ts` — boundary contract, percentile math, warm-up exclusion, schema round-trip

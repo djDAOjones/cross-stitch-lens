@@ -15,66 +15,38 @@ line passes and `check` is green. Requirements references are to
 
 ## Active
 
-### M5B — Component investigations (§22, §23.5) (current milestone)
+### M5B-FIX — correctness defects found by the M5B audits (current milestone)
 
-Each audit starts from the leads recorded in `tickets/M5-PERF.md`
-(verify, don't re-discover) and appends its evidence there. M5A shipped
-the bv1 baseline: several leads there are already confirmed, bounded or
-challenged by measurement — read those verdicts before re-deriving them.
-Measure with `npm run bench`; the contract is
-`docs/measurement-contract.md`. The three browser-only boundaries have a
-documented rehearsal but **no numbers yet** — M5-PERF-18 owns taking
-them.
+The M5B audits shipped their evidence into `tickets/M5-PERF.md`; these
+are the defects they found. Two are wrong-output bugs, not performance
+work, so they jump the queue ahead of the M5C decision gate. Reproduce
+each with `npm run audit` (node) or the procedure in
+`docs/browser-measurement.md` (browser) before changing code.
 
-- [ ] **M5-PERF-10 Audit pipeline construction and ownership** [spike] [detail]
-  Intent: quantify identity-adjust cloning, stage ordering, transfers, retained buffers, and repeated palette/config construction.
-  Done when: each material orchestration cost has evidence and any discovered bug or safe optimisation has a concrete follow-up ticket.
+- [ ] **M5-PERF-31 Fix the WebGPU LUT build and cover it on a real GPU** [detail] (2026-07-19)
+  Intent: `lutBuildShader` uses `target`, a reserved WGSL keyword, so the shader never compiles; WebGPU reports that asynchronously, nothing throws, and the zero-filled buffer is cached by `ensureLut` in preference to the correct TS LUT. Non-dithered reduction renders a solid single colour in every WebGPU browser.
+  Done when: the shader compiles and its LUT matches the TS build within the D41 near-tie tolerance; shader creation drains `getCompilationInfo()`/error scopes and falls back on any diagnostic; and the real-GPU suite runs somewhere that has a GPU, so this class of defect cannot ship again.
 
-- [ ] **M5-PERF-11 Audit resize** [spike] [detail]
-  Intent: compare area averaging with separable, integral-image, canvas, and GPU candidates across modes, alpha edges, and source sizes.
-  Done when: timings and memory are recorded; byte equality or tolerance is established; CPU/GPU roles and crossover thresholds are recommended before either path receives deep optimisation.
+- [ ] **M5-PERF-30 Make dirty detection see small edits**
+  Intent: the 64×64 downsample averages ~362 source pixels per sample cell at a realistic Retina crop, so small or low-contrast edits round away and the preview never updates — the core live-capture promise failing silently.
+  Done when: the in-browser detection threshold is measured against the real `drawImage` sampler, the chosen fix (higher-precision hash, max-difference sampling, or a periodic forced refresh) detects the measured miss cases, and the idle path stays within its current cost.
 
-- [ ] **M5-PERF-12 Audit LUT construction and colour reduction** [spike] [detail]
-  Intent: separate LUT build from pixel mapping and test TS/WebGPU costs, cache behaviour (including the name+count cache key's stale-LUT risk), palette sizes, readback overhead, and near-tie differences.
-  Done when: cache correctness and fallback are verified; candidates have build, steady-state, memory, and output-difference evidence; TS/WebGPU mapping roles and crossover thresholds are explicit.
+- [ ] **M5-PERF-29 Never let a frame wedge the worker gate**
+  Intent: the client releases latest-wins only in `handleResponse`, and two paths in `pipeline-worker.ts` can post nothing at all — `await ensureLutFor(…)` and `createImageBitmap(…).then(…)` both sit inside a floating async wrapper with no catch. A single rejection stops live preview permanently.
+  Done when: every worker entry path posts either a result or an error, a regression test drives each rejection and proves the coalescer is released, and recovery needs no user action.
 
-- [ ] **M5-PERF-13 Decompose dither colour conversion** [spike] [detail]
-  Intent: measure transfer-function powers, XYZ/Lab conversion, and cube roots independently; evaluate lookup-based reductions against frozen Exact output.
-  Done when: each cost is quantified and proposed alternatives include output-difference propagation through error diffusion.
+- [ ] **M5-PERF-26 Key the LUT cache on palette content**
+  Intent: the key is `name:entries.length:metric`, so palettes differing only in colour or order share a LUT that stores palette *indices* — a reordered palette renders a red pixel green.
+  Done when: the key is a deterministic content fingerprint plus metric and schema version, the reordering case is a regression test, and cache growth stays bounded.
 
-- [ ] **M5-PERF-14 Decompose dither nearest-colour search** [spike] [detail]
-  Intent: compare linear scanning, provably exact candidate pruning, spatial search, and LUT-quantised matching for 64- and 533-colour palettes.
-  Done when: timings, table-build cost, memory, winner coverage, and first-index tie behaviour are evidenced.
-
-- [ ] **M5-PERF-15 Audit WASM boundary and generated code** [spike] [detail]
-  Intent: measure copying, palette conversion, allocation, JS glue, Rust execution, emitted WASM, and calibration representativeness separately.
-  Done when: the actual boundary/backend costs are known and SIMD or persistent-memory work is either justified by evidence or rejected.
-
-- [ ] **M5-PERF-16 Audit worker scheduling and split compare** [spike] [detail]
-  Intent: trace latest-wins scheduling, bitmap creation, stale-result risks, and compare's second full-RGB pipeline run.
-  Done when: throughput, latency, dropped frames, compare overhead, and any race or stale-frame bugs have reproducible evidence.
-
-- [ ] **M5-PERF-17 Audit capture and dirty-frame path** [spike] [detail]
-  Intent: measure canvas creation, readback, dirty sampling, copies, crop effects, gates, and allocation under static and changing sources.
-  Done when: idle and active costs are separated and any collision, stale-signature, gate-stall, or allocation issue has a follow-up.
-
-- [ ] **M5-PERF-18 Audit preview rendering and UI work** [spike] [detail]
-  Intent: measure bitmap conversion, canvas/grid/tick rendering, stats, diagnostics, zoom, and compare redraws apart from worker processing.
-  Done when: main-thread responsiveness and the ≤5 ms render row have browser evidence and discovered hot paths or bugs are ticketed.
-
-- [ ] **M5-PERF-19 Audit export isolation** [spike] [detail]
-  Intent: verify exports use the chosen creative algorithm but never adaptive draft substitutions, and examine maximum-grid memory, latency, and preview contention.
-  Done when: isolation and round-trip expectations are proven; export performance or scheduling defects have follow-ups.
-
-*Acceptance: every material frame path has a cost breakdown, bug
-inventory, evidence-ranked optimisation candidates, and explicit
-correctness constraints.*
+*Acceptance: each defect has a regression test that fails before the fix,
+and no fix changes Exact output on a correct configuration.*
 
 ### M5C — Performance and product decision gate (§22, §23.5)
 
 - [ ] **M5-PERF Synthesize the performance strategy** [sign-off] [detail] (2026-07-19)
-  Intent: use M5A/M5B evidence to choose quality-neutral work, justify any processing modes, and bind budgets to explicit behaviour.
-  Done when: resize strategy, Exact/Balanced/Responsive semantics if retained, default mode, visual thresholds, budget mode, and honest Exact expectations are approved.
+  Intent: use M5A/M5B evidence to choose quality-neutral work, justify any processing modes, and bind budgets to explicit behaviour. M5B narrowed this considerably: three bit-exact wins need no mode contract at all, and the only two remaining levers (rounded conversion, canvas resize) both change appearance.
+  Done when: resize strategy, Exact/Balanced/Responsive semantics if retained, default mode, visual thresholds, budget mode, and honest Exact expectations are approved. In particular the 5 ms resize row and the 15 ms dither row are both unreachable on M5B evidence and must be revised or bound to a mode here.
 
 *Acceptance: implementation tickets carry approved behaviour and
 evidence; no unresolved algorithm or budget choice is delegated to a
@@ -83,20 +55,32 @@ coding task.*
 ### M5D — Quality-neutral implementation (§22, §23.5)
 
 - [ ] **M5-PERF-20 Remove proven orchestration waste** [detail]
-  Intent: apply approved clone, allocation, cache, and stage-construction reductions without weakening ownership or transfer safety.
+  Intent: apply approved clone, allocation, cache, and stage-construction reductions without weakening ownership or transfer safety. M5B found nothing material left here beyond M5-PERF-25 — scope accordingly rather than hunting.
   Done when: targeted costs fall by the agreed amount and worker/capture correctness tests pass unchanged or are strengthened for discovered bugs.
 
-- [ ] **M5-PERF-21 Implement the approved resize reference** [detail]
-  Intent: preserve or land the approved pure TypeScript resize reference, deeply optimising it only if M5C shows the CPU path remains performance-relevant.
-  Done when: resize tests and fixture tolerances pass and any approved CPU optimisation meets its measured role-specific target; otherwise the correct fallback remains unchanged.
+- [ ] **M5-PERF-25 Reuse the dither f32 work buffer and skip identity adjust**
+  Intent: the 12 MB per-frame f32 work buffer is the only allocation M5B found worth reusing (it is stage-private scratch, never observable), and the identity `adjust` clone can be skipped at config level.
+  Done when: both land without weakening stage purity, and the ownership invariant M5B pinned still holds — the response buffer can never alias the retained `lastFrame`, which requires every remaining stage to allocate its own output.
+
+- [ ] **M5-PERF-21 Land the bit-exact hoisted resize** [detail]
+  Intent: M5B settled this — the hoisted-coverage variant is byte-identical to the reference and ~1.5× faster on every case in the matrix, while separable is *slower* near 1:1 and summed-area is slower everywhere. Land the hoisted variant; do not rewrite as separable.
+  Done when: resize golden fixtures pass unchanged (no tolerance needed), the ~1.5× is reproduced by `npm run audit`, and the 5 ms budget row is resolved by M5C rather than by this ticket.
 
 - [ ] **M5-PERF-22 Implement Exact dither acceleration** [detail]
-  Intent: accelerate frozen Exact appearance using only transformations proven to preserve its matching and tie behaviour.
-  Done when: TypeScript and Rust are bit-exact across the expanded parity suite and the before/after cost contribution is recorded.
+  Intent: land the two bit-exact wins M5B proved — hoist the query Lab out of the palette scan loop, then per-bin candidate pruning (exactness argued and verified over 138k adversarial values). Together 888 ms → 217 ms at 1024²/64 with byte-identical output. The pruning table is a per-palette one-off and belongs in the LUT cache, not the frame path.
+  Done when: TypeScript and Rust are bit-exact across the expanded parity suite, the table build is cached and excluded from frame timings, and the before/after contribution of each of the two changes is recorded separately.
 
 - [ ] **M5-PERF-23 Implement approved boundary/backend improvements** [detail]
-  Intent: apply only WASM, WebGPU, or worker-boundary changes whose M5B evidence clears their stated benefit and complexity threshold, with workload-based routing rather than universal replacement.
+  Intent: apply only WASM, WebGPU, or worker-boundary changes whose M5B evidence clears their stated benefit and complexity threshold, with workload-based routing rather than universal replacement. M5B closed the wasm-boundary leads (copies are 0.2% of a call; SIMD is mis-aimed), so this item is now about routing, not about the boundary.
   Done when: measured crossover thresholds select appropriate backends by workload; feature detection and TS fallback remain sound; each change meets its individual target.
+
+- [ ] **M5-PERF-27 Replace one-shot calibration with workload-threshold routing**
+  Intent: D42 calibrates once on a 96²/533 frame and applies the winner everywhere, but M5B measured the backend margin varying 2.1–5.4× by workload — and the winner flips entirely once M5-PERF-22 lands (TS 217 ms vs wasm 417 ms at 1024²/64).
+  Done when: selection is a threshold over grid × palette size, it is re-derived after M5-PERF-22 rather than before, and the TS reference remains the fallback everywhere.
+
+- [ ] **M5-PERF-28 Recompute the compare pass only when it can change**
+  Intent: split compare re-runs `adjust + resize` over the full source every frame (16.4% overhead at 300²) although its result is deterministic for a given source and geometry.
+  Done when: the compare bitmap is recomputed only on source or geometry change, cell-for-cell alignment with the output is unchanged, and the second per-frame ImageBitmap allocation is gone.
 
 - [ ] **M5-PERF-24 Extend performance regression coverage** [detail]
   Intent: encode the approved measurement contract as repeatable, non-mutating checks without hiding machine variance or weakening budgets.

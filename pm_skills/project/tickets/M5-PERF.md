@@ -240,6 +240,176 @@ and the bench bias.
   project's selected mode at full execution quality; adaptive draft
   never affects exports.
 
+## M5B component evidence (2026-07-19, Apple M1 Max, node 24.5 + Chromium/Metal-3)
+
+M5B is complete. Audits are code: `npm run audit` (AUDIT=1) reruns every
+node measurement below and writes JSON artefacts to `bench-reports`; the
+browser numbers and their procedure are in `docs/browser-measurement.md`.
+Candidate prototypes live in `tests/audits/candidates/` and are **not**
+shipping code.
+
+**Read this section before the leads below — several leads are now
+overturned, not merely confirmed.**
+
+### The headline: three bit-exact wins, one shipped correctness bug
+
+| Change | Workload | Before | After | Exact? |
+| --- | --- | --- | --- | --- |
+| Hoist Lab scan reads out of the palette loop | dither ts 1024²/64 | 821–888 ms | 273–304 ms | **yes** |
+| + per-bin candidate pruning | dither ts 1024²/64 | 273 ms | 217 ms | **yes** |
+| + per-bin candidate pruning | dither ts 300²/533 | 106 ms | 32 ms | **yes** |
+| Hoisted coverage in `sampleArea` | resize 1280→1024 | 37.4 ms | 24.4 ms | **yes** |
+
+None needs a tolerance decision or a golden regeneration. Together they
+move the TS dither at the ceiling grid from 888 ms to 217 ms (4.1×) and
+the TS resize by ~1.5× everywhere.
+
+**P0 defect: the WebGPU LUT has never worked and silently replaces the
+correct one.** `lutBuildShader` uses `target`, a reserved WGSL keyword;
+the module fails to compile, WebGPU reports that asynchronously so
+nothing throws, the dispatch no-ops, and the zero-filled buffer reads
+back as a valid all-zeros LUT that `ensureLut` caches in preference to
+the TS build. In any WebGPU browser, non-dithered reduction renders a
+**solid single colour**. Proven on the real frame path — see
+`docs/browser-measurement.md`. Fix + real-GPU CI coverage: **M5-PERF-31**.
+
+### Corrections to bv1
+
+- **"Dither is conversion-bound (~70%)" is a WASM statement, not an
+  algorithm statement.** bv1 derived it from (lab − rgb)/lab on the wasm
+  backend. Measured per backend: wasm 70.1%, TS as-shipped 11.4%, TS
+  with the scan reads hoisted **−2% (i.e. nil)**. The Rust port calls
+  `libm::pow`/`libm::cbrt` — software routines chosen for bit-exact
+  parity with V8 (D39) — while V8 lowers the same maths to builtins.
+  M5C must not plan one conversion strategy across both backends.
+- **"Pruning can address at most ~22% of dither cost" understated it.**
+  Measured 4.1× at 1024²/64 and 15.4× at 300²/533 — because the
+  reference's Lab scan carried a loop-invariant Float32Array re-read
+  that bv1's palette-size model could not see. Attribution is reported
+  separately: the hoist is 84–92% of the saving, pruning the rest.
+- **Separability is worse than CHALLENGED — it is actively harmful.**
+  Measured against the reference: 1.17–1.27× at hard downscale, but
+  **0.51–0.69× (slower)** as the ratio approaches 1. A summed-area table
+  is slower everywhere (0.35–0.79×). The bit-exact hoisted variant beats
+  both on every case. **Do not rewrite resize as separable.**
+- **The `?? 0` bounds-read tax is zero.** Measured ratio 0.985–0.995
+  against an assertion-typed loop — V8 elides it. Lead closed; do not
+  weaken strict TypeScript for performance.
+- **The wasm boundary is not where the time goes.** ~8 MB of in+out
+  copying plus the per-call palette flatten is **0.17–0.28%** of a wasm
+  dither call. Zero-copy linear memory, persistent allocations and
+  cached palette buffers are all premature. SIMD is likewise mis-aimed
+  while the residual is `libm` transcendental routines.
+- **Node is not a proxy for the browser.** The same TS resize is ~3.5×
+  slower in-browser than in node on this machine, while TS dither is
+  only ~1.1× slower — stage-dependent, so no global multiplier fixes it.
+  Verified inside a Worker too, so it is not a main-thread artefact.
+
+### Per-component verdicts
+
+- **M5-PERF-10 orchestration — nothing material left.** Palette
+  derivation per stage call: 0.009 ms (p64) / 0.063 ms (p533), ≤ 0.02%
+  of a 200² frame. `?? 0` tax nil. Per 1024² frame the engine allocates
+  ~26.5 MB (~4× the source); the 12 MB f32 dither work buffer is the
+  only reuse candidate that does not touch stage purity. Ownership
+  pinned: skipping identity `adjust` is safe **only** because every
+  remaining stage allocates its own output, so a response buffer can
+  never alias the retained `lastFrame`. (M5-PERF-25)
+- **M5-PERF-11 resize — no CPU path reaches 5 ms; canvas cannot be
+  quality-neutral.** Best bit-exact CPU candidate is 24.4 ms at
+  1280→1024 (node). Canvas `drawImage` + readback is 8.1 ms in-browser
+  but differs from the oracle by mean 39/255 per channel at 6.4×
+  downscale (100% of pixels). The 5 ms row is unreachable without a
+  visible appearance change. M5C must either revise the row or accept
+  canvas as a *mode*, not a backend.
+- **M5-PERF-12 LUT/reduce — two defects.** (1) The P0 GPU shader bug
+  above. (2) The cache key is `name:entries.length:metric`, so palettes
+  differing only in colour **or order** share a LUT — and the LUT stores
+  *indices*. Reproduced: a pure-red pixel reduced under a reordered
+  palette comes back **green**. Latent until user palettes ship, then a
+  live wrong-output bug. (M5-PERF-26) Cost split: the 13.6 ms bv1
+  `reduce` row is essentially all per-pixel mapping (12.7 ms at 1024²,
+  identical for 64 and 533 colours — memory-bound, not palette-bound),
+  so no search-side work can move it. Cold build 26 ms / 179 ms. The
+  15-bit LUT disagrees with exact Lab matching on **5.9%** of sampled
+  sRGB values, which is why D6 keeps dither off the LUT.
+- **M5-PERF-13 conversion — reject candidate B.** Isolated, the three
+  `Math.pow` transfer functions are 33% of conversion and the three
+  `Math.cbrt` 19%; a 256-entry table halves the pow term. But in situ
+  the whole conversion is worth ~0% on the hoisted TS path, while
+  rounding the match input changes **49–53% of output pixels** through
+  error diffusion. Method caveat recorded: the isolated micro-benchmark
+  predicts ~90 ms/frame and the in-situ delta is nil, because V8 keeps
+  the Lab triple in registers — quote the in-situ number.
+- **M5-PERF-14 search — pruning is exact and it is the win.** Per-bin
+  candidate lists derived from a monotone Lab bounding box of each
+  15-bit bin, keeping candidates in palette index order. Exactness is
+  argued (every step sRGB→f is monotone per channel; the enclosure is
+  conservative) and verified: **0 mismatches over 138,304 adversarial
+  values** per palette, and byte-identical dither output on every
+  workload. Mean candidates 18.0/64 and 34.5/533 (3.6× and 15.4× scan
+  reduction). Table build 74 ms / 355 ms, 1.3 MB / 2.3 MB — a per-palette
+  one-off that belongs in the LUT cache, not the frame path.
+- **M5-PERF-15 wasm boundary — closed as immaterial.** See corrections.
+  Emitted module 21.7 KB (19.3 KB code), no `simd128`. Calibration picks
+  wasm at every workload today (margins 2.1–5.4×), but the margin varies
+  by workload and the winner **flips** once the two bit-exact TS fixes
+  land (TS 217 ms vs wasm 417 ms at 1024²/64). The one-shot 96²/533
+  calibration cannot see either. Re-derive routing after M5-PERF-22, and
+  make selection a workload threshold rather than a global pick.
+  (M5-PERF-27)
+- **M5-PERF-16 worker/compare — one confirmed stall defect.** Split
+  compare re-runs `adjust + resize` over the full **source** every frame:
+  16.3 ms at 300² (16.4% overhead) and 43.8 ms at 1024² (4.2%) — worst
+  proportionally where the pipeline is cheapest, and the result is
+  deterministic per source+config so it need not be recomputed per frame
+  (M5-PERF-28). Confirmed latent stall: the client releases the
+  latest-wins gate only in `handleResponse`, and two paths in
+  `pipeline-worker.ts` can produce no response at all — both sit inside a
+  floating `void (async () => …)()` with no catch: `await ensureLutFor(…)`
+  rejecting (WebGPU device loss is the realistic trigger) and
+  `createImageBitmap(…).then(…)` rejecting, since the `postMessage` is
+  *inside* that callback. Live preview then wedges permanently — every
+  later frame is dropped and nothing recovers it. (M5-PERF-29)
+- **M5-PERF-17 capture — cheap when idle, but it can miss real edits.**
+  Idle cost is a 16 KB readback plus a 0.03 ms hash against a 5.9 MB
+  full readback (~362× saved); crop moves correctly read as changes;
+  32-bit FNV collisions are a non-issue against the immediately previous
+  frame. **But** the 64×64 downsample means one sample cell covers ~362
+  source pixels at a realistic Retina crop, and edits whose contribution
+  rounds away are invisible — the preview then **never** updates, not
+  merely late. Measured misses: a 1 px full-contrast edit, a 1 px Δ8
+  edit, a 4×4 Δ8 edit. This is the product's core promise failing
+  silently for small strokes. (M5-PERF-30; the exact threshold needs
+  re-measuring in-browser because the real sampler uses `drawImage`.)
+- **M5-PERF-18 preview/UI — budget met, and the first browser numbers
+  exist.** Render components total ≈ 2 ms at 1024² (ImageData wrap 0.5,
+  `createImageBitmap` 1.5, surface draw < 0.1) against the 5 ms row.
+  `preview-update` end to end: 57.5 ms at 200² (17.4/sec), 85.9 ms at
+  300² (11.6/sec), 633.7 ms at 1024² (1.6/sec). The brief's ≥ 4/sec bar
+  at ≤ 300² is **met with margin**; the ceiling grid is not, which is
+  what the draft governor is for. Procedure: `docs/browser-measurement.md`.
+- **M5-PERF-19 export — isolation proven.** `exportFrame` is called with
+  the stable project config, never `liveConfig()`; the draft governor
+  mutates nothing; export output is **byte-identical** to an independent
+  full-quality run at 300² and 1024². Open and browser-only: encode
+  time, the 16384 px clamp against real canvas limits, peak memory at
+  maximum scale, and worker contention — a 1024² export blocks the
+  worker for ~1 s, during which live frames are dropped.
+
+### What M5C should decide first
+
+1. **M5-PERF-31 is not an M5C decision** — it is a shipped wrong-output
+   bug and should be fixed before anything else in the milestone.
+2. The three bit-exact wins need no mode contract; they can land as
+   quality-neutral work regardless of how Exact/Balanced/Responsive
+   resolve.
+3. Candidate B (rounded conversion) and canvas resize are the only two
+   remaining levers, and **both change appearance** — so the mode
+   question is now narrower and sharper than the pre-M5B framing.
+4. The 5 ms resize row and the 15 ms dither row are both unreachable on
+   the evidence; M5C owns revising them or binding them to a mode.
+
 ## Leads by component (for the M5B audits — verify, don't re-discover)
 
 Findings from the 2026-07-19 code analysis, mapped to backlog items.

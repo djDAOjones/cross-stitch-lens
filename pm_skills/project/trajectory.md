@@ -19,6 +19,18 @@
 
 ## M5 — WASM + WebGPU backends (in progress)
 
+- M5-PERF-10, M5-PERF-11, M5-PERF-12, M5-PERF-13, M5-PERF-14,
+  M5-PERF-15, M5-PERF-16, M5-PERF-17, M5-PERF-18, M5-PERF-19
+  (2026-07-19) — M5B component audits: ten investigations shipped as a
+  repeatable `npm run audit` suite plus the first browser measurements
+  the project has ever taken (`docs/browser-measurement.md`). Found
+  three **bit-exact** wins (dither 888 → 217 ms at 1024²/64; resize
+  ~1.5× everywhere), overturned four bv1 leads, closed the wasm-boundary
+  and `?? 0` leads as immaterial, and uncovered a shipped wrong-output
+  bug: the WebGPU LUT shader has never compiled and silently replaced
+  the correct LUT. Evidence in `tickets/M5-PERF.md`; see decision-log
+  D45.
+
 - M5-PERF-01, M5-PERF-02, M5-PERF-03 (2026-07-19) — M5A measurement
   truth: boundary contract **bv1** (six boundaries, versioned so a moved
   mark invalidates comparison), a frozen 24-row workload matrix with

@@ -40,6 +40,7 @@ Package manager: **npm** (Node LTS).
 | `build:wasm` | `wasm-pack build crates/stitch-engine --target web` | Rust→WASM release build into `crates/stitch-engine/pkg` (gitignored) | When touching the Rust crate |
 | `test` | `vitest run` | Vitest incl. golden suite | After every change |
 | `bench` | `BENCH=1 vitest run tests/benchmark.test.ts` | Workload matrix + JSON report to `bench-reports`, then budget assertions | Perf-sensitive changes, pre-release |
+| `audit` | `AUDIT=1 vitest run tests/audits` | M5B component decompositions + defect reproductions; JSON artefacts to `bench-reports` | Investigating where a cost or a defect lives |
 | `check` | typecheck + lint + test + build | **Quality gate** | Before calling a task done |
 | `lint:fix` | `eslint . --fix` | Auto-fix (separate from the gate) | Cleanup, never the CI pass/fail |
 
@@ -240,6 +241,15 @@ is overwritten on every build.
 - **`build:wasm`** — `wasm-pack` release build of `crates/stitch-engine`
   into `crates/stitch-engine/pkg` (M5+). Not required for pre-M5
   checkouts or CI without Rust.
+- **`audit`** — runs the M5B component audits (`tests/audits`): the
+  decompositions behind the matrix rows, plus reproductions of the
+  defects those audits found. Gated behind `AUDIT=1` for the same reason
+  as `bench` — the gate stays fast — and out of `check` for the same
+  reason: it times things. Candidate prototypes under
+  `tests/audits/candidates/` are measurement subjects, never shipping
+  code, and nothing in `src/` may import them. Browser-only boundaries
+  are **not** covered here; their procedure is
+  `docs/browser-measurement.md`.
 - **`bench`** — runs the M5 workload matrix under the boundary contract
   in `docs/measurement-contract.md`, writes a machine-readable report to
   `bench-reports` (gitignored — regenerated, never committed), logs a

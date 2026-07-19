@@ -36,3 +36,12 @@
   each row now binds to one workload at one boundary under contract bv1
   (`docs/measurement-contract.md`), and the preview-render row is
   browser-only (source: D44)
+- [ ] 2026-07-19 architecture — the preview-render ≤ 5 ms row now has browser
+  evidence for the first time (components total ~2 ms at 1024²; it passes),
+  and the resize ≤ 5 ms and dither ≤ 15 ms rows are unreachable on M5B
+  evidence (best bit-exact CPU resize 24.4 ms; canvas 8.1 ms but not
+  area-averaging). M5C/ACCEPT-04 owns revising them (source: D45)
+- [ ] 2026-07-19 architecture — budget rows are stated without a runtime, but
+  the same TS resize measures ~3.5× slower in-browser than in node on one
+  machine while TS dither is only ~1.1× slower; a node median is not a
+  browser claim and the table should say which runtime binds (source: D45)

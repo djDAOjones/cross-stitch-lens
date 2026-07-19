@@ -196,6 +196,62 @@
         min-height: 44px;
         accent-color: var(--text);
       }
+      /* Live capture thumbnail + crop region. Dimming outside the
+        region is a thumbnail affordance only — the preview canvas
+        itself is never filtered. State is never colour-only: the
+        dashed border is a shape cue and the readout carries the
+        numbers. */
+      .capture-thumb {
+        position: relative;
+        max-width: 30rem;
+        margin-top: 0.75rem;
+      }
+      .capture-thumb video {
+        display: block;
+        width: 100%;
+        height: auto;
+        border: 1px solid var(--border);
+      }
+      .crop-overlay {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        cursor: crosshair;
+        touch-action: none;
+      }
+      .crop-overlay.locked {
+        cursor: default;
+      }
+      .crop-rect {
+        position: absolute;
+        box-sizing: border-box;
+        border: 2px dashed #ffffff;
+        outline: 2px dashed #161616;
+        outline-offset: -4px;
+        box-shadow: 0 0 0 100vmax rgb(0 0 0 / 0.35);
+      }
+      .crop-overlay.locked .crop-rect {
+        border-style: solid;
+        outline-style: solid;
+      }
+      .crop-handle {
+        position: absolute;
+        width: 0.75rem;
+        height: 0.75rem;
+        background: #ffffff;
+        border: 1px solid #161616;
+      }
+      .crop-overlay.locked .crop-handle {
+        display: none;
+      }
+      .crop-nw { top: -0.375rem; left: -0.375rem; }
+      .crop-n { top: -0.375rem; left: calc(50% - 0.375rem); }
+      .crop-ne { top: -0.375rem; right: -0.375rem; }
+      .crop-e { top: calc(50% - 0.375rem); right: -0.375rem; }
+      .crop-se { bottom: -0.375rem; right: -0.375rem; }
+      .crop-s { bottom: -0.375rem; left: calc(50% - 0.375rem); }
+      .crop-sw { bottom: -0.375rem; left: -0.375rem; }
+      .crop-w { top: calc(50% - 0.375rem); left: -0.375rem; }
       /* The worker-rendered preview surface. Pixels are content: no
         filters, no smoothing (crispness comes from the worker). */
       .preview-host {

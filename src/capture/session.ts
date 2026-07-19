@@ -8,6 +8,7 @@
  */
 
 import type { PixelBuffer } from '../core/types.ts';
+import { clampRect, type CropRect } from './crop.ts';
 
 /**
  * Map a `getDisplayMedia` failure to a human-readable status message
@@ -45,8 +46,13 @@ export function displayLabel(trackLabel: string): string {
 export interface CaptureSession {
   /** Human-friendly name of the shared surface. */
   readonly label: string;
-  /** Grab the current frame as a PixelBuffer (RGBA sRGB). */
-  grabFrame(): Promise<PixelBuffer>;
+  /** The live decoding element — usable as an on-page thumbnail. */
+  readonly video: HTMLVideoElement;
+  /**
+   * Grab the current frame (or a region of it, clamped to the frame)
+   * as a PixelBuffer (RGBA sRGB).
+   */
+  grabFrame(region?: CropRect): Promise<PixelBuffer>;
   /** Stop sharing and release the stream. Idempotent. */
   stop(): void;
   /** Called once if sharing ends outside the app (browser stop UI). */
@@ -78,8 +84,8 @@ export async function startCapture(): Promise<CaptureSession> {
     throw new Error('the shared stream has no video track');
   }
 
-  // A detached, muted video element decodes the stream for frame
-  // grabs; nothing is added to the document.
+  // A muted video element decodes the stream for frame grabs; the
+  // caller may mount it in the document as the live thumbnail.
   const video = document.createElement('video');
   video.muted = true;
   video.srcObject = stream;
@@ -89,13 +95,16 @@ export async function startCapture(): Promise<CaptureSession> {
   let stopped = false;
   return {
     label: displayLabel(track.label),
-    async grabFrame(): Promise<PixelBuffer> {
+    video,
+    async grabFrame(region?: CropRect): Promise<PixelBuffer> {
       if (stopped) throw new Error('capture has stopped');
       if (video.videoWidth === 0) throw new Error('no frame available yet');
-      const canvas = new OffscreenCanvas(video.videoWidth, video.videoHeight);
+      const bounds = { width: video.videoWidth, height: video.videoHeight };
+      const src = region === undefined ? { x: 0, y: 0, ...bounds } : clampRect(region, bounds);
+      const canvas = new OffscreenCanvas(src.width, src.height);
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (ctx === null) throw new Error('2d canvas context unavailable');
-      ctx.drawImage(video, 0, 0);
+      ctx.drawImage(video, src.x, src.y, src.width, src.height, 0, 0, src.width, src.height);
       const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
       return { width: image.width, height: image.height, data: image.data };
     },

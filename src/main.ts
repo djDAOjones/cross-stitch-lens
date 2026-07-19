@@ -9,6 +9,16 @@
 
 import { installGlobalCapture, log } from './diagnostics/log.ts';
 import {
+  clampRect,
+  fullRect,
+  hitTest,
+  moveRect,
+  resizeRect,
+  stitchSpan,
+  type CropRect,
+  type Handle,
+} from './capture/crop.ts';
+import {
   captureErrorMessage,
   startCapture,
   type CaptureSession,
@@ -118,11 +128,43 @@ function build(app: HTMLElement): void {
   stopCaptureButton.type = 'button';
   stopCaptureButton.textContent = 'Stop capture';
   stopCaptureButton.hidden = true;
+  const lockButton = document.createElement('button');
+  lockButton.type = 'button';
+  lockButton.textContent = 'Lock region';
+  lockButton.setAttribute('aria-pressed', 'false');
+  lockButton.hidden = true;
   const captureMeta = document.createElement('p');
   captureMeta.className = 'meta';
   captureMeta.hidden = true;
-  captureRow.append(captureButton, captureFrameButton, stopCaptureButton);
-  importSection.append(label, input, hint, captureRow, captureMeta);
+
+  // Live thumbnail + crop region (§3): the session's own video with
+  // a keyboard-operable overlay. Geometry lives in capture/crop.ts;
+  // this block only converts pointer CSS px ↔ source px and renders.
+  const thumbWrap = document.createElement('div');
+  thumbWrap.className = 'capture-thumb';
+  thumbWrap.hidden = true;
+  const cropOverlay = document.createElement('div');
+  cropOverlay.className = 'crop-overlay';
+  cropOverlay.tabIndex = 0;
+  cropOverlay.setAttribute('role', 'application');
+  cropOverlay.setAttribute(
+    'aria-label',
+    'Capture region. Drag to draw or move it. Move with arrow keys, resize with shift and arrow keys.',
+  );
+  const cropRectEl = document.createElement('div');
+  cropRectEl.className = 'crop-rect';
+  for (const h of ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w']) {
+    const handleEl = document.createElement('div');
+    handleEl.className = `crop-handle crop-${h}`;
+    cropRectEl.append(handleEl);
+  }
+  cropOverlay.append(cropRectEl);
+  thumbWrap.append(cropOverlay);
+  const cropReadout = document.createElement('p');
+  cropReadout.className = 'meta';
+  cropReadout.hidden = true;
+  captureRow.append(captureButton, captureFrameButton, lockButton, stopCaptureButton);
+  importSection.append(label, input, hint, captureRow, captureMeta, thumbWrap, cropReadout);
 
   // Status is text in an aria-live region — never colour-only, never
   // silent (UI-STANDARDS → "System status").
@@ -810,13 +852,43 @@ function build(app: HTMLElement): void {
   // the app or the browser's own stop-sharing UI) restores the idle
   // controls and says so — never a silent state change.
   let capture: CaptureSession | null = null;
+  let cropRect: CropRect | null = null;
+  let cropLocked = false;
+
+  function captureBounds(): { width: number; height: number } | null {
+    if (capture === null || capture.video.videoWidth === 0) return null;
+    return { width: capture.video.videoWidth, height: capture.video.videoHeight };
+  }
+
+  /** Source px per CSS px of the displayed thumbnail. */
+  function cropScale(): number {
+    if (capture === null || capture.video.clientWidth === 0) return 1;
+    return capture.video.videoWidth / capture.video.clientWidth;
+  }
+
+  function renderCrop(): void {
+    const bounds = captureBounds();
+    if (bounds === null || cropRect === null) return;
+    const scale = cropScale();
+    cropRectEl.style.left = `${String(cropRect.x / scale)}px`;
+    cropRectEl.style.top = `${String(cropRect.y / scale)}px`;
+    cropRectEl.style.width = `${String(cropRect.width / scale)}px`;
+    cropRectEl.style.height = `${String(cropRect.height / scale)}px`;
+    const span = stitchSpan(cropRect, config.grid);
+    cropReadout.textContent = `Region ${String(cropRect.width)} × ${String(cropRect.height)} px → ${String(span.width)} × ${String(span.height)} stitches`;
+  }
 
   function endCaptureUi(message: string): void {
+    capture?.video.remove();
     capture = null;
+    cropRect = null;
     captureButton.hidden = false;
     captureFrameButton.hidden = true;
     stopCaptureButton.hidden = true;
+    lockButton.hidden = true;
     captureMeta.hidden = true;
+    thumbWrap.hidden = true;
+    cropReadout.hidden = true;
     status.textContent = message;
   }
 
@@ -824,7 +896,7 @@ function build(app: HTMLElement): void {
     if (capture === null) return;
     status.textContent = 'Processing…';
     try {
-      const buffer = await capture.grabFrame();
+      const buffer = await capture.grabFrame(cropRect ?? undefined);
       log.info('capture', 'frame grabbed', {
         width: buffer.width,
         height: buffer.height,
@@ -847,8 +919,26 @@ function build(app: HTMLElement): void {
       captureButton.hidden = true;
       captureFrameButton.hidden = false;
       stopCaptureButton.hidden = false;
+      lockButton.hidden = false;
       captureMeta.hidden = false;
       captureMeta.textContent = `Capturing ${session.label}.`;
+      // Mount the live thumbnail with the full frame selected; the
+      // video keeps its own aspect (width-driven), so overlay maths
+      // stays a single linear scale.
+      thumbWrap.prepend(session.video);
+      thumbWrap.hidden = false;
+      cropReadout.hidden = false;
+      cropRect = fullRect({ width: session.video.videoWidth, height: session.video.videoHeight });
+      renderCrop();
+      // Source dimensions can change mid-session (e.g. the shared
+      // window is resized): re-clamp the region rather than let it
+      // point off-frame.
+      session.video.addEventListener('resize', () => {
+        const bounds = captureBounds();
+        if (bounds === null || cropRect === null) return;
+        cropRect = clampRect(cropRect, bounds);
+        renderCrop();
+      });
       session.onEnded(() => {
         if (capture !== session) return;
         endCaptureUi('Screen capture ended (sharing was stopped).');
@@ -876,6 +966,100 @@ function build(app: HTMLElement): void {
     endCaptureUi('Screen capture stopped.');
     log.info('capture', 'session stopped');
   });
+  lockButton.addEventListener('click', () => {
+    cropLocked = !cropLocked;
+    lockButton.setAttribute('aria-pressed', String(cropLocked));
+    cropOverlay.classList.toggle('locked', cropLocked);
+    status.textContent = cropLocked ? 'Capture region locked.' : 'Capture region unlocked.';
+  });
+
+  // Pointer interaction: hit-test decides move / resize-by-handle /
+  // draw-new; geometry updates go through the pure crop model. A
+  // ≈12 CSS px grab tolerance keeps handles usable; full keyboard
+  // operation below is the coarse-pointer alternative (UI-STANDARDS).
+  let cropDrag: {
+    mode: Handle | 'inside' | 'draw';
+    startX: number;
+    startY: number;
+    startRect: CropRect;
+  } | null = null;
+
+  function overlayToSource(event: PointerEvent): { x: number; y: number } {
+    const box = cropOverlay.getBoundingClientRect();
+    const scale = cropScale();
+    return { x: (event.clientX - box.left) * scale, y: (event.clientY - box.top) * scale };
+  }
+
+  cropOverlay.addEventListener('pointerdown', (event) => {
+    const bounds = captureBounds();
+    if (cropLocked || bounds === null || cropRect === null) return;
+    const point = overlayToSource(event);
+    const mode = hitTest(cropRect, point.x, point.y, 12 * cropScale());
+    cropDrag = {
+      mode: mode ?? 'draw',
+      startX: point.x,
+      startY: point.y,
+      startRect:
+        mode === null
+          ? { x: Math.round(point.x), y: Math.round(point.y), width: 0, height: 0 }
+          : cropRect,
+    };
+    cropOverlay.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  });
+  cropOverlay.addEventListener('pointermove', (event) => {
+    const bounds = captureBounds();
+    if (cropDrag === null || bounds === null) return;
+    const point = overlayToSource(event);
+    const dx = point.x - cropDrag.startX;
+    const dy = point.y - cropDrag.startY;
+    if (cropDrag.mode === 'inside') {
+      cropRect = moveRect(cropDrag.startRect, dx, dy, bounds);
+    } else if (cropDrag.mode === 'draw') {
+      cropRect = clampRect(
+        {
+          x: Math.min(cropDrag.startX, point.x),
+          y: Math.min(cropDrag.startY, point.y),
+          width: Math.abs(dx),
+          height: Math.abs(dy),
+        },
+        bounds,
+      );
+    } else {
+      cropRect = resizeRect(cropDrag.startRect, cropDrag.mode, dx, dy, bounds);
+    }
+    renderCrop();
+  });
+  cropOverlay.addEventListener('pointerup', (event) => {
+    if (cropDrag === null) return;
+    cropDrag = null;
+    cropOverlay.releasePointerCapture(event.pointerId);
+    log.debug('capture', 'crop region set', { ...(cropRect ?? {}) });
+  });
+
+  // Keyboard: arrows move by 8 source px, shift+arrows resize the
+  // right/bottom edges — the non-pointer route required by
+  // UI-STANDARDS → "Capture UX".
+  cropOverlay.addEventListener('keydown', (event) => {
+    const bounds = captureBounds();
+    if (cropLocked || bounds === null || cropRect === null) return;
+    const step = 8;
+    const delta: Record<string, [number, number]> = {
+      ArrowLeft: [-step, 0],
+      ArrowRight: [step, 0],
+      ArrowUp: [0, -step],
+      ArrowDown: [0, step],
+    };
+    const move = delta[event.key];
+    if (move === undefined) return;
+    cropRect = event.shiftKey
+      ? resizeRect(cropRect, 'se', move[0], move[1], bounds)
+      : moveRect(cropRect, move[0], move[1], bounds);
+    renderCrop();
+    event.preventDefault();
+  });
+
+  window.addEventListener('resize', renderCrop);
 
   input.addEventListener('change', () => {
     const file = imageFiles(input.files ?? []).at(0);

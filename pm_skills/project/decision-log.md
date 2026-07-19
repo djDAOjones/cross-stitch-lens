@@ -542,3 +542,27 @@ video-element draw. Capture stays off the worker per architecture
 ("main thread: capture + UI only"). Auto-jazz assumptions: scope as
 above; buttons reuse existing dev-shell styles (44 px met); declined
 permission treated as a normal status, not an error.
+
+## D33 — Crop rectangle: pure geometry model, video-element thumbnail (2026-07-19)
+
+**Decision:** The M4 crop rectangle ships as a pure geometry module
+(`src/capture/crop.ts`: clamp/move/resize-by-handle/hit-test +
+`stitchSpan` for the readout, all in source-video pixels,
+hermetically tested) driven by a thin DOM overlay in `main.ts`. The
+live thumbnail **is the session's own `<video>` element** mounted
+width-driven (height auto), so overlay maths is one linear scale —
+no second render path. `grabFrame` takes an optional region, clamped
+session-side. Lock is a pressed-state toggle button that disables
+pointer/keyboard edits and hides handles (solid border as the shape
+cue). Keyboard: arrows move 8 source px, shift+arrows resize the se
+edge — the non-pointer route UI-STANDARDS requires. Source-dimension
+changes mid-session re-clamp the rect (`video` `resize` event).
+**Why:** The pure/DOM split mirrors D32 and keeps the interaction
+maths testable without a browser; a canvas-drawn overlay was
+rejected as a second renderer with no benefit at thumbnail scale.
+Handles are 12 px visuals with a generous hit tolerance; the WCAG
+44 px target rule is met by the documented keyboard alternative.
+Outside-region dimming (box-shadow) is a thumbnail affordance only —
+the preview canvas stays unfiltered (colour-fidelity rule). Auto-jazz
+assumptions: full frame selected on session start; stitches readout
+assumes contain mapping; frame pump stays out of scope.

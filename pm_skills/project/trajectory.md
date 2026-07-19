@@ -19,6 +19,12 @@
 
 ## M4 — Live capture (in progress)
 
+- M4-CROP (2026-07-19) — user-drawn crop rectangle over the live
+  thumbnail (§3 subset): pure geometry model (clamp/move/resize/
+  hit-test) in source pixels, draw/move/resize by pointer, arrow-key
+  move + shift-resize, lock toggle, source-px → stitches readout,
+  cropped frame grabs, mid-session source-resize re-clamp;
+  hermetically tested. See decision-log D33.
 - M4-SESSION (2026-07-19) — `getDisplayMedia` screen/window capture
   session (§3 subset): user-initiated Start/Capture frame/Stop buttons
   in the source section, honest permission UX (declined prompt is a

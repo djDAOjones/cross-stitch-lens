@@ -895,7 +895,7 @@ verdicts instead of unverified hypotheses, and M5-PERF-13 is now the
 highest-value target in M5. `bench` stays out of `check` (noisy by
 nature), but matrix coverage, percentile math, warm-up exclusion and
 schema round-trip are unit-tested in the gate — 28 new tests. Reports go
-to gitignored `bench-reports/`. No pipeline behaviour changed; no golden
+to gitignored `bench-reports`. No pipeline behaviour changed; no golden
 fixture touched.
 
 **Run notes (auto-jazz, all gates skipped):** assumptions — ship M5A as

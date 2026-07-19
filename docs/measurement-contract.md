@@ -154,7 +154,7 @@ and each carries a `note` saying why it earns its place.
 ## 3. Reproducible reports (M5-PERF-03)
 
 `npm run bench` runs the whole matrix once, writes a JSON report to
-`bench-reports/` (gitignored — regenerated, never committed), logs a
+`bench-reports` (gitignored — regenerated, never committed), logs a
 human summary, and only then asserts budgets. A missed budget therefore
 still leaves complete evidence on disk. This is deliberate: D43's rule
 is to record the signal, not green-wash it.

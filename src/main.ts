@@ -10,14 +10,37 @@
 import { installGlobalCapture, log } from './diagnostics/log.ts';
 import type { PipelineConfig } from './core/pipeline/config.ts';
 import { loadDmcPalette } from './core/palette.ts';
+import {
+  parseProject,
+  projectFilename,
+  SCHEMA_VERSION,
+  serializeProject,
+  type ProjectFile,
+} from './core/project.ts';
 import { computeStats } from './core/stats.ts';
 import type { PixelBuffer } from './core/types.ts';
 import {
   colorField,
   numberField,
   selectField,
+  textField,
   toggleField,
 } from './ui/controls.ts';
+import { chartFilename, chartLayout, encodeChartPng, maxCellPx } from './export/chart.ts';
+import {
+  buildChartPdf,
+  pdfFilename,
+  type KeyEntry,
+  type PdfOptions,
+} from './export/pdf.ts';
+import {
+  downloadBlob,
+  encodePngBlob,
+  flattenBackground,
+  maxScaleFor,
+  pngFilename,
+  scaleNearest,
+} from './export/png.ts';
 import { decodeImageBlob, imageFiles } from './ui/import.ts';
 import { createInfoPanel } from './ui/info-panel.ts';
 import { PreviewController } from './ui/preview.ts';
@@ -269,7 +292,412 @@ function build(app: HTMLElement): void {
     ),
   );
 
-  controls.append(gridGroup, colourGroup, ditherGroup, pipelineGroup);
+  // Export group (§13 MVP subset): clean PNG at an integer scale,
+  // transparent or solid background. The button stays disabled until
+  // a frame has processed (error prevention: no impossible actions).
+  const exportState = {
+    scale: 1,
+    background: 'transparent',
+    color: '#ffffff',
+    chartCell: 10,
+  };
+  const exportGroup = document.createElement('fieldset');
+  const exportLegend = document.createElement('legend');
+  exportLegend.textContent = 'Export';
+  const exportButton = document.createElement('button');
+  exportButton.type = 'button';
+  exportButton.textContent = 'Export PNG';
+  exportButton.disabled = true;
+  exportButton.addEventListener('click', () => {
+    void exportPng();
+  });
+  const chartButton = document.createElement('button');
+  chartButton.type = 'button';
+  chartButton.textContent = 'Export chart PNG';
+  chartButton.disabled = true;
+  chartButton.addEventListener('click', () => {
+    void exportChart();
+  });
+  const pdfOptions: PdfOptions = {
+    pageSize: 'a4',
+    orientation: 'portrait',
+    marginMm: 15,
+    title: '',
+  };
+  const pdfButton = document.createElement('button');
+  pdfButton.type = 'button';
+  pdfButton.textContent = 'Export PDF';
+  pdfButton.disabled = true;
+  pdfButton.addEventListener('click', () => {
+    void exportPdf();
+  });
+  exportGroup.append(
+    exportLegend,
+    numberField(
+      document,
+      'export-scale',
+      'Scale',
+      { min: 1, max: 64, value: exportState.scale, helper: 'Pixels per stitch' },
+      (value) => {
+        exportState.scale = value;
+      },
+    ),
+    selectField(
+      document,
+      'export-background',
+      'Background',
+      [
+        ['transparent', 'Transparent'],
+        ['solid', 'Solid colour'],
+      ],
+      exportState.background,
+      (value) => {
+        exportState.background = value;
+      },
+    ),
+    colorField(document, 'export-bg-color', 'Background colour', exportState.color, (value) => {
+      exportState.color = value;
+    }),
+    exportButton,
+    numberField(
+      document,
+      'chart-cell',
+      'Chart cell size',
+      { min: 4, max: 40, value: exportState.chartCell, helper: 'Pixels per stitch in the chart' },
+      (value) => {
+        exportState.chartCell = value;
+      },
+    ),
+    chartButton,
+    selectField(
+      document,
+      'pdf-page',
+      'Page size',
+      [
+        ['a4', 'A4'],
+        ['letter', 'Letter'],
+      ],
+      pdfOptions.pageSize,
+      (value) => {
+        pdfOptions.pageSize = value as PdfOptions['pageSize'];
+      },
+    ),
+    selectField(
+      document,
+      'pdf-orientation',
+      'Orientation',
+      [
+        ['portrait', 'Portrait'],
+        ['landscape', 'Landscape'],
+      ],
+      pdfOptions.orientation,
+      (value) => {
+        pdfOptions.orientation = value as PdfOptions['orientation'];
+      },
+    ),
+    numberField(
+      document,
+      'pdf-margin',
+      'Page margin',
+      { min: 5, max: 40, value: pdfOptions.marginMm, helper: 'Millimetres' },
+      (value) => {
+        pdfOptions.marginMm = value;
+      },
+    ),
+    textField(document, 'pdf-title', 'Design title', pdfOptions.title, (value) => {
+      pdfOptions.title = value;
+    }),
+    pdfButton,
+  );
+
+  async function exportPng(): Promise<void> {
+    if (masterImage === null) return;
+    // Clamp so the output canvas stays within browser limits; say so
+    // in the status when it bites rather than failing silently.
+    const scale = Math.min(exportState.scale, maxScaleFor(config.grid.width, config.grid.height));
+    status.textContent = 'Exporting…';
+    exportButton.disabled = true;
+    try {
+      const frame = await client.exportFrame(
+        {
+          width: masterImage.width,
+          height: masterImage.height,
+          data: new Uint8ClampedArray(masterImage.data),
+        },
+        config,
+      );
+      let out = scale > 1 ? scaleNearest(frame, scale) : frame;
+      if (exportState.background === 'solid') out = flattenBackground(out, exportState.color);
+      const filename = pngFilename(frame.width, frame.height, scale);
+      downloadBlob(document, await encodePngBlob(out), filename);
+      status.textContent =
+        scale < exportState.scale
+          ? `Exported ${filename} (scale limited to ${scale}).`
+          : `Exported ${filename}.`;
+      log.info('export', 'clean png', {
+        filename,
+        scale,
+        background: exportState.background,
+        width: out.width,
+        height: out.height,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      status.textContent = `Export failed (${message}). Try again after the preview updates.`;
+      log.error('export', 'clean png failed', { message });
+    } finally {
+      exportButton.disabled = false;
+    }
+  }
+
+  async function exportChart(): Promise<void> {
+    if (masterImage === null) return;
+    // Chart furniture follows the on-screen grid settings (CSS-px
+    // thicknesses — the chart's own unit; the DPR scaling is a
+    // preview concern). Paper/ink colours are fixed in chart.ts.
+    const cell = Math.min(
+      exportState.chartCell,
+      maxCellPx(config.grid.width, config.grid.height, gridStyle),
+    );
+    status.textContent = 'Exporting…';
+    chartButton.disabled = true;
+    try {
+      const frame = await client.exportFrame(
+        {
+          width: masterImage.width,
+          height: masterImage.height,
+          data: new Uint8ClampedArray(masterImage.data),
+        },
+        config,
+      );
+      const filename = chartFilename(frame.width, frame.height);
+      downloadBlob(document, await encodeChartPng(frame, gridStyle, cell), filename);
+      status.textContent =
+        cell < exportState.chartCell
+          ? `Exported ${filename} (cell size limited to ${cell}).`
+          : `Exported ${filename}.`;
+      log.info('export', 'chart png', { filename, cell });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      status.textContent = `Export failed (${message}). Try again after the preview updates.`;
+      log.error('export', 'chart png failed', { message });
+    } finally {
+      chartButton.disabled = false;
+    }
+  }
+
+  async function exportPdf(): Promise<void> {
+    if (masterImage === null) return;
+    status.textContent = 'Exporting…';
+    pdfButton.disabled = true;
+    try {
+      const frame = await client.exportFrame(
+        {
+          width: masterImage.width,
+          height: masterImage.height,
+          data: new Uint8ClampedArray(masterImage.data),
+        },
+        config,
+      );
+      // Chart raster at print resolution: ~2400 px on the long side
+      // (≈300 dpi on an A4 content box), inside the canvas clamp.
+      const cell = Math.max(
+        4,
+        Math.min(
+          Math.ceil(2400 / Math.max(frame.width, frame.height)),
+          40,
+          maxCellPx(config.grid.width, config.grid.height, gridStyle),
+        ),
+      );
+      const chartL = chartLayout(frame.width, frame.height, gridStyle, cell);
+      const chartBlob = await encodeChartPng(frame, gridStyle, cell);
+      const chartPng = new Uint8Array(await chartBlob.arrayBuffer());
+      // Thread key: used colours only; full-RGB mode has no key.
+      const entries: KeyEntry[] =
+        config.palette === null
+          ? []
+          : computeStats(frame, config.palette).perColor.map((c) => ({
+              hex: c.hex,
+              rgb: c.rgb,
+              ...(c.code === undefined ? {} : { code: c.code }),
+            }));
+      const bytes = await buildChartPdf(chartPng, chartL.width, chartL.height, entries, {
+        ...pdfOptions,
+      });
+      const filename = pdfFilename(frame.width, frame.height);
+      // pdf-lib returns a fresh non-shared buffer; cast for Blob's sake.
+      const part = bytes as Uint8Array<ArrayBuffer>;
+      downloadBlob(document, new Blob([part], { type: 'application/pdf' }), filename);
+      status.textContent = `Exported ${filename}.`;
+      log.info('export', 'pdf chart', {
+        filename,
+        cell,
+        page: pdfOptions.pageSize,
+        orientation: pdfOptions.orientation,
+        keyEntries: entries.length,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      status.textContent = `Export failed (${message}).`;
+      log.error('export', 'pdf chart failed', { message });
+    } finally {
+      pdfButton.disabled = false;
+    }
+  }
+
+  // Project group (§20): save the current settings as a versioned
+  // JSON file; load applies a saved file back onto the controls and
+  // reprocesses. The source image is not part of the file — loading
+  // into an empty session applies on the next import.
+  const projectGroup = document.createElement('fieldset');
+  const projectLegend = document.createElement('legend');
+  projectLegend.textContent = 'Project';
+  const saveButton = document.createElement('button');
+  saveButton.type = 'button';
+  saveButton.textContent = 'Save project';
+  saveButton.addEventListener('click', saveProject);
+  const projectLabel = document.createElement('label');
+  projectLabel.textContent = 'Load project';
+  projectLabel.htmlFor = 'project-file';
+  const projectInput = document.createElement('input');
+  projectInput.type = 'file';
+  projectInput.id = 'project-file';
+  projectInput.accept = 'application/json,.json';
+  projectInput.addEventListener('change', () => {
+    const file = projectInput.files?.[0];
+    projectInput.value = '';
+    if (file !== undefined) void loadProject(file);
+  });
+  projectGroup.append(projectLegend, saveButton, projectLabel, projectInput);
+
+  /** Snapshot the live UI state as a schema-v1 project file. */
+  function currentProject(): ProjectFile {
+    return {
+      schemaVersion: SCHEMA_VERSION,
+      pipeline: {
+        preset: config.preset,
+        grid: { width: config.grid.width, height: config.grid.height },
+        resizeMode: config.resizeMode,
+        palette: config.palette === null ? null : config.palette.name,
+        metric: config.metric,
+        dither: config.dither,
+        serpentine: config.serpentine,
+      },
+      gridStyle: {
+        show: gridStyle.show,
+        minorInterval: gridStyle.minorInterval,
+        majorInterval: gridStyle.majorInterval,
+        color: gridStyle.color,
+        minorThickness: gridStyle.minorThickness,
+        majorThickness: gridStyle.majorThickness,
+        ticks: gridStyle.ticks,
+        tickFontPx: gridStyle.tickFontPx,
+      },
+      export: {
+        scale: exportState.scale,
+        background: exportState.background === 'solid' ? 'solid' : 'transparent',
+        color: exportState.color,
+        chartCell: exportState.chartCell,
+        pdf: {
+          pageSize: pdfOptions.pageSize,
+          orientation: pdfOptions.orientation,
+          marginMm: pdfOptions.marginMm,
+          title: pdfOptions.title,
+        },
+      },
+    };
+  }
+
+  function saveProject(): void {
+    const filename = projectFilename(config.grid.width, config.grid.height);
+    downloadBlob(
+      document,
+      new Blob([serializeProject(currentProject())], { type: 'application/json' }),
+      filename,
+    );
+    status.textContent = `Saved ${filename}.`;
+    log.info('project', 'saved', { filename });
+  }
+
+  // Push loaded state back into the control DOM. Values are set
+  // directly (no synthetic events) so a load causes exactly one
+  // reprocess; toggle state text and dependent disabled states are
+  // updated by hand for the same reason.
+  function setFieldValue(id: string, value: string): void {
+    const el = document.getElementById(id);
+    if (el instanceof HTMLInputElement || el instanceof HTMLSelectElement) el.value = value;
+  }
+  function setToggleValue(id: string, on: boolean): void {
+    const el = document.getElementById(id);
+    if (!(el instanceof HTMLInputElement)) return;
+    el.checked = on;
+    const state = el.nextElementSibling;
+    if (state !== null) state.textContent = on ? 'On' : 'Off';
+  }
+  function syncControls(): void {
+    setFieldValue('order-preset', config.preset);
+    setFieldValue('colour-mode', config.palette === null ? 'rgb' : 'dmc');
+    setToggleValue('dither-on', config.dither);
+    ditherToggle.input.disabled = config.palette === null;
+    setToggleValue('grid-show', gridStyle.show);
+    setToggleValue('grid-ticks', gridStyle.ticks);
+    setFieldValue('grid-minor', String(gridStyle.minorInterval));
+    setFieldValue('grid-major', String(gridStyle.majorInterval));
+    setFieldValue('grid-color', gridStyle.color);
+    setFieldValue('grid-minor-thickness', String(gridStyle.minorThickness));
+    setFieldValue('grid-major-thickness', String(gridStyle.majorThickness));
+    setFieldValue('export-scale', String(exportState.scale));
+    setFieldValue('export-background', exportState.background);
+    setFieldValue('export-bg-color', exportState.color);
+    setFieldValue('chart-cell', String(exportState.chartCell));
+    setFieldValue('pdf-page', pdfOptions.pageSize);
+    setFieldValue('pdf-orientation', pdfOptions.orientation);
+    setFieldValue('pdf-margin', String(pdfOptions.marginMm));
+    setFieldValue('pdf-title', pdfOptions.title);
+  }
+
+  async function loadProject(fileBlob: File): Promise<void> {
+    try {
+      const file = parseProject(await fileBlob.text());
+      const name = file.pipeline.palette;
+      // v1 knows one palette; refuse rather than silently substitute.
+      if (name !== null && name !== DMC.name) {
+        status.textContent = `Could not load that project (unknown palette "${name}").`;
+        log.error('project', 'unknown palette', { name });
+        return;
+      }
+      config.preset = file.pipeline.preset;
+      config.grid = { ...file.pipeline.grid };
+      config.resizeMode = file.pipeline.resizeMode;
+      config.palette = name === null ? null : DMC;
+      config.metric = file.pipeline.metric;
+      config.dither = file.pipeline.dither;
+      config.serpentine = file.pipeline.serpentine;
+      Object.assign(gridStyle, file.gridStyle);
+      exportState.scale = file.export.scale;
+      exportState.background = file.export.background;
+      exportState.color = file.export.color;
+      exportState.chartCell = file.export.chartCell;
+      pdfOptions.pageSize = file.export.pdf.pageSize;
+      pdfOptions.orientation = file.export.pdf.orientation;
+      pdfOptions.marginMm = file.export.pdf.marginMm;
+      pdfOptions.title = file.export.pdf.title;
+      syncControls();
+      sendGridStyle();
+      reprocess();
+      status.textContent =
+        masterImage === null
+          ? `Loaded ${fileBlob.name} — import an image to see it applied.`
+          : `Loaded ${fileBlob.name}.`;
+      log.info('project', 'loaded', { filename: fileBlob.name });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      status.textContent = `Could not load that project (${message}).`;
+      log.error('project', 'load failed', { message });
+    }
+  }
+
+  controls.append(gridGroup, colourGroup, ditherGroup, pipelineGroup, exportGroup, projectGroup);
 
   // Split compare (§10): source (full-RGB resize) left of the
   // divider, reduced output right. Native range slider = keyboard
@@ -320,6 +748,9 @@ function build(app: HTMLElement): void {
 
   client.setOnResult((frame) => {
     previewSection.hidden = false;
+    exportButton.disabled = false;
+    chartButton.disabled = false;
+    pdfButton.disabled = false;
     preview.onFrame(frame.buffer.width, frame.buffer.height);
     const total = frame.timings.reduce((sum, t) => sum + t.ms, 0);
     const stats = computeStats(frame.buffer, config.palette ?? undefined);

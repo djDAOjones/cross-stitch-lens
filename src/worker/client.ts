@@ -10,7 +10,12 @@ import type { PipelineConfig } from '../core/pipeline/config.ts';
 import type { PixelBuffer } from '../core/types.ts';
 import { Coalescer } from './coalesce.ts';
 import type { GridStyle } from './grid.ts';
-import type { ProcessRequest, StageTiming, WorkerResponse } from './protocol.ts';
+import type {
+  ExportRequest,
+  ProcessRequest,
+  StageTiming,
+  WorkerResponse,
+} from './protocol.ts';
 
 /** A processed frame delivered to the UI. */
 export interface FrameResult {
@@ -29,6 +34,11 @@ export class PipelineClient {
   private readonly coalescer = new Coalescer<Job>();
   private nextId = 0;
   private onResult: ((frame: FrameResult) => void) | null = null;
+  /** Export runs awaiting their result, keyed by request id. */
+  private readonly pendingExports = new Map<
+    number,
+    { resolve: (buffer: PixelBuffer) => void; reject: (error: Error) => void }
+  >();
 
   constructor() {
     this.worker = new Worker(new URL('./pipeline-worker.ts', import.meta.url), {
@@ -83,6 +93,28 @@ export class PipelineClient {
     if (startNow) this.post(startNow);
   }
 
+  /**
+   * Re-run the pipeline for an export and resolve with the output
+   * buffer. Bypasses coalescing (every export is answered) and the
+   * preview surface — full quality by construction (AGENTS.md
+   * invariant). The caller's buffer is transferred, so pass a copy.
+   */
+  exportFrame(buffer: PixelBuffer, config: PipelineConfig): Promise<PixelBuffer> {
+    const id = this.nextId++;
+    return new Promise((resolve, reject) => {
+      this.pendingExports.set(id, { resolve, reject });
+      const request: ExportRequest = {
+        type: 'export',
+        id,
+        width: buffer.width,
+        height: buffer.height,
+        pixels: buffer.data.buffer as ArrayBuffer,
+        config,
+      };
+      this.worker.postMessage(request, [request.pixels]);
+    });
+  }
+
   /** Frames dropped by coalescing (diagnostics). */
   get droppedFrames(): number {
     return this.coalescer.droppedCount;
@@ -101,6 +133,25 @@ export class PipelineClient {
   }
 
   private handleResponse(response: WorkerResponse): void {
+    // Export responses are one-to-one by id and never touch the
+    // coalescer — it only tracks preview jobs.
+    if (response.type === 'export-result') {
+      const pending = this.pendingExports.get(response.id);
+      this.pendingExports.delete(response.id);
+      pending?.resolve({
+        width: response.width,
+        height: response.height,
+        data: new Uint8ClampedArray(response.pixels),
+      });
+      return;
+    }
+    if (response.type === 'error' && this.pendingExports.has(response.id)) {
+      const pending = this.pendingExports.get(response.id);
+      this.pendingExports.delete(response.id);
+      log.error('worker', 'export failed', { message: response.message });
+      pending?.reject(new Error(response.message));
+      return;
+    }
     if (response.type === 'error') {
       log.error('worker', 'frame failed', { message: response.message });
     } else if (this.onResult) {

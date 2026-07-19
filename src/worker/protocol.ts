@@ -55,13 +55,31 @@ export interface CompareRequest {
   position: number;
 }
 
+/**
+ * Main → worker: re-run the pipeline for an export. Same shape as a
+ * process request, but the result bypasses the preview surface and
+ * coalescing entirely — exports always re-run at full quality
+ * (AGENTS.md invariant) and are answered one-to-one by id.
+ */
+export interface ExportRequest {
+  type: 'export';
+  /** Client-assigned id; the export result echoes it. */
+  id: number;
+  width: number;
+  height: number;
+  /** RGBA bytes (transferred). */
+  pixels: ArrayBuffer;
+  config: PipelineConfig;
+}
+
 export type WorkerRequest =
   | ProcessRequest
   | CanvasRequest
   | ViewRequest
   | SurfaceResizeRequest
   | GridStyleRequest
-  | CompareRequest;
+  | CompareRequest
+  | ExportRequest;
 
 /** Per-stage wall-clock timing (diagnostics / future debug panel). */
 export interface StageTiming {
@@ -79,11 +97,24 @@ export interface ProcessResult {
   timings: StageTiming[];
 }
 
-/** Worker → main: a frame failed; the worker stays alive. */
+/** Worker → main: one export re-run (pixels transferred back). */
+export interface ExportResult {
+  type: 'export-result';
+  id: number;
+  width: number;
+  height: number;
+  pixels: ArrayBuffer;
+}
+
+/**
+ * Worker → main: a frame failed; the worker stays alive. Serves both
+ * preview and export runs — the client routes by whether the id has a
+ * pending export.
+ */
 export interface ProcessError {
   type: 'error';
   id: number;
   message: string;
 }
 
-export type WorkerResponse = ProcessResult | ProcessError;
+export type WorkerResponse = ProcessResult | ExportResult | ProcessError;

@@ -73,19 +73,5 @@ export function stageInstance<P>(
   return { stage, params, ...(backend === undefined ? {} : { backend }) } as StageInstance;
 }
 
-/** Current project-file schema version. Bump with a forward migration. */
-export const SCHEMA_VERSION = 1;
-
-/**
- * Versioned JSON project file — v1 stub (architecture.md → "Project
- * file"). Fields grow with the milestones; loaders must migrate older
- * `schemaVersion`s forward and never drop unknown fields.
- */
-export interface ProjectFile {
-  schemaVersion: typeof SCHEMA_VERSION;
-  grid: { width: number; height: number };
-  /** Palette name reference; null = full-RGB mode (no reduction). */
-  palette: string | null;
-  /** Serialised stage order + params. Stage functions are looked up by name. */
-  pipeline: { name: string; params: unknown }[];
-}
+// The versioned ProjectFile schema and its (de)serialisation live in
+// project.ts, next to the migration logic that owns the version.

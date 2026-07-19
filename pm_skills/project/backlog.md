@@ -17,11 +17,10 @@ line passes and `check` is green. Requirements references are to
 
 ### M3 — Exports (§12–§14, §18–§19 subsets) (current milestone)
 
-- [ ] Clean PNG at 1 px/stitch; transparent or solid background
-- [ ] Enlarged PNG, integer nearest-neighbour scale
-- [ ] Styled PNG chart: stitch cells + grid + major lines + numbering
-- [ ] Single-page PDF chart (pdf-lib): A4/Letter, portrait/landscape, margins, design title, palette key (colour swatches + hex; symbols are post-MVP)
-- [ ] Project save/load as JSON v1 (§20), schema documented
+- [ ] M3-CLOSE Milestone close [maintainer] (2026-07-19)
+  Intent: verify the acceptance line and cut v0.4.0.
+  Done when: printed A4 PDF of a 100×100 design confirmed legible and
+  stitchable (manual print check — see D29); version bumped and tagged.
 
 *Acceptance: printed A4 PDF of a 100×100 design is legible and
 stitchable; clean PNG pixel-equal to engine output buffer.*

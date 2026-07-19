@@ -24,7 +24,7 @@
 ```text
 src/
   core/            # Pure engine. No DOM, no Worker, no UI imports. Ever.
-    types.ts       # PixelBuffer, Palette, StageParams, ProjectFile
+    types.ts       # PixelBuffer, Palette, StageParams
     pipeline/      # Stage implementations (TS reference)
       resize.ts
       adjust.ts

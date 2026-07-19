@@ -17,6 +17,30 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
+## M3 — Exports (in progress)
+
+- M3-PROJECT (2026-07-19) — project save/load as JSON schema v1 (§20
+  subset): settings-only (pipeline config with palette by name,
+  grid/chart style, export prefs), canonical serialisation for the
+  byte-identical round-trip invariant, path-named validation errors,
+  forward-migration switch; Save/Load control group syncs the panel
+  and reprocesses once. See decision-log D30.
+- M3-PDF (2026-07-19) — single-page PDF chart (§18 subset): pdf-lib
+  first use; chart raster embedded at ~300 dpi with vector title +
+  used-colour thread key (swatch/code/hex), A4/Letter, orientation,
+  mm margins; layout + built PDF parsed under Node in tests;
+  browser-verified. Print legibility check remains manual. See
+  decision-log D29.
+- M3-CHART (2026-07-19) — styled PNG chart export (§14 subset): stitch
+  cells + minor/major grid + margin numbering, sharing the preview's
+  grid settings and pure geometry; white-paper print colours; pure
+  layout tested, browser-verified pixel-exact. See decision-log D28.
+- M3-PNG (2026-07-19) — clean PNG export (§13 MVP subset): 1 px/stitch
+  or integer nearest-neighbour enlargement, transparent or solid
+  background; a dedicated worker export message re-runs the pipeline at
+  full quality (never the preview frame); pure scale/flatten helpers
+  unit-tested, browser-verified pixel-exact. See decision-log D27.
+
 ## M2 — Preview & info UI (shipped 2026-07-19, v0.3.0)
 
 - M2-CLOSE (2026-07-19) — milestone close: both acceptance legs

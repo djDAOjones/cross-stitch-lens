@@ -86,6 +86,33 @@ scope.onmessage = (event: MessageEvent): void => {
       if (enabling) refreshSourceFrame();
       break;
     }
+    case 'export': {
+      // Full-quality re-run for an export: no preview draw, no
+      // lastFrame update — the result goes straight back by id.
+      const response = executeRequest({
+        type: 'process',
+        id: request.id,
+        width: request.width,
+        height: request.height,
+        pixels: request.pixels,
+        config: request.config,
+      });
+      if (response.type === 'result') {
+        scope.postMessage(
+          {
+            type: 'export-result',
+            id: response.id,
+            width: response.width,
+            height: response.height,
+            pixels: response.pixels,
+          },
+          [response.pixels],
+        );
+      } else {
+        scope.postMessage(response, []);
+      }
+      break;
+    }
     case 'process': {
       lastFrame = {
         width: request.width,

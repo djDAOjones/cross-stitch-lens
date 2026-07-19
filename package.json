@@ -3,7 +3,7 @@
   "version": "0.3.0",
   "private": true,
   "type": "module",
-  "description": "Cross Stitch Lens \u2014 converts visual artwork into cross-stitch designs in real time.",
+  "description": "Cross Stitch Lens — converts visual artwork into cross-stitch designs in real time.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -47,5 +47,8 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/djDAOjones/cross-stitch-lens.git"
+  },
+  "dependencies": {
+    "pdf-lib": "^1.17.1"
   }
 }

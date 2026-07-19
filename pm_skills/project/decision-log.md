@@ -399,3 +399,105 @@ code.
 verbatim) to `archive/decision-log-2026-07-16.md` and created
 `archive/INDEX.md`; live log 25 → 15 entries plus this record.
 Trigger: entry count over the 20-entry budget (Diagnose check 1).
+
+## D27 — Clean/enlarged PNG export: worker re-run + pure NN expansion (2026-07-19)
+
+**Decision:** Exports go through a dedicated worker `export` message
+that re-runs the pipeline from the retained master image and is
+answered one-to-one by id (a promise on the client), bypassing both
+the preview surface and latest-wins coalescing — so the "exports
+always re-run at full quality" invariant holds by construction and
+survives M4's draft-quality preview. Enlargement is pure TS
+nearest-neighbour block replication (`scaleNearest`) followed by a
+1:1 OffscreenCanvas PNG encode — no `drawImage` resampling in the
+export path, so output is deterministic and hermetically testable.
+Transparent background passes engine alpha through untouched; solid
+background is a straight-alpha composite over an opaque colour.
+Scale is clamped to the ~16384 px canvas side limit, with the clamp
+surfaced in the status line. Auto-jazz assumptions: scope held to
+the two backlog items (§13 extras — custom dimensions, metadata,
+sidecar palette, intermediate stages — stay parked); the export UI
+is a fifth fieldset (Scale / Background / Background colour /
+Export PNG) with the button disabled until a frame exists. Dev
+infra: `vite.config.ts` honours a `PORT` env var and launch.json
+sets `autoPort`, so a second session's dev server coexists with a
+running one.
+**Why:** Reusing the last preview frame was simpler but would
+silently break the full-quality invariant the moment draft mode
+lands; the worker re-run costs one extra pipeline pass per export
+(milliseconds) and makes the invariant structural rather than
+disciplinary.
+
+## D28 — Styled PNG chart: preview geometry reuse, print-fixed colours (2026-07-19)
+
+**Decision:** The chart export reuses the preview's pure grid
+geometry (`worker/grid.ts` — `gridLines`/`tickLabels`/`snapSpan` at
+scale = cell px) and the clean-PNG transforms (`scaleNearest` +
+`flattenBackground`) rather than growing a parallel chart-furniture
+implementation. Furniture follows the user's on-screen grid settings
+(intervals, colour, CSS-px thicknesses — the chart's native unit),
+so the only new control is a chart cell-size field (4–40 px, clamped
+to the canvas side limit with margins included). Paper is fixed
+white and label ink fixed dark regardless of app theme — the
+preview's page-text-colour labels would vanish on white paper.
+Empty (transparent) stitches flatten to paper rather than exporting
+holes. The chart re-runs the pipeline via the M3-PNG export message
+(full-quality invariant). Assumptions at skipped gates: the chart
+respects the show/ticks toggles (furniture-off charts are
+deliberately possible); §14 extras (symbols, palette key, titles,
+page furniture) stay parked for the PDF item and post-MVP.
+**Why:** One geometry implementation means the chart and the preview
+can never disagree about where lines and numbers fall — the tested
+pure layer stays the single source of truth; fixed print colours
+stop a dark-theme session silently producing an unreadable chart.
+
+## D29 — Single-page PDF chart: embedded raster + vector key (2026-07-19)
+
+**Decision:** The PDF (pdf-lib 1.17.1 — first use of the allowlisted
+dependency, 0 advisories) embeds the chart.ts raster at print
+resolution (~2400 px long side ≈ 300 dpi on A4) and draws the title
+and thread key as native vector text, so furniture geometry stays
+single-sourced in grid.ts/chart.ts rather than reimplemented in PDF
+space. A pure bottom-up layout (`pdfLayout`) computes page size
+(A4/Letter, portrait/landscape), mm margins, the title block, an
+aspect-preserving chart fit, and a column-wrapped key of **used**
+colours (computeStats.perColor: swatch + code + hex) capped at 40 %
+of content height with a "+N more colours" note; full-RGB mode omits
+the key. Standard PDF fonts are WinAnsi-only, so titles degrade
+non-Latin characters to '?' instead of throwing. `buildChartPdf` is
+plain pdf-lib and runs under Node — tests parse the produced PDF.
+Assumptions at skipped gates: the key lists used colours only (a
+533-swatch DMC key would be unusable); counts and symbols stay
+parked (§17, post-MVP).
+**Why:** Embedding the tested raster keeps one furniture
+implementation and makes the PDF show exactly what the chart PNG
+shows; vector title/key stay crisp at any print size. The milestone
+acceptance leg — a printed A4 of a 100×100 design is legible — is a
+manual print check by design: named here, not silently skipped.
+
+## D30 — Project file v1: settings-only schema, canonical serialisation (2026-07-19)
+
+**Decision:** Schema v1 (§20 MVP subset) persists settings only —
+pipeline config with the palette as a **name reference** ("DMC" /
+null, never embedded data), grid/chart styling (minus the
+theme-derived tick text colour, recomputed at render), and export
+preferences. The source image is not stored; a loaded project applies
+to the next import (source references arrive with capture, M4). The
+schema, migration switch, and (de)serialisation live together in
+`src/core/project.ts` — the v1 stub moved out of `types.ts` so the
+version and its logic have one owner and no type cycle through the
+stage modules. `serializeProject` reconstructs a canonical field
+order (2-space indent, trailing newline) and `parseProject` validates
+with path-named errors, ignores unknown extra fields, refuses a newer
+`schemaVersion` explicitly, and migrates older ones forward — making
+save → load → save byte-identical (AGENTS.md invariant, asserted in
+tests). On load the UI writes state objects first, then syncs control
+DOM values silently (no synthetic events) so a load costs exactly one
+reprocess. Assumptions at skipped gates: an unknown palette name
+refuses the load rather than substituting; validation ranges are
+broad sanity bounds (grid 1–1024 per the brief), not duplicates of
+the control bounds.
+**Why:** Name-referencing the palette keeps project files small and
+human-readable and lets future preset palettes resolve by name;
+canonical serialisation makes the byte-identical guarantee structural
+rather than accidental.

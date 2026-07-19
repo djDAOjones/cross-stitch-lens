@@ -26,3 +26,5 @@
 
 - [ ] 2026-07-17 DEV-INFRASTRUCTURE — pre-M0 comments stale (full gate now
   live); scripts table missing the shipped script surface (source: M0)
+- [ ] 2026-07-19 DEV-INFRASTRUCTURE — dev server port now env-overridable
+  (`PORT` + launch.json `autoPort`) for parallel sessions (source: D27)

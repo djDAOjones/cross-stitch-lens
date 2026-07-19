@@ -26,6 +26,10 @@ export default defineConfig({
     __APP_VERSION__: JSON.stringify(`v${pkg.version}`),
     __BUILD_ID__: JSON.stringify(buildId()),
   },
+  server: {
+    // Honour a harness-assigned port (parallel sessions); default 5173.
+    port: Number(process.env['PORT']) || 5173,
+  },
   build: {
     sourcemap: true,
     target: 'es2022',

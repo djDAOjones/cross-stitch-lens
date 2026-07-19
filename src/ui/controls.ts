@@ -107,6 +107,30 @@ export function numberField(
   return element;
 }
 
+/** Labelled single-line text input (plain string, no validation). */
+export function textField(
+  doc: Document,
+  id: string,
+  label: string,
+  value: string,
+  onChange: (value: string) => void,
+): HTMLElement {
+  const element = doc.createElement('div');
+  element.className = 'field';
+  const lab = doc.createElement('label');
+  lab.htmlFor = id;
+  lab.textContent = label;
+  const input = doc.createElement('input');
+  input.type = 'text';
+  input.id = id;
+  input.value = value;
+  input.addEventListener('change', () => {
+    onChange(input.value);
+  });
+  element.append(lab, input);
+  return element;
+}
+
 /** Labelled native colour picker (#rrggbb values by construction). */
 export function colorField(
   doc: Document,

@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 73 file(s) across 9 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 81 file(s) across 9 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 10 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
@@ -23,8 +23,8 @@
 - `.windsurf` — 1 file(s)
 - `docs` — 1 file(s)
 - `scripts` — 4 file(s)
-- `src` — 31 file(s)
-- `tests` — 23 file(s)
+- `src` — 35 file(s)
+- `tests` — 27 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -82,9 +82,13 @@
 - `src/core/pipeline/index.ts` — pipeline executor: backend pick + ts fallback
 - `src/core/pipeline/reduce.ts` — reduce stage: LUT + exact paths, alpha passthrough
 - `src/core/pipeline/resize.ts` — resize stage: area-average, 4 modes, empty cells
+- `src/core/project.ts` — project file v1 (§20): schema, migration, canonical (de)serialisation
 - `src/core/stats.ts` — design stats §11 subset: counts, %, thread refs
-- `src/core/types.ts` — core contracts: PixelBuffer, Palette, Stage, ProjectFile
+- `src/core/types.ts` — core contracts: PixelBuffer, Palette, Stage
 - `src/diagnostics/log.ts` — structured logger: console + ring buffer + global capture
+- `src/export/chart.ts` — styled PNG chart (§14 subset): pure margin/
+- `src/export/pdf.ts` — single-page PDF chart (§18 subset): pure
+- `src/export/png.ts` — clean PNG export (§13 subset): pure nearest-
 - `src/main.ts` — app entry: M2 shell — import, control panel, preview, info panel
 - `src/ui/controls.ts` — Carbon-style field builders: toggle/number/colour/select + clampInt
 - `src/ui/import.ts` — import routes → decode: filter (pure) + blob→PixelBuffer
@@ -106,6 +110,9 @@
 - `tests/color-convert.test.ts` — golden: Lab reference values + round-trips
 - `tests/controls.test.ts` — number-input clamping (pure half of controls)
 - `tests/dither.test.ts` — dither golden + determinism/mean/serpentine invariants
+- `tests/export-chart.test.ts` — chart layout: label margin + edge pad,
+- `tests/export-pdf.test.ts` — PDF layout (page sizes, aspect fit, key
+- `tests/export-png.test.ts` — export transforms: k×k block replication,
 - `tests/golden/dither-8x8.expected.json` — golden fixture: dither expected, TS-generated (protected)
 - `tests/golden/dither-8x8.input.json` — golden fixture: dither input (protected)
 - `tests/golden/hello-4x4.expected.json` — golden fixture: identity expected output (protected)
@@ -120,6 +127,7 @@
 - `tests/palette.test.ts` — DMC load invariants (533, unique, hex↔rgb)
 - `tests/pipeline-config.test.ts` — preset order, full-RGB, dither-replaces-reduce
 - `tests/pipeline-hello.test.ts` — M0 acceptance: identity golden + purity invariants
+- `tests/project.test.ts` — project file: byte-identical round trip, validation errors, version refusal
 - `tests/reduce.test.ts` — reduce golden + invariants (membership, fixed point, LUT↔exact)
 - `tests/resize.test.ts` — resize golden + geometry/average/bounds invariants
 - `tests/stats.test.ts` — stats partition/sum/sort/reference invariants

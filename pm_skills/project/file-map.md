@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 102 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 107 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 10 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
@@ -24,8 +24,8 @@
 - `crates` — 4 file(s)
 - `docs` — 1 file(s)
 - `scripts` — 5 file(s)
-- `src` — 44 file(s)
-- `tests` — 34 file(s)
+- `src` — 47 file(s)
+- `tests` — 36 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -81,6 +81,9 @@
 - `src/backends/wasm/dither.ts` — wasm dither adapter: init + StageFn wrap + backends.wasm registration
 - `src/backends/wasm/stitch-engine-wasm.d.ts` — ambient types for the stitch-engine-wasm alias (tsc without pkg)
 - `src/backends/wasm/stub.ts` — alias stand-in when the pkg is unbuilt; never called at runtime
+- `src/backends/webgpu/device.ts` — WebGPU feature detect + one lazy shared device (null on failure)
+- `src/backends/webgpu/reduce.ts` — async GPU kernels: LUT build + palette map; null → ts fallback
+- `src/backends/webgpu/wgsl.ts` — WGSL sources: lut-build (metric-baked) + integer palette-map
 - `src/capture/crop.ts` — pure crop-rect geometry: clamp/move/resize, hit-test, stitch span
 - `src/capture/dirty.ts` — dirty-frame skip: 64×64 sampler, FNV-1a hash, region signature
 - `src/capture/draft.ts` — draft-quality governor: pure hysteresis over frame times
@@ -147,6 +150,7 @@
 - `tests/golden/resize-9x5-contain-4x4.input.json` — golden fixture: resize input (protected)
 - `tests/grid.test.ts` — grid-line placement, tick numbering/thinning, auto-hide rule
 - `tests/helpers/golden.ts` — golden harness: fixture load + tolerance compare
+- `tests/helpers/lut-f32.ts` — f32 mirror of the WGSL LUT arithmetic (fround per op)
 - `tests/info-panel.test.ts` — row cap/overflow, thread-vs-hex labels, percent format
 - `tests/palette.test.ts` — DMC load invariants (533, unique, hex↔rgb)
 - `tests/pipeline-config.test.ts` — preset order, full-RGB, dither-replaces-reduce
@@ -158,4 +162,5 @@
 - `tests/ui-import.test.ts` — image-file filtering (pure half of import)
 - `tests/viewport.test.ts` — viewport maths exact cases (fit/anchor/clamp)
 - `tests/wasm-dither.test.ts` — wasm↔TS bit-exact parity: golden fixture, metrics/scan modes, full DMC Lab
+- `tests/webgpu-lut.test.ts` — GPU tolerance suite: near-tie bound via f32 mirror + skipIf real-GPU parity
 - `tests/worker-executor.test.ts` — executor end-to-end, LUT cache, coalescer

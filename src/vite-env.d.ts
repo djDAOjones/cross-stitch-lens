@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+/// <reference types="@webgpu/types" />
 
 /** Product version, e.g. "v0.1.0" — injected at build (vite.config.ts). */
 declare const __APP_VERSION__: string;

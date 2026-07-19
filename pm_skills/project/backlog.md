@@ -17,7 +17,6 @@ line passes and `check` is green. Requirements references are to
 
 ### M5 — WASM + WebGPU backends (§22, §23.5) (current milestone)
 
-- [ ] WebGPU compute: LUT build + palette mapping (WGSL); tolerance-tested
 - [ ] Automatic backend selection (feature-detect + profile); TS fallback verified by disabling both in tests
 - [ ] Benchmark test asserting architecture.md budgets at 1024×1024
 

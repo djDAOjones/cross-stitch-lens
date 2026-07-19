@@ -69,3 +69,4 @@ refer to `docs/requirements.md`.
   needs real stitching feedback before designing.
 - Grid size (width/height) controls UI (§4) — engine supports it since M1; panel slot next to the M2 grid controls (from: 2026-07-19 M2-PANELS)
 - Rust lint/format in the gate: clippy -D warnings + rustfmt --check for the stitch-engine crate (needs the components locally + in CI) (from: 2026-07-19 M5-CRATE)
+- Browser-mode test runner (@vitest/browser + playwright) so the real-GPU WebGPU suite runs in CI, not just where navigator.gpu exists (from: 2026-07-19 M5-WEBGPU)

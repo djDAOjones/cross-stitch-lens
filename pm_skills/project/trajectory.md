@@ -19,6 +19,11 @@
 
 ## M5 — WASM + WebGPU backends (in progress)
 
+- M5-WEBGPU (2026-07-19) — WGSL LUT build + palette map as async GPU
+  kernels; LUT build wired GPU-first into the worker cache
+  (`ensureLut`, ts fallback), map kernel awaits the selection item;
+  tolerance quantified in node via an f32 mirror (≤ 1% bins, near-tie
+  bound) + skipIf real-GPU suite. See decision-log D41.
 - M5-WASM (2026-07-19) — wasm dither backend registered (worker
   startup, assignment onto `ditherStage.backends`, ts fallback);
   alias/stub build-time feature detection; **bit-exact parity proven**

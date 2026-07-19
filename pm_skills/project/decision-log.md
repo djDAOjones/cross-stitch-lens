@@ -739,3 +739,34 @@ instead of aspirational.
 per-call palette flattening (cache deferred to the selection item),
 node tests init the module from disk bytes via an optional adapter
 parameter.
+
+## D41 — WebGPU LUT build + palette map: cache-layer wiring, near-tie tolerance (2026-07-19)
+
+**Decision:** The WebGPU kernels (WGSL, `src/backends/webgpu/`) land
+as **async functions**, not sync StageFn backends: GPU readback cannot
+satisfy the synchronous stage contract, so core and the executor stay
+untouched. The LUT build — the actually expensive part per
+architecture ("WASM/WebGPU accelerate LUT construction") — wires into
+the worker cache as `ensureLut` (GPU-first, TS on any failure),
+awaited by the worker before frames that need a LUT; cache hits cost
+nothing. The palette-map kernel is implemented and GPU-tested but not
+yet routed — the backend-selection item owns any executor
+asyncification. **Tolerance, documented:** GPU colour maths is f32, so
+a GPU LUT may disagree with the f64 TS reference only on *near-ties*
+(two threads at almost identical distance). The automated suite
+quantifies this in node via an f32 mirror of the WGSL arithmetic
+(≤ 1% of bins, and every disagreement within a 0.5% relative distance
+margin — visually equivalent picks); a real-GPU suite runs the same
+assertions wherever `navigator.gpu` exists and skips visibly in
+node/CI. Mapping through a given LUT is integer-only and asserted
+bit-exact. Consequence accepted: non-dithered output can differ on
+near-tie bins between GPU and non-GPU machines; within one session
+preview and export share one cached LUT, so they always agree.
+`@webgpu/types` added as a types-only devDependency (user-approved).
+**Why:** The cache-layer wiring gets the GPU win where profiling says
+it lives without destabilising the pure sync pipeline; the f32 mirror
+makes "tolerance-tested" a real, CI-run assertion rather than a
+browser-only claim.
+**Run notes (auto-jazz via /next):** stopped once (types package
+approval). Assumption: real-GPU CI coverage via a browser-mode runner
+is parked to the wish-list, not scoped here.

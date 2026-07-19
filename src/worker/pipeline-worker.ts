@@ -13,6 +13,7 @@
 import { registerWasmDither } from '../backends/wasm/dither.ts';
 import { fullRgbVariant, type PipelineConfig } from '../core/pipeline/config.ts';
 import { executeRequest } from './execute.ts';
+import { ensureLut } from './lut-cache.ts';
 import {
   resizeSurface,
   setCompare,
@@ -36,6 +37,17 @@ const scope = self as unknown as WorkerScope;
 // (or when it is unavailable) run on the ts backend via the
 // executor's fallback — registration is additive, never blocking.
 void registerWasmDither();
+
+/**
+ * Fill the LUT cache (GPU-first) before a frame that needs one — a
+ * non-dithered palette reduction. Cache hits resolve immediately;
+ * misses run once per palette+metric change. The executor's sync
+ * getLut remains the safety net if this is skipped.
+ */
+async function ensureLutFor(config: PipelineConfig): Promise<void> {
+  if (config.palette === null || config.dither) return;
+  await ensureLut(config.palette, config.metric);
+}
 
 /**
  * Last source frame, kept for the split compare: stages are pure, so
@@ -95,28 +107,31 @@ scope.onmessage = (event: MessageEvent): void => {
     case 'export': {
       // Full-quality re-run for an export: no preview draw, no
       // lastFrame update — the result goes straight back by id.
-      const response = executeRequest({
-        type: 'process',
-        id: request.id,
-        width: request.width,
-        height: request.height,
-        pixels: request.pixels,
-        config: request.config,
-      });
-      if (response.type === 'result') {
-        scope.postMessage(
-          {
-            type: 'export-result',
-            id: response.id,
-            width: response.width,
-            height: response.height,
-            pixels: response.pixels,
-          },
-          [response.pixels],
-        );
-      } else {
-        scope.postMessage(response, []);
-      }
+      void (async () => {
+        await ensureLutFor(request.config);
+        const response = executeRequest({
+          type: 'process',
+          id: request.id,
+          width: request.width,
+          height: request.height,
+          pixels: request.pixels,
+          config: request.config,
+        });
+        if (response.type === 'result') {
+          scope.postMessage(
+            {
+              type: 'export-result',
+              id: response.id,
+              width: response.width,
+              height: response.height,
+              pixels: response.pixels,
+            },
+            [response.pixels],
+          );
+        } else {
+          scope.postMessage(response, []);
+        }
+      })();
       break;
     }
     case 'process': {
@@ -126,22 +141,28 @@ scope.onmessage = (event: MessageEvent): void => {
         pixels: request.pixels,
         config: request.config,
       };
-      const response = executeRequest(request);
-      if (compareEnabled) refreshSourceFrame();
-      if (response.type === 'result') {
-        const image = new ImageData(
-          new Uint8ClampedArray(response.pixels),
-          response.width,
-          response.height,
-        );
-        void createImageBitmap(image).then((bitmap) => {
-          setFrame(bitmap);
-          // Transfer AFTER the bitmap snapshot exists.
-          scope.postMessage(response, [response.pixels]);
-        });
-      } else {
-        scope.postMessage(response, []);
-      }
+      // Serial by construction: the client keeps at most one preview
+      // frame in flight (latest-wins), so awaiting the LUT here cannot
+      // reorder frames.
+      void (async () => {
+        await ensureLutFor(request.config);
+        const response = executeRequest(request);
+        if (compareEnabled) refreshSourceFrame();
+        if (response.type === 'result') {
+          const image = new ImageData(
+            new Uint8ClampedArray(response.pixels),
+            response.width,
+            response.height,
+          );
+          void createImageBitmap(image).then((bitmap) => {
+            setFrame(bitmap);
+            // Transfer AFTER the bitmap snapshot exists.
+            scope.postMessage(response, [response.pixels]);
+          });
+        } else {
+          scope.postMessage(response, []);
+        }
+      })();
       break;
     }
   }

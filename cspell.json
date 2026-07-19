@@ -14,6 +14,7 @@
   ],
   "words": [
     "AKIA",
+    "asyncification",
     "backticked",
     "bindgen",
     "cbrt",
@@ -32,6 +33,7 @@
     "docstrings",
     "fdlibm",
     "FILEMAP",
+    "fround",
     "frontmatter",
     "gitleaks",
     "gofmt",

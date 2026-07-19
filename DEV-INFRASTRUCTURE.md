@@ -16,8 +16,9 @@ Package manager: **npm** (Node LTS).
 - **Runtime dependencies** require explicit approval. Current
   allowlist: **Carbon** web components and **pdf-lib**. Default is to
   add nothing further.
-- **Dev dependencies** (Vite, Vitest, ESLint, Prettier, typescript)
-  can be added when justified by the architecture.
+- **Dev dependencies** (Vite, Vitest, ESLint, Prettier, typescript,
+  `@webgpu/types` — types only, never bundled) can be added when
+  justified by the architecture.
 - **Rust toolchain** (stable via rustup + the `wasm32-unknown-unknown`
   target + `wasm-pack`) is required for M5 crate work. Vite dev/build
   and `check` still pass without it: `check:wasm` skips with a visible

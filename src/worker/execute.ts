@@ -5,9 +5,9 @@
  * testable without a Worker.
  */
 
-import { buildStages } from '../core/pipeline/config.ts';
+import { buildStages, type PipelineConfig } from '../core/pipeline/config.ts';
 import type { Backend, PixelBuffer } from '../core/types.ts';
-import { selectedBackend } from './backend-select.ts';
+import { routeDither, selectedBackend } from './backend-select.ts';
 import { getCandidates, getLut } from './lut-cache.ts';
 import type { ProcessRequest, StageTiming, WorkerResponse } from './protocol.ts';
 
@@ -23,6 +23,22 @@ import type { ProcessRequest, StageTiming, WorkerResponse } from './protocol.ts'
  * may be the last and its output gets transferred.
  */
 export type StageObserver = (stage: string, buffer: PixelBuffer) => void;
+
+/**
+ * Workload-based backend routing for the stages that have it, or
+ * undefined to fall through to the recorded selection.
+ *
+ * Only dither routes today: it is the one stage with two mature
+ * backends whose winner depends on the frame (M5-PERF-27).
+ */
+function routeFor(stageName: string, config: PipelineConfig): Backend | undefined {
+  if (stageName !== 'dither' || config.palette === null) return undefined;
+  return routeDither({
+    grid: Math.max(config.grid.width, config.grid.height),
+    paletteSize: config.palette.entries.length,
+    metric: config.metric,
+  });
+}
 
 /** Run one frame; never throws — failures become error responses. */
 export function executeRequest(
@@ -42,11 +58,17 @@ export function executeRequest(
     };
     const timings: StageTiming[] = [];
     for (const instance of stages) {
-      // Explicit instance backend > automatic selection > 'ts'; a
-      // requested backend that is not registered falls back to the
-      // TS reference (architecture.md → "Stage backends").
+      // Explicit instance backend > workload routing > recorded
+      // selection > 'ts'; a requested backend that is not registered
+      // falls back to the TS reference (architecture.md → "Stage
+      // backends"). Routing sits above the recorded selection because
+      // it is per-workload: D42's single startup calibration could not
+      // see that the dither winner flips on metric (M5-PERF-27).
       const requested: Backend =
-        instance.backend ?? selectedBackend(instance.stage.name) ?? 'ts';
+        instance.backend ??
+        routeFor(instance.stage.name, request.config) ??
+        selectedBackend(instance.stage.name) ??
+        'ts';
       const fn = instance.stage.backends[requested] ?? instance.stage.backends.ts;
       const used: Backend =
         instance.stage.backends[requested] === undefined ? 'ts' : requested;

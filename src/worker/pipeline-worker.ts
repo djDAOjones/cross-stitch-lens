@@ -6,7 +6,6 @@
  */
 
 import { registerWasmDither } from '../backends/wasm/dither.ts';
-import { calibrateDither } from './backend-select.ts';
 import type { WorkerRequest } from './protocol.ts';
 import { createRouter, defaultDeps } from './router.ts';
 
@@ -21,11 +20,10 @@ const scope = self as unknown as WorkerScope;
 // Fire-and-forget: frames arriving before the wasm module is ready
 // (or when it is unavailable) run on the ts backend via the
 // executor's fallback — registration is additive, never blocking.
-// Once registered, a one-shot calibration picks the faster dither
-// backend for subsequent frames (backend-select.ts).
-void registerWasmDither().then((registered) => {
-  if (registered) calibrateDither();
-});
+// No startup calibration: the dither backend is chosen per frame from
+// the workload (M5-PERF-27), which is what D42's single synthetic
+// frame could not do.
+void registerWasmDither();
 
 const route = createRouter(
   defaultDeps((message, transfer) => {

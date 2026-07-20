@@ -18,10 +18,8 @@ import { buildLut } from '../src/core/color/lut.ts';
 import { ditherStage } from '../src/core/pipeline/dither.ts';
 import type { Palette } from '../src/core/types.ts';
 import {
-  calibrateDither,
   clearSelectedBackends,
-  medianMs,
-  pickFaster,
+  routeDither,
   selectedBackend,
   setSelectedBackend,
 } from '../src/worker/backend-select.ts';
@@ -36,12 +34,24 @@ const WASM_BYTES_PATH = fileURLToPath(
 const PALETTE: Palette = {
   name: 'test-bw',
   entries: [
-    { code: 'K', name: 'black', hex: '#000000', rgb: [0, 0, 0], manufacturer: 'test' },
-    { code: 'W', name: 'white', hex: '#ffffff', rgb: [255, 255, 255], manufacturer: 'test' },
+    {
+      code: 'K',
+      name: 'black',
+      hex: '#000000',
+      rgb: [0, 0, 0],
+      manufacturer: 'test',
+    },
+    {
+      code: 'W',
+      name: 'white',
+      hex: '#ffffff',
+      rgb: [255, 255, 255],
+      manufacturer: 'test',
+    },
   ],
 };
 
-function ditherRequest(): ProcessRequest {
+function ditherRequest(metric: 'rgb' | 'lab' = 'rgb'): ProcessRequest {
   const width = 8;
   const height = 8;
   const data = new Uint8ClampedArray(width * height * 4);
@@ -60,7 +70,7 @@ function ditherRequest(): ProcessRequest {
       grid: { width: 8, height: 8 },
       resizeMode: 'stretch',
       palette: PALETTE,
-      metric: 'rgb',
+      metric,
       dither: true,
       serpentine: true,
     },
@@ -73,19 +83,6 @@ afterEach(() => {
 });
 
 describe('selection policy', () => {
-  it('medianMs takes the middle sample', () => {
-    expect(medianMs([5])).toBe(5);
-    expect(medianMs([9, 1, 5])).toBe(5);
-    expect(medianMs([1, 9])).toBe(5);
-  });
-
-  it('pickFaster requires a clear win before leaving ts', () => {
-    expect(pickFaster(10, 5, 'wasm')).toBe('wasm');
-    expect(pickFaster(10, 9.5, 'wasm')).toBe('ts'); // inside the margin
-    expect(pickFaster(10, 10, 'wasm')).toBe('ts'); // tie → reference
-    expect(pickFaster(10, 20, 'wasm')).toBe('ts');
-  });
-
   it('set/clear round-trips a selection', () => {
     expect(selectedBackend('dither')).toBeUndefined();
     setSelectedBackend('dither', 'wasm');
@@ -95,70 +92,67 @@ describe('selection policy', () => {
   });
 });
 
-describe('calibration', () => {
-  it('skips (ts, no selection) when wasm is not registered', () => {
-    expect(ditherStage.backends.wasm).toBeUndefined();
-    expect(calibrateDither()).toBe('ts');
-    expect(selectedBackend('dither')).toBeUndefined();
+describe('workload routing (M5-PERF-27)', () => {
+  /**
+   * The policy is derived from the sweep in
+   * `tests/audits/routing.audit.test.ts`: under lab the TS path carries
+   * per-bin pruning that Rust does not, and under rgb the Rust loop
+   * wins. Measured on every combination of 96²–1024² and 64/533
+   * colours, the metric decided all sixteen.
+   */
+  it('routes lab to ts and rgb to wasm, at every grid and palette size', () => {
+    for (const grid of [96, 200, 300, 1024]) {
+      for (const paletteSize of [2, 64, 533]) {
+        expect(routeDither({ grid, paletteSize, metric: 'lab' })).toBe('ts');
+        expect(routeDither({ grid, paletteSize, metric: 'rgb' })).toBe('wasm');
+      }
+    }
   });
 
-  it('selects wasm when the fake clock says wasm is faster', async () => {
-    expect(await registerWasmDither(readFileSync(WASM_BYTES_PATH))).toBe(true);
-    // Fake clock: each now() call advances 1ms during ts runs and
-    // 0.1ms during wasm runs (calls alternate ts,wasm per run pair).
-    let t = 0;
-    const steps = [10, 10, 1, 1, 10, 10, 1, 1, 10, 10, 1, 1]; // start/end × (ts,wasm) × 3
-    let call = 0;
-    const now = (): number => {
-      t += steps[call % steps.length] ?? 1;
-      call++;
-      return t;
-    };
-    expect(calibrateDither(3, 8, now)).toBe('wasm');
-    expect(selectedBackend('dither')).toBe('wasm');
-  });
-
-  it('stays on ts when the fake clock says wasm is not clearly faster', async () => {
-    expect(await registerWasmDither(readFileSync(WASM_BYTES_PATH))).toBe(true);
-    let t = 0;
-    const now = (): number => {
-      t += 1; // identical cost for both backends → tie → ts
-      return t;
-    };
-    expect(calibrateDither(3, 8, now)).toBe('ts');
-    expect(selectedBackend('dither')).toBeUndefined();
+  it('is a pure function of the workload — no startup state to go stale', () => {
+    // D42's failing mode: one calibration at startup, applied forever.
+    // Routing cannot drift because it holds nothing.
+    const workload = { grid: 300, paletteSize: 64, metric: 'lab' as const };
+    const first = routeDither(workload);
+    clearSelectedBackends();
+    setSelectedBackend('dither', 'wasm');
+    expect(routeDither(workload)).toBe(first);
   });
 });
 
 describe('executor routing', () => {
-  it('uses the automatic selection and reports the backend that ran', async () => {
+  it('routes an rgb frame to wasm and reports the backend that ran', async () => {
     expect(await registerWasmDither(readFileSync(WASM_BYTES_PATH))).toBe(true);
-    setSelectedBackend('dither', 'wasm');
-    const response = executeRequest(ditherRequest());
+    const response = executeRequest(ditherRequest('rgb'));
     expect(response.type).toBe('result');
     if (response.type !== 'result') return;
-    const dither = response.timings.find((timing) => timing.stage === 'dither');
-    expect(dither?.backend).toBe('wasm');
+    expect(response.timings.find((t) => t.stage === 'dither')?.backend).toBe(
+      'wasm',
+    );
   });
 
-  it('an explicit instance backend outranks the selection', async () => {
-    // Selection says wasm, but nothing is registered — see fallback
-    // suite below; here the inverse: registration present, explicit
-    // 'ts' request must win. Covered via runPipeline in wasm tests;
-    // the executor path takes instance.backend first by construction.
+  it('routes a lab frame to ts even when a selection says wasm', async () => {
+    // The D42 failure this replaces: a recorded selection applied to a
+    // workload it was never measured on. Routing outranks it.
     expect(await registerWasmDither(readFileSync(WASM_BYTES_PATH))).toBe(true);
     setSelectedBackend('dither', 'wasm');
-    // buildStages never sets instance.backend, so assert the executor
-    // honoured the selection (wasm) — then clear it and assert ts.
-    const withSelection = executeRequest(ditherRequest());
-    clearSelectedBackends();
-    const without = executeRequest(ditherRequest());
-    if (withSelection.type !== 'result' || without.type !== 'result') {
-      expect.unreachable('both runs must produce results');
-      return;
-    }
-    expect(withSelection.timings.find((t) => t.stage === 'dither')?.backend).toBe('wasm');
-    expect(without.timings.find((t) => t.stage === 'dither')?.backend).toBe('ts');
+    const response = executeRequest(ditherRequest('lab'));
+    expect(response.type).toBe('result');
+    if (response.type !== 'result') return;
+    expect(response.timings.find((t) => t.stage === 'dither')?.backend).toBe(
+      'ts',
+    );
+  });
+
+  it('falls back to ts when the routed backend is not registered', () => {
+    // rgb routes to wasm, but nothing is registered in node.
+    expect(ditherStage.backends.wasm).toBeUndefined();
+    const response = executeRequest(ditherRequest('rgb'));
+    expect(response.type).toBe('result');
+    if (response.type !== 'result') return;
+    expect(response.timings.find((t) => t.stage === 'dither')?.backend).toBe(
+      'ts',
+    );
   });
 });
 

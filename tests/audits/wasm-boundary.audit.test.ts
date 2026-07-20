@@ -15,8 +15,7 @@ import { readFileSync, statSync } from 'node:fs';
 
 import { describe, expect, it } from 'vitest';
 
-import { calibrateDither, clearSelectedBackends } from '../../src/worker/backend-select.ts';
-import { loadDmcPalette, paletteLab, paletteRgb } from '../../src/core/palette.ts';
+import { paletteLab, paletteRgb } from '../../src/core/palette.ts';
 import { ditherStage, type DitherParams } from '../../src/core/pipeline/dither.ts';
 import { resizeStage } from '../../src/core/pipeline/resize.ts';
 import type { PixelBuffer } from '../../src/core/types.ts';
@@ -147,56 +146,22 @@ describe.skipIf(!AUDIT)('M5-PERF-15 wasm boundary audit (AUDIT=1)', () => {
     expect(rows.length).toBeGreaterThan(0);
   }, AUDIT_TIMEOUT_MS);
 
-  it('tests whether the 96² calibration is representative', async () => {
-    const backend = await useProductionBackends();
-    const wasm = ditherStage.backends.wasm;
-    if (backend !== 'wasm' || wasm === undefined) return;
-    const ts = ditherStage.backends.ts;
-
-    clearSelectedBackends();
-    const calibrated = calibrateDither();
-
-    const results: Record<string, string> = {};
-    for (const [name, grid, palette] of [
-      ['96²/533 (calibration workload)', 96, loadDmcPalette()] as const,
-      ['300²/64', 300, palette64()] as const,
-      ['1024²/64 (ceiling)', 1024, palette64()] as const,
-    ]) {
-      const buffer = gridBuffer(grid);
-      const params: DitherParams = { palette, metric: 'lab', serpentine: true };
-      const expected = grid === 1024 ? 500 : grid === 300 ? 60 : 10;
-      const tsRow = timed(`ts — ${name}`, () => ts(buffer, params), expected);
-      const wasmRow = timed(`wasm — ${name}`, () => wasm(buffer, params), expected);
-      const tsMs = tsRow.summary?.median ?? 0;
-      const wasmMs = wasmRow.summary?.median ?? 0;
-      results[name] = wasmMs < tsMs ? 'wasm' : 'ts';
-      rows.push(tsRow, wasmRow);
-      rows.push(
-        counted(`winner — ${name}`, {
-          'ts ms': round(tsMs, 2),
-          'wasm ms': round(wasmMs, 2),
-          winner: results[name] ?? '',
-          'margin ×': round(Math.max(tsMs, wasmMs) / Math.max(Math.min(tsMs, wasmMs), 1e-9), 2),
-        }),
-      );
-    }
-    rows.push(
-      counted('calibration representativeness', {
-        'calibration picked': calibrated,
-        'winners by workload': JSON.stringify(results),
-        consistent: new Set(Object.values(results)).size === 1 ? 'yes' : 'NO',
-      }),
-    );
+  it('records how the calibration question was resolved', () => {
+    // This audit used to time the D42 calibration workload against
+    // others to ask whether one synthetic frame generalises. It does
+    // not, and the question is now closed: M5-PERF-27 removed the
+    // calibration entirely in favour of per-workload routing, and the
+    // full grid × palette × metric sweep that replaced this lives in
+    // `routing.audit.test.ts`. Kept as a pointer rather than deleted so
+    // the lead's resolution is discoverable from where it was raised.
     findings.push(
-      'Calibration (D42) runs one 96² frame against the full 533-colour DMC palette and ' +
-        'applies the winner to every subsequent frame at every grid and palette size. The ' +
-        'winners table above shows whether that generalises. Even where it happens to, the ' +
-        'policy is unsound in shape: the backend gap is a function of grid AND palette size, ' +
-        'so the selection should be a threshold over the workload, not a single global pick. ' +
-        'Follow-up: M5-PERF-27.',
+      'CLOSED by M5-PERF-27. D42 calibrated on a single 96²/533 lab frame and applied the ' +
+        'winner to every workload. That is unsound in shape, and after M5-PERF-22 it is also ' +
+        'wrong in fact: the dither winner is decided by METRIC (lab → ts, rgb → wasm) across ' +
+        'the whole 96²–1024² × 64–533 matrix. The calibration has been removed, not retuned. ' +
+        'Evidence: tests/audits/routing.audit.test.ts.',
     );
-    clearSelectedBackends();
-    expect(rows.length).toBeGreaterThan(0);
+    expect(findings.length).toBeGreaterThan(0);
   }, AUDIT_TIMEOUT_MS);
 
   it('inspects the emitted module without touching pkg', () => {

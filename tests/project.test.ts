@@ -14,6 +14,10 @@ import {
   serializeProject,
   type ProjectFile,
 } from '../src/core/project.ts';
+import { buildStages, type PipelineConfig } from '../src/core/pipeline/config.ts';
+import { runPipeline } from '../src/core/pipeline/index.ts';
+import { loadDmcPalette } from '../src/core/palette.ts';
+import type { PixelBuffer } from '../src/core/types.ts';
 
 /** A representative, fully-populated v1 project. */
 function sampleProject(): ProjectFile {
@@ -168,5 +172,128 @@ describe('parseProject validation', () => {
 describe('projectFilename', () => {
   it('names the file after the grid size', () => {
     expect(projectFilename(200, 150)).toBe('project-200x150.json');
+  });
+});
+
+/**
+ * The brief's third success criterion — "a saved project reopens with
+ * identical output (golden-test guarantee)" — and the only one that was
+ * never asserted anywhere (M5-ACCEPT-01). Byte-identical JSON above
+ * proves the *file* survives; it does not prove the file still means
+ * the same picture. A field silently dropped from `toJSON`, or a
+ * default applied on parse that differs from the value in the document,
+ * would round-trip perfectly and still reopen as different artwork.
+ *
+ * This walks the whole way round: config → project file → text → parse
+ * → config → rendered pixels, mirroring `loadProject`'s resolution of
+ * the palette NAME back to palette data.
+ */
+describe('a saved project reopens with identical output', () => {
+  const DMC = loadDmcPalette();
+
+  /** `loadProject`'s mapping, as a pure function of the parsed file. */
+  function configFrom(file: ProjectFile): PipelineConfig {
+    const name = file.pipeline.palette;
+    return {
+      preset: file.pipeline.preset,
+      grid: { ...file.pipeline.grid },
+      resizeMode: file.pipeline.resizeMode,
+      palette: name === null ? null : DMC,
+      metric: file.pipeline.metric,
+      dither: file.pipeline.dither,
+      serpentine: file.pipeline.serpentine,
+    };
+  }
+
+  /** Deterministic source artwork (LCG — no Math.random). */
+  function artwork(width: number, height: number): PixelBuffer {
+    const data = new Uint8ClampedArray(width * height * 4);
+    let state = 0x2f6e2b1 >>> 0;
+    for (let i = 0; i < width * height; i++) {
+      state = (state * 1664525 + 1013904223) >>> 0;
+      data[i * 4] = state >>> 24;
+      data[i * 4 + 1] = (state >>> 16) & 255;
+      data[i * 4 + 2] = (state >>> 8) & 255;
+      // Some fully transparent cells, so empty-stitch handling is part
+      // of what has to survive the round trip.
+      data[i * 4 + 3] = i % 17 === 0 ? 0 : 255;
+    }
+    return { width, height, data };
+  }
+
+  function render(config: PipelineConfig, source: PixelBuffer): Uint8ClampedArray {
+    return runPipeline(source, buildStages(config)).data;
+  }
+
+  // One row per creative axis the project file carries.
+  const CASES: { name: string; pipeline: ProjectFile['pipeline'] }[] = [
+    {
+      name: 'dithered Lab, contain, serpentine',
+      pipeline: {
+        preset: 'resize-first',
+        grid: { width: 24, height: 16 },
+        resizeMode: 'contain',
+        palette: 'DMC',
+        metric: 'lab',
+        dither: true,
+        serpentine: true,
+      },
+    },
+    {
+      name: 'plain RGB reduce, cover, raster',
+      pipeline: {
+        preset: 'resize-first',
+        grid: { width: 16, height: 16 },
+        resizeMode: 'cover',
+        palette: 'DMC',
+        metric: 'rgb',
+        dither: false,
+        serpentine: false,
+      },
+    },
+    {
+      name: 'reduce-first preset, fit',
+      pipeline: {
+        preset: 'reduce-first',
+        grid: { width: 20, height: 20 },
+        resizeMode: 'fit',
+        palette: 'DMC',
+        metric: 'lab',
+        dither: false,
+        serpentine: true,
+      },
+    },
+    {
+      name: 'full-RGB mode (no palette), stretch',
+      pipeline: {
+        preset: 'resize-first',
+        grid: { width: 18, height: 12 },
+        resizeMode: 'stretch',
+        palette: null,
+        metric: 'lab',
+        dither: false,
+        serpentine: true,
+      },
+    },
+  ];
+
+  const source = artwork(40, 30);
+
+  for (const { name, pipeline } of CASES) {
+    it(`renders identically after save → load — ${name}`, () => {
+      const saved: ProjectFile = { ...sampleProject(), pipeline };
+      const before = render(configFrom(saved), source);
+      const after = render(configFrom(parseProject(serializeProject(saved))), source);
+      expect(Array.from(after)).toEqual(Array.from(before));
+    });
+  }
+
+  it('distinguishes the cases — a different project is a different picture', () => {
+    // Without this, the assertions above would also pass if `render`
+    // ignored the config entirely.
+    const rendered = CASES.map(({ pipeline }) =>
+      render(configFrom({ ...sampleProject(), pipeline }), source).join(','),
+    );
+    expect(new Set(rendered).size).toBe(CASES.length);
   });
 });

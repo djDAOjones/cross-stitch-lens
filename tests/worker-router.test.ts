@@ -244,6 +244,125 @@ describe('worker router response invariant', () => {
 });
 
 /**
+ * Export isolation (M5-ACCEPT-01, promoting the M5-PERF-19 audit
+ * finding into the gate).
+ *
+ * "Exports always re-run the pipeline at full quality; preview quality
+ * settings must be unable to leak into exported output" is an AGENTS.md
+ * invariant, but it was only ever asserted under `AUDIT=1`, which
+ * `check` does not run — so nothing stopped a regression reaching main.
+ * These use the REAL executor, not the harness fake, because the claim
+ * is about the bytes.
+ */
+describe('export isolation (AGENTS.md: preview quality never leaks)', () => {
+  const DITHERED: PipelineConfig = {
+    preset: 'resize-first',
+    grid: { width: 8, height: 8 },
+    resizeMode: 'stretch',
+    palette: PALETTE,
+    metric: 'lab',
+    dither: true,
+    serpentine: true,
+  };
+  /** What the draft governor substitutes under load: dithering off. */
+  const DRAFT: PipelineConfig = { ...DITHERED, dither: false };
+
+  /** A gradient big enough that dither and plain reduce disagree. */
+  function source(): ArrayBuffer {
+    const data = new Uint8ClampedArray(16 * 16 * 4);
+    for (let i = 0; i < 16 * 16; i++) {
+      data[i * 4] = (i * 7) % 256;
+      data[i * 4 + 1] = (i * 11) % 256;
+      data[i * 4 + 2] = (i * 13) % 256;
+      data[i * 4 + 3] = 255;
+    }
+    return data.buffer as ArrayBuffer;
+  }
+
+  function realHarness(): {
+    route: (r: ProcessRequest | ExportRequest) => void;
+    posted: WorkerResponse[];
+    executions: ProcessRequest[];
+  } {
+    const posted: WorkerResponse[] = [];
+    const executions: ProcessRequest[] = [];
+    const route = createRouter({
+      post: (message) => posted.push(message as WorkerResponse),
+      ensureLutFor: () => Promise.resolve(),
+      execute: (request, observe) => {
+        executions.push(request);
+        return executeRequest(request, () => 0, observe);
+      },
+      toBitmap: (image) =>
+        Promise.resolve({
+          width: image.width,
+          height: image.height,
+          close: () => undefined,
+        } as ImageBitmap),
+    });
+    return { route, posted, executions };
+  }
+
+  function exportOf(config: PipelineConfig, id: number): ExportRequest {
+    return { type: 'export', id, width: 16, height: 16, pixels: source(), config };
+  }
+
+  function bytesOf(response: WorkerResponse | undefined): number[] {
+    if (response === undefined || response.type === 'error') return [];
+    return Array.from(new Uint8ClampedArray(response.pixels));
+  }
+
+  it('an export is byte-identical to an independent full-quality run', async () => {
+    const a = realHarness();
+    const b = realHarness();
+    a.route(exportOf(DITHERED, 1));
+    b.route(exportOf(DITHERED, 2));
+    await vi.waitFor(() => {
+      expect(a.posted).toHaveLength(1);
+      expect(b.posted).toHaveLength(1);
+    });
+    expect(bytesOf(a.posted[0])).toHaveLength(8 * 8 * 4);
+    expect(bytesOf(a.posted[0])).toEqual(bytesOf(b.posted[0]));
+  });
+
+  it('a preview running in draft quality does not change the export', async () => {
+    // Warm the router with draft-quality frames, exactly as the pump
+    // does while the governor has dithering dropped, then export.
+    const warmed = realHarness();
+    warmed.route({ type: 'process', id: 1, width: 16, height: 16, pixels: source(), config: DRAFT });
+    await vi.waitFor(() => expect(warmed.posted).toHaveLength(1));
+    warmed.route(exportOf(DITHERED, 2));
+    await vi.waitFor(() => expect(warmed.posted).toHaveLength(2));
+
+    // A cold router that never saw a draft frame.
+    const cold = realHarness();
+    cold.route(exportOf(DITHERED, 3));
+    await vi.waitFor(() => expect(cold.posted).toHaveLength(1));
+
+    expect(bytesOf(warmed.posted[1])).toEqual(bytesOf(cold.posted[0]));
+    // And the draft frame really was the cheaper one — otherwise the
+    // comparison above would hold for an uninteresting reason.
+    expect(bytesOf(warmed.posted[0])).not.toEqual(bytesOf(cold.posted[0]));
+  });
+
+  it('exporting mid-capture does not become the preview’s last frame', async () => {
+    const { route, posted, executions } = realHarness();
+    route({ type: 'process', id: 1, width: 16, height: 16, pixels: source(), config: DITHERED });
+    await vi.waitFor(() => expect(posted).toHaveLength(1));
+    route(exportOf({ ...DITHERED, grid: { width: 4, height: 4 } }, 2));
+    await vi.waitFor(() => expect(posted).toHaveLength(2));
+
+    // Enabling compare rebuilds from the last PROCESSED frame. If the
+    // export had overwritten `lastFrame`, the compare half would come
+    // back at the export's 4×4 grid instead of the preview's 8×8.
+    executions.length = 0;
+    route({ type: 'compare', enabled: true, position: 0.5 } as unknown as ProcessRequest);
+    expect(executions).toHaveLength(1);
+    expect(executions[0]?.config.grid).toEqual({ width: 8, height: 8 });
+  });
+});
+
+/**
  * Split compare must show the full-RGB source at grid scale, aligned
  * cell-for-cell with the reduced output. M5-PERF-28 stopped computing
  * that with a second full pipeline pass per frame; these pin the two

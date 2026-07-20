@@ -15,17 +15,17 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 139 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 143 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 11 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
 - `.github` — 1 file(s)
 - `.windsurf` — 1 file(s)
 - `crates` — 4 file(s)
-- `docs` — 4 file(s)
-- `scripts` — 5 file(s)
+- `docs` — 5 file(s)
+- `scripts` — 6 file(s)
 - `src` — 51 file(s)
-- `tests` — 60 file(s)
+- `tests` — 62 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -67,6 +67,7 @@
 
 ## docs
 
+- `docs/acceptance-matrix.md` — M5-ACCEPT-01 evidence: generated coverage table, per-row invariants, explicit skips
 - `docs/browser-measurement.md` — browser-only boundary procedure + recorded results (M5-PERF-18)
 - `docs/measurement-contract.md` — M5 boundary contract (bv1), workload matrix, report schema, browser rehearsal
 - `docs/performance-evidence.md` — M5 measured evidence: bv1 baseline, component audits, M5C decisions
@@ -79,6 +80,7 @@
 - `scripts/check-secrets.mjs` — report-only credential-shape scan (gate step)
 - `scripts/check-wasm.mjs` — gate step: cargo test + wasm-pack build; toolchain-aware skip (hard-fails in CI)
 - `scripts/gen-golden-hello.mjs` — one-time generator of the M0 hello fixtures
+- `scripts/write-acceptance-matrix.mjs` — regenerates the coverage table (the fixer; `check` only compares)
 
 ## src
 
@@ -136,6 +138,7 @@
 
 ## tests
 
+- `tests/acceptance-matrix.test.ts` — M5-ACCEPT-01 driver: per-row invariants through the worker entry, tie-break oracles, coverage-table staleness gate
 - `tests/audits/audit.ts` — audit harness: AUDIT=1 gate, timed/counted rows, JSON artefacts
 - `tests/audits/candidates/dither-candidates.ts` — dither prototypes: exact pruning table, hoisted scan, rounded conversion
 - `tests/audits/candidates/resize-candidates.ts` — resize prototypes: hoisted (bit-exact), separable, summed-area
@@ -183,6 +186,7 @@
 - `tests/helpers/wgsl-reserved.ts` — WGSL reserved-word list + identifier scan (GPU-free shader guard)
 - `tests/info-panel.test.ts` — row cap/overflow, thread-vs-hex labels, percent format
 - `tests/lut-cache.test.ts` — cache identity by palette content, LRU bound, GPU-LUT sanity rejection
+- `tests/matrix/rows.ts` — the correctness matrix: row definitions with `proves` text, adversarial palettes, seeded sources
 - `tests/palette.test.ts` — DMC load invariants (533, unique, hex↔rgb)
 - `tests/pipeline-config.test.ts` — preset order, full-RGB, dither-replaces-reduce
 - `tests/pipeline-hello.test.ts` — M0 acceptance: identity golden + purity invariants

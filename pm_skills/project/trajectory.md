@@ -19,6 +19,21 @@
 
 ## M5 — WASM + WebGPU backends (in progress)
 
+- M5-ACCEPT-01 (2026-07-20) — integrated correctness and parity matrix:
+  31 rows over preset × metric × dither × resize mode × palette ×
+  alpha × grid, driven through the real worker entry, 218 assertions in
+  `check` (1024² ceiling behind `MATRIX_FULL=1`). Coverage table
+  generated into `docs/acceptance-matrix.md` with its staleness gated.
+  Found and fixed an engine defect on the first run — fully transparent
+  cells were quantised as opaque black and diffused that error into the
+  stitches beside them, so a `contain`/`fit` letterbox band destroyed
+  the dither of the artwork it framed (TS + Rust, no golden fixture
+  changed). Characterised `reduce-first` as non-stitchable rather than
+  waiving the palette-membership invariant for it. Promoted export
+  isolation out of `AUDIT=1`-only into the gate, and added the brief's
+  never-asserted "a saved project reopens with identical output". See
+  decision-log D49.
+
 - M5-PERF-21, M5-PERF-22, M5-PERF-25, M5-PERF-20, M5-PERF-28,
   M5-PERF-27, M5-PERF-23, M5-PERF-24, M5-PERF-32 (2026-07-20) — M5D
   quality-neutral implementation, all bit-exact. Resize hoisted

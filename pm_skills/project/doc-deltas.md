@@ -57,3 +57,8 @@
       the identity `adjust` is now omitted from the built stage list until §9
       populates its params (D48, M5-PERF-25). The slot is unchanged; only its
       presence in a run is conditional.
+- [ ] 2026-07-20 `architecture.md` → "Core contracts" — the dither stage now
+  excludes fully transparent cells from the scan and from error diffusion; no
+  contract states it (source: D49)
+- [ ] 2026-07-20 DEV-INFRASTRUCTURE — scripts table missing `matrix` /
+  `matrix:write`, and the generated-doc staleness gate they back (source: D49)

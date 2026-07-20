@@ -17,12 +17,8 @@ line passes and `check` is green. Requirements references are to
 
 ### M5F — Integrated acceptance (§22, §23.5)
 
-- [ ] **M5-ACCEPT-01 Run the correctness and parity matrix** [detail]
-  Intent: exercise backend availability, metrics, scan directions, alpha boundaries, resize modes, palette sizes, and fallbacks together (processing modes were cut at M5C — D47).
-  Done when: the automated matrix passes without weakening the TypeScript reference or golden-fixture protections.
-
 - [ ] **M5-ACCEPT-02 Review output quality** [maintainer] [sign-off] [detail] (2026-07-19)
-  Intent: judge representative gradients, photographs, hard edges, transparency, and artwork. Narrowed by D47: modes are cut and every M5 change is bit-exact, so this is a confidence review against the current reference, not a cross-mode tolerance judgement.
+  Intent: judge representative gradients, photographs, hard edges, transparency, and artwork. Narrowed by D47: modes are cut and every M5 change is bit-exact, so this is a confidence review against the current reference, not a cross-mode tolerance judgement. D49 adds one question: whether `reduce-first` should stay user-reachable, given its output is ~98% off-palette (955 colours, 4 with thread references).
   Done when: the reviewed output is accepted, or any rejection is recorded with the artwork that failed.
 
 - [ ] **M5-ACCEPT-03 Rehearse live Photoshop capture** [maintainer] [detail] (2026-07-19)

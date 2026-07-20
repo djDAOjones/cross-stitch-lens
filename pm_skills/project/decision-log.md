@@ -1172,3 +1172,105 @@ unverified; the pre-commit hook caught what they missed. (2) The browser
 harness first reported 200² six times *slower* than 300², because it was
 measured first and absorbed the pipeline's JIT cost; unexamined that
 would have shipped as a product-promise failure.
+
+## D49 — M5-ACCEPT-01: the matrix found an engine defect on its first run (2026-07-20)
+
+**Context:** M5F's automated gate. The per-stage suites are strong — 52
+files, every stage against its own contract — but nothing exercised the
+*composed* pipeline across axes a user reaches together, which is
+precisely what M5-ACCEPT-01 exists to do. The ticket predates D47 and
+still described processing modes, per-mode fixtures and tolerances; with
+modes cut, the matrix reduces to one fidelity and every row is exact.
+
+**Decision — build the matrix, and fix what it found rather than
+document it as green.**
+
+### The defect: empty cells were dithering
+
+Fully transparent cells were quantised as if they were opaque black and
+**diffused that error into the real stitches beside them**. Resize
+writes literal `RGBA(0,0,0,0)` for every grid cell the source does not
+cover, so any `contain`/`fit` letterbox band was a strip of phantom
+black feeding error into the artwork it framed.
+
+It hid because the obvious test palette contains black: matching
+(0,0,0) to black gives **zero** error, so nothing propagates and the
+bug is invisible. It needs a palette with no near-black to appear — and
+then it is severe, not subtle. Measured: 220-grey against a 200/255
+palette, `contain` into a square grid, dithered to **solid 200 across
+the entire visible area** — mean level 20 below the source and no
+dithering at all, versus a correct 200/255 mix in isolation.
+
+Fixed in both backends (`alpha === 0` takes no part in the scan) with
+the TS and Rust rules mirrored line-for-line. Deliberately `=== 0` and
+not the D9 `< 128` fabric threshold: alpha 0 provably carries no
+colour, whereas a semi-transparent cell has a real one and whether it
+should participate is a creative question — parked on the wish-list.
+Bit-exact for all-opaque content, so **no golden fixture changed**.
+
+### The characterisation: `reduce-first` is not a stitchable mode
+
+The matrix's palette-membership invariant failed on all five
+`reduce-first` rows. Not a defect: that preset maps to threads at source
+resolution and only then resizes, and the resize **area-averages**,
+blending threads into colours no thread has. Measured at 32²/64: **1006
+of 1024 cells off-palette, 955 distinct colours, 4 carrying a thread
+reference** — against 14/14 for `resize-first`.
+
+So the §7 order comparison shows what that order *costs*; it is not an
+alternative way to produce a design. The invariant is now scoped to
+`resize-first` and the reason is **asserted rather than waived** — if
+`reduce-first` ever produced palette-membered output, that test fails
+and the exemption gets revisited. Worth surfacing at M5-ACCEPT-02:
+choosing that preset yields a chart whose colours are mostly not
+threads.
+
+### Two MVP invariants were never actually asserted
+
+- **Export isolation** ("preview quality must be unable to leak into
+  exported output", an AGENTS.md hard rule) lived only in
+  `runtime.audit.test.ts`, which is `AUDIT=1`-gated and therefore **not
+  run by `check`**. Nothing stopped a regression reaching main. Promoted
+  into the gate against the real executor, including the case that
+  matters: a router warmed with draft-quality frames still exports
+  byte-identically to a cold one.
+- **"A saved project reopens with identical output"** — the brief's
+  third success criterion — was nowhere. Byte-identical JSON round-trip
+  proves the *file* survives, not that it still means the same picture:
+  a dropped field or a parse-time default would round-trip perfectly and
+  reopen as different artwork. Now walked end to end (config → file →
+  text → parse → config → pixels) across four creative configurations,
+  with a control asserting those four differ from each other.
+
+**Matrix shape.** Mirrors the bench matrix idiom (derived IDs, mandatory
+core cross-product plus targeted expansions, each row carrying a
+`proves` line) but separate from it: the bench matrix is frozen for
+measurement and its sources are perf-scale. Pairwise-plus-risk, not
+Cartesian — the full product is 28,672 rows to re-prove what the
+per-stage suites already hold. 31 rows, 218 assertions, 1.9 s in
+`check`; the 1024² ceiling row is `MATRIX_FULL=1` (11.3 s).
+
+**The coverage table is generated, and its staleness is a gate.**
+`docs/acceptance-matrix.md` is rendered from the same rows the suite
+runs, and the suite fails if the committed copy drifts. `check` never
+writes it — `npm run matrix:write` does — so the gate stays
+non-mutating. A row that cannot say what it proves cannot pad the
+matrix.
+
+**Consequences:**
+
+- `check` is green: 41 files, 540 tests. Rust crate step **skipped
+  locally** (no toolchain on this machine) — the crate change and its
+  new unit test are verified by CI, and this is recorded as an explicit
+  skip in the matrix doc rather than implied as covered.
+- The local `crates/stitch-engine/pkg/` is now stale against the crate
+  source, and without a toolchain it cannot be rebuilt here. Parked.
+- M5-ACCEPT-02 gains a question it did not have: whether `reduce-first`
+  should remain user-reachable given what its output is.
+
+**Run notes (auto-jazz):** gateless. One judgement worth naming — on
+finding the dither defect the choice was to ticket it or fix it. Fixed,
+because M5-ACCEPT-01's own invariant list requires alpha to hold, and
+shipping a matrix that documents a broken invariant as green is the
+green-washing the project forbids. The maintainer-owned items
+(ACCEPT-02/03) were not attempted: they are human gates by definition.

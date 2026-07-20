@@ -1,28 +1,24 @@
-# M5-PERF — Close the budget gap (D43)
+# M5 performance evidence
 
-Working detail for the M5 perf item. Decision rationale goes to
-`decision-log.md` on ship; this file is deleted when the item closes.
+Permanent measurement reference for the M5 performance programme: the
+bv1 baseline, the M5B component audits, and the M5C decisions those
+produced. Cite section and workload IDs from here; do not duplicate the
+numbers into project memory.
 
-## How a fresh chat should use this file
+Moved out of `pm_skills/project/tickets/M5-PERF.md` when the M5-PERF item
+shipped (2026-07-20, D47) — the item closed but its evidence is still
+load-bearing for M5D/M5F. Sibling references: `docs/measurement-contract.md`
+(boundary contract bv1, workload matrix, report schema) and
+`docs/browser-measurement.md` (the browser-only procedure).
 
-This is both the shared evidence base for every M5A/M5B ticket and the
-handoff for the M5C synthesis decision. Treat all entries under “Leads by
-component” as hypotheses until the named audit verifies them. Treat the
-owner’s provisional decisions as strong inputs, not final contracts: M5C
-must reconcile them with the completed workload, boundary, diagnostic, and
-component evidence before releasing implementation tickets.
+Re-measure with `npm run bench` (budgets) or `npm run audit` (component
+audits); compare only against reports carrying the same boundary version.
 
-M5A shipped (2026-07-19): the workload matrix, boundary contract and
-report schema are code, and `docs/measurement-contract.md` is the
-canonical prose. Re-measure with `npm run bench`; compare only against
-reports carrying the same boundary version.
-
-Read order for synthesis: `docs/measurement-contract.md` → the bv1
-baseline below → M5-PERF-10 through 19
-evidence → this file’s provisional choices → requirements §§7, 8, 20, 22
-and architecture budgets. Produce one decision table covering resize,
-Exact acceleration, Balanced/Responsive retention, visual tolerances,
-default/migration, budget binding, backends, export, and adaptive draft.
+**Superseded content has been removed**, not archived: the pre-M5B
+"Leads by component" (every lead was verified or overturned — read the
+M5B evidence instead), the design-options list, and the pre-synthesis
+scope sketch. The owner's provisional decisions below are retained for
+provenance and are **superseded where the approved synthesis says so**.
 
 ## Dependency and decision map
 
@@ -146,25 +142,6 @@ all hot loops (`noUncheckedIndexedAccess` tax); wasm boundary copies
 ~8 MB/frame; bench times include a 6.5 MB `slice()` inside the timed
 region (`tests/benchmark.test.ts` `wholePipelineMs`); `build:wasm`
 passes no SIMD flag (moot while transcendental-bound).
-
-## Options (for design-options stage)
-
-- **D-a dither matching:**
-  - (i) exact-preserving per-15-bit-bin candidate lists — bit-exact,
-    golden fixtures unchanged; must preserve first-min-wins tie-break (strict
-    `<`, palette index order) or backends silently diverge.
-  - (ii) integer-round the clamped work value before matching →
-    256-entry channel→linear table kills the per-pixel `pow`; changes
-    the reference (regenerate golden fixtures; ≤ ½ LSB quality effect).
-  - (iii) LUT-quantised matching in dither — cheapest, visibly
-    relaxes the D6/D14 exactness stance.
-  - (i)+(ii) compose and plausibly land near the 15 ms row.
-- **D-b resize:** separable two-pass area average (pure TS,
-  node-benchable) vs OffscreenCanvas `drawImage` backend
-  (browser-only — node bench can never verify the 5 ms row) vs both.
-- **D-c budget revision:** any row left honestly out of reach →
-  doc-delta for architecture.md (protected doc, owner sign-off).
-- **D-d:** skip the identity adjust stage at config level (free win).
 
 ## Scope sign-off (2026-07-19)
 
@@ -418,71 +395,78 @@ metrics). Real-GPU CI coverage remains open as **M5-PERF-32**.
 4. The 5 ms resize row and the 15 ms dither row are both unreachable on
    the evidence; M5C owns revising them or binding them to a mode.
 
-## Leads by component (for the M5B audits — verify, don't re-discover)
+## M5C synthesis — APPROVED 2026-07-20 (D47)
 
-Findings from the 2026-07-19 code analysis, mapped to backlog items.
-Each is a lead with a code location. Leads marked **[bv1: …]** were
-tested against the M5A baseline above — read that verdict before
-spending an audit on them.
+Approved by the maintainer at the M5C gate. It **supersedes provisional
+decisions Q3 and Q4** above: budgets no longer bind to Balanced, and
+Balanced is no longer the default, because Balanced is cut.
 
-- **M5-PERF-02 (bench boundaries):** `wholePipelineMs` times request
-  construction — a 6.5 MB `data.slice()` — inside the timed region
-  (`tests/benchmark.test.ts`). **[bv1: CLOSED — fixed; worth ~1 ms,
-  never the reason budgets miss.]**
-- **M5-PERF-10 (orchestration):** identity `adjust` clones the full
-  source buffer every frame (`adjust.ts` → `clonePixelBuffer`);
-  `paletteRgb`/`paletteLab` rebuilt on every stage call
-  (`palette.ts`); cross-loop `?? 0` reads (`noUncheckedIndexedAccess`
-  pattern) in every hot loop — measure the tax once, decide a pattern.
-  **[bv1: the adjust clone is 0.15 ms and the stage-list build
-  0.01–0.05 ms — both immaterial. The palette-rebuild and `?? 0` leads
-  are untouched by the baseline and remain this audit's real content.]**
-- **M5-PERF-11 (resize):** `sampleArea` is non-separable
-  O(kernelW×kernelH) per output cell; area-average is separable.
-  Caution: a separable rewrite may not be bit-identical (float
-  summation order) — tolerance decision needed.
-  **[bv1: CHALLENGED — exact area averaging already visits each source
-  pixel ~once under hard downscale, so separability has little to
-  remove; redundancy appears only as the scale ratio nears 1. Expect
-  ~1.5–2×, not the ~7× the budget needs. Test the integral-image
-  candidate before committing to separability.]**
-- **M5-PERF-12 (LUT/reduce):** measured 13 ms vs 10 budget (within
-  ~30%); LUT cache key is `name:entries.length:metric`
-  (`lut-cache.ts`) — a palette edit keeping name+count would serve a
-  stale LUT (latent bug once user palettes ship).
-- **M5-PERF-13 (dither conversion):** per-pixel sRGB→Lab = 3 `pow` +
-  3 `cbrt` (Rust and TS conversion functions) ≈ ~3M transcendental
-  operations per frame at 1024² — likely the larger half of 412 ms.
-  Lead: integer-rounding the matched value enables an exact 256-entry
-  channel→linear table (kills the pows; cbrt remains).
-  **[bv1: CONFIRMED and quantified — ~70% of dither cost (424.5 ms lab
-  vs 125.1 ms rgb at 1024²/64). This is the highest-value target in
-  M5.]**
-- **M5-PERF-14 (dither search):** 64-entry linear Lab scan per pixel;
-  exact pruning must preserve strict-`<` first-min-wins tie-breaking
-  in palette index order or TS/Rust silently diverge.
-  **[bv1: BOUNDED — the scan is ~1.44 ms per palette entry, i.e. ~22%
-  of cost at 64 colours but the dominant term at 533 (1099 ms). Pruning
-  is a large-palette win and a small 64-colour one; size the work
-  accordingly.]**
-- **M5-PERF-15 (wasm boundary):** ~8 MB copied per 1024² dither call
-  (pixels in + out, `backends/wasm/dither.ts`); `build:wasm` passes
-  no SIMD flag — moot while transcendental-bound.
-- **M5-PERF-16 (worker/compare):** split compare runs a second
-  full-RGB pipeline pass per frame (`fullRgbVariant`) — cost scales
-  with source size when compare is on.
+### New evidence taken at synthesis (2026-07-20)
 
-## Smallest useful scope (revised)
+The GPU LUT rows in this file were measured against a kernel that never
+ran (D46). Re-measured in-browser on the fixed kernel, Chromium/Metal-3,
+dev server, same-runtime comparison:
 
-1. Quality-neutral core: adjust skip, separable resize, candidate
-   pruning, bench fix — lands regardless of UI decisions.
-2. Processing-mode plumbing: one enum in `PipelineConfig` + project
-   file (defaulted — loader migrates), mode → param resolution.
-3. Balanced + Responsive matching paths in TS + Rust with parity
-   fixtures per mode.
-4. One "Processing" select in the controls panel with helper text.
-5. Re-bench; doc-delta the budget-binding decision (Q2/Q3).
+| Workload | GPU | TS (same runtime) | Ratio |
+| --- | --- | --- | --- |
+| LUT build, 64 colours | 3.2 ms | 190.3 ms | 59× |
+| LUT build, 533 colours | 4.4 ms | 2883 ms | 655× |
+| Per-pixel map, 1024²/64 | 18.4 ms | 122.8 ms | 6.7× |
 
-Out of scope: WebGPU dither, SIMD, zero-copy wasm memory, CIEDE2000,
-per-param advanced controls (Codex option 3 / original option C),
-backend-preference UI.
+**Caveat — do not bank the absolute TS figures.** They are dev-server,
+unminified, few iterations, and run 10–16× slower than the node numbers
+above (vs ~3.5× for resize), so the TS side is likely understating a
+production build. The GPU figures are trustworthy (no JIT dependence)
+and the *direction* is unambiguous. Re-take under
+`docs/browser-measurement.md` on a production build before any budget
+row cites these.
+
+### The decision table
+
+| # | Decision | Recommendation | Basis |
+| --- | --- | --- | --- |
+| 1 | Resize strategy | Land the bit-exact hoisted `sampleArea` (M5-PERF-21) and nothing else. Reject separable, summed-area, and canvas-as-backend. | Hoisted 37.4→24.4 ms byte-identical; separable 0.51–0.69× (slower) near 1:1; summed-area slower everywhere; canvas 8.1 ms but mean 39/255 per channel on 100% of pixels |
+| 2 | Exact/Balanced/Responsive | **Cut Balanced and Responsive.** One fidelity + the existing adaptive draft. | Balanced's two ingredients are both dead: rounded conversion ~0% in situ but changes 49–53% of pixels; separable resize slower. Only canvas remains, at 39/255 error |
+| 3 | Default mode | Falls away — there is one fidelity. **The v1 back-compat waiver can be withdrawn**: no mode enum means v1 files render unchanged. | Q4 waiver was needed only to default old files to Balanced |
+| 4 | Visual thresholds | **None required.** Golden fixtures untouched across all of M5. | Hoist, pruning and hoisted resize are all bit-exact; GPU LUT measured 0 mismatches under D41; GPU map is integer-only |
+| 5 | Budget binding | Replace the aspirational per-stage table with (a) one product promise — **≥4 preview updates/sec at ≤300², in-browser** — and (b) per-stage measured baselines with regression guards, each naming its runtime and workload ID. | Every row except preview-render has missed since written; a permanently-red table trains everyone to ignore it |
+| 6 | Honest Exact expectations | Publish measured per grid; state plainly that **1024² is an export/finishing grid, not a live-editing grid**. | 200² 17.4/sec, 300² 11.6/sec (both pass the 4/sec bar pre-wins); 1024² 1.6/sec → ~2.5/sec post-wins |
+
+### The two rows the item names
+
+- **5 ms resize row — revise.** Unreachable without an appearance
+  change. New row: measured baseline (~24 ms node at 1280→1024; browser
+  to be measured), regression-guarded.
+- **15 ms dither row — revise.** Best bit-exact is 217 ms at 1024²/64
+  and 32 ms at 300²/533. New row: measured baseline, regression-guarded.
+
+Neither row is edited here — **M5-ACCEPT-04 owns the protected table**.
+
+### Backend routing (forced by the evidence)
+
+- D42's one-shot 96²/533 calibration is wrong: the winner **flips** after
+  M5-PERF-22 (TS 217 ms vs wasm 417 ms at 1024²/64). M5-PERF-27 must
+  re-derive as a workload threshold and must run **after** M5-PERF-22.
+- WebGPU now genuinely wins reduce. LUT build is already wired through
+  `ensureLut` and works. Wiring `mapPaletteGpu` needs executor
+  asyncification (M5-PERF-23) — gate that on a production-build
+  re-measurement, per the caveat above.
+
+### Consequences if approved
+
+- **M5E is cut** (MODE-01…06). MODE-06 resolves per its own stated
+  contingency: keep today's dither-off draft.
+- **M5-ACCEPT-02 narrows** from cross-mode review to single-fidelity
+  output review.
+- Escalation path if ACCEPT-03's live rehearsal finds the ceiling grid
+  unusable: add canvas resize to the **draft ladder** (temporary,
+  automatic, visibly named, never exported) — not a user-facing mode.
+- Sequence: 21 → 22 → 25 → 28 → 27 (after 22) → 23 → 24 → 32 → M5F.
+
+### The alternative, if the owner prefers to keep modes
+
+Balanced = canvas resize only (8.1 ms, mean 39/255 error), Exact =
+today's path. That buys real browser-side time at the ceiling grid but
+makes the product's core spatial reduction visibly wrong in its default
+mode, and reinstates the full mode cost: 3× parity matrix, per-mode
+fixtures, project-file enum + migration, UI control, ACCEPT-02 sign-off.

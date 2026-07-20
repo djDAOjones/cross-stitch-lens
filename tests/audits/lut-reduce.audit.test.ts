@@ -39,7 +39,12 @@ describe.skipIf(!AUDIT)('M5-PERF-12 LUT/reduce audit (AUDIT=1)', () => {
   const rows: AuditRow[] = [];
   const findings: string[] = [];
 
-  it('reproduces the stale-LUT cache-key collision', () => {
+  // Was "reproduces the stale-LUT cache-key collision" — the M5B audit
+  // that confirmed the defect. M5-PERF-26 fixed it (D46: the key is now
+  // a content fingerprint over the entry RGB values in order), so the
+  // reproduction is inverted rather than deleted: it stays as the
+  // evidence that the collision cannot come back.
+  it('no longer serves a stale LUT across a reordered palette', () => {
     clearLutCache();
     const entry = (
       code: string,
@@ -86,26 +91,24 @@ describe.skipIf(!AUDIT)('M5-PERF-12 LUT/reduce audit (AUDIT=1)', () => {
     const wrong = !(rgbOut[0] === 255 && rgbOut[1] === 0 && rgbOut[2] === 0);
 
     rows.push(
-      counted('stale-LUT collision (name:count:metric key)', {
+      counted('stale-LUT collision (content-fingerprint key)', {
         'same object served': served ? 'yes' : 'no',
         'red pixel reduced to': `rgb(${rgbOut.join(',')})`,
-        verdict: wrong ? 'CONFIRMED — wrong colour served' : 'not reproduced',
+        verdict: wrong ? 'REGRESSED — wrong colour served' : 'fixed (D46)',
         'cache entries': lutCacheSize(),
       }),
     );
     findings.push(
       wrong
-        ? 'CONFIRMED defect: `lut-cache.ts` keys on `name:entries.length:metric`, so two ' +
-          'palettes differing only in entry order or colour share one LUT — and the LUT ' +
-          'stores palette INDICES. A pure-red pixel reduced under the reordered palette ' +
-          'comes back GREEN. Latent today (only the built-in DMC palette ships) ' +
-          'but it becomes a live wrong-output bug the moment user palettes or a second ' +
-          'preset land, and mode work may add further key dimensions. Fix: a deterministic ' +
-          'content fingerprint over the entry RGB values, plus metric and a schema version. ' +
-          'Follow-up: M5-PERF-26.'
-        : 'The cache-key collision did not reproduce; re-check the key before acting on it.',
+        ? 'REGRESSION: the stale-LUT collision is back. `lut-cache.ts` must key on a ' +
+          'content fingerprint over the entry RGB values in order, plus metric and a ' +
+          'schema version — keying on name or entry count lets two palettes share one ' +
+          'LUT, and the LUT stores palette INDICES. See D46 / M5-PERF-26.'
+        : 'Fixed (M5-PERF-26, D46): reordering a palette yields its own LUT and a ' +
+          'pure-red pixel still reduces to red. The M5B collision cannot recur.',
     );
-    expect(served).toBe(true);
+    expect(served).toBe(false);
+    expect(rgbOut).toEqual([255, 0, 0]);
     clearLutCache();
   }, AUDIT_TIMEOUT_MS);
 

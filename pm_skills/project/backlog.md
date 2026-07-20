@@ -15,16 +15,6 @@ line passes and `check` is green. Requirements references are to
 
 ## Active
 
-### M5C — Performance and product decision gate (§22, §23.5)
-
-- [ ] **M5-PERF Synthesize the performance strategy** [sign-off] [detail] (2026-07-19)
-  Intent: use M5A/M5B evidence to choose quality-neutral work, justify any processing modes, and bind budgets to explicit behaviour. M5B narrowed this considerably: three bit-exact wins need no mode contract at all, and the only two remaining levers (rounded conversion, canvas resize) both change appearance.
-  Done when: resize strategy, Exact/Balanced/Responsive semantics if retained, default mode, visual thresholds, budget mode, and honest Exact expectations are approved. In particular the 5 ms resize row and the 15 ms dither row are both unreachable on M5B evidence and must be revised or bound to a mode here.
-
-*Acceptance: implementation tickets carry approved behaviour and
-evidence; no unresolved algorithm or budget choice is delegated to a
-coding task.*
-
 ### M5D — Quality-neutral implementation (§22, §23.5)
 
 - [ ] **M5-PERF-20 Remove proven orchestration waste** [detail]
@@ -37,7 +27,7 @@ coding task.*
 
 - [ ] **M5-PERF-21 Land the bit-exact hoisted resize** [detail]
   Intent: M5B settled this — the hoisted-coverage variant is byte-identical to the reference and ~1.5× faster on every case in the matrix, while separable is *slower* near 1:1 and summed-area is slower everywhere. Land the hoisted variant; do not rewrite as separable.
-  Done when: resize golden fixtures pass unchanged (no tolerance needed), the ~1.5× is reproduced by `npm run audit`, and the 5 ms budget row is resolved by M5C rather than by this ticket.
+  Done when: resize golden fixtures pass unchanged (no tolerance needed) and the ~1.5× is reproduced by `npm run audit`. The 5 ms row was revised at M5C (D47) — this ticket does not touch it.
 
 - [ ] **M5-PERF-22 Implement Exact dither acceleration** [detail]
   Intent: land the two bit-exact wins M5B proved — hoist the query Lab out of the palette scan loop, then per-bin candidate pruning (exactness argued and verified over 138k adversarial values). Together 888 ms → 217 ms at 1024²/64 with byte-identical output. The pruning table is a per-palette one-off and belongs in the LUT cache, not the frame path.
@@ -45,7 +35,7 @@ coding task.*
 
 - [ ] **M5-PERF-23 Implement approved boundary/backend improvements** [detail]
   Intent: apply only WASM, WebGPU, or worker-boundary changes whose M5B evidence clears their stated benefit and complexity threshold, with workload-based routing rather than universal replacement. M5B closed the wasm-boundary leads (copies are 0.2% of a call; SIMD is mis-aimed), so this item is now about routing, not about the boundary.
-  Done when: measured crossover thresholds select appropriate backends by workload; feature detection and TS fallback remain sound; each change meets its individual target.
+  Done when: measured crossover thresholds select appropriate backends by workload; feature detection and TS fallback remain sound; each change meets its individual target. D47 added one candidate: wiring `mapPaletteGpu` (needs executor asyncification) — gate it on re-measuring in-browser on a **production** build, since the D47 dev-server TS figures look understated.
 
 - [ ] **M5-PERF-27 Replace one-shot calibration with workload-threshold routing**
   Intent: D42 calibrates once on a 96²/533 frame and applies the winner everywhere, but M5B measured the backend margin varying 2.1–5.4× by workload — and the winner flips entirely once M5-PERF-22 lands (TS 217 ms vs wasm 417 ms at 1024²/64).
@@ -57,7 +47,7 @@ coding task.*
 
 - [ ] **M5-PERF-24 Extend performance regression coverage** [detail]
   Intent: encode the approved measurement contract as repeatable, non-mutating checks without hiding machine variance or weakening budgets.
-  Done when: the workload matrix reports regressions consistently locally and in CI.
+  Done when: the workload matrix reports regressions consistently locally and in CI, encoding the D47 budget shape — one product promise (≥ 4 preview updates/sec at ≤ 300², in-browser) plus per-stage measured baselines with regression guards, each naming its runtime and workload ID.
 
 - [ ] **M5-PERF-32 Run the WebGPU suites on a real GPU** (2026-07-20)
   Intent: the unmet leg of M5-PERF-31. Two GPU defects shipped behind `describe.skipIf(!isWebGpuAvailable())` on a node CI; D46 added GPU-free scans for both known classes, but the bind-group defect was found only by *executing* on a GPU, so the scans cannot be the whole answer.
@@ -70,60 +60,31 @@ roles: deeply optimise the TS reference only where it remains
 performance-relevant, while retaining it as the correctness fallback
 everywhere.*
 
-### M5E — Processing modes (§22, §23.5) (conditional on M5C)
-
-- [ ] **M5-MODE-01 Define processing-mode contracts** [sign-off] [detail] (2026-07-19)
-  Intent: specify stable user-facing and internal semantics for Exact appearance, Balanced, and Responsive without exposing backend names; modes are a fidelity axis orthogonal to algorithm choice, so future dither algorithms (Icebox) slot in without redefining modes.
-  Done when: each retained mode has an approved parameter bundle, quality promise, export meaning, and default/migration behaviour.
-
-- [ ] **M5-MODE-02 Implement Balanced processing** [detail]
-  Intent: add the approved near-neutral algorithms as a distinct creative mode rather than replacing the Exact reference.
-  Done when: independent fixtures, backend parity, visual-difference evidence, and the Balanced performance budget pass.
-
-- [ ] **M5-MODE-03 Implement Responsive processing** [detail] (contingent)
-  Intent: add approved speed-prioritised algorithms with explicit quality limits for large-grid live work — only if M5C evidence shows Balanced cannot sustain fluid live capture at demanding grids; otherwise cut this item.
-  Done when: fixtures, parity, representative visual comparisons, and the Responsive performance target pass — or the item is cut with the evidence recorded.
-
-- [ ] **M5-MODE-04 Persist processing intent** [detail]
-  Intent: carry the selected mode through pipeline configuration and versioned project JSON without conflating it with temporary preview quality.
-  Done when: all projects default to Balanced (v1 files included — back-compat waived 2026-07-19, see ticket); schema defaults, validation, and save→load→save byte identity pass.
-
-- [ ] **M5-MODE-05 Add the Processing control** [detail]
-  Intent: expose one Carbon-style mode select while keeping backend selection automatic and dev-only.
-  Done when: immediate application, keyboard/accessibility behaviour, project restore, and honest processing status pass UI review.
-
-- [ ] **M5-MODE-06 Improve adaptive draft behaviour** [detail]
-  Intent: use Responsive before disabling dithering, reducing disruption when live processing falls behind; if Responsive is cut (M5-MODE-03), keep today's dither-off fallback and close this item with that decision recorded.
-  Done when: hysteresis is stable, draft remains visibly named, recovery is automatic, and exports/saved creative intent never inherit the substitution.
-
-*Acceptance: each retained mode has stable semantics, fixtures,
-parity, persistence, accessible UI, honest status, and correct export
-behaviour.*
-
 ### M5F — Integrated acceptance (§22, §23.5)
 
 - [ ] **M5-ACCEPT-01 Run the correctness and parity matrix** [detail]
-  Intent: exercise backend availability, processing modes, metrics, scan directions, alpha boundaries, resize modes, palette sizes, and fallbacks together.
+  Intent: exercise backend availability, metrics, scan directions, alpha boundaries, resize modes, palette sizes, and fallbacks together (processing modes were cut at M5C — D47).
   Done when: the automated matrix passes without weakening the TypeScript reference or golden-fixture protections.
 
-- [ ] **M5-ACCEPT-02 Review processing-mode output** [maintainer] [sign-off] [detail] (2026-07-19)
-  Intent: judge representative gradients, photographs, hard edges, transparency, and artwork across retained processing modes.
-  Done when: accepted differences and any rejection/rework decisions are recorded against the agreed visual thresholds.
+- [ ] **M5-ACCEPT-02 Review output quality** [maintainer] [sign-off] [detail] (2026-07-19)
+  Intent: judge representative gradients, photographs, hard edges, transparency, and artwork. Narrowed by D47: modes are cut and every M5 change is bit-exact, so this is a confidence review against the current reference, not a cross-mode tolerance judgement.
+  Done when: the reviewed output is accepted, or any rejection is recorded with the artwork that failed.
 
 - [ ] **M5-ACCEPT-03 Rehearse live Photoshop capture** [maintainer] [detail] (2026-07-19)
   Intent: validate update rate, latency, dropped/skipped frames, draft transitions, split compare, and idle CPU during realistic editing.
   Done when: the live acceptance measurements are recorded and any failure is classified as a bug or an approved budget decision.
 
 - [ ] **M5-ACCEPT-04 Reconcile performance budgets and protected docs** [sign-off] [detail] (2026-07-19)
-  Intent: resolve the D43 architecture doc-delta using final measurement boundaries, mode binding, and evidence rather than aspirational numbers.
+  Intent: resolve the D43/D44/D45 architecture doc-deltas by applying the budget shape approved at M5C (D47) — product promise + regression-guarded measured baselines, each naming its runtime — rather than aspirational numbers. This item alone edits the protected table.
   Done when: the approved budget table and related infrastructure documentation accurately describe enforced behaviour.
 
 - [ ] **M5-ACCEPT-05 Close M5** [sign-off] [detail] (2026-07-19)
   Intent: close the milestone only after automated, benchmark, visual, and live-capture evidence agree.
   Done when: `npm run check`, the approved benchmark suite, parity matrix, and manual gates pass; residual risks and release readiness are recorded.
 
-*Acceptance: the budget mode meets its targets, Exact has a published
-measurement, backend equivalence passes, and live editing feels responsive.*
+*Acceptance: the product promise (≥ 4 updates/sec at ≤ 300²) holds
+in-browser, the published measurements are honest at every grid, backend
+equivalence passes, and live editing feels responsive.*
 
 ### Icebox
 
@@ -135,11 +96,13 @@ algorithms, user-defined palettes, symbols + B/W charts, multi-page
 PDF, advanced grid/tick styling presets, thread estimates, Tauri
 packaging.
 
-M5 couplings: *more dithering algorithms* ride on the M5 mode
-contracts and search structures (M5-MODE-01 orthogonality,
-M5-PERF-14); *user-defined palettes* must fix the LUT cache key
-(stale-LUT lead in M5-PERF-12) and need the M5-PERF-14 evidence on
-per-palette table build cost for live editing.
+M5 couplings: *more dithering algorithms* ride on the M5 search
+structures (M5-PERF-14); with modes cut (D47) they would land as
+algorithm choices, not fidelity tiers. *User-defined palettes* are
+unblocked on the LUT cache key (fixed, D46) but still need the
+M5-PERF-14 evidence on per-palette table build cost for live editing —
+note the GPU LUT build is now 59–655× faster than TS (D47), which
+changes that calculus.
 
 <!-- Ticket grammar (CANONICAL COPY — prompts and workflows point here,
      they do not restate it): quick items stay one line. Non-trivial or

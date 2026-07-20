@@ -10,7 +10,8 @@
  * boundary contract as the matrix it explains.
  *
  * Every audit writes a markdown table to the log and a JSON artefact to
- * `bench-reports`, so a finding quoted in `M5-PERF.md` can be traced to
+ * `bench-reports`, so a finding quoted in `docs/performance-evidence.md`
+ * can be traced to
  * the run that produced it.
  */
 

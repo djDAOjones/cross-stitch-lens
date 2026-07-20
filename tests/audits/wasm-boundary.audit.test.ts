@@ -136,7 +136,7 @@ describe.skipIf(!AUDIT)('M5-PERF-15 wasm boundary audit (AUDIT=1)', () => {
         'percentage of the call; the rest is Rust execution. Zero-copy linear memory, ' +
         'persistent allocations and cached palette buffers are therefore all premature — ' +
         'they optimise a term that is already small. This closes the "8 MB copied per frame" ' +
-        'lead in `M5-PERF.md` as measured-and-immaterial.',
+        'lead in `docs/performance-evidence.md` as measured-and-immaterial.',
       'SIMD is likewise not the lever the earlier analysis assumed. `build:wasm` passes no ' +
         '`simd128` target feature, but with the residual dominated by `libm` transcendental ' +
         'routines (M5-PERF-13), vectorising the surrounding arithmetic cannot reach the 15 ms ' +

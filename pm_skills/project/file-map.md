@@ -15,14 +15,14 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 133 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 134 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 10 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
 - `.github` — 1 file(s)
 - `.windsurf` — 1 file(s)
 - `crates` — 4 file(s)
-- `docs` — 3 file(s)
+- `docs` — 4 file(s)
 - `scripts` — 5 file(s)
 - `src` — 49 file(s)
 - `tests` — 58 file(s)
@@ -68,6 +68,7 @@
 
 - `docs/browser-measurement.md` — browser-only boundary procedure + recorded results (M5-PERF-18)
 - `docs/measurement-contract.md` — M5 boundary contract (bv1), workload matrix, report schema, browser rehearsal
+- `docs/performance-evidence.md` — M5 measured evidence: bv1 baseline, component audits, M5C decisions
 - `docs/requirements.md` — full combined requirements spec (reference only)
 
 ## scripts

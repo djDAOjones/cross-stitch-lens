@@ -19,6 +19,15 @@
 
 ## M5 — WASM + WebGPU backends (in progress)
 
+- M5-PERF (2026-07-20) — M5C decision gate: **processing modes cut**.
+  Balanced's ingredients both died on M5B evidence (rounded conversion
+  ~0% gain but 49–53% of pixels changed; separable resize slower), so
+  one fidelity plus the existing draft governor ships instead — no
+  visual thresholds needed anywhere, golden fixtures untouched, and the
+  v1 back-compat waiver withdrawn. Budgets reshaped to one product
+  promise plus regression-guarded measured baselines. M5E cut; evidence
+  re-homed to `docs/performance-evidence.md`. See decision-log D47.
+
 - M5-PERF-31, M5-PERF-30, M5-PERF-29, M5-PERF-26 (2026-07-20) —
   M5B-FIX: the four audit defects closed. The WebGPU LUT works for the
   first time (523 distinct indices, 0 mismatches vs TS across all 32,768
@@ -39,7 +48,7 @@
   ~1.5× everywhere), overturned four bv1 leads, closed the wasm-boundary
   and `?? 0` leads as immaterial, and uncovered a shipped wrong-output
   bug: the WebGPU LUT shader has never compiled and silently replaced
-  the correct LUT. Evidence in `tickets/M5-PERF.md`; see decision-log
+  the correct LUT. Evidence in `docs/performance-evidence.md`; see decision-log
   D45.
 
 - M5-PERF-01, M5-PERF-02, M5-PERF-03 (2026-07-19) — M5A measurement

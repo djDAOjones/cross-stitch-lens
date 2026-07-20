@@ -918,7 +918,8 @@ like `bench`) reruns every node measurement; candidate prototypes live
 in `tests/audits/candidates/` and are explicitly not shipping code. The
 browser work is a written repeatable procedure with recorded results
 (`docs/browser-measurement.md`), not a one-off session. Full evidence
-and every number: `tickets/M5-PERF.md` → "M5B component evidence".
+and every number: `docs/performance-evidence.md` → "M5B component
+evidence" (moved there from `tickets/M5-PERF.md` at M5C close, D47).
 
 **Why it matters — what the evidence changed:**
 
@@ -962,7 +963,7 @@ fixture touched.
 **Run notes (auto-jazz, all gates skipped):** assumptions — audits ship
 as committed code (M5A precedent; M5C must rerun them); the ten
 per-ticket files were deleted on close per the tickets policy, evidence
-folded into `tickets/M5-PERF.md`; audits 16/17/19 were combined as one
+folded into `docs/performance-evidence.md`; audits 16/17/19 were one
 frame-path surface; browser probes ran on one machine via the dev
 server, so the node/browser gap is flagged for confirmation, not
 settled. The GPU defect was reported, not fixed — fixing inside a spike
@@ -1025,3 +1026,72 @@ CI surface), so the GPU-free scans landed instead; 2 s chosen for the
 forced refresh (≈3% of one core idle at 200²) without the in-browser
 threshold measurement the ticket asked for, because the averaging loss
 is analytic, not empirical. Each fix was verified failing before the fix.
+
+## D47 — M5C: processing modes cut; budgets bind to measured reality (2026-07-20)
+
+**Context:** M5C had to choose resize strategy, mode semantics, default
+mode, visual thresholds, budget binding, and honest Exact expectations.
+The owner's provisional decisions (Q3: budgets bind to Balanced; Q4:
+Balanced is the default everywhere) were explicitly subject to
+validation against the completed evidence.
+
+**Decision — cut Balanced and Responsive.** Ship one fidelity plus the
+existing adaptive draft governor.
+
+**Why:** Balanced had no content left. Its two intended ingredients both
+died on M5B evidence — rounded conversion is worth ~0% in situ on the
+hoisted TS path while changing **49–53% of output pixels**, and
+separable resize is *slower* near 1:1. The only remaining ingredient is
+canvas resize, whose output differs from the oracle by mean **39/255 per
+channel on 100% of pixels**. For a product whose entire spatial
+reduction *is* the resize, that is wrong output, not a controlled
+trade-off. Meanwhile the three bit-exact wins give 4.1× on dither and
+1.5× on resize with **zero** appearance change, and the brief's actual
+bar — ≥ 4 preview updates/sec at ≤ 300² — is already met with margin
+(11.6–17.4/sec measured pre-wins). Modes would have cost a 3× parity
+matrix, per-mode fixtures, a project-file enum plus migration, a UI
+control and a visual sign-off gate, to express a distinction the
+evidence could not justify.
+
+**Consequences:**
+
+- **No visual thresholds are needed anywhere in M5** — every approved
+  change is bit-exact, so the golden fixtures are untouched.
+- **The v1 back-compat waiver is withdrawn.** With no mode enum, v1
+  project files render exactly as before; the Q4 appearance-change
+  acceptance is moot.
+- **M5E is cut** (M5-MODE-01…06, ticket files deleted). M5-ACCEPT-02
+  narrows to a single-fidelity confidence review.
+- **Budgets change shape**: one product promise (≥ 4 updates/sec at
+  ≤ 300², in-browser) plus per-stage measured baselines with regression
+  guards, each naming its runtime and workload ID. The aspirational
+  table had missed every row except preview-render since it was written,
+  and a permanently-red budget trains everyone to ignore it. The 5 ms
+  resize and 15 ms dither rows are revised, not met. **M5-ACCEPT-04
+  alone edits the protected table.**
+- Escalation if the ceiling grid proves unusable at ACCEPT-03: canvas
+  resize joins the **draft ladder** (temporary, automatic, visibly
+  named, never exported), not a user-facing mode.
+- 1024² is stated plainly as an export/finishing grid, not a
+  live-editing grid (~1.6/sec pre-wins, ~2.5/sec projected).
+
+**New evidence taken at the gate:** the GPU LUT rows in the evidence
+base were measured against a kernel that never ran (D46), so they were
+re-taken on the fixed kernel: LUT build 59× (64 colours) and 655× (533)
+versus TS on the same runtime, per-pixel map 6.7× at 1024²/64. This
+makes WebGPU a real contender for the reduce row — but the dev-server TS
+figures run 10–16× slower than node (vs ~3.5× for resize), so they are
+flagged as understated and M5-PERF-23 must re-measure on a production
+build before wiring `mapPaletteGpu`.
+
+**Housekeeping:** the M5-PERF ticket shipped, so its file was moved to
+`docs/performance-evidence.md` rather than deleted — the item closed but
+its measured evidence is still load-bearing for M5D/M5F. Superseded
+sections (pre-M5B leads, design options, scope sketch) were dropped.
+
+**Run notes (auto-jazz):** the mode question was put to the maintainer
+because the item is `[sign-off]` and its acceptance is literally
+"approved"; everything else ran gateless. `npm run audit` also caught a
+stale M5B audit asserting the M5-PERF-26 collision still reproduces —
+inverted to prove it cannot recur. `audit` is AUDIT=1-gated and not part
+of `check`, which is why the D46 close missed it.

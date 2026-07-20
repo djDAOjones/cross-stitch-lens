@@ -71,8 +71,10 @@ These are the three questions M5-PERF-02 existed to settle. Decided
    step the app controls before the compositor. Anything after that is
    the browser's, and is reported under `interaction` instead.
 
-Headline budgets bind to an explicit processing mode only after M5C
-(see `pm_skills/project/tickets/M5-PERF.md`, provisional Q3).
+M5C resolved this (D47): processing modes were cut, so budgets bind to
+the single fidelity — one product promise (≥ 4 preview updates/sec at
+≤ 300², in-browser) plus per-stage measured baselines with regression
+guards. See `docs/performance-evidence.md` → "M5C synthesis".
 
 ### Bias removed in bv1
 

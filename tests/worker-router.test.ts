@@ -18,6 +18,9 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { Coalescer } from '../src/worker/coalesce.ts';
 import { createRouter, type RouterDeps } from '../src/worker/router.ts';
+import { executeRequest } from '../src/worker/execute.ts';
+import { fullRgbVariant } from '../src/core/pipeline/config.ts';
+import type { Palette } from '../src/core/types.ts';
 import type { PipelineConfig } from '../src/core/pipeline/config.ts';
 import type {
   ExportRequest,
@@ -37,6 +40,16 @@ class TestImageData {
     readonly width: number,
     readonly height: number,
   ) {}
+
+  /**
+   * The tests hand these back as stand-in ImageBitmaps, and the preview
+   * surface closes the bitmap it is replacing. Without this the
+   * replacement path throws — which Vitest reports as an unhandled
+   * error rather than a failure, so it would quietly erode the suite.
+   */
+  close(): void {
+    /* no-op: nothing to release in the fake */
+  }
 }
 globalThis.ImageData ??= TestImageData as unknown as typeof ImageData;
 
@@ -48,6 +61,26 @@ const CONFIG: PipelineConfig = {
   metric: 'rgb',
   dither: false,
   serpentine: true,
+};
+
+const PALETTE: Palette = {
+  name: 'test-bw',
+  entries: [
+    {
+      code: 'K',
+      name: 'black',
+      hex: '#000000',
+      rgb: [0, 0, 0],
+      manufacturer: 'test',
+    },
+    {
+      code: 'W',
+      name: 'white',
+      hex: '#ffffff',
+      rgb: [255, 255, 255],
+      manufacturer: 'test',
+    },
+  ],
 };
 
 function processRequest(id = 3): ProcessRequest {
@@ -100,7 +133,11 @@ function harness(overrides: Partial<RouterDeps> = {}): {
     execute: (request) => result(request.id),
     toBitmap: (image) => {
       snapshots.push(image);
-      return Promise.resolve({ width: 2, height: 2, close: () => undefined } as ImageBitmap);
+      return Promise.resolve({
+        width: 2,
+        height: 2,
+        close: () => undefined,
+      } as ImageBitmap);
     },
     ...overrides,
   };
@@ -133,7 +170,11 @@ describe('worker router response invariant', () => {
     });
     route(processRequest(11));
     await vi.waitFor(() => expect(posted).toHaveLength(1));
-    expect(posted[0]).toMatchObject({ type: 'error', id: 11, message: 'device lost' });
+    expect(posted[0]).toMatchObject({
+      type: 'error',
+      id: 11,
+      message: 'device lost',
+    });
     expect(gateReleasedBy(posted)).toBe(true);
   });
 
@@ -151,7 +192,11 @@ describe('worker router response invariant', () => {
 
   it('answers when the executor reports an error', async () => {
     const { route, posted } = harness({
-      execute: (request) => ({ type: 'error', id: request.id, message: 'bad frame' }),
+      execute: (request) => ({
+        type: 'error',
+        id: request.id,
+        message: 'bad frame',
+      }),
     });
     route(processRequest(13));
     await vi.waitFor(() => expect(posted).toHaveLength(1));
@@ -166,7 +211,9 @@ describe('worker router response invariant', () => {
     await vi.waitFor(() => expect(posted).toHaveLength(2));
     // Both are answered; order between them is not an invariant (an
     // export has one less await), and the client matches exports by id.
-    expect([...posted.map((r) => r.id)].sort((a, b) => a - b)).toEqual([21, 22]);
+    expect([...posted.map((r) => r.id)].sort((a, b) => a - b)).toEqual([
+      21, 22,
+    ]);
   });
 
   it('answers an export whose LUT fill rejects', async () => {
@@ -188,6 +235,178 @@ describe('worker router response invariant', () => {
     });
     route(processRequest(41));
     await vi.waitFor(() => expect(posted).toHaveLength(1));
-    expect(posted[0]).toMatchObject({ type: 'error', id: 41, message: 'unexpected' });
+    expect(posted[0]).toMatchObject({
+      type: 'error',
+      id: 41,
+      message: 'unexpected',
+    });
+  });
+});
+
+/**
+ * Split compare must show the full-RGB source at grid scale, aligned
+ * cell-for-cell with the reduced output. M5-PERF-28 stopped computing
+ * that with a second full pipeline pass per frame; these pin the two
+ * things that could break as a result — the donated buffer being the
+ * wrong buffer, and the fallback path being skipped when it is needed.
+ */
+describe('split compare recomputation (M5-PERF-28)', () => {
+  /** Router deps that count executions and capture posted compare frames. */
+  function harness(overrides: Partial<RouterDeps> = {}): {
+    deps: RouterDeps;
+    executions: ProcessRequest[];
+    bitmaps: { width: number; height: number; data: Uint8ClampedArray }[];
+  } {
+    const executions: ProcessRequest[] = [];
+    const bitmaps: {
+      width: number;
+      height: number;
+      data: Uint8ClampedArray;
+    }[] = [];
+    const deps: RouterDeps = {
+      post: () => undefined,
+      ensureLutFor: () => Promise.resolve(),
+      execute: (request, observe) => {
+        executions.push(request);
+        return executeRequest(request, () => 0, observe);
+      },
+      toBitmap: (image) => {
+        bitmaps.push({
+          width: image.width,
+          height: image.height,
+          data: new Uint8ClampedArray(image.data),
+        });
+        return Promise.resolve(image as unknown as ImageBitmap);
+      },
+      ...overrides,
+    };
+    return { deps, executions, bitmaps };
+  }
+
+  /** A source whose resize result is not uniform, so alignment is testable. */
+  function gradientRequest(id: number, config: PipelineConfig): ProcessRequest {
+    const data = new Uint8ClampedArray(4 * 4 * 4);
+    for (let i = 0; i < 16; i++) {
+      data[i * 4] = i * 16;
+      data[i * 4 + 1] = 255 - i * 16;
+      data[i * 4 + 2] = 40;
+      data[i * 4 + 3] = 255;
+    }
+    return {
+      type: 'process',
+      id,
+      width: 4,
+      height: 4,
+      pixels: data.buffer as ArrayBuffer,
+      config,
+    };
+  }
+
+  it('runs ONE pipeline per frame under resize-first, not two', async () => {
+    const { deps, executions } = harness();
+    const route = createRouter(deps);
+    route({ type: 'compare', enabled: true, position: 0.5 });
+    await Promise.resolve();
+    executions.length = 0;
+
+    route(gradientRequest(1, CONFIG));
+    await new Promise((r) => setTimeout(r, 0));
+
+    // Before M5-PERF-28 this was 2: the frame, then a full-RGB twin
+    // over the whole source.
+    expect(executions.length).toBe(1);
+  });
+
+  it('the donated compare half equals a dedicated full-RGB pass, byte for byte', async () => {
+    const config: PipelineConfig = {
+      ...CONFIG,
+      palette: PALETTE,
+      dither: false,
+      metric: 'rgb',
+    };
+    const { deps, bitmaps } = harness();
+    const route = createRouter(deps);
+    route({ type: 'compare', enabled: true, position: 0.5 });
+    await new Promise((r) => setTimeout(r, 0));
+    bitmaps.length = 0;
+
+    route(gradientRequest(2, config));
+    await new Promise((r) => setTimeout(r, 0));
+
+    // The oracle: what the old code computed — a full pipeline run of
+    // the full-RGB twin over the same source.
+    const oracle = executeRequest(
+      gradientRequest(3, fullRgbVariant(config)),
+      () => 0,
+    );
+    expect(oracle.type).toBe('result');
+    if (oracle.type !== 'result') return;
+    const expected = Array.from(new Uint8ClampedArray(oracle.pixels)).join();
+
+    // Two bitmaps per frame: the compare half and the preview snapshot.
+    // Assert by content, not by position, so the test cannot silently
+    // pass on the wrong one if the publish order changes.
+    expect(bitmaps.length).toBe(2);
+    const matches = bitmaps.filter(
+      (b) =>
+        b.width === oracle.width &&
+        b.height === oracle.height &&
+        Array.from(b.data).join() === expected,
+    );
+    expect(matches.length).toBe(1);
+
+    // The other must be the reduced output — genuinely different.
+    // Without this, a pipeline that returned the source twice would
+    // still satisfy the check above.
+    expect(bitmaps.filter((b) => Array.from(b.data).join() !== expected).length).toBe(1);
+  });
+
+  it('falls back to a dedicated pass under reduce-first', async () => {
+    const config: PipelineConfig = {
+      ...CONFIG,
+      preset: 'reduce-first',
+      palette: PALETTE,
+      metric: 'rgb',
+    };
+    const { deps, executions } = harness();
+    const route = createRouter(deps);
+    route({ type: 'compare', enabled: true, position: 0.5 });
+    await new Promise((r) => setTimeout(r, 0));
+    executions.length = 0;
+
+    route(gradientRequest(4, config));
+    await new Promise((r) => setTimeout(r, 0));
+
+    // Under reduce-first the resize runs AFTER the colour stage, so no
+    // intermediate is the full-RGB grid — the twin pass is required.
+    expect(executions.length).toBe(2);
+    expect(executions[1]?.config.palette).toBeNull();
+  });
+
+  it('does no pipeline work when only the split position moves', async () => {
+    const { deps, executions } = harness();
+    const route = createRouter(deps);
+    route(gradientRequest(5, CONFIG));
+    await new Promise((r) => setTimeout(r, 0));
+    route({ type: 'compare', enabled: true, position: 0.5 });
+    await new Promise((r) => setTimeout(r, 0));
+    executions.length = 0;
+
+    // Dragging the divider re-enters the compare case on every move.
+    for (const position of [0.4, 0.3, 0.2, 0.6]) {
+      route({ type: 'compare', enabled: true, position });
+    }
+    await new Promise((r) => setTimeout(r, 0));
+    expect(executions.length).toBe(0);
+  });
+
+  it('does no compare work at all while compare is off', async () => {
+    const { deps, executions, bitmaps } = harness();
+    const route = createRouter(deps);
+    route(gradientRequest(6, CONFIG));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(executions.length).toBe(1);
+    // Only the preview snapshot bitmap, never a compare one.
+    expect(bitmaps.length).toBe(1);
   });
 });

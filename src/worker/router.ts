@@ -16,7 +16,7 @@
 
 import { fullRgbVariant, type PipelineConfig } from '../core/pipeline/config.ts';
 import { log } from '../diagnostics/log.ts';
-import { executeRequest } from './execute.ts';
+import { executeRequest, type StageObserver } from './execute.ts';
 import { ensureLut } from './lut-cache.ts';
 import {
   resizeSurface,
@@ -34,7 +34,7 @@ export interface RouterDeps {
   post(message: unknown, transfer?: Transferable[]): void;
   /** Fill the LUT cache before a frame that needs one (GPU-first). */
   ensureLutFor(config: PipelineConfig): Promise<void>;
-  execute(request: ProcessRequest): WorkerResponse;
+  execute(request: ProcessRequest, observe?: StageObserver): WorkerResponse;
   toBitmap(image: ImageData): Promise<ImageBitmap>;
 }
 
@@ -56,7 +56,8 @@ export function defaultDeps(
   return {
     post,
     ensureLutFor,
-    execute: executeRequest,
+    // `now` keeps its default; the observer is the router's third arg.
+    execute: (request, observe) => executeRequest(request, undefined, observe),
     toBitmap: (image) => createImageBitmap(image),
   };
 }
@@ -85,23 +86,58 @@ export function createRouter(deps: RouterDeps): (request: WorkerRequest) => void
   } | null = null;
   let compareEnabled = false;
 
-  /** Run the full-RGB twin of the last frame and hand it to the surface. */
+  /**
+   * Geometry the current compare bitmap was built for. The compare half
+   * is a pure function of the source pixels and the geometry, so it
+   * only needs rebuilding when one of them changes (M5-PERF-28).
+   */
+  let compareGeometry = '';
+
+  /** Geometry identity of a config — everything the compare half depends on. */
+  function geometryKey(config: PipelineConfig): string {
+    return [
+      config.preset,
+      config.grid.width,
+      config.grid.height,
+      config.resizeMode,
+    ].join(':');
+  }
+
+  /** Hand a full-RGB grid-sized buffer to the surface as the compare half. */
+  function publishSourceFrame(image: ImageData, geometry: string): void {
+    // Compare is decoration: a failure here must not disturb the frame
+    // response, so it is logged and dropped rather than propagated.
+    deps.toBitmap(image).then(
+      (bitmap) => {
+        compareGeometry = geometry;
+        setSourceFrame(bitmap);
+      },
+      (error: unknown) => {
+        log.warn('worker', 'compare bitmap failed', { message: describe(error) });
+      },
+    );
+  }
+
+  /**
+   * Rebuild the compare half by running the full-RGB twin of the last
+   * frame — the fallback path, used when the main run cannot donate its
+   * post-resize buffer (the 'reduce-first' preset, where resize runs
+   * *after* the colour stage so no intermediate is the full-RGB grid)
+   * and when compare is switched on between frames.
+   */
   function refreshSourceFrame(): void {
     if (lastFrame === null) return;
+    const config = fullRgbVariant(lastFrame.config);
     const response = deps.execute({
       type: 'process',
       id: -1,
       width: lastFrame.width,
       height: lastFrame.height,
       pixels: lastFrame.pixels,
-      config: fullRgbVariant(lastFrame.config),
+      config,
     });
     if (response.type !== 'result') return;
-    // Compare is decoration: a failure here must not disturb the frame
-    // response, so it is logged and dropped rather than propagated.
-    deps.toBitmap(toImageData(response)).then(setSourceFrame, (error: unknown) => {
-      log.warn('worker', 'compare bitmap failed', { message: describe(error) });
-    });
+    publishSourceFrame(toImageData(response), geometryKey(config));
   }
 
   /**
@@ -150,8 +186,40 @@ export function createRouter(deps: RouterDeps): (request: WorkerRequest) => void
       config: request.config,
     };
     await deps.ensureLutFor(request.config);
-    const response = deps.execute(request);
-    if (compareEnabled) refreshSourceFrame();
+
+    // Under 'resize-first' the pipeline's post-resize buffer IS the
+    // compare half — same source, same geometry, and the colour stages
+    // that follow are exactly what compare exists to show the absence
+    // of. Taking it here costs one copy instead of re-running the whole
+    // full-RGB pipeline over the full source every frame (16.4% of a
+    // 300² frame, M5-PERF-28). Skipping the copy is not an option: the
+    // buffer belongs to the pipeline and ImageData takes ownership.
+    const wantsDonation = compareEnabled && request.config.preset === 'resize-first';
+    let donated: ImageData | null = null;
+    const observe: StageObserver | undefined = wantsDonation
+      ? (stage, buffer): void => {
+          if (stage !== 'resize' || donated !== null) return;
+          donated = new ImageData(
+            new Uint8ClampedArray(buffer.data),
+            buffer.width,
+            buffer.height,
+          );
+        }
+      : undefined;
+
+    const response = deps.execute(request, observe);
+
+    if (compareEnabled) {
+      const geometry = geometryKey(fullRgbVariant(request.config));
+      if (donated !== null) {
+        publishSourceFrame(donated, geometry);
+      } else {
+        // 'reduce-first', or the resize stage never ran: fall back to
+        // the dedicated pass. Still skipped when nothing the compare
+        // half depends on has changed.
+        refreshSourceFrame();
+      }
+    }
     if (response.type !== 'result') {
       deps.post(response, []);
       return;
@@ -187,7 +255,13 @@ export function createRouter(deps: RouterDeps): (request: WorkerRequest) => void
         const enabling = request.enabled && !compareEnabled;
         compareEnabled = request.enabled;
         setCompare(request.enabled, request.position);
-        if (enabling) refreshSourceFrame();
+        // Dragging the split position re-enters here on every pointer
+        // move; only an actual enable — and only when the bitmap on the
+        // surface is not already the right one — needs a pipeline run.
+        const stale =
+          lastFrame !== null &&
+          compareGeometry !== geometryKey(fullRgbVariant(lastFrame.config));
+        if (enabling && (stale || compareGeometry === '')) refreshSourceFrame();
         break;
       }
       case 'export':

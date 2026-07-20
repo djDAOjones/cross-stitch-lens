@@ -11,10 +11,24 @@ import { selectedBackend } from './backend-select.ts';
 import { getCandidates, getLut } from './lut-cache.ts';
 import type { ProcessRequest, StageTiming, WorkerResponse } from './protocol.ts';
 
+/**
+ * Observe each stage's output as the frame runs.
+ *
+ * Exists for the split compare (M5-PERF-28): under the default
+ * 'resize-first' preset the compare half is exactly the pipeline's
+ * post-resize buffer, so the router reads it here instead of running a
+ * second full-RGB pass over the source. The buffer is safe to read —
+ * stages never mutate their input and each allocates its own output —
+ * but it must not be retained past the callback, since the next stage
+ * may be the last and its output gets transferred.
+ */
+export type StageObserver = (stage: string, buffer: PixelBuffer) => void;
+
 /** Run one frame; never throws — failures become error responses. */
 export function executeRequest(
   request: ProcessRequest,
   now: () => number = () => performance.now(),
+  observe?: StageObserver,
 ): WorkerResponse {
   try {
     const stages = buildStages(request.config, {
@@ -39,6 +53,9 @@ export function executeRequest(
       const start = now();
       buffer = fn(buffer, instance.params);
       timings.push({ stage: instance.stage.name, ms: now() - start, backend: used });
+      // Observation is outside the timing window: it is the router's
+      // bookkeeping, not the stage's cost.
+      observe?.(instance.stage.name, buffer);
     }
     return {
       type: 'result',

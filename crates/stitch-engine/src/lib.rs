@@ -174,6 +174,16 @@ pub fn dither_floyd_steinberg(
 
         let mut x = x_start;
         while x != x_end {
+            let oi = ((y * w + x) * 4) as usize;
+            // Mirrors the TS reference: a fully transparent cell is the
+            // empty stitch (D9), carries no colour, and must neither be
+            // quantised nor diffuse error into the real stitches around
+            // it. See `dither.ts` for the defect this closes.
+            if pixels[oi + 3] == 0 {
+                x += x_step;
+                continue; // out stays RGBA(0,0,0,0)
+            }
+
             let wi = ((y * w + x) * 3) as usize;
             let r = clamp255(work[wi] as f64);
             let g = clamp255(work[wi + 1] as f64);
@@ -184,7 +194,6 @@ pub fn dither_floyd_steinberg(
             let pg = pal_rgb[idx + 1];
             let pb = pal_rgb[idx + 2];
 
-            let oi = ((y * w + x) * 4) as usize;
             out[oi] = pr;
             out[oi + 1] = pg;
             out[oi + 2] = pb;
@@ -231,6 +240,25 @@ mod tests {
             assert!(rgb == [0, 0, 0] || rgb == [255, 255, 255], "pixel {p}: {rgb:?}");
             assert_eq!(out[p * 4 + 3], 255);
         }
+    }
+
+    #[test]
+    fn transparent_cells_do_not_diffuse_error_into_stitches() {
+        // Palette with no near-black, so quantising a transparent
+        // RGBA(0,0,0,0) cell would carry a −200/channel error.
+        let pal: [u8; 6] = [200, 200, 200, 255, 255, 255];
+        // Row of 220-grey with two transparent cells leading.
+        let mut padded = vec![0u8, 0, 0, 0, 0, 0, 0, 0];
+        padded.extend_from_slice(&grey_rgba(6, 1, 220));
+        let out = dither_floyd_steinberg(8, 1, &padded, &pal, &[], false, false);
+
+        // The empty cells stay empty and pick up no thread colour.
+        assert_eq!(&out[0..8], &[0, 0, 0, 0, 0, 0, 0, 0]);
+
+        // The stitches match the same content dithered on its own.
+        let isolated = grey_rgba(6, 1, 220);
+        let iso = dither_floyd_steinberg(6, 1, &isolated, &pal, &[], false, false);
+        assert_eq!(&out[8..], &iso[..]);
     }
 
     #[test]

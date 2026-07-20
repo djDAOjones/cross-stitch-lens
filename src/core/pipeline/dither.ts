@@ -138,6 +138,27 @@ function ditherTs(input: PixelBuffer, params: DitherParams): PixelBuffer {
     const ahead = xStep;
 
     for (let x = xStart; x !== xEnd; x += xStep) {
+      const oi = (y * width + x) * 4;
+      // A fully transparent cell is the "empty stitch" (D9) and carries
+      // no colour: resize writes literal RGBA(0,0,0,0) for every grid
+      // cell the source does not cover. Quantising it anyway matched
+      // (0,0,0) to the nearest thread and diffused THAT error into the
+      // real stitches beside it — so a `contain`/`fit` letterbox band
+      // wrecked the dither of the artwork it framed. With a palette
+      // holding no near-black the error is the full distance to the
+      // darkest thread: 220-grey against a 200/255 palette dithered to
+      // solid 200 across the whole visible area, mean level 200 instead
+      // of 220, no dithering at all. Skipping the cell leaves it
+      // transparent and stops error crossing the boundary in either
+      // direction, so regions separated by empty cells dither
+      // independently — which is what a gap in the artwork means.
+      //
+      // Deliberately `=== 0`, not the D9 `< 128` fabric threshold:
+      // alpha 0 provably carries no colour, whereas a semi-transparent
+      // cell has a real one, and whether it should take part is a
+      // creative question (wish-list) rather than this defect.
+      if ((src[oi + 3] ?? 255) === 0) continue; // out stays RGBA(0,0,0,0)
+
       const wi = (y * width + x) * 3;
       const r = clamp255(work[wi] ?? 0);
       const g = clamp255(work[wi + 1] ?? 0);
@@ -151,7 +172,6 @@ function ditherTs(input: PixelBuffer, params: DitherParams): PixelBuffer {
       const pg = palRgb[idx + 1] ?? 0;
       const pb = palRgb[idx + 2] ?? 0;
 
-      const oi = (y * width + x) * 4;
       out[oi] = pr;
       out[oi + 1] = pg;
       out[oi + 2] = pb;

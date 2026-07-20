@@ -10,6 +10,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { ditherStage, type DitherParams } from '../src/core/pipeline/dither.ts';
+import { resizeStage } from '../src/core/pipeline/resize.ts';
 import { runPipeline } from '../src/core/pipeline/index.ts';
 import { stageInstance } from '../src/core/types.ts';
 import type { Palette, PixelBuffer } from '../src/core/types.ts';
@@ -121,5 +122,69 @@ describe('Floyd–Steinberg dither stage', () => {
     for (let i = 3; i < input.data.length; i += 4) {
       expect(output.data[i]).toBe(input.data[i]);
     }
+  });
+});
+
+/**
+ * Regression (M5-ACCEPT-01). Empty cells used to be quantised as if
+ * they were opaque black and diffused THAT error into the stitches
+ * beside them, so a `contain`/`fit` letterbox band destroyed the
+ * dither of the artwork it framed. The palette below is the adversarial
+ * case — nothing near black, so the phantom error was the full
+ * distance to the darkest thread.
+ */
+describe('empty cells take no part in error diffusion', () => {
+  const LIGHT_PALETTE: Palette = {
+    name: 'test-light',
+    entries: [
+      { code: 'L', name: 'light', hex: '#c8c8c8', rgb: [200, 200, 200], manufacturer: 'test' },
+      { code: 'W', name: 'white', hex: '#ffffff', rgb: [255, 255, 255], manufacturer: 'test' },
+    ],
+  };
+
+  /** `count` fully transparent cells, then `width - count` of `level`. */
+  function paddedRow(width: number, count: number, level: number): PixelBuffer {
+    const data = new Uint8ClampedArray(width * 4);
+    for (let x = count; x < width; x++) {
+      data[x * 4] = level;
+      data[x * 4 + 1] = level;
+      data[x * 4 + 2] = level;
+      data[x * 4 + 3] = 255;
+    }
+    return { width, height: 1, data };
+  }
+
+  const p = params({ palette: LIGHT_PALETTE, metric: 'lab', serpentine: false });
+
+  it('leaves an empty cell empty rather than giving it a thread colour', () => {
+    const output = runPipeline(paddedRow(8, 2, 220), [stageInstance(ditherStage, p)]);
+    expect(Array.from(output.data.slice(0, 8))).toEqual([0, 0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it('dithers stitches identically whether or not empty cells precede them', () => {
+    const padded = runPipeline(paddedRow(8, 2, 220), [stageInstance(ditherStage, p)]);
+    const isolated = runPipeline(paddedRow(6, 0, 220), [stageInstance(ditherStage, p)]);
+    expect(Array.from(padded.data.slice(8))).toEqual(Array.from(isolated.data));
+  });
+
+  it('preserves mean level across a letterbox band (the defect it closes)', () => {
+    // 2:1 source into a square grid: `contain` leaves empty bands top
+    // and bottom. Before the fix this dithered to solid 200 — no
+    // dithering at all, and a mean 20 levels below the source.
+    const source = grayField(16, 8, 220);
+    const grid = runPipeline(source, [
+      stageInstance(resizeStage, { width: 8, height: 8, mode: 'contain' }),
+      stageInstance(ditherStage, p),
+    ]);
+
+    let sum = 0;
+    let stitches = 0;
+    for (let i = 0; i < grid.data.length; i += 4) {
+      if (grid.data[i + 3] === 0) continue;
+      sum += grid.data[i] ?? 0;
+      stitches++;
+    }
+    expect(stitches).toBe(32); // 8×4 opaque band, 8×2 empty top and bottom
+    expect(Math.abs(sum / stitches - 220)).toBeLessThan(4);
   });
 });

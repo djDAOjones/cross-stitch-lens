@@ -13,6 +13,7 @@
  * 3/16  5/16  1/16               right-to-left rows.
  */
 
+import { nearestIndexPruned, type CandidateTable } from '../color/candidates.ts';
 import { nearestIndex } from '../color/lut.ts';
 import type { ColorMetric } from '../color/metrics.ts';
 import { paletteLab, paletteRgb } from '../palette.ts';
@@ -32,6 +33,18 @@ export interface DitherParams {
    * unused until a random/blue-noise variant ships (wish-list §8).
    */
   seed?: number;
+  /**
+   * Per-bin candidate table for this palette under the 'lab' metric
+   * (M5-PERF-22). Purely a performance hint: the pruned scan returns
+   * the identical index to the full scan, so output is unchanged
+   * whether or not it is supplied. Callers that already hold one may
+   * pass it to skip the per-frame rebuild — same contract as
+   * `ReduceParams.lut`. Ignored under the 'rgb' metric.
+   *
+   * Derived data, never persisted: the project file stores the palette,
+   * and the table is rebuilt from it on load.
+   */
+  candidates?: CandidateTable;
 }
 
 /** Diffuse `error * weight` into the working buffer at (x, y). */
@@ -63,9 +76,14 @@ function ditherTs(input: PixelBuffer, params: DitherParams): PixelBuffer {
   const src = input.data;
   const out = new Uint8ClampedArray(src.length);
   const palRgb = paletteRgb(params.palette);
-  const palLab =
-    params.metric === 'lab' ? paletteLab(params.palette) : new Float32Array(0);
+  const usesLab = params.metric === 'lab';
+  const palLab = usesLab ? paletteLab(params.palette) : new Float32Array(0);
   const labScratch = new Float32Array(3);
+  // Pruning is a Lab-only structure (its exclusion proof rests on the
+  // sRGB→Lab pipeline being monotone per channel), and it is optional
+  // everywhere: without a table the full exact scan runs and produces
+  // the same bytes.
+  const table = usesLab ? (params.candidates ?? null) : null;
 
   // Float working copy of the RGB channels; alpha never diffuses.
   const work = new Float32Array(width * height * 3);
@@ -90,7 +108,9 @@ function ditherTs(input: PixelBuffer, params: DitherParams): PixelBuffer {
       const b = clamp255(work[wi + 2] ?? 0);
 
       const idx =
-        nearestIndex(r, g, b, params.metric, palRgb, palLab, labScratch) * 3;
+        (table === null
+          ? nearestIndex(r, g, b, params.metric, palRgb, palLab, labScratch)
+          : nearestIndexPruned(r, g, b, palLab, labScratch, table)) * 3;
       const pr = palRgb[idx] ?? 0;
       const pg = palRgb[idx + 1] ?? 0;
       const pb = palRgb[idx + 2] ?? 0;

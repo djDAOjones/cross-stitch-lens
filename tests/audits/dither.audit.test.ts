@@ -23,7 +23,8 @@ import {
   buildCandidateTable,
   captureWorkValues,
   ditherHoistedScan,
-  ditherPruned,
+  ditherPreM5D,
+  ditherUnhoisted,
   ditherRoundedLab,
   linearTable,
   nearestIndexPruned,
@@ -42,7 +43,17 @@ import {
   type AuditRow,
 } from './audit.ts';
 
-const reference = ditherStage.backends.ts;
+/**
+ * The audit's "before" is the pre-M5D dither (unhoisted scan, no
+ * pruning), not the shipped stage: M5-PERF-22 landed both wins into
+ * `src/core`, so timing the shipped stage against itself would report
+ * 1.0× and prove nothing. Keeping the real baseline here makes the
+ * decomposition reproducible and turns it into a regression guard.
+ */
+const reference = ditherPreM5D;
+
+/** The shipped stage — hoisted, and pruned when handed a table. */
+const shipped = ditherStage.backends.ts;
 
 /** A grid-sized buffer, i.e. what dither actually sees in the pipeline. */
 function gridBuffer(grid: number): PixelBuffer {
@@ -328,53 +339,76 @@ describe.skipIf(!AUDIT)('M5-PERF-13/14 dither audit (AUDIT=1)', () => {
     ]) {
       const buffer = gridBuffer(grid);
       const oracle = reference(buffer, params(palette));
-      const hoistedOut = ditherHoistedScan(buffer, params(palette));
-      const pruned = ditherPruned(buffer, params(palette), table);
-      const hoistedDiff = outputDiff(oracle, hoistedOut);
-      const prunedDiff = outputDiff(oracle, pruned);
+      const shippedPlain = shipped(buffer, params(palette));
+      const shippedPruned = shipped(buffer, { ...params(palette), candidates: table });
+      const plainDiff = outputDiff(oracle, shippedPlain);
+      const prunedDiff = outputDiff(oracle, shippedPruned);
 
-      const refRow = timed(`Exact dither (ts) — ${name}`, () => reference(buffer, params(palette)), expected);
+      const refRow = timed(
+        `pre-M5D dither (ts, deltaE76Sq call) — ${name}`,
+        () => reference(buffer, params(palette)),
+        expected,
+      );
+      const unhoistedRow = timed(
+        `+ metric inlined, scratch re-read — ${name}`,
+        () => ditherUnhoisted(buffer, params(palette)),
+        expected * 0.4,
+      );
       const hoistedRow = timed(
-        `+ hoisted scan reads — ${name}`,
-        () => ditherHoistedScan(buffer, params(palette)),
-        expected * 0.7,
+        `shipped, no table (inlined + hoisted) — ${name}`,
+        () => shipped(buffer, params(palette)),
+        expected * 0.4,
       );
       const prunedRow = timed(
-        `+ hoisted + pruned — ${name}`,
-        () => ditherPruned(buffer, params(palette), table),
+        `shipped + candidate table — ${name}`,
+        () => shipped(buffer, { ...params(palette), candidates: table }),
         expected * 0.5,
       );
       const refMs = refRow.summary?.median ?? 1;
+      const unhoistedMs = unhoistedRow.summary?.median ?? 1;
       const hoistedMs = hoistedRow.summary?.median ?? 1;
       const prunedMs = prunedRow.summary?.median ?? 1;
-      hoistedRow.notes['speedup vs ref'] = round(refMs / hoistedMs, 2);
-      hoistedRow.notes['bit-exact'] = hoistedDiff.identical ? 'yes' : 'no';
-      prunedRow.notes['speedup vs ref'] = round(refMs / prunedMs, 2);
-      prunedRow.notes['speedup vs hoisted'] = round(hoistedMs / prunedMs, 2);
+      unhoistedRow.notes['speedup vs pre-M5D'] = round(refMs / unhoistedMs, 2);
+      hoistedRow.notes['speedup vs pre-M5D'] = round(refMs / hoistedMs, 2);
+      hoistedRow.notes['bit-exact'] = plainDiff.identical ? 'yes' : 'no';
+      prunedRow.notes['speedup vs pre-M5D'] = round(refMs / prunedMs, 2);
+      prunedRow.notes['speedup vs no table'] = round(hoistedMs / prunedMs, 2);
       prunedRow.notes['bit-exact'] = prunedDiff.identical ? 'yes' : 'no';
-      rows.push(refRow, hoistedRow, prunedRow);
+      rows.push(refRow, unhoistedRow, hoistedRow, prunedRow);
       rows.push(
         counted(`attribution — ${name}`, {
-          'reference ms': round(refMs, 1),
-          'saved by hoist ms': round(refMs - hoistedMs, 1),
-          'saved by pruning ms': round(hoistedMs - prunedMs, 1),
-          'hoist share of total saving %': round(
-            (100 * (refMs - hoistedMs)) / Math.max(refMs - prunedMs, 1e-9),
-            0,
-          ),
+          'pre-M5D ms': round(refMs, 1),
+          'shipped ms': round(prunedMs, 1),
+          'total ×': round(refMs / prunedMs, 2),
+          'of which: inlining the metric call ×': round(refMs / unhoistedMs, 2),
+          'of which: hoisting the scratch read ×': round(unhoistedMs / hoistedMs, 2),
+          'of which: candidate pruning ×': round(hoistedMs / prunedMs, 2),
+          'mean candidates': round(table.candidates.length / 32768, 1),
         }),
       );
-      expect(hoistedDiff.identical).toBe(true);
+      // Both shipped paths must be byte-identical to the pre-M5D
+      // output: the whole ticket rests on Exact appearance being frozen.
+      expect(plainDiff.identical).toBe(true);
       expect(prunedDiff.identical).toBe(true);
+      // Regression guard: revert either win and the ratio collapses.
+      expect(refMs / prunedMs).toBeGreaterThan(1.5);
     }
     findings.push(
-      'Two independent bit-exact wins live in the matcher, and they must not be conflated. ' +
-        '(1) The reference re-reads the query Lab out of the `Float32Array` scratch on every ' +
-        'palette iteration via `deltaE76Sq(labScratch, 0, …)`; hoisting those three reads out ' +
-        'of the scan loop is a pure loop-invariant fix with no algorithmic change. (2) Per-bin ' +
-        'candidate pruning then cuts the surviving scan. Both are byte-identical to the ' +
-        'reference on every workload measured, so neither needs a tolerance decision or a ' +
-        'golden regeneration. The attribution rows above give each its own contribution.',
+      'M5B ATTRIBUTION CORRECTED. M5B credited its ~4× to "hoisting the Lab scan reads out ' +
+        'of the palette loop". Decomposed against the verbatim pre-M5D matcher, the hoist is ' +
+        'worth 0.96–1.11× — i.e. nothing, and slightly negative at the ceiling grid. The ' +
+        'entire large term is INLINING the `deltaE76Sq(labScratch, 0, palLab, i*3)` call ' +
+        '(2.85–4.31×): a cross-module call made 64–533 times per pixel that V8 does not ' +
+        'inline. M5B\'s candidate bundled the two changes and attributed the result to the ' +
+        'wrong one. The totals it reported stand — 858 ms → 225 ms at 1024²/64 — only the ' +
+        'cause differs.',
+      'This is the SAME mis-attribution the resize audit found (M5-PERF-21): both M5B ' +
+        '"algorithmic" wins were really per-call-boundary costs in a per-pixel loop. Treat ' +
+        'any future TS micro-optimisation lead as call-boundary-first until a decomposition ' +
+        'says otherwise, and decompose one change at a time.',
+      'Per-bin candidate pruning is the real algorithmic win and it scales with palette ' +
+        'size: 1.2× at 64 colours, 3.38× at 533. Byte-identical on every workload measured, ' +
+        'so it needs no tolerance decision and no golden regeneration.',
       'The pruning table build is a per-palette one-off and belongs in the LUT cache beside ' +
         'the reduce LUT, not on the frame path — its build cost is the same order as the ' +
         'existing cold LUT build and would otherwise be charged to the first frame.',

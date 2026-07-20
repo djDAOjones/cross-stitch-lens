@@ -66,15 +66,157 @@ export function placementFor(
 }
 
 /**
- * Candidate H — hoisted/specialised area average.
+ * Area-average one output cell — the pre-M5D `sampleArea`, kept
+ * verbatim as the callee of {@link resizeCallV0} so the cost of the
+ * call boundary itself can be measured.
+ */
+function sampleAreaV0(
+  src: Uint8ClampedArray,
+  srcWidth: number,
+  sx0: number,
+  sy0: number,
+  sx1: number,
+  sy1: number,
+  out: Uint8ClampedArray,
+  offset: number,
+): void {
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  let a = 0;
+  let area = 0;
+
+  const yFirst = Math.floor(sy0);
+  const yLast = Math.ceil(sy1);
+  const xFirst = Math.floor(sx0);
+  const xLast = Math.ceil(sx1);
+
+  for (let y = yFirst; y < yLast; y++) {
+    const hCov = Math.min(sy1, y + 1) - Math.max(sy0, y);
+    if (hCov <= 0) continue;
+    for (let x = xFirst; x < xLast; x++) {
+      const wCov = Math.min(sx1, x + 1) - Math.max(sx0, x);
+      if (wCov <= 0) continue;
+      const cov = wCov * hCov;
+      const i = (y * srcWidth + x) * 4;
+      const alpha = src[i + 3] ?? 0;
+      r += (src[i] ?? 0) * alpha * cov;
+      g += (src[i + 1] ?? 0) * alpha * cov;
+      b += (src[i + 2] ?? 0) * alpha * cov;
+      a += alpha * cov;
+      area += cov;
+    }
+  }
+
+  if (area <= 0 || a <= 0) return;
+  out[offset] = r / a;
+  out[offset + 1] = g / a;
+  out[offset + 2] = b / a;
+  out[offset + 3] = a / area;
+}
+
+/**
+ * Candidate V0-call — the **true** pre-M5D shipped stage, verbatim: an
+ * eight-argument `sampleArea` call per output cell, recomputing both
+ * coverages per source pixel.
  *
- * Same algorithm, same summation order, same values as the reference:
- * the per-output-column horizontal coverage is computed once per row
- * instead of once per source pixel, and the fully-covered interior
- * skips the `× cov` multiply. Multiplying by exactly 1.0 is exact in
- * IEEE-754 and the accumulation order is unchanged, so this candidate
- * is expected to be **byte-identical** to the reference — the audit
- * asserts that rather than assuming it.
+ * This is the honest "before" for M5-PERF-21. M5B quoted 37.4 ms at
+ * 1280→1024 against this, and 24.4 ms for the hoisted candidate — but
+ * the candidate changed two things at once, and the audit now shows the
+ * call boundary was the larger of them.
+ */
+export function resizeCallV0(input: PixelBuffer, params: ResizeParams): PixelBuffer {
+  const gw = params.width;
+  const gh = params.height;
+  const sw = input.width;
+  const out = new Uint8ClampedArray(gw * gh * 4);
+  const p = placementFor(sw, input.height, gw, gh, params.mode);
+  const srcW = p.srcX1 - p.srcX0;
+  const srcH = p.srcY1 - p.srcY0;
+
+  for (let dy = 0; dy < p.destH; dy++) {
+    const sy0 = p.srcY0 + (dy / p.destH) * srcH;
+    const sy1 = p.srcY0 + ((dy + 1) / p.destH) * srcH;
+    for (let dx = 0; dx < p.destW; dx++) {
+      const sx0 = p.srcX0 + (dx / p.destW) * srcW;
+      const sx1 = p.srcX0 + ((dx + 1) / p.destW) * srcW;
+      const offset = ((p.destY + dy) * gw + (p.destX + dx)) * 4;
+      sampleAreaV0(input.data, sw, sx0, sy0, sx1, sy1, out, offset);
+    }
+  }
+  return { width: gw, height: gh, data: out };
+}
+
+/**
+ * Candidate V0-inline — V0 with the sampling inlined into the cell loop
+ * but the per-source-pixel coverage recomputation left alone.
+ *
+ * The middle point of the decomposition: `resizeCallV0` → this isolates
+ * the call-boundary cost, and this → the shipped stage isolates what
+ * the coverage hoist is actually worth.
+ */
+export function resizeNaiveV0(input: PixelBuffer, params: ResizeParams): PixelBuffer {
+  const gw = params.width;
+  const gh = params.height;
+  const sw = input.width;
+  const src = input.data;
+  const out = new Uint8ClampedArray(gw * gh * 4);
+  const p = placementFor(sw, input.height, gw, gh, params.mode);
+  const srcW = p.srcX1 - p.srcX0;
+  const srcH = p.srcY1 - p.srcY0;
+
+  for (let dy = 0; dy < p.destH; dy++) {
+    const sy0 = p.srcY0 + (dy / p.destH) * srcH;
+    const sy1 = p.srcY0 + ((dy + 1) / p.destH) * srcH;
+    for (let dx = 0; dx < p.destW; dx++) {
+      const sx0 = p.srcX0 + (dx / p.destW) * srcW;
+      const sx1 = p.srcX0 + ((dx + 1) / p.destW) * srcW;
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      let a = 0;
+      let area = 0;
+      const yFirst = Math.floor(sy0);
+      const yLast = Math.ceil(sy1);
+      const xFirst = Math.floor(sx0);
+      const xLast = Math.ceil(sx1);
+      for (let y = yFirst; y < yLast; y++) {
+        const hCov = Math.min(sy1, y + 1) - Math.max(sy0, y);
+        if (hCov <= 0) continue;
+        for (let x = xFirst; x < xLast; x++) {
+          const wCov = Math.min(sx1, x + 1) - Math.max(sx0, x);
+          if (wCov <= 0) continue;
+          const cov = wCov * hCov;
+          const i = (y * sw + x) * 4;
+          const alpha = src[i + 3] ?? 0;
+          r += (src[i] ?? 0) * alpha * cov;
+          g += (src[i + 1] ?? 0) * alpha * cov;
+          b += (src[i + 2] ?? 0) * alpha * cov;
+          a += alpha * cov;
+          area += cov;
+        }
+      }
+      if (area <= 0 || a <= 0) continue;
+      const offset = ((p.destY + dy) * gw + (p.destX + dx)) * 4;
+      out[offset] = r / a;
+      out[offset + 1] = g / a;
+      out[offset + 2] = b / a;
+      out[offset + 3] = a / area;
+    }
+  }
+  return { width: gw, height: gh, data: out };
+}
+
+/**
+ * Candidate H — hoisted/specialised area average, as first prototyped.
+ *
+ * Kept for the record: it regroups the premultiply as `alpha * cov`
+ * before the channel multiply, which measured byte-identical across the
+ * M5B matrix but is not *provably* so — float multiply is not
+ * associative. The shipped M5-PERF-21 implementation keeps the original
+ * `value * alpha * cov` association instead, so its exactness is a
+ * property of the transform rather than an observation. The audit times
+ * both to confirm the association costs nothing.
  */
 export function resizeHoisted(input: PixelBuffer, params: ResizeParams): PixelBuffer {
   const gw = params.width;
@@ -372,14 +514,17 @@ export function resizeSat(input: PixelBuffer, params: ResizeParams): PixelBuffer
 
 /** Peak extra bytes a candidate holds beyond its output buffer. */
 export function scratchBytes(
-  candidate: 'reference' | 'hoisted' | 'separable' | 'sat',
+  candidate: 'v0-call' | 'v0-inline' | 'shipped' | 'hoisted' | 'separable' | 'sat',
   sw: number,
   sh: number,
   destW: number,
 ): number {
   switch (candidate) {
-    case 'reference':
+    case 'v0-call':
+    case 'v0-inline':
       return 0;
+    case 'shipped':
+      return destW * 8 * 4; // per-column coverage spans (small)
     case 'hoisted':
       return destW * 8 * 4; // per-column coverage spans (small)
     case 'separable':

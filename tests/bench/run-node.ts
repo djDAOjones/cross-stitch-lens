@@ -108,7 +108,7 @@ function runWorkload(workload: Workload, options: MatrixOptions): BenchRow[] {
   // already cached. This is the number to subtract from a
   // pipeline-compute median to see the executor's construction cost.
   const preparePlan = planFor(1);
-  buildStages(config, getLut); // ensure the LUT cache is warm first
+  buildStages(config, { lut: getLut }); // ensure the LUT cache is warm first
   rows.push(
     measuredRow({
       workloadId: workload.id,
@@ -119,7 +119,7 @@ function runWorkload(workload: Workload, options: MatrixOptions): BenchRow[] {
       samples: measure(
         () => {
           paletteFor(workload);
-          buildStages(config, getLut);
+          buildStages(config, { lut: getLut });
         },
         preparePlan,
       ),

@@ -8,6 +8,7 @@
  * fully custom order editor is post-MVP (wish-list §7).
  */
 
+import type { CandidateTable } from '../color/candidates.ts';
 import type { ColorMetric } from '../color/metrics.ts';
 import { adjustStage } from './adjust.ts';
 import { ditherStage } from './dither.ts';
@@ -49,6 +50,20 @@ export function fullRgbVariant(config: PipelineConfig): PipelineConfig {
 export type LutProvider = (palette: Palette, metric: ColorMetric) => Uint16Array;
 
 /**
+ * Optional candidate-table supplier, same idea as {@link LutProvider}:
+ * both structures are per-palette one-offs far too expensive to build
+ * per frame, and both are pure performance hints that cannot change
+ * output. Only consulted for the 'lab' metric.
+ */
+export type CandidateProvider = (palette: Palette) => CandidateTable;
+
+/** Cache suppliers a host may inject into {@link buildStages}. */
+export interface StageProviders {
+  lut?: LutProvider;
+  candidates?: CandidateProvider;
+}
+
+/**
  * Build the executable stage list for a config.
  *
  * When dithering is on, the dither stage IS the quantiser (it maps to
@@ -57,7 +72,7 @@ export type LutProvider = (palette: Palette, metric: ColorMetric) => Uint16Array
  */
 export function buildStages(
   config: PipelineConfig,
-  lutProvider?: LutProvider,
+  providers: StageProviders = {},
 ): StageInstance[] {
   const stages: StageInstance[] = [stageInstance(adjustStage, {})];
 
@@ -70,15 +85,19 @@ export function buildStages(
   const colour: StageInstance[] = [];
   if (config.palette !== null) {
     if (config.dither) {
+      // Pruning is Lab-only; under 'rgb' the stage keeps the full scan.
+      const candidates =
+        config.metric === 'lab' ? providers.candidates?.(config.palette) : undefined;
       colour.push(
         stageInstance(ditherStage, {
           palette: config.palette,
           metric: config.metric,
           serpentine: config.serpentine,
+          ...(candidates === undefined ? {} : { candidates }),
         }),
       );
     } else {
-      const lut = lutProvider?.(config.palette, config.metric);
+      const lut = providers.lut?.(config.palette, config.metric);
       colour.push(
         stageInstance(reduceStage, {
           palette: config.palette,

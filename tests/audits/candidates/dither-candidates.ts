@@ -10,7 +10,7 @@
 
 import { srgbToLab } from '../../../src/core/color/convert.ts';
 import { lutKey } from '../../../src/core/color/lut.ts';
-import type { ColorMetric } from '../../../src/core/color/metrics.ts';
+import { deltaE76Sq, type ColorMetric } from '../../../src/core/color/metrics.ts';
 import { paletteLab, paletteRgb } from '../../../src/core/palette.ts';
 import type { DitherParams } from '../../../src/core/pipeline/dither.ts';
 import type { Palette, PixelBuffer } from '../../../src/core/types.ts';
@@ -83,6 +83,78 @@ export function captureWorkValues(
     }
   }
   return captured;
+}
+
+/**
+ * The **pre-M5D** matcher, verbatim: the query Lab is re-read out of
+ * the `Float32Array` scratch on every palette iteration, because the
+ * distance came from `deltaE76Sq(labScratch, 0, palLab, i * 3)`.
+ *
+ * M5-PERF-22 landed the hoist into `src/core/color/lut.ts`, so the
+ * shipped matcher is no longer the baseline it was measured against.
+ * This is that baseline, kept so the audit's "before" stays real and
+ * the hoist cannot be silently reverted.
+ */
+export function nearestIndexPreM5D(
+  r: number,
+  g: number,
+  b: number,
+  palLab: Float32Array,
+  labScratch: Float32Array,
+): number {
+  const count = palLab.length / 3;
+  let best = 0;
+  let bestDist = Infinity;
+  srgbToLab(r, g, b, labScratch, 0);
+  for (let i = 0; i < count; i++) {
+    // Verbatim pre-M5D: a cross-module call per palette entry, which
+    // re-reads the three scratch slots inside the callee.
+    const d = deltaE76Sq(labScratch, 0, palLab, i * 3);
+    if (d < bestDist) {
+      bestDist = d;
+      best = i;
+    }
+  }
+  return best;
+}
+
+/**
+ * Matcher with the distance inlined but the scratch still re-read per
+ * iteration — the middle point that separates "inlining the metric
+ * call" from "hoisting the loop-invariant read".
+ */
+export function nearestIndexUnhoisted(
+  r: number,
+  g: number,
+  b: number,
+  palLab: Float32Array,
+  labScratch: Float32Array,
+): number {
+  const count = palLab.length / 3;
+  let best = 0;
+  let bestDist = Infinity;
+  srgbToLab(r, g, b, labScratch, 0);
+  for (let i = 0; i < count; i++) {
+    const dl = (labScratch[0] ?? 0) - (palLab[i * 3] ?? 0);
+    const da = (labScratch[1] ?? 0) - (palLab[i * 3 + 1] ?? 0);
+    const db = (labScratch[2] ?? 0) - (palLab[i * 3 + 2] ?? 0);
+    const d = dl * dl + da * da + db * db;
+    if (d < bestDist) {
+      bestDist = d;
+      best = i;
+    }
+  }
+  return best;
+}
+
+/** Full dither using the verbatim pre-M5D matcher — the audit's "before". */
+export function ditherPreM5D(input: PixelBuffer, params: DitherParams): PixelBuffer {
+  return ditherWith(input, params, null, 'preM5D');
+}
+
+/** Full dither with the metric inlined but the scratch read unhoisted. */
+export function ditherUnhoisted(input: PixelBuffer, params: DitherParams): PixelBuffer {
+  return ditherWith(input, params, null, 'unhoisted');
 }
 
 /** Local copy of the oracle matcher (keeps the audit self-contained). */
@@ -347,11 +419,18 @@ export function ditherPruned(
   return ditherWith(input, params, table);
 }
 
-/** Shared loop: pruned when a table is given, full scan when not. */
+/**
+ * Shared loop; `variant` selects the matcher and a table overrides it
+ * with the pruned scan. One loop body for every variant, so a timing
+ * difference is the matcher and nothing else.
+ */
+type ScanVariant = 'hoisted' | 'unhoisted' | 'preM5D';
+
 function ditherWith(
   input: PixelBuffer,
   params: DitherParams,
   table: CandidateTable | null,
+  variant: ScanVariant = 'hoisted',
 ): PixelBuffer {
   const { width, height } = input;
   const src = input.data;
@@ -385,9 +464,13 @@ function ditherWith(
       const g = clamp255(work[wi + 1] ?? 0);
       const b = clamp255(work[wi + 2] ?? 0);
       const idx =
-        (table === null
-          ? nearestIndexReference(r, g, b, 'lab', palRgb, palLab, labScratch)
-          : nearestIndexPruned(r, g, b, palLab, labScratch, table)) * 3;
+        (table !== null
+          ? nearestIndexPruned(r, g, b, palLab, labScratch, table)
+          : variant === 'preM5D'
+            ? nearestIndexPreM5D(r, g, b, palLab, labScratch)
+            : variant === 'unhoisted'
+              ? nearestIndexUnhoisted(r, g, b, palLab, labScratch)
+              : nearestIndexReference(r, g, b, 'lab', palRgb, palLab, labScratch)) * 3;
       const pr = palRgb[idx] ?? 0;
       const pg = palRgb[idx + 1] ?? 0;
       const pb = palRgb[idx + 2] ?? 0;

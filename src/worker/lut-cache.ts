@@ -19,6 +19,7 @@
  */
 
 import { buildLutGpu } from '../backends/webgpu/reduce.ts';
+import { buildCandidateTable, type CandidateTable } from '../core/color/candidates.ts';
 import { buildLut, LUT_SIZE } from '../core/color/lut.ts';
 import type { ColorMetric } from '../core/color/metrics.ts';
 import { paletteFingerprint } from '../core/palette.ts';
@@ -125,7 +126,57 @@ export function lutCacheSize(): number {
   return cache.size;
 }
 
-/** Drop all cached LUTs (tests; palette-editing flows later). */
+/**
+ * Candidate tables, keyed the same way as LUTs but without the metric:
+ * pruning exists only for 'lab' (M5-PERF-22). Kept in a separate map so
+ * the two structures evict independently — a table is ~20–35× the size
+ * of a LUT, so a shared cap would be wrong for both.
+ */
+const candidateCache = new Map<string, CandidateTable>();
+
+/**
+ * Lower cap than the LUT cache: 1.3 MB (64 colours) to 2.3 MB (533),
+ * against a LUT's 64 KB. Live editing cycles between a couple of
+ * palettes, so two is enough to avoid a rebuild when toggling.
+ */
+const MAX_CANDIDATE_ENTRIES = 2;
+
+/**
+ * Get (building on miss) the Lab candidate table for a palette.
+ *
+ * The build is O(32,768 × palette size) — the same order as a LUT
+ * build, and far too slow for the frame path, which is the whole reason
+ * it is cached here rather than derived inside the dither stage.
+ */
+export function getCandidates(palette: Palette): CandidateTable {
+  const key = keyFor(palette, 'lab');
+  const hit = candidateCache.get(key);
+  if (hit) {
+    candidateCache.delete(key);
+    candidateCache.set(key, hit);
+    return hit;
+  }
+  const table = buildCandidateTable(palette);
+  candidateCache.set(key, table);
+  while (candidateCache.size > MAX_CANDIDATE_ENTRIES) {
+    const oldest = candidateCache.keys().next();
+    if (oldest.done === true) break;
+    candidateCache.delete(oldest.value);
+  }
+  log.info('lut-cache', 'candidate table built', {
+    key,
+    entries: table.candidates.length,
+  });
+  return table;
+}
+
+/** Number of cached candidate tables (diagnostics). */
+export function candidateCacheSize(): number {
+  return candidateCache.size;
+}
+
+/** Drop all cached LUTs and candidate tables (tests; palette editing). */
 export function clearLutCache(): void {
   cache.clear();
+  candidateCache.clear();
 }

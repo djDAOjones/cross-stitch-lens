@@ -47,58 +47,6 @@ function assertGridDimension(value: number, name: string): void {
   }
 }
 
-/**
- * Area-average the source rect [sx0,sx1)×[sy0,sy1) (float source
- * coordinates) in premultiplied alpha, writing RGBA to `out` at
- * `offset`. The rect is assumed to lie within the source bounds.
- */
-function sampleArea(
-  src: Uint8ClampedArray,
-  srcWidth: number,
-  sx0: number,
-  sy0: number,
-  sx1: number,
-  sy1: number,
-  out: Uint8ClampedArray,
-  offset: number,
-): void {
-  let r = 0;
-  let g = 0;
-  let b = 0;
-  let a = 0;
-  let area = 0;
-
-  const yFirst = Math.floor(sy0);
-  const yLast = Math.ceil(sy1);
-  const xFirst = Math.floor(sx0);
-  const xLast = Math.ceil(sx1);
-
-  for (let y = yFirst; y < yLast; y++) {
-    const hCov = Math.min(sy1, y + 1) - Math.max(sy0, y);
-    if (hCov <= 0) continue;
-    for (let x = xFirst; x < xLast; x++) {
-      const wCov = Math.min(sx1, x + 1) - Math.max(sx0, x);
-      if (wCov <= 0) continue;
-      const cov = wCov * hCov;
-      const i = (y * srcWidth + x) * 4;
-      const alpha = src[i + 3] ?? 0;
-      // Premultiply: colour contributes in proportion to coverage×alpha.
-      r += (src[i] ?? 0) * alpha * cov;
-      g += (src[i + 1] ?? 0) * alpha * cov;
-      b += (src[i + 2] ?? 0) * alpha * cov;
-      a += alpha * cov;
-      area += cov;
-    }
-  }
-
-  if (area <= 0 || a <= 0) return; // fully transparent — leave empty
-  // Unpremultiply; Uint8ClampedArray rounds on store.
-  out[offset] = r / a;
-  out[offset + 1] = g / a;
-  out[offset + 2] = b / a;
-  out[offset + 3] = a / area;
-}
-
 function resizeTs(input: PixelBuffer, params: ResizeParams): PixelBuffer {
   assertGridDimension(params.width, 'width');
   assertGridDimension(params.height, 'height');
@@ -138,14 +86,97 @@ function resizeTs(input: PixelBuffer, params: ResizeParams): PixelBuffer {
 
   const srcW = srcX1 - srcX0;
   const srcH = srcY1 - srcY0;
+  const src = input.data;
+
+  // Coverage hoisting (M5-PERF-21). Every destination column sees the
+  // same horizontal source span in every row, and every destination row
+  // the same vertical coverage in every column — yet the naive form
+  // recomputed both per *source pixel*. Precomputing them costs
+  // O(destW + kernelH) and removes four Math.min/max calls from the
+  // innermost loop.
+  //
+  // This is arithmetic-preserving, not merely close: the hoisted
+  // coverages are computed from the same sx0/sx1/sy0/sy1 by the same
+  // expression, and the accumulation below keeps the original
+  // `value * alpha * cov` association and the original y-then-x
+  // summation order. Byte-identical output is therefore a property of
+  // the transform, not an observation about one workload — which is why
+  // the golden fixtures need no tolerance and no regeneration (D47).
+  const colFirst = new Int32Array(destW);
+  const colLast = new Int32Array(destW);
+  const colStart = new Int32Array(destW + 1);
+  let spanTotal = 0;
+  for (let dx = 0; dx < destW; dx++) {
+    const first = Math.floor(srcX0 + (dx / destW) * srcW);
+    const last = Math.ceil(srcX0 + ((dx + 1) / destW) * srcW);
+    colFirst[dx] = first;
+    colLast[dx] = last;
+    colStart[dx] = spanTotal;
+    spanTotal += Math.max(0, last - first);
+  }
+  colStart[destW] = spanTotal;
+
+  const colCov = new Float64Array(spanTotal);
+  for (let dx = 0; dx < destW; dx++) {
+    const sx0 = srcX0 + (dx / destW) * srcW;
+    const sx1 = srcX0 + ((dx + 1) / destW) * srcW;
+    const first = colFirst[dx] ?? 0;
+    const last = colLast[dx] ?? 0;
+    const base = colStart[dx] ?? 0;
+    for (let x = first; x < last; x++) {
+      colCov[base + x - first] = Math.min(sx1, x + 1) - Math.max(sx0, x);
+    }
+  }
+
+  // A destination row spans at most ceil(srcH/destH)+1 source rows.
+  const rowCov = new Float64Array(Math.ceil(srcH / destH) + 2);
+
   for (let dy = 0; dy < destH; dy++) {
     const sy0 = srcY0 + (dy / destH) * srcH;
     const sy1 = srcY0 + ((dy + 1) / destH) * srcH;
+    const yFirst = Math.floor(sy0);
+    const yLast = Math.ceil(sy1);
+    for (let y = yFirst; y < yLast; y++) {
+      rowCov[y - yFirst] = Math.min(sy1, y + 1) - Math.max(sy0, y);
+    }
+    const destRow = (destY + dy) * gw + destX;
+
     for (let dx = 0; dx < destW; dx++) {
-      const sx0 = srcX0 + (dx / destW) * srcW;
-      const sx1 = srcX0 + ((dx + 1) / destW) * srcW;
-      const offset = ((destY + dy) * gw + (destX + dx)) * 4;
-      sampleArea(input.data, sw, sx0, sy0, sx1, sy1, out, offset);
+      const first = colFirst[dx] ?? 0;
+      const last = colLast[dx] ?? 0;
+      const base = colStart[dx] ?? 0;
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      let a = 0;
+      let area = 0;
+
+      for (let y = yFirst; y < yLast; y++) {
+        const hCov = rowCov[y - yFirst] ?? 0;
+        if (hCov <= 0) continue;
+        const srcRow = y * sw * 4;
+        for (let x = first; x < last; x++) {
+          const wCov = colCov[base + x - first] ?? 0;
+          if (wCov <= 0) continue;
+          const cov = wCov * hCov;
+          const i = srcRow + x * 4;
+          const alpha = src[i + 3] ?? 0;
+          // Premultiply: colour contributes in proportion to coverage×alpha.
+          r += (src[i] ?? 0) * alpha * cov;
+          g += (src[i + 1] ?? 0) * alpha * cov;
+          b += (src[i + 2] ?? 0) * alpha * cov;
+          a += alpha * cov;
+          area += cov;
+        }
+      }
+
+      if (area <= 0 || a <= 0) continue; // fully transparent — leave empty
+      // Unpremultiply; Uint8ClampedArray rounds on store.
+      const offset = (destRow + dx) * 4;
+      out[offset] = r / a;
+      out[offset + 1] = g / a;
+      out[offset + 2] = b / a;
+      out[offset + 3] = a / area;
     }
   }
 

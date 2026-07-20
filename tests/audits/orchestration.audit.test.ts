@@ -228,7 +228,7 @@ describe.skipIf(!AUDIT)('M5-PERF-10 orchestration audit (AUDIT=1)', () => {
     //    which is what makes transferring the result back safe while the
     //    worker keeps the source. Skipping identity adjust preserves
     //    this only because resize/reduce/dither all allocate.
-    const stages = buildStages(configFor(workloadById(W200)), getLut);
+    const stages = buildStages(configFor(workloadById(W200)), { lut: getLut });
     expect(stages[0]?.stage.name).toBe('adjust');
     expect(stages.length).toBeGreaterThan(1);
 

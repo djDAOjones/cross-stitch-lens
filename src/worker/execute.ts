@@ -8,7 +8,7 @@
 import { buildStages } from '../core/pipeline/config.ts';
 import type { Backend, PixelBuffer } from '../core/types.ts';
 import { selectedBackend } from './backend-select.ts';
-import { getLut } from './lut-cache.ts';
+import { getCandidates, getLut } from './lut-cache.ts';
 import type { ProcessRequest, StageTiming, WorkerResponse } from './protocol.ts';
 
 /** Run one frame; never throws — failures become error responses. */
@@ -17,7 +17,10 @@ export function executeRequest(
   now: () => number = () => performance.now(),
 ): WorkerResponse {
   try {
-    const stages = buildStages(request.config, getLut);
+    const stages = buildStages(request.config, {
+      lut: getLut,
+      candidates: getCandidates,
+    });
     let buffer: PixelBuffer = {
       width: request.width,
       height: request.height,

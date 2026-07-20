@@ -17,7 +17,9 @@ import { resizeStage, type ResizeMode } from '../../src/core/pipeline/resize.ts'
 import type { PixelBuffer } from '../../src/core/types.ts';
 import { sourceBuffer, workloadById } from '../bench/workloads.ts';
 import {
+  resizeCallV0,
   resizeHoisted,
+  resizeNaiveV0,
   resizeSat,
   resizeSeparable,
   scratchBytes,
@@ -32,7 +34,18 @@ import {
   type AuditRow,
 } from './audit.ts';
 
-const reference = resizeStage.backends.ts;
+/** The shipped stage — hoisted since M5-PERF-21. */
+const shipped = resizeStage.backends.ts;
+
+/**
+ * The oracle is the *true pre-M5D stage* (`sampleArea` call per cell),
+ * not the shipped stage: M5-PERF-21 landed the hoist into `resize.ts`,
+ * so diffing the shipped stage against itself would prove nothing.
+ * `v0-inline` sits between the two so the audit attributes the win to
+ * the call boundary and the coverage hoist separately, rather than
+ * repeating M5B's single 1.5× figure for a change that did two things.
+ */
+const reference = resizeCallV0;
 
 /** Channel-difference summary between a candidate and the oracle. */
 function diff(a: PixelBuffer, b: PixelBuffer): {
@@ -109,7 +122,8 @@ describe.skipIf(!AUDIT)('M5-PERF-11 resize audit (AUDIT=1)', () => {
   const findings: string[] = [];
 
   it('times and diffs every candidate across the matrix', () => {
-    let hoistedExact = true;
+    let shippedExact = true;
+    let worstShippedSpeedup = Infinity;
     let worstSeparable = 0;
     let worstSat = 0;
 
@@ -122,7 +136,9 @@ describe.skipIf(!AUDIT)('M5-PERF-11 resize audit (AUDIT=1)', () => {
         (sw * sh) / (testCase.grid * testCase.grid);
 
       const candidates = [
-        ['reference', reference] as const,
+        ['v0-call', reference] as const,
+        ['v0-inline', resizeNaiveV0] as const,
+        ['shipped', shipped] as const,
         ['hoisted', resizeHoisted] as const,
         ['separable', resizeSeparable] as const,
         ['sat', resizeSat] as const,
@@ -136,14 +152,11 @@ describe.skipIf(!AUDIT)('M5-PERF-11 resize audit (AUDIT=1)', () => {
           {
             'src px': sw * sh,
             'samples/cell': round(samplesPerCell, 2),
-            'scratch KB': round(
-              scratchBytes(name as 'reference', sw, sh, testCase.grid) / 1024,
-              0,
-            ),
+            'scratch KB': round(scratchBytes(name, sw, sh, testCase.grid) / 1024, 0),
           },
         );
         medians.set(name, row.summary?.median ?? 0);
-        if (name !== 'reference') {
+        if (name !== 'v0-call') {
           const d = diff(oracle, fn(testCase.source, params));
           row.notes['bytes ='] = d.bytesEqual ? 'yes' : 'no';
           row.notes['max Δ'] = d.maxErr;
@@ -153,31 +166,53 @@ describe.skipIf(!AUDIT)('M5-PERF-11 resize audit (AUDIT=1)', () => {
             2,
           );
           row.notes['max alpha Δ'] = d.maxAlphaErr;
-          if (name === 'hoisted' && !d.bytesEqual) hoistedExact = false;
+          if (name === 'shipped' && !d.bytesEqual) shippedExact = false;
           if (name === 'separable') worstSeparable = Math.max(worstSeparable, d.maxErr);
           if (name === 'sat') worstSat = Math.max(worstSat, d.maxErr);
         }
         rows.push(row);
       }
-      const ref = medians.get('reference') ?? 1;
+      const ref = medians.get('v0-call') ?? 1;
+      const inlined = medians.get('v0-inline') ?? ref;
+      const shippedMs = medians.get('shipped') ?? ref;
+      const shippedSpeedup = ref / shippedMs;
+      worstShippedSpeedup = Math.min(worstShippedSpeedup, shippedSpeedup);
       rows.push(
-        counted(`${testCase.name} — speedup vs reference`, {
+        counted(`${testCase.name} — speedup vs pre-M5D v0-call`, {
+          shipped: round(shippedSpeedup, 2),
+          'of which: inlining': round(ref / inlined, 2),
+          'of which: hoisting': round(inlined / shippedMs, 2),
           hoisted: round(ref / (medians.get('hoisted') ?? ref), 2),
           separable: round(ref / (medians.get('separable') ?? ref), 2),
           sat: round(ref / (medians.get('sat') ?? ref), 2),
-          'reference ms': round(ref, 2),
+          'v0-call ms': round(ref, 2),
         }),
       );
     }
 
+    // The regression guard M5-PERF-21 asks for: if the stage is ever
+    // reverted to a per-cell call, the speedup row collapses and this
+    // fails rather than quietly reporting ~1.0.
+    expect(shippedExact).toBe(true);
+    expect(worstShippedSpeedup).toBeGreaterThan(1.05);
+
     findings.push(
-      hoistedExact
-        ? 'Candidate H (hoisted coverage, unchanged summation order) is BYTE-IDENTICAL to ' +
-          'the reference on every case in the matrix, including alpha edges and letterboxed ' +
-          'contain/fit cells. It is therefore a quality-neutral optimisation needing no ' +
-          'tolerance decision and no golden regeneration.'
-        : 'Candidate H diverged from the reference — the hoisting is NOT arithmetic-preserving ' +
-          'as designed; do not treat it as quality-neutral.',
+      shippedExact
+        ? 'The SHIPPED resize stage (hoisted coverage, original multiply association and ' +
+          'summation order) is BYTE-IDENTICAL to the pre-M5D stage on every case in the ' +
+          'matrix, including alpha edges and letterboxed contain/fit cells. Quality-neutral: ' +
+          'no tolerance decision, no golden regeneration.'
+        : 'The shipped resize stage diverged from v0 — the hoisting is NOT ' +
+          'arithmetic-preserving as designed; do not treat it as quality-neutral.',
+      'M5B ATTRIBUTION CORRECTED. M5B reported ~1.5× for "hoisted coverage in sampleArea", ' +
+        'but its candidate changed two things at once. Decomposed here: inlining the ' +
+        'per-cell sampleArea call is the large term, and hoisting the coverage out of the ' +
+        'per-source-pixel loop is the small one. The total is unchanged and still ' +
+        'byte-exact; only the cause is different. The practical consequence is that the ' +
+        'win is a V8 call-boundary effect, so it is worth re-checking in-browser rather ' +
+        'than assumed to transfer.',
+      `Worst-case total speedup of the shipped stage over the pre-M5D stage across the ` +
+        `matrix: ${String(round(worstShippedSpeedup, 2))}×.`,
       `Candidate S (separable) differs from the reference by at most ${String(worstSeparable)}/255 per ` +
         'channel: float summation order, exactly as predicted. It needs a documented ' +
         'resize tolerance before it can ship in any mode.',
@@ -198,6 +233,7 @@ describe.skipIf(!AUDIT)('M5-PERF-11 resize audit (AUDIT=1)', () => {
     };
     const params = { width: 16, height: 8, mode: 'contain' as const };
     for (const [name, fn] of [
+      ['shipped', shipped],
       ['hoisted', resizeHoisted],
       ['separable', resizeSeparable],
       ['sat', resizeSat],

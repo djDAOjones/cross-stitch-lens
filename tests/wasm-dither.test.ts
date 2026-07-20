@@ -15,6 +15,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import { registerWasmDither } from '../src/backends/wasm/dither.ts';
 import { loadDmcPalette } from '../src/core/palette.ts';
+import { buildCandidateTable } from '../src/core/color/candidates.ts';
 import { ditherStage, type DitherParams } from '../src/core/pipeline/dither.ts';
 import { runPipeline } from '../src/core/pipeline/index.ts';
 import { stageInstance } from '../src/core/types.ts';
@@ -91,6 +92,41 @@ describe.skipIf(!PKG_BUILT)('WASM dither backend (bit-exact vs TS)', () => {
   it('matches TS on 64x64 noise vs the full DMC palette under RGB', () => {
     const input = noiseBuffer(64, 64, 0x5eed);
     const p = params({ palette: loadDmcPalette(), metric: 'rgb', serpentine: false });
+    expectBufferMatch(dither(input, p, 'wasm'), dither(input, p, 'ts'), 0);
+  });
+
+  /**
+   * The TS path that actually ships uses per-bin candidate pruning
+   * (M5-PERF-22) whenever the worker hands it a table; Rust keeps the
+   * full scan, since routing (M5-PERF-27) sends Lab work to TS anyway
+   * and optimising an unselected backend would be optimising ahead of
+   * the profiler. Parity therefore has to be asserted against the
+   * PRUNED TS output, not just the unpruned one — otherwise the pair
+   * the product actually runs is never compared.
+   */
+  it('matches the PRUNED TS path — the one that ships — under CIELAB', () => {
+    const palette = loadDmcPalette();
+    const input = noiseBuffer(64, 64, 0xd17e5);
+    const p = params({
+      palette,
+      metric: 'lab',
+      candidates: buildCandidateTable(palette),
+    });
+    expectBufferMatch(dither(input, p, 'wasm'), dither(input, p, 'ts'), 0);
+  });
+
+  it('matches the pruned TS path on a 64-colour palette, raster scan', () => {
+    const palette: Palette = {
+      name: 'dmc-64',
+      entries: loadDmcPalette().entries.slice(0, 64),
+    };
+    const input = noiseBuffer(48, 53, 0x64c010);
+    const p = params({
+      palette,
+      metric: 'lab',
+      serpentine: false,
+      candidates: buildCandidateTable(palette),
+    });
     expectBufferMatch(dither(input, p, 'wasm'), dither(input, p, 'ts'), 0);
   });
 

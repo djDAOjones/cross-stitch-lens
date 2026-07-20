@@ -78,7 +78,7 @@ describe('pipeline config builder', () => {
 
   it('injects the provided LUT into the reduce params', () => {
     const lut = new Uint16Array(32768);
-    const stages = buildStages(config(), () => lut);
+    const stages = buildStages(config(), { lut: () => lut });
     const reduce = stages.find((s) => s.stage.name === 'reduce');
     expect((reduce?.params as { lut?: Uint16Array }).lut).toBe(lut);
   });

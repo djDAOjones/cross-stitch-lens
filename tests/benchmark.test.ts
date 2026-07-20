@@ -98,10 +98,45 @@ describe.skipIf(!BENCH)('performance budgets (BENCH=1)', () => {
     }
   });
 
-  it.each([...BUDGETS.keys()])('within budget: %s', (key) => {
+  it.each([...BUDGETS.keys()])('no regression against baseline: %s', (key) => {
     const row = rowFor(key);
+    const baseline = BUDGETS.get(key);
     expect(row.status).toBe('measured');
-    expect(row.summary?.median ?? Infinity).toBeLessThanOrEqual(row.budgetMs ?? 0);
+    expect(baseline).toBeDefined();
+    if (baseline === undefined) return;
+    const median = row.summary?.median ?? Infinity;
+    // The ceiling is baseline × tolerance (× the CI multiplier). The
+    // message carries the runtime and the build the baseline came from,
+    // because a failure here is meaningless without knowing what it is
+    // being compared to (D47).
+    expect(
+      median,
+      `${key}\n  measured ${median.toFixed(2)} ms\n  baseline ${baseline.ms.toFixed(2)} ms ` +
+        `(${baseline.runtime}, ${baseline.taken})\n  ceiling  ${(row.budgetMs ?? 0).toFixed(2)} ms ` +
+        `(tolerance ×${String(baseline.tolerance)}${MULT === 1 ? '' : `, CI ×${String(MULT)}`})`,
+    ).toBeLessThanOrEqual(row.budgetMs ?? 0);
+  });
+
+  /**
+   * A baseline that has drifted far BELOW its recorded value is not a
+   * pass — it means the recorded figure is stale and the guard has gone
+   * slack, so the next real regression has room to hide. D47 asked for
+   * regression guards, and a guard nobody re-baselines stops guarding.
+   */
+  it.each([...BUDGETS.keys()])('baseline is not stale: %s', (key) => {
+    const row = rowFor(key);
+    const baseline = BUDGETS.get(key);
+    if (baseline === undefined || row.status !== 'measured') return;
+    const median = row.summary?.median ?? 0;
+    // Only meaningful locally: the CI multiplier makes "much faster
+    // than baseline" the normal case there.
+    if (MULT !== 1) return;
+    expect(
+      median,
+      `${key} is ${(baseline.ms / Math.max(median, 1e-9)).toFixed(2)}× faster than its ` +
+        `recorded baseline (${baseline.ms.toFixed(2)} ms, ${baseline.runtime}). ` +
+        `That is good news — re-record the baseline so the guard stays tight.`,
+    ).toBeGreaterThan(baseline.ms / 2);
   });
 });
 

@@ -31,36 +31,91 @@ import {
 } from './workloads.ts';
 
 /**
- * The architecture.md budget table, mapped onto specific matrix rows.
- * A budget belongs to one workload at one boundary — an unattached
- * budget number is exactly the ambiguity M5-PERF-02 exists to remove.
- * Values are pre-multiplier milliseconds.
+ * A measured performance baseline with a regression guard.
+ *
+ * D47 replaced the aspirational per-stage table with this shape. The
+ * old one asserted numbers nobody had ever hit — every row except
+ * preview-render had been red since it was written, and a permanently
+ * red budget trains everyone to ignore the gate. A baseline instead
+ * says "this is what the code does today, on this runtime, for this
+ * workload; shout if it gets materially worse".
+ *
+ * Each baseline therefore NAMES ITS RUNTIME and its workload id: a
+ * millisecond figure without both is the ambiguity M5-PERF-02 exists to
+ * remove, and M5B showed the same TS resize runs ~3.5× slower
+ * in-browser than in node, so a number that does not say where it was
+ * taken is not evidence.
  */
-export const BUDGETS: ReadonlyMap<string, number> = new Map([
-  // Resize 1280² → 1024² grid.
-  ['noise.w1280.opaque.g1024.p64.lab.dither.resize-first.stretch.still|stage|resize', 5],
-  // Palette reduce via LUT at 1024²/64.
+export interface Baseline {
+  /** Measured median in ms on {@link runtime}. */
+  ms: number;
+  /** Where the figure was taken — never omit. */
+  runtime: string;
+  /** Build id the figure was taken against. */
+  taken: string;
+  /**
+   * Regression trips above `ms × tolerance`. Wide enough to absorb
+   * machine noise and JIT variance, tight enough that losing a
+   * measured win fails: the M5D wins were 1.3–16×, so 1.35 catches any
+   * of them being reverted.
+   */
+  tolerance: number;
+}
+
+/** Node baselines, re-taken 2026-07-20 after the M5D wins landed. */
+const NODE = 'node 24.5, Apple M1 Max';
+const TAKEN = 'v0.5.0+20260720.89046be';
+
+/**
+ * Measured baselines mapped onto specific matrix rows. A baseline
+ * belongs to one workload at one boundary — an unattached number is
+ * exactly what M5-PERF-02 removed.
+ *
+ * The product promise — **≥ 4 preview updates/sec at ≤ 300²** — is
+ * deliberately NOT here: it is defined at the in-browser preview-update
+ * boundary, and node cannot measure it. Asserting a node proxy for it
+ * would be green-washing a promise about a different runtime. It is
+ * owned by `bench.html` (`docs/browser-measurement.md`) and confirmed
+ * live at M5-ACCEPT-03.
+ */
+export const BUDGETS: ReadonlyMap<string, Baseline> = new Map([
+  // Resize 1280² → 1024² grid. Was an aspirational 5 ms; no bit-exact
+  // CPU path reaches it (M5B), and the hoist got it to ~24 ms (D47).
+  [
+    'noise.w1280.opaque.g1024.p64.lab.dither.resize-first.stretch.still|stage|resize',
+    { ms: 24.4, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
+  ],
+  // Palette reduce via LUT at 1024²/64 — memory-bound per-pixel
+  // mapping; the old 10 ms row was never met.
   [
     'noise.w1280.opaque.g1024.p64.lab.nodither.resize-first.stretch.still|stage|reduce',
-    10,
+    { ms: 12.4, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
   ],
-  // Floyd–Steinberg at 1024²/64 on the accelerated backend.
+  // Floyd–Steinberg at 1024²/64, lab. The old 15 ms row assumed the
+  // wasm backend; routing now sends lab to TS (M5-PERF-27), and the
+  // bit-exact wins took this from ~858 ms to ~232 ms.
   [
     'noise.w1280.opaque.g1024.p64.lab.dither.resize-first.stretch.still|stage|dither',
-    15,
+    { ms: 231.9, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
   ],
-  // Whole pipeline at the 1024² ceiling and at the typical 200² grid.
+  // Whole pipeline at the 1024² ceiling — an export/finishing grid,
+  // stated plainly as such (D47), not a live-editing grid.
   [
     'noise.w1280.opaque.g1024.p64.lab.dither.resize-first.stretch.still|pipeline-compute|pipeline',
-    100,
+    { ms: 256.3, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
   ],
+  // Whole pipeline at the typical 200² grid.
   [
     'noise.w1280.opaque.g200.p64.lab.dither.resize-first.stretch.still|pipeline-compute|pipeline',
-    10,
+    { ms: 17.0, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
   ],
 ]);
 
-/** Budget for a row after the environment multiplier, or null. */
+/**
+ * Regression ceiling for a row after the environment multiplier, or
+ * null when the row carries no baseline. This is `baseline × tolerance`
+ * — the point at which a change is called a regression — not a target.
+ */
 function budgetFor(
   workloadId: string,
   boundary: BoundaryId,
@@ -68,7 +123,7 @@ function budgetFor(
   multiplier: number,
 ): number | null {
   const base = BUDGETS.get(`${workloadId}|${boundary}|${label}`);
-  return base === undefined ? null : base * multiplier;
+  return base === undefined ? null : base.ms * base.tolerance * multiplier;
 }
 
 /**

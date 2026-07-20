@@ -1358,3 +1358,40 @@ than only an impression.
 stopping. Building the affordance is not in the backlog — it is a
 hard-rule gap that the rehearsal depends on, which is why it was treated
 as in scope rather than parked.
+
+## D51 — M5F closed on maintainer acceptance; roadmap restructured M6–M12 (2026-07-20)
+
+**Context:** the maintainer ran the M5F gates and stated the M5 items
+are tested and accepted. Separately, the maintainer supplied a
+comprehensive product-direction prompt expanding the parked Icebox
+themes into roadmap work.
+
+**Decision 1 — close M5F.** All four acceptance items
+(M5-ACCEPT-02..05) were human gates; the maintainer's acceptance is the
+evidence they were waiting for. Recorded as sign-off, not fabricated
+measurements — the gate packs (`docs/acceptance-visual-review.md`,
+`docs/acceptance-live-rehearsal.md`) remain the record of what was
+judged. Ticket files deleted per lifecycle.
+
+**Decision 2 — roadmap shape.** Milestones M6–M12 added, ordered
+companion layout → palette strategy → dithering → charting/export →
+cosmetics/estimates. M6 first because the narrow-window Photoshop
+workflow is the core product promise; M7 rides the M5 palette evidence
+(LUT cache key fixed D46; GPU LUT build 59–655× faster than TS, D47);
+M8 rides the M5 search structures with algorithms landing as choices,
+not fidelity tiers (D47). Only M6–M8 carry full task breakdowns —
+M9–M12 are terse stubs expanded when they become Next — keeping the
+Active section inside its 1,500-word/40-item budget while the
+maintainer's ticket-detail pass and agent runs work milestone by
+milestone.
+
+**Decision 3 — Icebox.** Tauri packaging stays uncommitted as a
+feasibility spike (ICE-TAURI-01); a new automated Photoshop companion
+workspace item (ICE-WORKSPACE-01, with detail ticket) records the
+browser-vs-desktop capability split — browser gets a companion window
+at best, OS-level Photoshop window control needs packaging. Wish-list
+lines promoted into M6–M12 were drained.
+
+**Consequences:** decision-log live entries now exceed the 20-entry
+budget (41 live) — an archive split per `memory-policy.md` should be
+proposed at next maintenance; not auto-pruned here.

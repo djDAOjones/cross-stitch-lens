@@ -15,47 +15,141 @@ line passes and `check` is green. Requirements references are to
 
 ## Active
 
-### M5F — Integrated acceptance (§22, §23.5)
+### M6 — Photoshop companion layout
 
-- [ ] **M5-ACCEPT-02 Review output quality** [maintainer] [sign-off] [detail] (2026-07-19)
-  Intent: judge representative gradients, photographs, hard edges, transparency, and artwork. Narrowed by D47: modes are cut and every M5 change is bit-exact, so this is a confidence review against the current reference, not a cross-mode tolerance judgement. D49 adds one question: whether `reduce-first` should stay user-reachable, given its output is ~98% off-palette (955 colours, 4 with thread references).
-  Done when: the reviewed output is accepted, or any rejection is recorded with the artwork that failed.
-  Ready: review pack prepared at `docs/acceptance-visual-review.md` (D50).
+Make Cross Stitch Lens work well in a tall, narrow window beside
+Photoshop, preview taking most of the space. Terminology contract:
+*pattern resolution* (stitches) / *capture resolution* (source px) /
+*preview scale* (screen px per stitch) / *export scale* are four
+independent things.
 
-- [ ] **M5-ACCEPT-03 Rehearse live Photoshop capture** [maintainer] [detail] (2026-07-19)
-  Intent: validate update rate, latency, dropped/skipped frames, draft transitions, split compare, and idle CPU during realistic editing.
-  Done when: the live acceptance measurements are recorded and any failure is classified as a bug or an approved budget decision.
-  Ready: rehearsal checklist at `docs/acceptance-live-rehearsal.md`; the copy-diagnostics affordance it records evidence with now exists (D50).
+- [ ] **M6-CAPRES-01 Rescale the capture frame independently of pattern resolution** [detail]
+  Intent: set the pattern (canvas) resolution explicitly, then resize the on-screen capture frame with its aspect ratio locked to the pattern's — captured pixels rescale onto the fixed stitch grid.
+  Done when: resizing the capture frame changes neither the stitch count nor the grid dimensions, and the frame cannot leave the pattern's aspect.
 
-- [ ] **M5-ACCEPT-04 Reconcile performance budgets and protected docs** [sign-off] [detail] (2026-07-19)
-  Intent: resolve the D43/D44/D45 architecture doc-deltas by applying the budget shape approved at M5C (D47) — product promise + regression-guarded measured baselines, each naming its runtime — rather than aspirational numbers. This item alone edits the protected table.
-  Done when: the approved budget table and related infrastructure documentation accurately describe enforced behaviour.
+- [ ] **M6-SCALE-01 Separate pattern, capture, preview, and export scale** [detail]
+  Intent: one model + UI terminology keeping the four resolutions independently settable and impossible to confuse.
+  Done when: changing any one provably leaves the other three untouched, in tests and in the visible labels.
 
-- [ ] **M5-ACCEPT-05 Close M5** [sign-off] [detail] (2026-07-19)
-  Intent: close the milestone only after automated, benchmark, visual, and live-capture evidence agree.
-  Done when: `npm run check`, the approved benchmark suite, parity matrix, and manual gates pass; residual risks and release readiness are recorded.
+- [ ] **M6-VIEW-01 Preview zoom and fit controls** [detail]
+  Intent: fit-to-space / fit-width / fit-height, user zoom, crisp nearest-neighbour enlargement, stitch-dimensions readout, reset view, persisted preview scale.
+  Done when: the preview enlarges without changing stitch count, colours, or export output, and the chosen scale survives reload.
 
-*Acceptance: the product promise (≥ 4 updates/sec at ≤ 300²) holds
-in-browser, the published measurements are honest at every grid, backend
-equivalence passes, and live editing feels responsive.*
+- [ ] **M6-NARROW-01 Narrow-window layout** [detail]
+  Intent: preview gets most of a tall narrow window; controls reflow; no horizontal scrolling; popovers/dialogs stay visible; targets stay ≥ 44 px.
+  Done when: the app is usable at realistic side-by-side widths while live capture runs, with no material responsiveness regression.
+
+- [ ] **M6-PANEL-01 Collapsible configuration panel** [detail]
+  Intent: collapse/expand the settings panel (keyboard accessible); preview auto-enlarges; essential status stays visible; collapsed state remembered.
+  Done when: collapse works at wide and narrow widths and across resizes without losing settings.
+
+- [ ] **M6-FOCUS-01 Preview-focused mode** [detail]
+  Intent: one consistently-named mode hiding most controls; live updates continue with zoom/fit/pan and a compact status line (grid size, palette, colour count, capture/staleness state).
+  Done when: entry/exit is fast, no state is lost, and the status line stays legible.
+
+- [ ] **M6-WIN-01 Companion-window sizing spike** [spike] [detail]
+  Intent: timebox what the browser can do — resize its own opened window, dedicated companion window, size presets, restore position, multi-monitor — vs. what needs packaging. Feeds ICE-WORKSPACE-01.
+  Done when: findings and a promote/park recommendation are recorded; no capability assumed untested.
+
+*Acceptance: Photoshop + Cross Stitch Lens work side by side at a
+realistic narrow width; pattern dimensions are independent of capture,
+display, and export; the preview enlarges without changing the pattern;
+live editing keeps the ≥ 4 updates/sec promise.*
+
+### M7 — Palette & colour strategy
+
+One connected workflow: brands → inventory → palettes → presets →
+counts → locks → auto-fill. Rides M5 evidence: LUT cache key fixed
+(D46); GPU LUT build 59–655× faster than TS (D47), so per-palette
+rebuild during live editing is plausible.
+
+- [ ] **M7-BRAND-01 Thread-brand data model** [detail]
+  Intent: keep display colour, brand, reference, name, palette membership, inventory status, and availability distinct; ingest a second brand (Anchor cross-reference already on the DMC map).
+  Done when: two brands load with distinct references and near-equal digital colours are never merged.
+
+- [ ] **M7-BRAND-02 Brand selection and restricted conversion** [detail]
+  Intent: enable/disable brands; conversion restricted to enabled brands; brand/reference/name visible per colour; brand switching without manual project rebuild.
+  Done when: conversion provably uses only enabled-brand references and switching preserves the project.
+
+- [ ] **M7-INV-01 Personal thread inventory** [detail]
+  Intent: reusable cross-project inventory — mark owned, add/remove, filter by brand/family/search, import/export; "only use threads I own" as a conversion restriction.
+  Done when: an inventory-restricted conversion uses only owned references and the inventory persists across projects.
+
+- [ ] **M7-PAL-01 Named custom palettes** [detail]
+  Intent: create/edit/duplicate/delete named palettes seeded from a brand, inventory, or preset; multi-brand; import/export; missing/retired/duplicate references surfaced, not hidden.
+  Done when: a project restricted to a saved palette reproduces identically on reopen, including defined missing-reference behaviour.
+
+- [ ] **M7-PRESET-01 Curated colour-scheme presets** [detail]
+  Intent: ready-made schemes (pastels, earth tones, monochrome, limited-N…) resolving to real references from enabled brands; previewable; duplicable into a custom palette; strict-palette vs preference application kept distinct.
+  Done when: presets apply predictably, degrade visibly when a brand is disabled, and save as personal palettes.
+
+- [ ] **M7-COUNT-01 Target / maximum colour count** [detail]
+  Intent: exact or maximum colour-count requests with automatic reduction; requested vs actual shown with the reason for any gap; edge cases (count > palette, locked > count, indistinguishable threads) defined.
+  Done when: limits are never silently violated and every divergence is explained in the UI.
+
+- [ ] **M7-MIX-01 Locked, preferred, and excluded colours with auto-fill** [detail]
+  Intent: lock/prefer/exclude colours and let the app pick the rest within the permitted set; re-run keeps manual choices; conflicts explained, never silently overridden.
+  Done when: "lock 5, request 15" fills 10 from the permitted palette and each conflict case has a visible explanation.
+
+- [ ] **M7-ACCEPT-01 Palette workflow acceptance** [sign-off] [detail] (2026-07-20)
+  Intent: verify the combined workflow's worked examples under live editing, persistence, and export.
+  Done when: saved projects reproduce identically, exports carry correct brand + reference only from the permitted set, and live editing has no material regression.
+
+*Acceptance: the §3 workflow examples pass end-to-end (choose DMC and
+reduce to 20; owned threads only, best 15; lock 5 and auto-fill;
+preset → edit → save as palette).*
+
+### M8 — Dithering expansion
+
+Rides the M5 search structures; algorithms land as user choices, not
+fidelity tiers (D47). Bayer/blue-noise are the natural first WebGPU
+wins.
+
+- [ ] **M8-SPIKE-01 Dither algorithm evaluation** [spike] [detail]
+  Intent: evaluate Atkinson, Jarvis–Judice–Ninke, Stucki, Sierra family, ordered/Bayer, blue-noise on representative content (gradients, photos, flat art, tiny palettes) for quality, cost, and WebGPU fit; pick the committed set and control surface.
+  Done when: the committed algorithm set and which controls earn UI exposure are recorded with evidence.
+
+- [ ] **M8-ALG-01 Implement the chosen algorithms** [blocked: M8-SPIKE-01] [detail] (2026-07-20)
+  Intent: each chosen algorithm as a deterministic stage variant — TS reference first, parity-gated accelerated path where justified; no silent fallback between methods.
+  Done when: each algorithm is golden-tested, deterministic, selectable without losing other settings, and export matches preview.
+
+- [ ] **M8-CTRL-01 Dithering controls and presets** [detail]
+  Intent: only controls with understandable visible effects (strength, serpentine, matrix size — as spike evidence supports), plus plain-language presets (None/Subtle/Balanced/Strong/Photograph/Graphic/Very limited palette) mapping to documented settings.
+  Done when: every shipped control and preset has a documented, reproducible effect that survives save/reopen.
+
+- [ ] **M8-ACCEPT-01 Comparison view and visual-quality acceptance** [detail]
+  Intent: compare against no-dither (split compare exists) and between methods; inspect stitch placement at zoom; judge banding, noise, edge damage, isolated stitches, stitchability on the representative set.
+  Done when: the evaluation evidence is recorded and live editing stays usable across all shipped methods.
+
+### Next milestones (stubs — expand into tasks when each becomes Next)
+
+- [ ] **M9 Symbols & B/W charting** — automatic distinct-symbol
+  assignment (stable, reassignable, collision-handled), chart modes
+  (colour / colour+symbols / B/W / high-contrast), full sortable colour
+  key with brand + reference + stitch count.
+- [ ] **M10 Multi-page PDF chart export** [blocked: M9 for symbol charts] (2026-07-20) —
+  A4/Letter pagination, overlap + registration marks, consistent
+  coordinates + overview map, vector grid/symbols, export options.
+- [ ] **M11 Grid, ruler & tick styling presets** — minor/major grid
+  styling, numbering/rulers, named style presets incl. high-contrast,
+  separate screen vs print settings.
+- [ ] **M12 Fabric & thread estimates** — fabric count → physical
+  size, cut margins, centre point; qualified per-colour thread/skein
+  estimates with stated assumptions; recalculates on pattern/palette
+  change.
 
 ### Icebox
 
 <!-- Deferred but worth keeping (post-triage). Needs a decision to
      reactivate. Promote into a milestone when committed. -->
 
-**Parked next (post-MVP, triage from wish-list):** more dithering
-algorithms, user-defined palettes, symbols + B/W charts, multi-page
-PDF, advanced grid/tick styling presets, thread estimates, Tauri
-packaging.
+- [ ] **ICE-WORKSPACE-01 Automated Photoshop companion workspace** [detail] (2026-07-20)
+  Intent: one-button side-by-side arrangement of Photoshop and Cross Stitch Lens — limited companion-window workflow in the browser, fuller OS window control (incl. moving Photoshop via macOS Accessibility) only in a packaged desktop build. Depends on M6-WIN-01 findings and ICE-TAURI-01.
+  Done when: the user can select a display and preferred split, arrange both applications predictably, continue live capture, and restore the previous workspace without losing state.
 
-M5 couplings: *more dithering algorithms* ride on the M5 search
-structures (M5-PERF-14); with modes cut (D47) they would land as
-algorithm choices, not fidelity tiers. *User-defined palettes* are
-unblocked on the LUT cache key (fixed, D46) but still need the
-M5-PERF-14 evidence on per-palette table build cost for live editing —
-note the GPU LUT build is now 59–655× faster than TS (D47), which
-changes that calculus.
+- [ ] **ICE-TAURI-01 Tauri desktop packaging feasibility** [spike] (2026-07-20)
+  Intent: timebox Tauri fit — capture permissions, window management, macOS notarisation / Windows signing, project-file compatibility, updates — and whether packaging materially improves the Photoshop workflow. Packaging/release work is backlogged only if this passes.
+  Done when: a go/no-go recommendation with a delivery outline is recorded.
 
 <!-- Ticket grammar (CANONICAL COPY — prompts and workflows point here,
      they do not restate it): quick items stay one line. Non-trivial or

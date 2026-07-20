@@ -17,7 +17,12 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
-## M5 — WASM + WebGPU backends (in progress)
+## M5 — WASM + WebGPU backends (shipped 2026-07-20)
+
+- M5-ACCEPT-02, M5-ACCEPT-03, M5-ACCEPT-04, M5-ACCEPT-05 (2026-07-20) —
+  maintainer tested and accepted the M5 acceptance gates: visual review,
+  live Photoshop rehearsal, budget/protected-doc reconciliation, and the
+  milestone close sign-off. M5F closed; M5 shipped. See decision-log D51.
 
 - DIAG-01 (2026-07-20) — copy-diagnostics affordance built: a hard-rule
   gap where AGENTS.md, UI-STANDARDS and DEV-INFRASTRUCTURE all specified

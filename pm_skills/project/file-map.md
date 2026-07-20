@@ -15,17 +15,17 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 143 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 148 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 11 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
 - `.github` — 1 file(s)
 - `.windsurf` — 1 file(s)
 - `crates` — 4 file(s)
-- `docs` — 5 file(s)
+- `docs` — 7 file(s)
 - `scripts` — 6 file(s)
-- `src` — 51 file(s)
-- `tests` — 62 file(s)
+- `src` — 53 file(s)
+- `tests` — 63 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -67,7 +67,9 @@
 
 ## docs
 
+- `docs/acceptance-live-rehearsal.md` — M5-ACCEPT-03 rehearsal checklist: setup, actions, evidence, miss classification
 - `docs/acceptance-matrix.md` — M5-ACCEPT-01 evidence: generated coverage table, per-row invariants, explicit skips
+- `docs/acceptance-visual-review.md` — M5-ACCEPT-02 review sheet: review set, protocol, verdict record
 - `docs/browser-measurement.md` — browser-only boundary procedure + recorded results (M5-PERF-18)
 - `docs/measurement-contract.md` — M5 boundary contract (bv1), workload matrix, report schema, browser rehearsal
 - `docs/performance-evidence.md` — M5 measured evidence: bv1 baseline, component audits, M5C decisions
@@ -113,6 +115,7 @@
 - `src/core/project.ts` — project file v1 (§20): schema, migration, canonical (de)serialisation
 - `src/core/stats.ts` — design stats §11 subset: counts, %, thread refs
 - `src/core/types.ts` — core contracts: PixelBuffer, Palette, Stage
+- `src/diagnostics/bundle.ts` — copy-diagnostics bundle: pure builder + fail-closed redaction
 - `src/diagnostics/log.ts` — structured logger: console + ring buffer + global capture
 - `src/export/chart.ts` — styled PNG chart (§14 subset): pure margin/
 - `src/export/pdf.ts` — single-page PDF chart (§18 subset): pure
@@ -120,6 +123,7 @@
 - `src/main.ts` — app entry: M2 shell — import, control panel, preview, info panel
 - `src/ui/controls.ts` — Carbon-style field builders: toggle/number/colour/select + clampInt
 - `src/ui/debug-panel.ts` — dev-only profiling panel: rolling timing window (pure) + disclosure DOM
+- `src/ui/diagnostics-button.ts` — the "Copy diagnostics" control + announced status line
 - `src/ui/import.ts` — import routes → decode: filter (pure) + blob→PixelBuffer
 - `src/ui/info-panel.ts` — stats info panel: pure row model + thin DOM half
 - `src/ui/preview.ts` — preview controller: toolbar, wheel/drag/keys → worker
@@ -167,6 +171,7 @@
 - `tests/color-convert.test.ts` — golden: Lab reference values + round-trips
 - `tests/controls.test.ts` — number-input clamping (pure half of controls)
 - `tests/debug-panel.test.ts` — timing-window aggregation, cap, stage-change reset, ms formatting
+- `tests/diagnostics-bundle.test.ts` — redaction (secret keys/values, fail-closed, caps), bundle shape, status text
 - `tests/dither-pruning.test.ts` — pruning exactness over 138,688 adversarial values × 5 palettes, dither byte-equality with and without a table, and the shared f32 work-buffer reuse guards (M5-PERF-22/25)
 - `tests/dither.test.ts` — dither golden + determinism/mean/serpentine invariants
 - `tests/export-chart.test.ts` — chart layout: label margin + edge pad,

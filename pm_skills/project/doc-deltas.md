@@ -62,3 +62,7 @@
   contract states it (source: D49)
 - [ ] 2026-07-20 DEV-INFRASTRUCTURE — scripts table missing `matrix` /
   `matrix:write`, and the generated-doc staleness gate they back (source: D49)
+- [ ] 2026-07-20 `UI-STANDARDS.md` → "Diagnostics affordance" — specifies a
+  Carbon *icon* button, but also that visible label and accessible name must
+  match; shipped as a text button to satisfy both, consistent with every other
+  control in this app (source: D50)

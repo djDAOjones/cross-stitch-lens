@@ -19,6 +19,18 @@
 
 ## M5 — WASM + WebGPU backends (in progress)
 
+- DIAG-01 (2026-07-20) — copy-diagnostics affordance built: a hard-rule
+  gap where AGENTS.md, UI-STANDARDS and DEV-INFRASTRUCTURE all specified
+  a control that did not exist and `recentLogs()` sat as a dead export.
+  Pure bundle builder with fail-closed redaction (secret-shaped keys and
+  values withheld, unrecognised types dropped rather than serialised),
+  dev-only text-button control announcing what was copied and that it is
+  redacted. Verified live in the browser against a seeded secret.
+  Unblocks M5-ACCEPT-03, which had no way to record its evidence. Gate
+  packs for both maintainer items written:
+  `docs/acceptance-visual-review.md` and
+  `docs/acceptance-live-rehearsal.md`. See decision-log D50.
+
 - M5-ACCEPT-01 (2026-07-20) — integrated correctness and parity matrix:
   31 rows over preset × metric × dither × resize mode × palette ×
   alpha × grid, driven through the real worker entry, 218 assertions in

@@ -1274,3 +1274,87 @@ because M5-ACCEPT-01's own invariant list requires alpha to hold, and
 shipping a matrix that documents a broken invariant as green is the
 green-washing the project forbids. The maintainer-owned items
 (ACCEPT-02/03) were not attempted: they are human gates by definition.
+
+## D50 — The diagnostics affordance was specified three times and never built (2026-07-20)
+
+**Context:** M5F's remaining items are all human gates. Preparing them —
+which both maintainer tickets explicitly assign to the chat — meant
+answering "how does the rehearsal record its evidence?". It could not.
+
+**The gap.** `recentLogs()` in `src/diagnostics/log.ts` carried the
+comment *"the (future) copy-diagnostics affordance reads"* and had **no
+callers anywhere in the tree**. Meanwhile the affordance was specified
+as present in three protected documents: an AGENTS.md hard rule
+("Self-explaining runtime"), a full UI-STANDARDS section governing its
+placement and behaviour, and DEV-INFRASTRUCTURE's bundle contract
+listing its exact contents. Three documents described a control that did
+not exist, and the dead export was the only trace.
+
+**Decision — build it, as the prerequisite for M5-ACCEPT-03.**
+
+**Shape.** `src/diagnostics/bundle.ts` is pure: every environment fact
+is passed in rather than read from `window` here. That is what makes the
+redaction rules — the part that must never be wrong — testable in node
+without a DOM.
+
+**Redaction is fail-closed, and that is the whole design.** The rule is
+not "strip what we recognise as secret" but "emit only what we can
+positively recognise as safe". Known-safe primitives inside depth,
+string-length and entry caps; secret-shaped **keys** withheld by name;
+secret-shaped **values** withheld by shape under any key (JWTs, prefixed
+keys, long hex/base64 runs) because the dangerous case is a credential
+logged under an innocent name; and anything else — a class instance, a
+function, a value past the depth cap — **dropped rather than serialised
+hopefully**. A class instance is dropped specifically because its
+getters may have side effects or fields we cannot reason about.
+
+The eagerness is deliberate and was confirmed by a test failure: a
+1000-character string was redacted rather than truncated because it
+matched the base64 pattern. That is the correct trade — a false positive
+costs one field in a debug bundle, a false negative leaks a key into
+someone else's chat log.
+
+**UI deviation, recorded rather than silently taken.** UI-STANDARDS says
+*Carbon icon button with a tooltip*, and also that the visible label and
+accessible name must match — which a bare icon cannot satisfy. Every
+other control in this app is a text button, so this is one too, with
+`title` and text identical. Verified live: 159 × 44 px, keyboard
+reachable, `role="status"` announcing what was copied **and that it is
+redacted**, so the maintainer knows before pasting it somewhere public.
+Captured as a doc-delta.
+
+**Verified in the browser, not assumed.** Drove the real button in the
+dev server with a seeded secret-shaped log record: status announced
+correctly, no raw secret in the payload, `[redacted]` present, build id
+resolving to the real commit, capabilities detected, and
+`activeBackends` populating from a real frame as `{resize: ts, dither:
+ts}` — the Lab routing D48 specifies. Screenshots came back blank in
+this environment; the functional read-back is stronger evidence anyway
+and is what was recorded.
+
+**Also shipped: the two gate packs** the maintainer tickets ask the chat
+to prepare — `docs/acceptance-visual-review.md` and
+`docs/acceptance-live-rehearsal.md`. Both are grounded in real
+thresholds (the draft governor's 200/100 ms and 2/5-frame hysteresis,
+`DIRTY_MAX_STALE_MS`, the ≥ 4 updates/sec promise, 1024² as an
+export grid per D47) rather than restating the tickets. The visual pack
+carries the two things that actually changed since M4 — the D49
+empty-cell fix, visible at letterboxed edges — and the open
+`reduce-first` question, so the review has a decision to return rather
+than only an impression.
+
+**Consequences:**
+
+- M5-ACCEPT-03 can now record its evidence with one paste instead of
+  hand-transcribing build and environment facts.
+- The affordance is **dev-only**. Production exposure needs the explicit
+  opt-in and redaction review DEV-INFRASTRUCTURE requires; not done, not
+  claimed.
+- `check` green: 42 files, 560 tests. Rust step skipped locally as ever.
+
+**Run notes (auto-jazz):** gateless. The scope judgement worth naming:
+"auto-jazz M5F" had no agent-closable item left, so the batch became
+*unblock the human gates* rather than either manufacturing work or
+stopping. Building the affordance is not in the backlog — it is a
+hard-rule gap that the rehearsal depends on, which is why it was treated
+as in scope rather than parked.

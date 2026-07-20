@@ -20,10 +20,12 @@ line passes and `check` is green. Requirements references are to
 - [ ] **M5-ACCEPT-02 Review output quality** [maintainer] [sign-off] [detail] (2026-07-19)
   Intent: judge representative gradients, photographs, hard edges, transparency, and artwork. Narrowed by D47: modes are cut and every M5 change is bit-exact, so this is a confidence review against the current reference, not a cross-mode tolerance judgement. D49 adds one question: whether `reduce-first` should stay user-reachable, given its output is ~98% off-palette (955 colours, 4 with thread references).
   Done when: the reviewed output is accepted, or any rejection is recorded with the artwork that failed.
+  Ready: review pack prepared at `docs/acceptance-visual-review.md` (D50).
 
 - [ ] **M5-ACCEPT-03 Rehearse live Photoshop capture** [maintainer] [detail] (2026-07-19)
   Intent: validate update rate, latency, dropped/skipped frames, draft transitions, split compare, and idle CPU during realistic editing.
   Done when: the live acceptance measurements are recorded and any failure is classified as a bug or an approved budget decision.
+  Ready: rehearsal checklist at `docs/acceptance-live-rehearsal.md`; the copy-diagnostics affordance it records evidence with now exists (D50).
 
 - [ ] **M5-ACCEPT-04 Reconcile performance budgets and protected docs** [sign-off] [detail] (2026-07-19)
   Intent: resolve the D43/D44/D45 architecture doc-deltas by applying the budget shape approved at M5C (D47) — product promise + regression-guarded measured baselines, each naming its runtime — rather than aspirational numbers. This item alone edits the protected table.

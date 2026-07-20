@@ -7,7 +7,11 @@
  * "Layout model").
  */
 
-import { installGlobalCapture, log } from './diagnostics/log.ts';
+import {
+  buildDiagnosticsBundle,
+  formatDiagnosticsBundle,
+} from './diagnostics/bundle.ts';
+import { installGlobalCapture, log, recentLogs } from './diagnostics/log.ts';
 import {
   clampRect,
   fullRect,
@@ -60,6 +64,7 @@ import {
   scaleNearest,
 } from './export/png.ts';
 import { createDebugPanel } from './ui/debug-panel.ts';
+import { createDiagnosticsControl } from './ui/diagnostics-button.ts';
 import { decodeImageBlob, imageFiles } from './ui/import.ts';
 import { createInfoPanel } from './ui/info-panel.ts';
 import { PreviewController } from './ui/preview.ts';
@@ -223,6 +228,55 @@ function build(app: HTMLElement): void {
   // Profiling panel (M5 harness): dev-only per UI-STANDARDS →
   // "Diagnostics affordance" — never mounted in a production build.
   const debugPanel = import.meta.env.DEV ? createDebugPanel(document) : null;
+
+  /**
+   * Backend that last ran each stage, for the diagnostics bundle. Read
+   * off the frame timings rather than asked of the router, because what
+   * matters in a bug report is what actually ran, not what routing
+   * would choose now.
+   */
+  const activeBackends: Record<string, string> = {};
+
+  // Copy-diagnostics affordance (AGENTS.md → "Self-explaining
+  // runtime"). Dev-only: a production bundle needs the explicit opt-in
+  // and redaction review in DEV-INFRASTRUCTURE.md → "Maintainer
+  // diagnostics", which has not been done.
+  const diagnostics = import.meta.env.DEV
+    ? createDiagnosticsControl(document, {
+        collect: () => {
+          const logs = recentLogs();
+          const bundle = buildDiagnosticsBundle(
+            {
+              appVersion: __APP_VERSION__,
+              buildId: __BUILD_ID__,
+              timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+              view: stopPump === null ? 'still' : 'live',
+              userAgent: navigator.userAgent,
+              viewport: {
+                width: window.innerWidth,
+                height: window.innerHeight,
+                dpr: window.devicePixelRatio,
+              },
+              capabilities: {
+                webgpu: 'gpu' in navigator,
+                offscreenCanvas: typeof OffscreenCanvas !== 'undefined',
+                displayMedia: typeof navigator.mediaDevices?.getDisplayMedia === 'function',
+              },
+              activeBackends,
+              dev: true,
+            },
+            logs,
+          );
+          return { text: formatDiagnosticsBundle(bundle), records: bundle.logs.length };
+        },
+        copy: async (text) => {
+          if (typeof navigator.clipboard?.writeText !== 'function') {
+            throw new Error('the clipboard API is unavailable in this context');
+          }
+          await navigator.clipboard.writeText(text);
+        },
+      })
+    : null;
 
   const client = new PipelineClient();
   client.attachCanvas(canvas);
@@ -834,6 +888,7 @@ function build(app: HTMLElement): void {
   );
   previewSection.append(toolbar, host, info.element);
   if (debugPanel !== null) previewSection.append(debugPanel.element);
+  if (diagnostics !== null) previewSection.append(diagnostics.element);
 
   const content = document.createElement('div');
   content.className = 'content';
@@ -860,6 +915,7 @@ function build(app: HTMLElement): void {
     const stats = computeStats(frame.buffer, config.palette ?? undefined);
     info.update(stats);
     debugPanel?.update(frame.timings, client.droppedFrames);
+    for (const timing of frame.timings) activeBackends[timing.stage] = timing.backend;
     status.textContent = 'Preview updated.';
     log.info('pipeline', 'frame processed', {
       timings: frame.timings,

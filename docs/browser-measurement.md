@@ -161,3 +161,72 @@ Two lessons this procedure now encodes:
    from a successful zero-filled dispatch.
 
 Follow-ups: M5-PERF-31 (fix + real-GPU coverage in CI).
+
+## Production-build harness (M5D, 2026-07-20)
+
+The console-probe procedure above runs against the **dev server**, which
+serves unminified TypeScript. D47 flagged what that costs: its TS
+figures ran 10–16× slower than node, so every TS-vs-GPU ratio taken that
+way overstates the GPU. M5-PERF-23 was gated on re-measuring against a
+production build, and a console probe cannot do that — the sources are
+not served.
+
+`bench.html` + `src/bench-browser.ts` is that harness. It is a real Vite
+entry, so `npm run build` minifies it exactly like the app.
+
+```sh
+npm run build
+npx vite preview --port 4173     # or preview_start "cross-stitch-lens-preview"
+# open http://localhost:4173/bench.html
+```
+
+Results land in the page and on `window.__BENCH__` as JSON.
+
+### Results — 2026-07-20, Apple M1 Max, Chromium/Metal-3, production build
+
+Build `v0.5.0+20260720.df0e811`, WebGPU present, 10 cores, DPR 2.
+
+| Measurement | Result |
+| --- | --- |
+| reduce (ts, LUT path) 1024²/64 | 17.1 ms |
+| reduce (webgpu map) 1024²/64 | 11.8 ms |
+| **GPU/TS ratio, production** | **~1.4×** (0.98 / 1.62 / 1.45 over three runs) |
+| GPU map vs TS LUT path | **byte-identical** (0 differing bytes) |
+| GPU LUT vs TS build, 64/lab | **0 mismatches** / 32,768 bins |
+| GPU LUT vs TS build, 64/rgb | **0 mismatches** / 32,768 bins |
+| GPU LUT vs TS build, 533/lab | **0 mismatches** / 32,768 bins |
+| Pipeline 200²/64/lab | 42.7 ms → 23.4 updates/sec |
+| Pipeline 300²/64/lab | 66.5 ms → 15.0 updates/sec |
+| Pipeline 1024²/64/lab | 463 ms → 2.2 updates/sec |
+
+**M5-PERF-23 gate: NOT MET — `mapPaletteGpu` stays unwired.** D47's
+6.7× was a dev-server artefact almost entirely on the TS side; on a
+production build the GPU wins ~1.4× on a 17 ms stage, so roughly 5 ms
+per frame, and only on the *non-dithered* reduce path. The price is
+the executor's asyncification — the most safety-critical code in
+the worker, where D46 established that every request must answer exactly
+once or live preview wedges permanently. Five milliseconds on one path
+does not buy that risk. Re-open only if the reduce path becomes
+dominant.
+
+**M5-PERF-32 satisfied.** The WebGPU suites now execute on a real GPU
+against a production build, and assert *bin agreement*, not timing —
+including an all-zeros trap, since a kernel that never runs reads back
+as a structurally valid all-zeros LUT (the D46 defect). All three
+configurations are bit-exact.
+
+**Pipeline rows are a lower bound on frame cost**, not the
+preview-update boundary the product promise is stated at: they exclude
+the worker round-trip, the `ImageBitmap` snapshot and the surface draw.
+They can prove the promise is missed and can show headroom (3.8–5.9×
+over the 4/sec bar at ≤ 300²); the end-to-end confirmation is P6 above
+and the live rehearsal in M5-ACCEPT-03.
+
+### Warmup artefact — read this before adding probes
+
+The harness's first run reported 200² at **2.45 updates/sec** and 300²
+at 15.06 — i.e. the smaller grid apparently six times slower than the
+larger one. That was JIT warmup: 200² was measured first and absorbed
+the compilation cost of the whole shared pipeline. It would have been
+published as a product-promise **failure**. Every grid is now exercised
+once before any grid is timed. Any probe added here must do the same.

@@ -55,6 +55,17 @@ export default defineConfig({
   build: {
     sourcemap: true,
     target: 'es2022',
+    rollupOptions: {
+      // `bench.html` is the production-build measurement harness
+      // (src/bench-browser.ts). It must be built the same way the app
+      // is — minified and optimised — because measuring TS against
+      // WebGPU on a dev-server build is exactly what made the D47
+      // figures unusable (M5-PERF-23's gate).
+      input: {
+        main: fileURLToPath(new URL('./index.html', import.meta.url)),
+        bench: fileURLToPath(new URL('./bench.html', import.meta.url)),
+      },
+    },
   },
   test: {
     include: ['tests/**/*.test.ts'],

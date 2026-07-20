@@ -179,21 +179,25 @@ describe.skipIf(!AUDIT)('M5-PERF-10 orchestration audit (AUDIT=1)', () => {
       rows.push(
         counted(`allocation inventory — ${name}`, {
           'source view (0 copy)': 0,
-          'adjust clone B': srcBytes,
+          'adjust clone B (was, now 0)': srcBytes,
           'resize out B': gridBytes,
           'dither out B': gridBytes,
-          'dither work f32 B': workload.grid * workload.grid * 3 * 4,
+          'dither work f32 B (was, now amortised)': workload.grid * workload.grid * 3 * 4,
           'palette rgb+lab B': 64 * 3 + 64 * 3 * 4,
-          'total B': srcBytes + gridBytes * 2 + workload.grid * workload.grid * 12 + 960,
-          'x source': round((srcBytes + gridBytes * 2 + workload.grid * workload.grid * 12) / srcBytes, 2),
+          'total B before M5-PERF-25': srcBytes + gridBytes * 2 + workload.grid * workload.grid * 12 + 960,
+          'total B after M5-PERF-25': gridBytes * 2 + 960,
+          'x source before': round((srcBytes + gridBytes * 2 + workload.grid * workload.grid * 12) / srcBytes, 2),
+          'x source after': round((gridBytes * 2) / srcBytes, 2),
         }),
       );
     }
     findings.push(
-      'Per 1024² frame the engine allocates ~6.5 MB (adjust clone) + 4 MB (resize out) + ' +
-        '4 MB (dither out) + 12 MB (dither f32 work) ≈ 26.5 MB, ~4× the source. The f32 ' +
-        'work buffer is the largest single allocation and is the one reuse candidate that ' +
-        'does not touch stage purity (it is stage-private scratch, never observable).',
+      'M5-PERF-25 CLOSED BOTH. Per 1024² frame the engine used to allocate ~6.5 MB (adjust ' +
+        'clone) + 4 MB (resize out) + 4 MB (dither out) + 12 MB (dither f32 work) ≈ 26.5 MB, ' +
+        '~4× the source. The identity adjust is now omitted from the stage list rather than ' +
+        'run for its clone, and the f32 work buffer is retained and re-viewed across frames ' +
+        '(stage-private scratch, fully overwritten before read, so unobservable). Steady-state ' +
+        'per-frame allocation is the two grid-sized outputs — 8 MB at 1024², a ~70% cut.',
     );
     expect(true).toBe(true);
   }, AUDIT_TIMEOUT_MS);
@@ -223,21 +227,29 @@ describe.skipIf(!AUDIT)('M5-PERF-10 orchestration audit (AUDIT=1)', () => {
     });
     expect(Array.from(input.data)).toEqual(Array.from(before));
 
-    // 3. the stage list always allocates at least once downstream of
-    //    adjust, so the response buffer is never the request buffer —
-    //    which is what makes transferring the result back safe while the
-    //    worker keeps the source. Skipping identity adjust preserves
-    //    this only because resize/reduce/dither all allocate.
+    // 3. with the identity adjust now omitted (M5-PERF-25), the
+    //    response buffer is only safe to transfer because EVERY
+    //    remaining stage allocates its own output. Assert that directly
+    //    rather than trusting the old adjust-clone to absorb it.
     const stages = buildStages(configFor(workloadById(W200)), { lut: getLut });
-    expect(stages[0]?.stage.name).toBe('adjust');
-    expect(stages.length).toBeGreaterThan(1);
+    expect(stages.map((s) => s.stage.name)).not.toContain('adjust');
+    expect(stages.length).toBeGreaterThan(0);
+    let chained: PixelBuffer = input;
+    for (const instance of stages) {
+      const fn = instance.stage.backends.ts;
+      const out = fn(chained, instance.params);
+      expect(out.data).not.toBe(chained.data);
+      expect(out.data.buffer).not.toBe(chained.data.buffer);
+      chained = out;
+    }
 
     findings.push(
-      'Ownership: skipping the identity adjust stage is safe *only* because every ' +
+      'Ownership: omitting the identity adjust stage is safe *only* because every ' +
         'remaining stage allocates its own output, so the response buffer can never ' +
-        'alias the transferred request buffer the worker retains as `lastFrame`. Any ' +
-        'future in-place stage would break that and must be paired with an explicit ' +
-        'copy at the executor boundary. Follow-up: M5-PERF-25.',
+        'alias the transferred request buffer the worker retains as `lastFrame`. That is ' +
+        'now asserted stage-by-stage over the real stage list rather than argued. Any ' +
+        'future in-place stage breaks it and must be paired with an explicit copy at the ' +
+        'executor boundary.',
     );
   }, AUDIT_TIMEOUT_MS);
 

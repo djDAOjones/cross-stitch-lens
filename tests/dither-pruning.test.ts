@@ -26,7 +26,11 @@ import { LUT_SIZE, nearestIndex } from '../src/core/color/lut.ts';
 import { deltaE76Sq, euclideanRgbSq } from '../src/core/color/metrics.ts';
 import { srgbToLab } from '../src/core/color/convert.ts';
 import { loadDmcPalette, paletteLab, paletteRgb } from '../src/core/palette.ts';
-import { ditherStage, type DitherParams } from '../src/core/pipeline/dither.ts';
+import {
+  ditherStage,
+  releaseDitherWorkBuffer,
+  type DitherParams,
+} from '../src/core/pipeline/dither.ts';
 import { runPipeline } from '../src/core/pipeline/index.ts';
 import { stageInstance } from '../src/core/types.ts';
 import type { Palette, PixelBuffer } from '../src/core/types.ts';
@@ -367,5 +371,74 @@ describe('inlined metric copies in nearestIndex match metrics.ts', () => {
         );
       }
     }
+  });
+});
+
+describe('shared f32 work buffer is unobservable (M5-PERF-25)', () => {
+  function run(
+    input: PixelBuffer,
+    overrides: Partial<DitherParams> = {},
+  ): PixelBuffer {
+    return runPipeline(input, [
+      stageInstance(ditherStage, {
+        palette: dmc64,
+        metric: 'lab',
+        serpentine: true,
+        ...overrides,
+      }),
+    ]);
+  }
+
+  function field(width: number, height: number, level: number): PixelBuffer {
+    const data = new Uint8ClampedArray(width * height * 4);
+    for (let i = 0; i < width * height; i++) {
+      data[i * 4] = level;
+      data[i * 4 + 1] = level;
+      data[i * 4 + 2] = level;
+      data[i * 4 + 3] = 255;
+    }
+    return { width, height, data };
+  }
+
+  /**
+   * The failure mode reuse could introduce: a large frame leaves values
+   * in the buffer, then a smaller frame reads them instead of its own.
+   * Running big→small and comparing against the same small frame run on
+   * a fresh buffer is what catches it — a small→small repeat would not.
+   */
+  it('a large frame cannot contaminate a following smaller one', () => {
+    releaseDitherWorkBuffer();
+    const small = field(9, 7, 200);
+    const clean = run(small);
+
+    releaseDitherWorkBuffer();
+    run(field(64, 64, 30)); // dirty the buffer with very different values
+    const afterLarge = run(small);
+
+    expect(Array.from(afterLarge.data)).toEqual(Array.from(clean.data));
+  });
+
+  it('repeated runs are identical, with and without pruning', () => {
+    releaseDitherWorkBuffer();
+    const source = field(23, 19, 137);
+    const table = buildCandidateTable(dmc64);
+    const a = run(source);
+    const b = run(source);
+    const c = run(source, { candidates: table });
+    expect(Array.from(b.data)).toEqual(Array.from(a.data));
+    expect(Array.from(c.data)).toEqual(Array.from(a.data));
+  });
+
+  it('growing then shrinking the grid stays correct in both directions', () => {
+    releaseDitherWorkBuffer();
+    const sizes = [4, 40, 12, 61, 8];
+    const expected = sizes.map((n) => {
+      releaseDitherWorkBuffer();
+      return Array.from(run(field(n, n, 90 + n)).data);
+    });
+    releaseDitherWorkBuffer();
+    sizes.forEach((n, i) => {
+      expect(Array.from(run(field(n, n, 90 + n)).data)).toEqual(expected[i]);
+    });
   });
 });

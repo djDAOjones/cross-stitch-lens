@@ -47,6 +47,40 @@ export interface DitherParams {
   candidates?: CandidateTable;
 }
 
+/**
+ * Reusable float working buffer (M5-PERF-25).
+ *
+ * At 1024² this is 12 MB allocated and thrown away on **every frame** —
+ * the largest single allocation in the engine, and the only one M5B
+ * found worth reusing. Reuse does not weaken stage purity: the buffer
+ * is stage-private scratch that never escapes (the stage's output is a
+ * separate `Uint8ClampedArray`), and every element is written from the
+ * source before it is read, so no value can survive from one call to
+ * the next. Same input + params → same output still holds exactly.
+ *
+ * Single-threaded by construction: `ditherTs` is synchronous, so no two
+ * calls can interleave, and each Worker gets its own module instance.
+ */
+let workBuffer = new Float32Array(0);
+
+/**
+ * A zeroed-length-`n` view of the shared work buffer, growing it when
+ * needed. The returned view is exactly `n` long, so stale values past
+ * `n` from a previous larger frame are unreachable.
+ */
+function workBufferFor(n: number): Float32Array {
+  if (workBuffer.length < n) workBuffer = new Float32Array(n);
+  return workBuffer.subarray(0, n);
+}
+
+/**
+ * Release the shared work buffer (tests, and any future memory-pressure
+ * handler). Purely an allocation concern — output is unaffected.
+ */
+export function releaseDitherWorkBuffer(): void {
+  workBuffer = new Float32Array(0);
+}
+
 /** Diffuse `error * weight` into the working buffer at (x, y). */
 function diffuse(
   work: Float32Array,
@@ -85,8 +119,10 @@ function ditherTs(input: PixelBuffer, params: DitherParams): PixelBuffer {
   // the same bytes.
   const table = usesLab ? (params.candidates ?? null) : null;
 
-  // Float working copy of the RGB channels; alpha never diffuses.
-  const work = new Float32Array(width * height * 3);
+  // Float working copy of the RGB channels; alpha never diffuses. Every
+  // element is written here before any is read, which is what makes
+  // reusing the buffer across calls unobservable.
+  const work = workBufferFor(width * height * 3);
   for (let p = 0; p < width * height; p++) {
     work[p * 3] = src[p * 4] ?? 0;
     work[p * 3 + 1] = src[p * 4 + 1] ?? 0;

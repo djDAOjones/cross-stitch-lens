@@ -71,11 +71,9 @@ describe('executeRequest', () => {
       expect(out[i]).toBe(out[i + 1]);
       expect(out[i]).toBe(out[i + 2]);
     }
-    expect(response.timings.map((t) => t.stage)).toEqual([
-      'adjust',
-      'resize',
-      'reduce',
-    ]);
+    // No 'adjust' row: the identity hook is omitted from the stage list
+    // (M5-PERF-25), so it neither costs a clone nor reports a timing.
+    expect(response.timings.map((t) => t.stage)).toEqual(['resize', 'reduce']);
     for (const t of response.timings) expect(t.ms).toBeGreaterThanOrEqual(0);
   });
 

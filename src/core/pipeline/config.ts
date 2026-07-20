@@ -10,7 +10,7 @@
 
 import type { CandidateTable } from '../color/candidates.ts';
 import type { ColorMetric } from '../color/metrics.ts';
-import { adjustStage } from './adjust.ts';
+import { adjustIsIdentity, adjustStage, type AdjustParams } from './adjust.ts';
 import { ditherStage } from './dither.ts';
 import { reduceStage } from './reduce.ts';
 import { resizeStage, type ResizeMode } from './resize.ts';
@@ -74,7 +74,16 @@ export function buildStages(
   config: PipelineConfig,
   providers: StageProviders = {},
 ): StageInstance[] {
-  const stages: StageInstance[] = [stageInstance(adjustStage, {})];
+  // The adjust hook is left out while it is the identity: including it
+  // buys a full-frame clone and nothing else (M5-PERF-25). It returns
+  // to the order automatically once §9 populates its params — see
+  // `adjustIsIdentity`. Ownership note (M5B): dropping it is only safe
+  // because every remaining stage allocates its own output, so a
+  // response buffer can never alias the worker's retained `lastFrame`.
+  const adjustParams: AdjustParams = {};
+  const stages: StageInstance[] = adjustIsIdentity(adjustParams)
+    ? []
+    : [stageInstance(adjustStage, adjustParams)];
 
   const resize = stageInstance(resizeStage, {
     width: config.grid.width,

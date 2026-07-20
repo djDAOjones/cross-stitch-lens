@@ -19,6 +19,25 @@
 
 ## M5 — WASM + WebGPU backends (in progress)
 
+- M5-PERF-21, M5-PERF-22, M5-PERF-25, M5-PERF-20, M5-PERF-28,
+  M5-PERF-27, M5-PERF-23, M5-PERF-24, M5-PERF-32 (2026-07-20) — M5D
+  quality-neutral implementation, all bit-exact. Resize hoisted
+  (1.29–1.77×); dither inlined + per-bin pruned (3.6× at 64 colours,
+  16.2× at 533, 0 mismatches over 138,688 adversarial values × 5
+  palettes); identity `adjust` omitted and the 12 MB dither scratch
+  reused (per-frame allocation ~26.5 MB → ~8 MB at 1024², closing
+  M5-PERF-20); split compare now donates the pipeline's post-resize
+  buffer instead of re-running it (one pipeline per frame, not two);
+  dither routed per workload by metric (lab → ts, rgb → wasm) with
+  D42's startup calibration removed; budgets replaced by measured
+  baselines naming runtime + workload + build, with regression and
+  staleness guards. `mapPaletteGpu` **declined on its own gate** — on a
+  production build the GPU edge is ~1.4×, not D47's dev-server 6.7×.
+  New `bench.html` production-build browser harness satisfied
+  M5-PERF-32 on a real GPU (0 mismatches over 32,768 bins × 3 configs).
+  M5B's causal attribution corrected twice: both its "algorithmic" wins
+  were call-boundary costs. See decision-log D48.
+
 - M5-PERF (2026-07-20) — M5C decision gate: **processing modes cut**.
   Balanced's ingredients both died on M5B evidence (rounded conversion
   ~0% gain but 49–53% of pixels changed; separable resize slower), so

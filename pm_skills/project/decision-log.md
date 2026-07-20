@@ -1095,3 +1095,80 @@ because the item is `[sign-off]` and its acceptance is literally
 stale M5B audit asserting the M5-PERF-26 collision still reproduces —
 inverted to prove it cannot recur. `audit` is AUDIT=1-gated and not part
 of `check`, which is why the D46 close missed it.
+
+## D48 — M5D: the wins are real, the attributions were not (2026-07-20)
+
+**Context:** M5D was execution — land M5B's bit-exact wins, cut its
+inventoried allocations, re-derive routing, encode D47's budget shape.
+
+**Decision — land all eight items; correct M5B's causal attribution
+twice; decline `mapPaletteGpu` on its own gate.**
+
+**Why the attributions changed.** Both audits now measure against
+verbatim pre-M5D implementations, because M5-PERF-21/22 landed into the
+code the audits used as oracle — timing the shipped stage against itself
+reports ~1.0× and proves nothing. The totals then reproduced M5B exactly
+(resize 37.2 ms vs its 37.4; dither 858 ms vs its 821–888). The causes
+did not:
+
+- **Resize:** M5B credited ~1.5× to hoisted coverage. Actually inlining
+  the per-cell `sampleArea` call (1.45×); the hoist is 1.05×.
+- **Dither:** M5B credited ~4× to hoisting the Lab scan reads. The hoist
+  is worth **0.96–1.11× — nothing**. The large term is inlining the
+  `deltaE76Sq(labScratch, 0, …)` call, made 64–533× per pixel and not
+  inlined by V8 (2.85–4.31×). Pruning is the real algorithmic win (1.2×
+  at 64 colours, 3.38× at 533).
+
+Same error twice: a candidate changing two things, credited to the
+interesting one. **Both M5B "algorithmic" wins were call-boundary costs
+in a per-pixel loop.** Treat TS micro-optimisation leads as
+call-boundary-first, and change one thing per measurement. The audits
+keep the pre-M5D baselines, so the decomposition now guards itself.
+
+**Exactness.** Every shipped change is byte-identical to pre-M5D output.
+Pruning is an exclusion proof, verified over 138,688 adversarial values
+× 5 palettes with 0 mismatches; Rust parity is asserted against the
+**pruned** TS path, since that is what ships.
+
+**Routing (M5-PERF-27).** Decided by **metric**, not a grid × palette
+threshold: lab → ts (1.79–3.34×; TS prunes, Rust does not), rgb → wasm
+(1.46–1.88×; neither prunes). Across 96²–1024² × 64/533 the metric
+decided all sixteen, so no size cutoff is applied — inventing one the
+evidence does not show is worse than none. D42's calibration is
+**removed, not retuned**: routing holds no state, which was D42's actual
+failure mode.
+
+**`mapPaletteGpu` declined (M5-PERF-23).** D47 required a
+production-build re-measurement and was right to: 6.7× was almost all
+dev-server slowdown on the TS side. Production: **~1.4×**
+(0.98/1.62/1.45) on a 17 ms stage — ~5 ms/frame, non-dithered path only.
+Price is the executor's asyncification, which D46 hardened so every
+request answers exactly once. Declined.
+
+**Alternatives rejected:** porting pruning to Rust (routing never
+selects that path); a grid/palette threshold (unsupported); keeping D42
+alongside routing (two mechanisms, one known wrong).
+
+**Consequences:**
+
+- Per-frame allocation at 1024²: ~26.5 MB → ~8 MB.
+- Split compare runs one pipeline per frame, not two; divider drag runs
+  none.
+- Budgets are measured baselines naming runtime, workload and build,
+  with a regression guard (×1.35) and a staleness guard (fires when a
+  row runs >2× faster than recorded, so it cannot go slack). The product
+  promise stays out of the node suite — it is an in-browser boundary and
+  a node proxy would be green-washing.
+- `bench.html`: new production-build browser harness; satisfied
+  M5-PERF-32 (real GPU, 0 mismatches over 32,768 bins × 3 configs, plus
+  an all-zeros trap for the D46 failure mode).
+- architecture.md's budget table stays unreconciled — **M5-ACCEPT-04
+  alone edits it** (D47) — so this adds a doc-delta instead.
+
+**Run notes (auto-jazz):** gateless throughout; no blocking ambiguity.
+Two process corrections. (1) Piping `npm run check` through `tail` made
+the harness record *tail's* exit code — two "green" runs were
+unverified; the pre-commit hook caught what they missed. (2) The browser
+harness first reported 200² six times *slower* than 300², because it was
+measured first and absorbed the pipeline's JIT cost; unexamined that
+would have shipped as a product-promise failure.

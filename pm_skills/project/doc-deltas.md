@@ -45,3 +45,15 @@
   the same TS resize measures ~3.5× slower in-browser than in node on one
   machine while TS dither is only ~1.1× slower; a node median is not a
   browser claim and the table should say which runtime binds (source: D45)
+- [ ] 2026-07-20 `architecture.md` → "Performance budgets" — the table still
+      states the aspirational 5/10/15/100 ms rows. M5D replaced them in the
+      test suite with measured baselines naming runtime + workload + build
+      (D47 shape, D48). M5-ACCEPT-04 owns this edit.
+- [ ] 2026-07-20 `architecture.md` → "Stage backends" — says backend selection
+      is "automatic by default (profiled)". D42's startup calibration is gone;
+      selection is per-workload routing by metric (D48, M5-PERF-27).
+- [ ] 2026-07-20 `AGENTS.md` → "Processing pipeline" / `architecture.md` — the
+      default order is documented as `adjust → resize → reduce(+dither)`, but
+      the identity `adjust` is now omitted from the built stage list until §9
+      populates its params (D48, M5-PERF-25). The slot is unchanged; only its
+      presence in a run is conditional.

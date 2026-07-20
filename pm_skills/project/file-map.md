@@ -15,8 +15,8 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 134 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
-- `(root)` — 10 file(s)
+<!-- 139 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+- `(root)` — 11 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
 - `.github` — 1 file(s)
@@ -24,8 +24,8 @@
 - `crates` — 4 file(s)
 - `docs` — 4 file(s)
 - `scripts` — 5 file(s)
-- `src` — 49 file(s)
-- `tests` — 58 file(s)
+- `src` — 51 file(s)
+- `tests` — 60 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -34,6 +34,7 @@
 - `DEV-INFRASTRUCTURE.md` — build/run/test/version/deploy rulebook
 - `README.md` — project front door: what it is, how to run it
 - `UI-STANDARDS.md` — Carbon-first UI + WCAG 2.2 AAA rulebook
+- `bench.html` — entry for the production-build browser measurement harness; built by Vite alongside the app so its figures are not dev-server artefacts
 - `cspell.json` — spelling dictionary + ignore paths for the docs gate
 - `eslint.config.js` — flat config; core-isolation + no-console rules
 - `index.html` — Vite entry; dev-shell styles (AAA contrast, pixelated preview)
@@ -87,11 +88,13 @@
 - `src/backends/webgpu/device.ts` — WebGPU feature detect + one lazy shared device (null on failure)
 - `src/backends/webgpu/reduce.ts` — async GPU kernels: LUT build + palette map; null → ts fallback
 - `src/backends/webgpu/wgsl.ts` — WGSL sources + binding indices: lut-build (metric-baked) + integer palette-map
+- `src/bench-browser.ts` — the harness itself: production-build GPU-vs-TS comparison (M5-PERF-23 gate), real-GPU LUT bin agreement (M5-PERF-32), in-browser pipeline timings. Not imported by the app
 - `src/capture/crop.ts` — pure crop-rect geometry: clamp/move/resize, hit-test, stitch span
 - `src/capture/dirty.ts` — dirty-frame skip: 64×64 sampler, FNV-1a hash, region signature, staleness gate
 - `src/capture/draft.ts` — draft-quality governor: pure hysteresis over frame times
 - `src/capture/pump.ts` — frame pump: rVFC subscription + pure latest-wins grab gate
 - `src/capture/session.ts` — getDisplayMedia session: start/grab/stop + pure error/label helpers
+- `src/core/color/candidates.ts` — per-bin candidate pruning for exact Lab matching: conservative Lab bounding box per 15-bit bin, witness-radius exclusion. An exclusion proof, not an approximation — returns the identical index to a full scan
 - `src/core/color/convert.ts` — sRGB↔linear↔Lab conversions (D65, CIE 1976)
 - `src/core/color/lut.ts` — 15-bit RGB→palette-index LUT builder + exact nearest
 - `src/core/color/metrics.ts` — squared colour distances: Euclidean RGB, ΔE76
@@ -140,6 +143,7 @@
 - `tests/audits/lut-reduce.audit.test.ts` — M5-PERF-12: LUT build vs map, stale-cache-key repro
 - `tests/audits/orchestration.audit.test.ts` — M5-PERF-10: palette rebuild, `?? 0` tax, allocation inventory
 - `tests/audits/resize.audit.test.ts` — M5-PERF-11: candidate timings + byte-equality across the mode matrix
+- `tests/audits/routing.audit.test.ts` — sweeps grid × palette × metric on both dither backends and asserts `routeDither` agrees with the measured winner on every row (M5-PERF-27 evidence)
 - `tests/audits/runtime.audit.test.ts` — M5-PERF-16/17/19: compare cost, gate stalls, dirty sensitivity, export isolation
 - `tests/audits/wasm-boundary.audit.test.ts` — M5-PERF-15: boundary vs Rust split, calibration representativeness
 - `tests/backend-select.test.ts` — selection policy/calibration + ts fallback with both backends disabled
@@ -160,6 +164,7 @@
 - `tests/color-convert.test.ts` — golden: Lab reference values + round-trips
 - `tests/controls.test.ts` — number-input clamping (pure half of controls)
 - `tests/debug-panel.test.ts` — timing-window aggregation, cap, stage-change reset, ms formatting
+- `tests/dither-pruning.test.ts` — pruning exactness over 138,688 adversarial values × 5 palettes, dither byte-equality with and without a table, and the shared f32 work-buffer reuse guards (M5-PERF-22/25)
 - `tests/dither.test.ts` — dither golden + determinism/mean/serpentine invariants
 - `tests/export-chart.test.ts` — chart layout: label margin + edge pad,
 - `tests/export-pdf.test.ts` — PDF layout (page sizes, aspect fit, key

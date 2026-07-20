@@ -1,27 +1,89 @@
 /**
  * Worker-side LUT cache: one LUT per palette+metric, rebuilt only
  * when either changes (architecture.md → "Colour reduction
- * strategy"). Palette identity is keyed by name + entry count — a
- * palette edit must present a new name (user palettes are post-MVP).
+ * strategy").
+ *
+ * Palette identity is the **content fingerprint** of its entries in
+ * order, never its name: a LUT stores palette *indices*, so two
+ * palettes that differ only in colour or in order are not
+ * interchangeable — sharing one LUT between them renders the wrong
+ * colours (D46). The key carries a schema version so a change to the
+ * LUT's meaning invalidates old entries rather than reusing them.
  *
  * Two fill paths share the cache: `ensureLut` (async, GPU-first — the
  * worker awaits it before a frame that needs a LUT) and `getLut`
  * (sync TS build on miss — the executor's safety net). A GPU-built
  * LUT may differ from the TS build on near-ties (documented tolerance,
- * decision-log D41).
+ * decision-log D41) but must otherwise be a plausible LUT; `ensureLut`
+ * checks that before caching it.
  */
 
 import { buildLutGpu } from '../backends/webgpu/reduce.ts';
-import { buildLut } from '../core/color/lut.ts';
+import { buildLut, LUT_SIZE } from '../core/color/lut.ts';
 import type { ColorMetric } from '../core/color/metrics.ts';
+import { paletteFingerprint } from '../core/palette.ts';
 import type { Palette } from '../core/types.ts';
 import { log } from '../diagnostics/log.ts';
 
+/**
+ * Bumped when the LUT's meaning changes (bin layout, metric
+ * semantics), so stale entries can never be served across a change.
+ */
+const LUT_SCHEMA_VERSION = 1;
+
+/**
+ * Cache ceiling. Each LUT is 64 KB; live editing only ever cycles
+ * between a handful of palettes, and user-defined palettes (post-MVP)
+ * must not be able to grow this without bound.
+ */
+const MAX_ENTRIES = 8;
+
+/** Insertion-ordered, so the oldest key is the first Map key (LRU). */
 const cache = new Map<string, Uint16Array>();
 
-/** Cache key for a palette+metric pair. */
+/** Cache key for a palette+metric pair: content, not name. */
 function keyFor(palette: Palette, metric: ColorMetric): string {
-  return `${palette.name}:${String(palette.entries.length)}:${metric}`;
+  return `v${String(LUT_SCHEMA_VERSION)}:${paletteFingerprint(palette)}:${metric}`;
+}
+
+/** Store a LUT, evicting the least recently used entry past the cap. */
+function store(key: string, lut: Uint16Array): void {
+  cache.delete(key);
+  cache.set(key, lut);
+  while (cache.size > MAX_ENTRIES) {
+    const oldest = cache.keys().next();
+    if (oldest.done === true) break;
+    cache.delete(oldest.value);
+  }
+}
+
+/** Read a LUT and mark it most recently used. */
+function touch(key: string): Uint16Array | undefined {
+  const hit = cache.get(key);
+  if (hit === undefined) return undefined;
+  cache.delete(key);
+  cache.set(key, hit);
+  return hit;
+}
+
+/**
+ * Reject a GPU LUT that cannot be a nearest-colour mapping: an index
+ * past the palette, or a single index covering all 32,768 bins for a
+ * multi-entry palette. Both are what a silently-failed kernel returns
+ * (a zero-filled buffer reads back as a well-formed all-zeros LUT),
+ * and the cost is one linear scan per palette change — cheap insurance
+ * against a failure mode the user sees as a solid-colour design.
+ */
+function isPlausibleLut(lut: Uint16Array, paletteSize: number): boolean {
+  if (lut.length !== LUT_SIZE) return false;
+  const first = lut[0] ?? 0;
+  let distinct = false;
+  for (let i = 0; i < lut.length; i++) {
+    const index = lut[i] ?? 0;
+    if (index >= paletteSize) return false;
+    if (index !== first) distinct = true;
+  }
+  return paletteSize === 1 || distinct;
 }
 
 /**
@@ -34,13 +96,16 @@ export async function ensureLut(
   metric: ColorMetric,
 ): Promise<Uint16Array> {
   const key = keyFor(palette, metric);
-  const hit = cache.get(key);
+  const hit = touch(key);
   if (hit) return hit;
   const gpuLut = await buildLutGpu(palette, metric);
   if (gpuLut !== null) {
-    log.info('webgpu', 'LUT built on gpu', { key });
-    cache.set(key, gpuLut);
-    return gpuLut;
+    if (isPlausibleLut(gpuLut, palette.entries.length)) {
+      log.info('webgpu', 'LUT built on gpu', { key });
+      store(key, gpuLut);
+      return gpuLut;
+    }
+    log.error('webgpu', 'gpu LUT failed the sanity check — falling back to ts', { key });
   }
   return getLut(palette, metric);
 }
@@ -48,10 +113,10 @@ export async function ensureLut(
 /** Get (building on miss) the LUT for a palette+metric. */
 export function getLut(palette: Palette, metric: ColorMetric): Uint16Array {
   const key = keyFor(palette, metric);
-  const hit = cache.get(key);
+  const hit = touch(key);
   if (hit) return hit;
   const lut = buildLut(palette, metric);
-  cache.set(key, lut);
+  store(key, lut);
   return lut;
 }
 

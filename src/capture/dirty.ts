@@ -33,6 +33,85 @@ export function frameSignature(hash: number, region: CropRect | null): string {
   return `${String(hash)}:${String(region.x)},${String(region.y)},${String(region.width)},${String(region.height)}`;
 }
 
+/**
+ * Longest a genuinely-changed source may stay invisible, in ms.
+ *
+ * The 64×64 downsample averages ~362 source pixels per sample cell at
+ * a realistic Retina crop, so an edit whose contribution rounds away
+ * inside its cell produces a byte-identical sample and an identical
+ * hash. Measured misses: a 1 px full-contrast edit, a 1 px Δ8 edit, a
+ * 4×4 Δ8 edit. **No hash precision fixes this** — the information is
+ * destroyed by the averaging, before the hash sees it — and sampling
+ * finely enough to guarantee detection costs the full readback the
+ * skip exists to avoid.
+ *
+ * So the gate bounds the damage instead: an unchanged-looking source
+ * is re-processed anyway once this interval elapses, turning "a small
+ * stroke never appears" into "it appears within 2 s". Idle cost is one
+ * pipeline run per interval (≈ 58 ms at 200²), against a 16 KB
+ * readback plus a 0.03 ms hash on every other tick.
+ */
+export const DIRTY_MAX_STALE_MS = 2000;
+
+/**
+ * Decides whether a sampled frame is worth processing: yes when the
+ * signature changed, and yes anyway once `maxStaleMs` has passed since
+ * the last processed frame. Pure state machine — the sampler that
+ * feeds it needs a browser, this does not.
+ */
+export class DirtyGate {
+  private lastSignature: string | null = null;
+  private lastProcessedAt: number | null = null;
+  private skipped = 0;
+  private forced = 0;
+
+  constructor(private readonly maxStaleMs: number = DIRTY_MAX_STALE_MS) {}
+
+  /**
+   * True = process this frame. `now` is a wall-clock ms reading
+   * (`Date.now()` / `performance.now()`), injected so the policy stays
+   * testable.
+   */
+  shouldProcess(signature: string, now: number): boolean {
+    const changed = signature !== this.lastSignature;
+    const stale =
+      this.lastProcessedAt === null || now - this.lastProcessedAt >= this.maxStaleMs;
+    if (!changed && !stale) {
+      this.skipped++;
+      return false;
+    }
+    if (!changed) this.forced++;
+    this.markProcessed(signature, now);
+    return true;
+  }
+
+  /** Record a frame processed outside the gate (a manual grab). */
+  markProcessed(signature: string, now: number): void {
+    this.lastSignature = signature;
+    this.lastProcessedAt = now;
+  }
+
+  /**
+   * Forget the last frame so the next tick always processes — used when
+   * the *output* would differ for identical input (a draft-quality
+   * switch), and when a session ends.
+   */
+  reset(): void {
+    this.lastSignature = null;
+    this.lastProcessedAt = null;
+  }
+
+  /** Frames skipped as unchanged (diagnostics). */
+  get skippedCount(): number {
+    return this.skipped;
+  }
+
+  /** Frames processed only because the source went stale (diagnostics). */
+  get forcedCount(): number {
+    return this.forced;
+  }
+}
+
 // One reusable sampling surface — per-frame allocation would defeat
 // the point of a cheap idle path.
 let sampleCanvas: OffscreenCanvas | null = null;

@@ -18,7 +18,7 @@ import {
   type CropRect,
   type Handle,
 } from './capture/crop.ts';
-import { frameSignature, hashPixels, sampleVideo } from './capture/dirty.ts';
+import { DirtyGate, frameSignature, hashPixels, sampleVideo } from './capture/dirty.ts';
 import { DraftGovernor } from './capture/draft.ts';
 import { PumpGate, startFramePump } from './capture/pump.ts';
 import {
@@ -893,8 +893,7 @@ function build(app: HTMLElement): void {
   let cropLocked = false;
   const pumpGate = new PumpGate();
   let stopPump: (() => void) | null = null;
-  let lastFrameSignature: string | null = null;
-  let skippedFrames = 0;
+  const dirtyGate = new DirtyGate();
   let capturePaused = false;
   const draftGovernor = new DraftGovernor();
   let draftMode = false;
@@ -905,7 +904,7 @@ function build(app: HTMLElement): void {
     draftBadge.hidden = !on;
     // Re-signature so the next tick re-processes at the new quality
     // even when the source itself is unchanged.
-    lastFrameSignature = null;
+    dirtyGate.reset();
     status.textContent = on
       ? 'Preview switched to draft quality (dithering off).'
       : 'Full quality restored.';
@@ -947,7 +946,8 @@ function build(app: HTMLElement): void {
     if (stopPump === null) return;
     log.info('capture', 'frame pump stopped', {
       dropped: pumpGate.droppedCount,
-      skipped: skippedFrames,
+      skipped: dirtyGate.skippedCount,
+      forced: dirtyGate.forcedCount,
     });
     stopPump();
     stopPump = null;
@@ -963,7 +963,7 @@ function build(app: HTMLElement): void {
 
   function endCaptureUi(message: string): void {
     stopPumpNow();
-    lastFrameSignature = null;
+    dirtyGate.reset();
     draftGovernor.reset();
     setDraftMode(false);
     capturePaused = false;
@@ -990,9 +990,12 @@ function build(app: HTMLElement): void {
       const buffer = await capture.grabFrame(cropRect ?? undefined);
       // A manual grab always processes, but records the signature so
       // the pump doesn't immediately re-process the same content.
-      lastFrameSignature = frameSignature(
-        hashPixels(sampleVideo(capture.video, cropRect ?? undefined)),
-        cropRect,
+      dirtyGate.markProcessed(
+        frameSignature(
+          hashPixels(sampleVideo(capture.video, cropRect ?? undefined)),
+          cropRect,
+        ),
+        Date.now(),
       );
       log.info('capture', 'frame grabbed', {
         width: buffer.width,
@@ -1020,19 +1023,20 @@ function build(app: HTMLElement): void {
       // full frame. Unchanged content (and unchanged region) skips
       // the expensive path entirely — the "idle frames cost ~0 CPU"
       // acceptance leg. The named state is honest, never silent.
+      // The gate also forces a refresh once the source has looked
+      // unchanged for DIRTY_MAX_STALE_MS, because the downsample can
+      // average a small edit away entirely (see dirty.ts).
       const signature = frameSignature(
         hashPixels(sampleVideo(capture.video, cropRect ?? undefined)),
         cropRect,
       );
-      if (signature === lastFrameSignature) {
-        skippedFrames++;
+      if (!dirtyGate.shouldProcess(signature, Date.now())) {
         if (status.textContent !== 'Source unchanged.') {
           status.textContent = 'Source unchanged.';
         }
         if (pumpGate.grabDone()) void pumpGrab();
         return;
       }
-      lastFrameSignature = signature;
       const buffer = await capture.grabFrame(cropRect ?? undefined);
       masterImage = buffer;
       client.submit(

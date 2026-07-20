@@ -15,33 +15,6 @@ line passes and `check` is green. Requirements references are to
 
 ## Active
 
-### M5B-FIX — correctness defects found by the M5B audits (current milestone)
-
-The M5B audits shipped their evidence into `tickets/M5-PERF.md`; these
-are the defects they found. Two are wrong-output bugs, not performance
-work, so they jump the queue ahead of the M5C decision gate. Reproduce
-each with `npm run audit` (node) or the procedure in
-`docs/browser-measurement.md` (browser) before changing code.
-
-- [ ] **M5-PERF-31 Fix the WebGPU LUT build and cover it on a real GPU** [detail] (2026-07-19)
-  Intent: `lutBuildShader` uses `target`, a reserved WGSL keyword, so the shader never compiles; WebGPU reports that asynchronously, nothing throws, and the zero-filled buffer is cached by `ensureLut` in preference to the correct TS LUT. Non-dithered reduction renders a solid single colour in every WebGPU browser.
-  Done when: the shader compiles and its LUT matches the TS build within the D41 near-tie tolerance; shader creation drains `getCompilationInfo()`/error scopes and falls back on any diagnostic; and the real-GPU suite runs somewhere that has a GPU, so this class of defect cannot ship again.
-
-- [ ] **M5-PERF-30 Make dirty detection see small edits**
-  Intent: the 64×64 downsample averages ~362 source pixels per sample cell at a realistic Retina crop, so small or low-contrast edits round away and the preview never updates — the core live-capture promise failing silently.
-  Done when: the in-browser detection threshold is measured against the real `drawImage` sampler, the chosen fix (higher-precision hash, max-difference sampling, or a periodic forced refresh) detects the measured miss cases, and the idle path stays within its current cost.
-
-- [ ] **M5-PERF-29 Never let a frame wedge the worker gate**
-  Intent: the client releases latest-wins only in `handleResponse`, and two paths in `pipeline-worker.ts` can post nothing at all — `await ensureLutFor(…)` and `createImageBitmap(…).then(…)` both sit inside a floating async wrapper with no catch. A single rejection stops live preview permanently.
-  Done when: every worker entry path posts either a result or an error, a regression test drives each rejection and proves the coalescer is released, and recovery needs no user action.
-
-- [ ] **M5-PERF-26 Key the LUT cache on palette content**
-  Intent: the key is `name:entries.length:metric`, so palettes differing only in colour or order share a LUT that stores palette *indices* — a reordered palette renders a red pixel green.
-  Done when: the key is a deterministic content fingerprint plus metric and schema version, the reordering case is a regression test, and cache growth stays bounded.
-
-*Acceptance: each defect has a regression test that fails before the fix,
-and no fix changes Exact output on a correct configuration.*
-
 ### M5C — Performance and product decision gate (§22, §23.5)
 
 - [ ] **M5-PERF Synthesize the performance strategy** [sign-off] [detail] (2026-07-19)
@@ -85,6 +58,10 @@ coding task.*
 - [ ] **M5-PERF-24 Extend performance regression coverage** [detail]
   Intent: encode the approved measurement contract as repeatable, non-mutating checks without hiding machine variance or weakening budgets.
   Done when: the workload matrix reports regressions consistently locally and in CI.
+
+- [ ] **M5-PERF-32 Run the WebGPU suites on a real GPU** (2026-07-20)
+  Intent: the unmet leg of M5-PERF-31. Two GPU defects shipped behind `describe.skipIf(!isWebGpuAvailable())` on a node CI; D46 added GPU-free scans for both known classes, but the bind-group defect was found only by *executing* on a GPU, so the scans cannot be the whole answer.
+  Done when: the real-GPU suite runs somewhere with a GPU (browser runner, or a documented manual gate with recorded results), and asserts bin agreement with the TS LUT rather than timing. Note an implausibly fast GPU row is itself a defect signal.
 
 *Acceptance: Exact output remains frozen where promised; approved
 quality-neutral improvements pass parity and report their individual

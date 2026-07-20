@@ -47,6 +47,29 @@ export function paletteRgb(palette: Palette): Uint8ClampedArray {
 }
 
 /**
+ * Content fingerprint of a palette: FNV-1a 32-bit over the entry RGB
+ * triples **in order**, returned as 8 hex digits with the entry count
+ * appended (`"1a2b3c4d-533"`).
+ *
+ * Order is part of the identity because anything keyed on a palette —
+ * the worker's LUT cache above all — stores palette *indices*: two
+ * palettes with the same colours in a different order produce
+ * different, non-interchangeable results (D46). Name is deliberately
+ * excluded: identical colours in identical order are the same palette
+ * whatever it is called.
+ */
+export function paletteFingerprint(palette: Palette): string {
+  const rgb = paletteRgb(palette);
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < rgb.length; i++) {
+    hash ^= rgb[i] ?? 0;
+    hash = Math.imul(hash, 0x01000193);
+  }
+  const hex = (hash >>> 0).toString(16).padStart(8, '0');
+  return `${hex}-${String(palette.entries.length)}`;
+}
+
+/**
  * Palette colours converted to Lab [L,a,b, …] (D65, L 0–100).
  * Computed once per palette/metric change, reused across the LUT
  * build and exact matching.

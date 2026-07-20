@@ -15,7 +15,7 @@ import { describe, expect, it } from 'vitest';
 
 import { buildLutGpu, mapPaletteGpu } from '../src/backends/webgpu/reduce.ts';
 import { isWebGpuAvailable } from '../src/backends/webgpu/device.ts';
-import { lutBuildShader, MAP_SHADER } from '../src/backends/webgpu/wgsl.ts';
+import { LUT_BINDINGS, lutBuildShader, MAP_SHADER } from '../src/backends/webgpu/wgsl.ts';
 import { binToChannel, buildLut, LUT_SIZE } from '../src/core/color/lut.ts';
 import type { ColorMetric } from '../src/core/color/metrics.ts';
 import { deltaE76Sq, euclideanRgbSq } from '../src/core/color/metrics.ts';
@@ -23,6 +23,7 @@ import { srgbToLab } from '../src/core/color/convert.ts';
 import { loadDmcPalette, paletteLab, paletteRgb } from '../src/core/palette.ts';
 import type { Palette } from '../src/core/types.ts';
 import { mirrorPalette, nearestBinF32 } from './helpers/lut-f32.ts';
+import { reservedIdentifiers } from './helpers/wgsl-reserved.ts';
 
 /** Divergence budget: at most this share of bins may disagree. */
 const MAX_MISMATCH_RATE = 0.01;
@@ -109,8 +110,74 @@ describe('WGSL shader sources', () => {
   it('bake the metric variants and entry points', () => {
     expect(lutBuildShader('lab')).toContain('srgb_to_lab');
     expect(lutBuildShader('lab')).toContain('build_lut');
-    expect(lutBuildShader('rgb')).not.toContain('let target = srgb_to_lab');
+    expect(lutBuildShader('rgb')).not.toContain('let probe = srgb_to_lab');
     expect(MAP_SHADER).toContain('map_palette');
+  });
+
+  // Regression for D46: `let target = …` made every LUT-build module
+  // fail to compile, and WebGPU's async error reporting meant nothing
+  // threw — the zero-filled result buffer was cached as a valid LUT and
+  // every non-dithered design rendered a single flat colour. A GPU-free
+  // scan catches this whole class before it can ship again.
+  it('use no WGSL reserved words as identifiers', () => {
+    const shaders: [string, string][] = [
+      ['lutBuildShader(lab)', lutBuildShader('lab')],
+      ['lutBuildShader(rgb)', lutBuildShader('rgb')],
+      ['MAP_SHADER', MAP_SHADER],
+    ];
+    for (const [name, code] of shaders) {
+      expect(reservedIdentifiers(code), `${name} uses reserved WGSL words`).toEqual([]);
+    }
+  });
+
+  // Second defect, found only by running on a real GPU once the shader
+  // compiled (D46): `layout: 'auto'` derives the bind group layout from
+  // the bindings a shader actually *uses*, so a declared-but-unread
+  // buffer is absent from the layout and binding it fails validation.
+  // These two checks make the shader/bind-group contract static.
+  it('declare exactly the bindings the dispatch binds', () => {
+    for (const metric of ['lab', 'rgb'] as const) {
+      const declared = [...lutBuildShader(metric).matchAll(/@binding\((\d+)\)/g)]
+        .map((m) => Number(m[1]))
+        .sort((a, b) => a - b);
+      const bound = [
+        LUT_BINDINGS.palette[metric],
+        LUT_BINDINGS.lut,
+        LUT_BINDINGS.count,
+      ].sort((a, b) => a - b);
+      expect(declared, `lutBuildShader(${metric})`).toEqual(bound);
+    }
+  });
+
+  it('reference every buffer they declare', () => {
+    const sources = [
+      lutBuildShader('lab'),
+      lutBuildShader('rgb'),
+      MAP_SHADER,
+    ];
+    for (const code of sources) {
+      for (const [, name] of code.matchAll(/@binding\(\d+\)\s+var<[^>]*>\s*(\w+)/g)) {
+        const uses = code.match(new RegExp(`\\b${name}\\b`, 'g'))?.length ?? 0;
+        expect(uses, `${name} is declared but never read`).toBeGreaterThan(1);
+      }
+    }
+  });
+
+  it('the scans actually catch both shipped defects', () => {
+    expect(reservedIdentifiers('let target = vec3f(r, g, b);')).toEqual(['target']);
+    // The unused-binding shape that failed validation: declared, never read.
+    const stale = `
+@group(0) @binding(0) var<storage, read> pal_rgb: array<f32>;
+@group(0) @binding(1) var<storage, read> pal_lab: array<f32>;
+fn f() { let x = pal_lab[0]; }`;
+    const unused = [...stale.matchAll(/@binding\(\d+\)\s+var<[^>]*>\s*(\w+)/g)]
+      .map(([, name]) => name)
+      .filter((name) => (stale.match(new RegExp(`\\b${name}\\b`, 'g'))?.length ?? 0) <= 1);
+    expect(unused).toEqual(['pal_rgb']);
+    // Prose in comments must not trip it ("as", "of", "use" are reserved).
+    expect(reservedIdentifiers('// same constants as convert.ts, use of it\nlet ok = 1;')).toEqual(
+      [],
+    );
   });
 });
 

@@ -967,3 +967,61 @@ frame-path surface; browser probes ran on one machine via the dev
 server, so the node/browser gap is flagged for confirmation, not
 settled. The GPU defect was reported, not fixed — fixing inside a spike
 would have broken the audit boundary.
+
+## D46 — M5B-FIX: four correctness defects closed; the GPU bug had a second half only a real GPU could find (2026-07-20)
+
+**Context:** the M5B audits (D45) filed four defects — two wrong-output
+bugs, one latent stall, one silent miss. All four are fixed here.
+
+**Decisions:**
+
+- **WebGPU LUT (M5-PERF-31).** Renamed the reserved WGSL identifier
+  (`target` → `probe`), and made shader creation fail loudly: drain
+  `getCompilationInfo()` and wrap pipeline creation and the compute pass
+  in `pushErrorScope('validation')`, returning `null` so the TS fallback
+  takes over. `ensureLut` now sanity-checks any GPU LUT before caching
+  it (index in range; not one index for a multi-entry palette) — cheap
+  insurance because the failure mode is silent and user-visible.
+- **A second defect was hiding behind the first.** With the shader
+  compiling for the first time, the real GPU rejected the *bind group*:
+  `layout: 'auto'` derives the layout from bindings a shader actually
+  **uses**, and the `lab` variant never reads `pal_rgb`. Each metric now
+  declares only the palette buffer it reads, with the binding indices in
+  one shared constant (`LUT_BINDINGS`) used by both the WGSL emitter and
+  the dispatch.
+- **LUT cache key (M5-PERF-26).** Keyed on a content fingerprint of the
+  entries in order (`paletteFingerprint`, core) plus metric and a schema
+  version, replacing `name:length:metric`. Cache is now LRU-bounded at 8.
+- **Worker gate (M5-PERF-29).** Routing moved out of the worker entry
+  into `src/worker/router.ts` with injected dependencies, so it is
+  testable without a Worker. Every `process`/`export` path now posts
+  exactly one response; a failed preview bitmap logs and still returns
+  the frame, because losing a redraw must not cost the frame.
+- **Dirty detection (M5-PERF-30).** The 64×64 downsample destroys small
+  edits *before* the hash sees them, so no hash precision fixes it and
+  fine-enough sampling costs the readback the skip exists to avoid.
+  `DirtyGate` bounds the damage instead: an unchanged-looking source is
+  re-processed after `DIRTY_MAX_STALE_MS` (2 s), turning "a small stroke
+  never appears" into "it appears within 2 s".
+
+**Why it matters:** the static scans now cover both known GPU classes
+without a GPU (reserved words; declared-vs-bound and declared-vs-read
+bindings) — but it was **execution on a real GPU that found the second
+defect**, exactly as the ticket predicted. Verified in-browser on
+Metal-3: GPU LUT 523 distinct indices (was 1) and **0 mismatches across
+all 32,768 bins** for both metrics, mapping kernel 0 wrong pixels of
+4096, and `ensureLut` now byte-identical to `getLut`. That is well
+inside the D41 near-tie tolerance, which is therefore untouched.
+
+**Consequences:** M5B-FIX closes. The real-GPU-in-CI leg of M5-PERF-31
+is **not** met — it needs a browser test runner — and is carried forward
+as M5-PERF-32 rather than quietly dropped. No golden fixture touched; no
+pipeline output changed on a correct configuration.
+
+**Run notes (auto-jazz, all gates skipped):** assumptions — all four
+items in one run (shared LUT/worker/capture surface); the browser-runner
+promotion was judged out of scope for a correctness fix (new dev-dep +
+CI surface), so the GPU-free scans landed instead; 2 s chosen for the
+forced refresh (≈3% of one core idle at 200²) without the in-browser
+threshold measurement the ticket asked for, because the averaging loss
+is analytic, not empirical. Each fix was verified failing before the fix.

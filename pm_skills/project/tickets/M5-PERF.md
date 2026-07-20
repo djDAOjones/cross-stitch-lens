@@ -271,7 +271,13 @@ nothing throws, the dispatch no-ops, and the zero-filled buffer reads
 back as a valid all-zeros LUT that `ensureLut` caches in preference to
 the TS build. In any WebGPU browser, non-dithered reduction renders a
 **solid single colour**. Proven on the real frame path — see
-`docs/browser-measurement.md`. Fix + real-GPU CI coverage: **M5-PERF-31**.
+`docs/browser-measurement.md`.
+
+**Fixed 2026-07-20 (D46).** It had a second half: with the shader
+compiling for the first time, the real GPU rejected the *bind group*,
+because `layout: 'auto'` omits a declared-but-unread buffer. GPU LUT now
+matches the TS build exactly (0 mismatches over all 32,768 bins, both
+metrics). Real-GPU CI coverage remains open as **M5-PERF-32**.
 
 ### Corrections to bv1
 
@@ -399,8 +405,10 @@ the TS build. In any WebGPU browser, non-dithered reduction renders a
 
 ### What M5C should decide first
 
-1. **M5-PERF-31 is not an M5C decision** — it is a shipped wrong-output
-   bug and should be fixed before anything else in the milestone.
+1. **M5-PERF-31 was not an M5C decision** — a shipped wrong-output bug,
+   fixed ahead of the gate along with the other three defects (D46).
+   Note the GPU LUT rows in this file were measured against a kernel
+   that never ran; re-measure before using them.
 2. The three bit-exact wins need no mode contract; they can land as
    quality-neutral work regardless of how Exact/Balanced/Responsive
    resolve.

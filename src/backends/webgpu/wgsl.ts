@@ -56,20 +56,40 @@ fn srgb_to_lab(r: f32, g: f32, b: f32) -> vec3f {
  * Nearest search uses strict `<` — first minimum wins, matching the TS
  * reference's tie-breaking.
  */
+export const LUT_BINDINGS = {
+  /** Palette buffer binding index, per metric (see lutBuildShader). */
+  palette: { lab: 1, rgb: 0 } as const,
+  lut: 2,
+  count: 3,
+} as const;
+
 export function lutBuildShader(metric: 'lab' | 'rgb'): string {
-  const target =
+  // `probe`, not `target`: `target` is a WGSL *reserved* word, and a
+  // module using one fails to compile — silently, because WebGPU
+  // reports compilation errors asynchronously (D46). The reserved-word
+  // scan in tests/helpers/wgsl-reserved.ts guards every emitted shader.
+  const probe =
     metric === 'lab'
-      ? 'let target = srgb_to_lab(r, g, b);'
-      : 'let target = vec3f(r, g, b);';
+      ? 'let probe = srgb_to_lab(r, g, b);'
+      : 'let probe = vec3f(r, g, b);';
   const entry =
     metric === 'lab'
       ? `let entry = vec3f(pal_lab[i * 3u], pal_lab[i * 3u + 1u], pal_lab[i * 3u + 2u]);`
       : `let entry = vec3f(pal_rgb[i * 3u], pal_rgb[i * 3u + 1u], pal_rgb[i * 3u + 2u]);`;
+  // Only the palette buffer this metric reads is declared. `layout:
+  // 'auto'` derives the bind group layout from the bindings a shader
+  // actually *uses*, so an unused declaration is dropped from the
+  // layout and binding it then fails validation (D46). Keeping the
+  // declaration and the binding in one place is what stops the shader
+  // and the bind group drifting apart — see LUT_BINDINGS in reduce.ts.
+  const palette =
+    metric === 'lab'
+      ? '@group(0) @binding(1) var<storage, read> pal_lab: array<f32>;'
+      : '@group(0) @binding(0) var<storage, read> pal_rgb: array<f32>;';
   return /* wgsl */ `
 ${COLOR_LIB}
 
-@group(0) @binding(0) var<storage, read> pal_rgb: array<f32>;
-@group(0) @binding(1) var<storage, read> pal_lab: array<f32>;
+${palette}
 @group(0) @binding(2) var<storage, read_write> lut: array<u32>;
 @group(0) @binding(3) var<uniform> pal_count: u32;
 
@@ -88,13 +108,13 @@ fn build_lut(@builtin(global_invocation_id) gid: vec3u) {
   let r = bin_to_channel((key >> 10u) & 31u);
   let g = bin_to_channel((key >> 5u) & 31u);
   let b = bin_to_channel(key & 31u);
-  ${target}
+  ${probe}
 
   var best = 0u;
   var best_dist = 3.40282e38;
   for (var i = 0u; i < pal_count; i = i + 1u) {
     ${entry}
-    let d = target - entry;
+    let d = probe - entry;
     let dist = dot(d, d);
     if (dist < best_dist) {
       best_dist = dist;

@@ -4,7 +4,12 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { frameSignature, hashPixels } from '../src/capture/dirty.ts';
+import {
+  DIRTY_MAX_STALE_MS,
+  DirtyGate,
+  frameSignature,
+  hashPixels,
+} from '../src/capture/dirty.ts';
 
 describe('hashPixels', () => {
   it('is deterministic', () => {
@@ -55,5 +60,87 @@ describe('frameSignature', () => {
   it('is stable for identical inputs', () => {
     expect(frameSignature(456, region)).toBe(frameSignature(456, { ...region }));
     expect(frameSignature(456, null)).toBe(frameSignature(456, null));
+  });
+});
+
+/**
+ * M5-PERF-30: the 64×64 downsample averages ~362 source pixels per
+ * cell, so a small edit can produce a byte-identical sample — the
+ * preview then never updated at all. The gate cannot recover the lost
+ * signal, so it bounds the staleness instead.
+ */
+describe('DirtyGate', () => {
+  it('processes a changed source immediately', () => {
+    const gate = new DirtyGate();
+    expect(gate.shouldProcess('a', 1000)).toBe(true);
+    expect(gate.shouldProcess('b', 1010)).toBe(true);
+    expect(gate.skippedCount).toBe(0);
+    expect(gate.forcedCount).toBe(0);
+  });
+
+  it('skips an unchanged source inside the staleness window', () => {
+    const gate = new DirtyGate();
+    gate.shouldProcess('a', 1000);
+    expect(gate.shouldProcess('a', 1500)).toBe(false);
+    expect(gate.shouldProcess('a', 1000 + DIRTY_MAX_STALE_MS - 1)).toBe(false);
+    expect(gate.skippedCount).toBe(2);
+  });
+
+  it('forces a refresh once the source has looked unchanged too long', () => {
+    const gate = new DirtyGate();
+    gate.shouldProcess('a', 1000);
+    expect(gate.shouldProcess('a', 1000 + DIRTY_MAX_STALE_MS)).toBe(true);
+    expect(gate.forcedCount).toBe(1);
+    // The forced pass restarts the window, so it cannot fire every tick.
+    expect(gate.shouldProcess('a', 1000 + DIRTY_MAX_STALE_MS + 1)).toBe(false);
+  });
+
+  it('never leaves an invisible edit invisible for longer than the window', () => {
+    // The failing case from the audit: an edit small enough that the
+    // downsample hashes identically. Ticking at 60 fps, the preview
+    // must still refresh within the window.
+    const window = 500;
+    const tick = 16;
+    const gate = new DirtyGate(window);
+    gate.shouldProcess('unchanged-looking', 0);
+    let lastProcessed = 0;
+    let worstGap = 0;
+    for (let t = tick; t <= 5000; t += tick) {
+      if (gate.shouldProcess('unchanged-looking', t)) {
+        worstGap = Math.max(worstGap, t - lastProcessed);
+        lastProcessed = t;
+      }
+    }
+    expect(gate.forcedCount).toBeGreaterThan(0);
+    // The bound that matters: never invisible for longer than one
+    // window plus the tick it lands on.
+    expect(worstGap).toBeLessThanOrEqual(window + tick);
+  });
+
+  it('honours a custom window', () => {
+    const gate = new DirtyGate(100);
+    gate.shouldProcess('a', 0);
+    expect(gate.shouldProcess('a', 50)).toBe(false);
+    expect(gate.shouldProcess('a', 100)).toBe(true);
+  });
+
+  it('always processes the first frame of a session', () => {
+    const gate = new DirtyGate();
+    expect(gate.shouldProcess('a', 5_000_000)).toBe(true);
+  });
+
+  it('processes the next frame after a reset even if unchanged', () => {
+    // Draft-quality switches reset the gate: identical input, different
+    // output, so the frame must be re-run.
+    const gate = new DirtyGate();
+    gate.shouldProcess('a', 1000);
+    gate.reset();
+    expect(gate.shouldProcess('a', 1001)).toBe(true);
+  });
+
+  it('does not re-process content a manual grab already handled', () => {
+    const gate = new DirtyGate();
+    gate.markProcessed('a', 1000);
+    expect(gate.shouldProcess('a', 1010)).toBe(false);
   });
 });

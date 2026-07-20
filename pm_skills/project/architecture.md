@@ -95,7 +95,9 @@ UI can reorder it (requirements §7). Default order:
 
 1. On palette or metric change, build a LUT: 15-bit quantised RGB
    (32,768 entries) → nearest palette index, computed once in the
-   worker (CIELAB distance by default; metric pluggable).
+   worker (CIELAB distance by default; metric pluggable). The LUT
+   stores palette *indices*, so its cache key is a content fingerprint
+   of the entries **in order** — never the palette name (D46).
 2. Per-pixel mapping is then an array lookup — this is why the TS
    path is already fast; WASM/WebGPU accelerate LUT *construction*
    and non-LUT paths (dither error terms use exact arithmetic).
@@ -107,7 +109,12 @@ UI can reorder it (requirements §7). Default order:
 - Frames are coalesced: if a frame arrives while processing, keep
   only the newest (latest-wins, no queue).
 - Dirty-frame detection: hash a 64×64 downsample of the crop; skip
-  identical frames (requirements §22).
+  identical frames (requirements §22). The downsample averages small
+  edits away, so an unchanged-looking source is re-processed anyway
+  after `DIRTY_MAX_STALE_MS` — bounded staleness, not silent loss (D46).
+- Every worker request answers exactly once (result or error): the
+  client's latest-wins gate releases only on a response, so a silent
+  path wedges live preview permanently (D46).
 - Preview may run at reduced quality under load; **exports always
   re-run the pipeline at full quality**.
 

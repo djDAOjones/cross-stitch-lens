@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 129 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 133 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 10 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
@@ -24,8 +24,8 @@
 - `crates` — 4 file(s)
 - `docs` — 3 file(s)
 - `scripts` — 5 file(s)
-- `src` — 48 file(s)
-- `tests` — 55 file(s)
+- `src` — 49 file(s)
+- `tests` — 58 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -85,16 +85,16 @@
 - `src/backends/wasm/stub.ts` — alias stand-in when the pkg is unbuilt; never called at runtime
 - `src/backends/webgpu/device.ts` — WebGPU feature detect + one lazy shared device (null on failure)
 - `src/backends/webgpu/reduce.ts` — async GPU kernels: LUT build + palette map; null → ts fallback
-- `src/backends/webgpu/wgsl.ts` — WGSL sources: lut-build (metric-baked) + integer palette-map
+- `src/backends/webgpu/wgsl.ts` — WGSL sources + binding indices: lut-build (metric-baked) + integer palette-map
 - `src/capture/crop.ts` — pure crop-rect geometry: clamp/move/resize, hit-test, stitch span
-- `src/capture/dirty.ts` — dirty-frame skip: 64×64 sampler, FNV-1a hash, region signature
+- `src/capture/dirty.ts` — dirty-frame skip: 64×64 sampler, FNV-1a hash, region signature, staleness gate
 - `src/capture/draft.ts` — draft-quality governor: pure hysteresis over frame times
 - `src/capture/pump.ts` — frame pump: rVFC subscription + pure latest-wins grab gate
 - `src/capture/session.ts` — getDisplayMedia session: start/grab/stop + pure error/label helpers
 - `src/core/color/convert.ts` — sRGB↔linear↔Lab conversions (D65, CIE 1976)
 - `src/core/color/lut.ts` — 15-bit RGB→palette-index LUT builder + exact nearest
 - `src/core/color/metrics.ts` — squared colour distances: Euclidean RGB, ΔE76
-- `src/core/palette.ts` — Palette model, DMC preset load, rgb/Lab flattening
+- `src/core/palette.ts` — Palette model, DMC preset load, rgb/Lab flattening, content fingerprint
 - `src/core/palettes/dmc-anchor-map.csv` — owner-supplied DMC/Anchor map (protected)
 - `src/core/palettes/dmc.json` — generated DMC palette, 533 colours (protected)
 - `src/core/pipeline/adjust.ts` — adjust hook stage: identity until §9 ops land
@@ -124,10 +124,11 @@
 - `src/worker/coalesce.ts` — latest-wins scheduler (no queue), drop counter
 - `src/worker/execute.ts` — timed frame execution; errors become responses
 - `src/worker/grid.ts` — pure grid/tick geometry: line placement, auto-hide, label thinning
-- `src/worker/lut-cache.ts` — one LUT per palette+metric, built on miss
-- `src/worker/pipeline-worker.ts` — worker entry: postMessage routing + compare source cache
+- `src/worker/lut-cache.ts` — one LUT per palette content+metric; LRU-bounded; rejects implausible GPU LUTs
+- `src/worker/pipeline-worker.ts` — worker entry shell: owns worker scope, wires router
 - `src/worker/preview-surface.ts` — worker: OffscreenCanvas; view/grid/tick/compare redraw (no clip)
 - `src/worker/protocol.ts` — main↔worker message types, transferred buffers
+- `src/worker/router.ts` — message routing + compare source cache; guarantees one response per request
 
 ## tests
 
@@ -151,7 +152,7 @@
 - `tests/bench/workloads.ts` — the frozen M5 workload matrix + seeded source generators
 - `tests/benchmark.test.ts` — BENCH=1-gated: runs the matrix, writes the report, then asserts budgets
 - `tests/capture-crop.test.ts` — crop geometry: bounds/min-size, handles, hit-test, span
-- `tests/capture-dirty.test.ts` — hash determinism/sensitivity, region-aware signatures
+- `tests/capture-dirty.test.ts` — hash determinism/sensitivity, region-aware signatures, staleness bound
 - `tests/capture-draft.test.ts` — governor hysteresis: enter/exit runs, gap, reset
 - `tests/capture-pump.test.ts` — pump gate policy: busy/pending/drop/reset transitions
 - `tests/capture-session.test.ts` — capture pure half: error messages, surface labels
@@ -173,7 +174,9 @@
 - `tests/grid.test.ts` — grid-line placement, tick numbering/thinning, auto-hide rule
 - `tests/helpers/golden.ts` — golden harness: fixture load + tolerance compare
 - `tests/helpers/lut-f32.ts` — f32 mirror of the WGSL LUT arithmetic (fround per op)
+- `tests/helpers/wgsl-reserved.ts` — WGSL reserved-word list + identifier scan (GPU-free shader guard)
 - `tests/info-panel.test.ts` — row cap/overflow, thread-vs-hex labels, percent format
+- `tests/lut-cache.test.ts` — cache identity by palette content, LRU bound, GPU-LUT sanity rejection
 - `tests/palette.test.ts` — DMC load invariants (533, unique, hex↔rgb)
 - `tests/pipeline-config.test.ts` — preset order, full-RGB, dither-replaces-reduce
 - `tests/pipeline-hello.test.ts` — M0 acceptance: identity golden + purity invariants
@@ -184,5 +187,6 @@
 - `tests/ui-import.test.ts` — image-file filtering (pure half of import)
 - `tests/viewport.test.ts` — viewport maths exact cases (fit/anchor/clamp)
 - `tests/wasm-dither.test.ts` — wasm↔TS bit-exact parity: golden fixture, metrics/scan modes, full DMC Lab
-- `tests/webgpu-lut.test.ts` — GPU tolerance suite: near-tie bound via f32 mirror + skipIf real-GPU parity
+- `tests/webgpu-lut.test.ts` — GPU tolerance suite: f32-mirror near-tie bound, static shader scans, skipIf real-GPU parity
 - `tests/worker-executor.test.ts` — executor end-to-end, LUT cache, coalescer
+- `tests/worker-router.test.ts` — response invariant: every request answered, gate released on each rejection

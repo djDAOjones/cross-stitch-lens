@@ -19,27 +19,68 @@ import { paletteLab, paletteRgb } from '../../core/palette.ts';
 import type { Palette, PixelBuffer } from '../../core/types.ts';
 import { log } from '../../diagnostics/log.ts';
 import { getDevice } from './device.ts';
-import { lutBuildShader, MAP_SHADER } from './wgsl.ts';
+import { LUT_BINDINGS, lutBuildShader, MAP_SHADER } from './wgsl.ts';
 
 const WORKGROUP = 64;
 
 /** One compute pipeline per device+shader, created on first use. */
 const pipelineCache = new WeakMap<GPUDevice, Map<string, GPUComputePipeline>>();
 
-function getPipeline(device: GPUDevice, key: string, code: string): GPUComputePipeline {
+/**
+ * Shader compilation diagnostics, or null when the module is clean.
+ * WebGPU reports compilation errors **asynchronously** — neither
+ * `createShaderModule` nor `createComputePipeline` throws — so a broken
+ * kernel otherwise dispatches as a no-op and its zero-filled output
+ * reads back as valid data (D46). Draining `getCompilationInfo()` is
+ * what turns that silence into a fallback.
+ */
+async function compilationErrors(module: GPUShaderModule): Promise<string | null> {
+  if (typeof module.getCompilationInfo !== 'function') return null;
+  const info = await module.getCompilationInfo();
+  const errors = info.messages.filter((message) => message.type === 'error');
+  if (errors.length === 0) return null;
+  return errors
+    .map((m) => `${String(m.lineNum)}:${String(m.linePos)} ${m.message}`)
+    .join('; ');
+}
+
+/**
+ * Get (creating on first use) the compute pipeline for a shader, or
+ * null if the shader does not compile or pipeline creation raises a
+ * validation error. A null pipeline is the caller's cue to fall back to
+ * the TS reference — never to dispatch anyway.
+ */
+async function getPipeline(
+  device: GPUDevice,
+  key: string,
+  code: string,
+): Promise<GPUComputePipeline | null> {
   let byKey = pipelineCache.get(device);
   if (byKey === undefined) {
     byKey = new Map();
     pipelineCache.set(device, byKey);
   }
-  let pipeline = byKey.get(key);
-  if (pipeline === undefined) {
-    pipeline = device.createComputePipeline({
-      layout: 'auto',
-      compute: { module: device.createShaderModule({ code }) },
+  const cached = byKey.get(key);
+  if (cached !== undefined) return cached;
+
+  device.pushErrorScope('validation');
+  const module = device.createShaderModule({ code });
+  const pipeline = device.createComputePipeline({
+    layout: 'auto',
+    compute: { module },
+  });
+  const [compileError, scopeError] = await Promise.all([
+    compilationErrors(module),
+    device.popErrorScope(),
+  ]);
+  if (compileError !== null || scopeError !== null) {
+    log.error('webgpu', 'shader rejected — falling back to ts', {
+      shader: key,
+      message: compileError ?? scopeError?.message,
     });
-    byKey.set(key, pipeline);
+    return null;
   }
+  byKey.set(key, pipeline);
   return pipeline;
 }
 
@@ -63,7 +104,12 @@ function uniformU32(device: GPUDevice, value: number): GPUBuffer {
   );
 }
 
-/** Dispatch a 1-D compute pass and read `resultBytes` back from `result`. */
+/**
+ * Dispatch a 1-D compute pass and read `resultBytes` back from
+ * `result`. Resolves null if the pass raises a validation error —
+ * again asynchronous, so without the error scope an invalid dispatch
+ * would return a well-formed buffer of zeros.
+ */
 async function dispatchAndRead(
   device: GPUDevice,
   pipeline: GPUComputePipeline,
@@ -71,7 +117,8 @@ async function dispatchAndRead(
   invocations: number,
   result: GPUBuffer,
   resultBytes: number,
-): Promise<ArrayBuffer> {
+): Promise<ArrayBuffer | null> {
+  device.pushErrorScope('validation');
   const bindGroup = device.createBindGroup({
     layout: pipeline.getBindGroupLayout(0),
     entries,
@@ -92,6 +139,13 @@ async function dispatchAndRead(
   const bytes = staging.getMappedRange().slice(0);
   staging.unmap();
   staging.destroy();
+  const scopeError = await device.popErrorScope();
+  if (scopeError !== null) {
+    log.error('webgpu', 'compute pass rejected — falling back to ts', {
+      message: scopeError.message,
+    });
+    return null;
+  }
   return bytes;
 }
 
@@ -107,13 +161,16 @@ export async function buildLutGpu(
   const device = await getDevice();
   if (device === null) return null;
   try {
-    const palRgb = new Float32Array(paletteRgb(palette));
-    const palLab =
-      metric === 'lab' ? paletteLab(palette) : new Float32Array(3); // dummy binding
-    const pipeline = getPipeline(device, `lut-${metric}`, lutBuildShader(metric));
+    const pipeline = await getPipeline(device, `lut-${metric}`, lutBuildShader(metric));
+    if (pipeline === null) return null;
     const storage = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST;
-    const rgbBuf = storageBuffer(device, palRgb, storage);
-    const labBuf = storageBuffer(device, palLab, storage);
+    // Exactly one palette buffer: the kernel declares only the one its
+    // metric reads, and binding anything else fails validation.
+    const palBuf = storageBuffer(
+      device,
+      metric === 'lab' ? paletteLab(palette) : new Float32Array(paletteRgb(palette)),
+      storage,
+    );
     const lutBuf = device.createBuffer({
       size: LUT_SIZE * 4,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
@@ -123,16 +180,16 @@ export async function buildLutGpu(
       device,
       pipeline,
       [
-        { binding: 0, resource: { buffer: rgbBuf } },
-        { binding: 1, resource: { buffer: labBuf } },
-        { binding: 2, resource: { buffer: lutBuf } },
-        { binding: 3, resource: { buffer: countBuf } },
+        { binding: LUT_BINDINGS.palette[metric], resource: { buffer: palBuf } },
+        { binding: LUT_BINDINGS.lut, resource: { buffer: lutBuf } },
+        { binding: LUT_BINDINGS.count, resource: { buffer: countBuf } },
       ],
       LUT_SIZE,
       lutBuf,
       LUT_SIZE * 4,
     );
-    for (const buffer of [rgbBuf, labBuf, lutBuf, countBuf]) buffer.destroy();
+    for (const buffer of [palBuf, lutBuf, countBuf]) buffer.destroy();
+    if (bytes === null) return null;
     return Uint16Array.from(new Uint32Array(bytes));
   } catch (error) {
     log.error('webgpu', 'LUT build failed — falling back to ts', {
@@ -161,7 +218,8 @@ export async function mapPaletteGpu(
       input.data.byteOffset,
       pixelCount,
     );
-    const pipeline = getPipeline(device, 'map', MAP_SHADER);
+    const pipeline = await getPipeline(device, 'map', MAP_SHADER);
+    if (pipeline === null) return null;
     const storage = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST;
     const pixelBuf = storageBuffer(device, pixels, storage);
     const lutBuf = storageBuffer(device, Uint32Array.from(lut), storage);
@@ -186,6 +244,7 @@ export async function mapPaletteGpu(
       pixelCount * 4,
     );
     for (const buffer of [pixelBuf, lutBuf, rgbBuf, outBuf, countBuf]) buffer.destroy();
+    if (bytes === null) return null;
     return {
       width: input.width,
       height: input.height,

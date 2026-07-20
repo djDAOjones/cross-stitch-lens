@@ -19,6 +19,17 @@
 
 ## M5 — WASM + WebGPU backends (in progress)
 
+- M5-PERF-31, M5-PERF-30, M5-PERF-29, M5-PERF-26 (2026-07-20) —
+  M5B-FIX: the four audit defects closed. The WebGPU LUT works for the
+  first time (523 distinct indices, 0 mismatches vs TS across all 32,768
+  bins on Metal-3) — the reserved-keyword bug was hiding a second,
+  bind-group defect that only real-GPU execution could surface. LUT
+  cache keyed on palette content (LRU-bounded); worker routing extracted
+  to `router.ts` and now answers every request, so a rejection can no
+  longer wedge live preview; `DirtyGate` bounds an averaged-away edit to
+  2 s instead of never appearing. Real-GPU CI coverage carried forward
+  as M5-PERF-32. See decision-log D46.
+
 - M5-PERF-10, M5-PERF-11, M5-PERF-12, M5-PERF-13, M5-PERF-14,
   M5-PERF-15, M5-PERF-16, M5-PERF-17, M5-PERF-18, M5-PERF-19
   (2026-07-19) — M5B component audits: ten investigations shipped as a

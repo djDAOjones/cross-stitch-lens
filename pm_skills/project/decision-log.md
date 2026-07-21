@@ -1683,3 +1683,61 @@ expansion) is the next milestone, entered through its spike. The
 memory budgets tripped at the M7 ship (trajectory over 2,000 words,
 decision log at 46 entries against 20) remain open and are now the
 oldest outstanding housekeeping.
+
+## D58 — M7-LIB-01: the library's missing verbs (2026-07-21)
+
+**Context:** M7 shipped a thread library you could add to but not
+change. Palettes could be created, never reordered or removed; the
+inventory could only be built one checkbox at a time across 3,338
+threads. Reordering was the sharpest gap — D46 makes palette order the
+nearest-match tie-break, so the app documented an edit it gave no way
+to perform.
+
+**Decision 1 — buttons, not drag.** Reordering is move-up/move-down
+buttons per entry. A native button is keyboard-operable by
+construction; a drag gesture needs a parallel key handler bolted on to
+meet the same rule (UI-STANDARDS → "Operable"). Measured 46 × 44 and
+92 × 44 CSS px, over the 44 px AAA floor, with `aria-label`s naming the
+thread rather than "Move up".
+
+**Decision 2 — bulk acts on the filter, and says how many.** The thread
+table renders at most 60 rows, so a bulk action reading the rendered
+list would silently do less than its label claims. `filteredThreads`
+returns the uncapped match set and the buttons carry the count in their
+own label — "Mark 480 shown as owned" — which is error *prevention*
+rather than a confirmation after the fact. A no-op button disables
+itself and says why ("All shown already owned").
+
+**Decision 3 — confirm only the subtractive direction.** Marking
+threads owned is additive and reversible by its own inverse; marking
+them not-owned destroys a record the user built by hand. Only the
+latter confirms. Symmetric confirmation would have trained the user to
+dismiss the dialog that matters.
+
+**Decision 4 — delete gets undo instead of a modal.** UI-STANDARDS
+allows confirmation *or* reliable undo. Undo is the better half here
+because deletion cannot damage a saved project at all — projects carry
+their own palette snapshot (D55) — so the only loss is the reusable
+record, and a session-scoped restore returns it exactly, revision
+intact. Deleting the palette the policy points at falls back to the
+enabled-brand set rather than leaving a dangling reference.
+
+**Decision 5 — the editor is a collapsed disclosure, capped at 60.**
+Rendering 489 entries added ~10,600 px to a settings panel already
+14,700 px long, and every reorder rebuilds the list. Collapsed by
+default, with the palette name and thread count in the summary so the
+contents are identifiable without opening. The cap matches the thread
+list; past it a note points at the colour-count control, which is the
+actual way to get a palette worth reordering by hand.
+
+**A measurement I got wrong:** the first timings suggested a reorder
+cost ~2.6 s and I nearly redesigned around it. The figure was my own
+polling `sleep`, not the work. Measured properly with a
+`MutationObserver`, click-to-repaint is **8 ms**. The cap survives on
+the worst-case argument (an eight-brand palette would rebuild ~17,000
+elements per click), not on the number that prompted it — recorded
+because the wrong figure is now in the git history of this file.
+
+**Consequences:** M7 closes entirely; M8 (dithering expansion) becomes
+Current. The memory budgets flagged at the M7 ship are still open and
+are now the only outstanding housekeeping.

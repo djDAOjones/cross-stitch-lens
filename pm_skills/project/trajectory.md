@@ -19,6 +19,12 @@
 
 ## M7 — Palette & colour strategy (shipped 2026-07-21)
 
+- M7-LIB-01 (2026-07-21) — the library operations that never shipped:
+  keyboard-operable palette reordering and entry removal (both bump the
+  revision), bulk owned/not-owned across the whole filter rather than
+  the rendered page, and palette deletion with a session undo. The
+  entry list is a collapsed disclosure capped at 60. See decision-log
+  D58.
 - M7-ACCEPT-01 (2026-07-21) — maintainer accepted the combined
   brands → inventory → palettes → presets → counts → locks workflow.
   Close triage kept one item ahead of M8 (M7-LIB-01, the library

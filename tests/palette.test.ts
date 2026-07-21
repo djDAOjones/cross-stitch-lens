@@ -6,8 +6,15 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { loadDmcPalette, paletteLab, paletteRgb } from '../src/core/palette.ts';
+import {
+  loadDmcPalette,
+  paletteFingerprint,
+  paletteIdentityFingerprint,
+  paletteLab,
+  paletteRgb,
+} from '../src/core/palette.ts';
 import { loadCatalogue, threadsForBrands } from '../src/core/thread-catalogue.ts';
+import { thread } from './helpers/threads.ts';
 
 describe('DMC palette', () => {
   const palette = loadDmcPalette();
@@ -103,5 +110,43 @@ describe('thread catalogue', () => {
     // superseded DMC→Anchor cross-reference (D55).
     expect(catalogue.brands.every((b) => b.provenance === 'measured')).toBe(true);
     expect(catalogue.threads.every((t) => t.mappedFrom === null)).toBe(true);
+  });
+});
+
+describe('palette fingerprints', () => {
+  const black = thread('310', 'black', [0, 0, 0], { brandId: 'dmc' });
+  /** Same colour, different thread — the case RGB alone cannot see. */
+  const otherBlack = thread('403', 'black', [0, 0, 0], { brandId: 'anchor' });
+  const white = thread('B5200', 'white', [255, 255, 255], { brandId: 'dmc' });
+
+  it('separates on identity where the colours are identical', () => {
+    // The LUT may safely be shared — it stores indices, so identical
+    // ordered RGB means identical maths. The labels may NOT be shared,
+    // which is exactly what the identity fingerprint catches (D55).
+    const a = { name: 'a', entries: [black, white] };
+    const b = { name: 'b', entries: [otherBlack, white] };
+    expect(paletteFingerprint(a)).toBe(paletteFingerprint(b));
+    expect(paletteIdentityFingerprint(a)).not.toBe(paletteIdentityFingerprint(b));
+  });
+
+  it('treats a reorder as a different palette under both fingerprints', () => {
+    // Order is identity for both, because a LUT stores indices (D46) —
+    // reordering is a real edit, not a presentation change.
+    const a = { name: 'a', entries: [black, white] };
+    const reordered = { name: 'a', entries: [white, black] };
+    expect(paletteFingerprint(a)).not.toBe(paletteFingerprint(reordered));
+    expect(paletteIdentityFingerprint(a)).not.toBe(paletteIdentityFingerprint(reordered));
+  });
+
+  it('ignores the palette name', () => {
+    const a = { name: 'one', entries: [black, white] };
+    const b = { name: 'two', entries: [black, white] };
+    expect(paletteFingerprint(a)).toBe(paletteFingerprint(b));
+    expect(paletteIdentityFingerprint(a)).toBe(paletteIdentityFingerprint(b));
+  });
+
+  it('carries the entry count, so a prefix cannot collide with the whole', () => {
+    expect(paletteFingerprint({ name: 'x', entries: [black] })).toMatch(/-1$/);
+    expect(paletteIdentityFingerprint({ name: 'x', entries: [black, white] })).toMatch(/-2$/);
   });
 });

@@ -15,18 +15,6 @@ line passes and `check` is green. Requirements references are to
 
 ## Active
 
-### M7 — Palette & colour strategy
-
-Shipped and accepted 2026-07-21 (D55/D56/D57). One item remains, and it
-is here rather than in M8 because it completes operations the shipped
-library UI is missing rather than adding anything new: a user can
-create library palettes but never reorder or remove one, and can only
-build an inventory one checkbox at a time.
-
-- [ ] **M7-LIB-01 Complete the thread-library UI** [detail] (2026-07-21)
-  Intent: the library operations deferred at ship — keyboard-accessible palette reordering (order is identity-significant, D46, so its absence means a documented edit cannot be performed at all), bulk owned/not-owned over the current filter with a confirmation, and recoverable palette deletion (no delete route exists today).
-  Done when: reordering is reachable by keyboard, a bulk change states its count and is reversible, and no palette deletion can lose a saved project's rendering.
-
 ### M8 — Dithering expansion
 
 Rides the M5 search structures; algorithms land as user choices, not

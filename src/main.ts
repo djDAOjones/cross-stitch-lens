@@ -60,6 +60,7 @@ import {
 import { openLibrary, MemoryStore, type LibraryStore } from './library/store.ts';
 import {
   createPalettePanel,
+  moveEntry,
   type PalettePanelState,
 } from './ui/palette-panel.ts';
 import {
@@ -192,6 +193,8 @@ function build(app: HTMLElement): void {
   let eligibleCount = 0;
   let owned = new Set<string>();
   let libraryPalettes: LibraryPalette[] = [];
+  /** Last palette deleted this session — the undo route's only copy. */
+  let deletedPalette: LibraryPalette | null = null;
   let library: LibraryStore = new MemoryStore();
   /**
    * The resized, **un-reduced** grid buffer that colour-count selection
@@ -723,6 +726,7 @@ function build(app: HTMLElement): void {
       library: libraryPalettes,
       selectedIds: new Set(config.palette?.entries.map((t) => t.id) ?? []),
       libraryPersistent: library.persistent,
+      deletedPalette,
     };
   }
 
@@ -748,14 +752,38 @@ function build(app: HTMLElement): void {
     setOwned: (id, isOwned) => {
       if (isOwned) owned.add(id);
       else owned.delete(id);
-      void library.saveOwned(owned).catch((error: unknown) => {
-        log.error('library', 'inventory save failed', { message: describeError(error) });
-        status.textContent = 'Could not save your inventory to browser storage.';
-      });
+      persistOwned();
+      applyPolicy();
+    },
+    setOwnedBulk: (ids, isOwned) => {
+      for (const id of ids) {
+        if (isOwned) owned.add(id);
+        else owned.delete(id);
+      }
+      persistOwned();
+      status.textContent = isOwned
+        ? `Marked ${String(ids.length)} thread(s) as owned.`
+        : `Removed ${String(ids.length)} thread(s) from your inventory.`;
       applyPolicy();
     },
     savePaletteToLibrary: () => {
       void saveCurrentPalette();
+    },
+    movePaletteEntry: (paletteId, index, delta) => {
+      void editPalette(paletteId, (ids) => moveEntry(ids, index, delta), 'Reordered');
+    },
+    removePaletteEntry: (paletteId, index) => {
+      void editPalette(
+        paletteId,
+        (ids) => ids.filter((_, i) => i !== index),
+        'Removed a thread from',
+      );
+    },
+    deletePalette: (paletteId) => {
+      void removePalette(paletteId);
+    },
+    undoDeletePalette: () => {
+      void restoreDeletedPalette();
     },
     exportInventory: () => {
       downloadBlob(
@@ -820,6 +848,100 @@ function build(app: HTMLElement): void {
       const message = describeError(error);
       status.textContent = `Could not read that inventory file (${message}).`;
       log.error('library', 'inventory import failed', { message });
+    }
+  }
+
+  /** Write the inventory back to the library, reporting any failure. */
+  function persistOwned(): void {
+    void library.saveOwned(owned).catch((error: unknown) => {
+      log.error('library', 'inventory save failed', { message: describeError(error) });
+      status.textContent = 'Could not save your inventory to browser storage.';
+    });
+  }
+
+  /**
+   * Apply an edit to a saved palette's ordered thread ids.
+   *
+   * Every edit commits once and bumps `revision`, which is what lets a
+   * reopened project detect that the library palette it named has moved
+   * on (D55). The live design changes immediately — the policy resolves
+   * against the library record, and order is the nearest-match
+   * tie-break (D46) — while projects already saved keep their own
+   * snapshot until explicitly refreshed.
+   */
+  async function editPalette(
+    paletteId: string,
+    edit: (ids: string[]) => string[],
+    verb: string,
+  ): Promise<void> {
+    const existing = libraryPalettes.find((p) => p.id === paletteId);
+    if (existing === undefined) return;
+    const next: LibraryPalette = {
+      ...existing,
+      revision: existing.revision + 1,
+      threadIds: edit([...existing.threadIds]),
+    };
+    if (next.threadIds.length === 0) {
+      status.textContent =
+        'A palette needs at least one thread — remove the palette itself if you no longer want it.';
+      return;
+    }
+    try {
+      await library.putPalette(next);
+      libraryPalettes = await library.listPalettes();
+      status.textContent = `${verb} "${next.name}" (revision ${String(next.revision)}).`;
+      applyPolicy();
+    } catch (error) {
+      const message = describeError(error);
+      status.textContent = `Could not save that palette change (${message}).`;
+      log.error('library', 'palette edit failed', { message });
+    }
+  }
+
+  /**
+   * Delete a saved palette, keeping it in memory for an undo.
+   *
+   * No confirmation dialog: the undo is the recovery route
+   * (UI-STANDARDS → destructive actions need confirmation *or* reliable
+   * undo), and it is the honest one here because deletion cannot damage
+   * a saved project at all — those carry their own snapshot (D55).
+   */
+  async function removePalette(paletteId: string): Promise<void> {
+    const existing = libraryPalettes.find((p) => p.id === paletteId);
+    if (existing === undefined) return;
+    try {
+      await library.deletePalette(paletteId);
+      libraryPalettes = await library.listPalettes();
+      deletedPalette = existing;
+      // Fall back to the whole enabled-brand set rather than leaving the
+      // policy pointing at a palette that no longer exists.
+      if (policy.source.kind === 'library' && policy.source.paletteId === paletteId) {
+        policy = { ...policy, source: { kind: 'brands' } };
+      }
+      status.textContent = `Deleted "${existing.name}". Saved projects that used it are unaffected — you can undo this until you reload.`;
+      applyPolicy();
+    } catch (error) {
+      const message = describeError(error);
+      status.textContent = `Could not delete that palette (${message}).`;
+      log.error('library', 'palette delete failed', { message });
+    }
+  }
+
+  /** Put the last deleted palette back, exactly as it was. */
+  async function restoreDeletedPalette(): Promise<void> {
+    const restoring = deletedPalette;
+    if (restoring === null) return;
+    try {
+      await library.putPalette(restoring);
+      libraryPalettes = await library.listPalettes();
+      deletedPalette = null;
+      policy = { ...policy, source: { kind: 'library', paletteId: restoring.id } };
+      status.textContent = `Restored "${restoring.name}".`;
+      applyPolicy();
+    } catch (error) {
+      const message = describeError(error);
+      status.textContent = `Could not restore that palette (${message}).`;
+      log.error('library', 'palette restore failed', { message });
     }
   }
 

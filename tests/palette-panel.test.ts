@@ -11,8 +11,12 @@ import { describe, expect, it } from 'vitest';
 import { defaultPolicy, type PalettePolicy } from '../src/core/palette-policy.ts';
 import { loadCatalogue } from '../src/core/thread-catalogue.ts';
 import {
+  buildPaletteEntryRows,
   buildThreadRows,
+  bulkOwnershipTargets,
   countSummary,
+  filteredThreads,
+  moveEntry,
   matchesSearch,
   roleOf,
   sourceFromValue,
@@ -40,6 +44,7 @@ function state(overrides: Partial<PalettePanelState> = {}): PalettePanelState {
     library: [],
     selectedIds: new Set(),
     libraryPersistent: true,
+    deletedPalette: null,
     ...overrides,
   };
 }
@@ -250,5 +255,113 @@ describe('countSummary', () => {
     );
     expect(summary).toContain('20 selected of 20 requested');
     expect(summary).toContain('18 used in the design');
+  });
+});
+
+describe('moveEntry', () => {
+  it('moves an item up and down', () => {
+    expect(moveEntry(['a', 'b', 'c'], 1, -1)).toEqual(['b', 'a', 'c']);
+    expect(moveEntry(['a', 'b', 'c'], 1, 1)).toEqual(['a', 'c', 'b']);
+  });
+
+  it('is a no-op at the ends rather than wrapping', () => {
+    // Wrapping would silently send the first entry to the bottom of a
+    // palette the user was only nudging.
+    expect(moveEntry(['a', 'b', 'c'], 0, -1)).toEqual(['a', 'b', 'c']);
+    expect(moveEntry(['a', 'b', 'c'], 2, 1)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('ignores an out-of-range index', () => {
+    expect(moveEntry(['a', 'b'], 5, -1)).toEqual(['a', 'b']);
+    expect(moveEntry(['a', 'b'], -1, 1)).toEqual(['a', 'b']);
+  });
+
+  it('never mutates its input', () => {
+    const start = ['a', 'b', 'c'];
+    moveEntry(start, 0, 1);
+    expect(start).toEqual(['a', 'b', 'c']);
+  });
+
+  it('preserves length and membership', () => {
+    const moved = moveEntry(['a', 'b', 'c', 'd'], 3, -1);
+    expect(moved).toHaveLength(4);
+    expect([...moved].sort()).toEqual(['a', 'b', 'c', 'd']);
+  });
+});
+
+describe('bulkOwnershipTargets', () => {
+  it('spans the whole filter, not just the rendered page', () => {
+    // The table caps at 60 rows; a bulk action that only touched those
+    // would silently do less than its label says.
+    const ids = bulkOwnershipTargets(catalogue, state(), '', true);
+    expect(ids).toHaveLength(489);
+    expect(buildThreadRows(catalogue, state(), '').rows.length).toBeLessThan(ids.length);
+  });
+
+  it('counts only threads whose state would actually change', () => {
+    const owned = new Set(['dmc:310', 'dmc:666']);
+    const toOwn = bulkOwnershipTargets(catalogue, state({ owned }), '', true);
+    expect(toOwn).toHaveLength(487);
+    expect(toOwn).not.toContain('dmc:310');
+  });
+
+  it('is bounded by the search, so a narrow filter cannot mark everything', () => {
+    const ids = bulkOwnershipTargets(catalogue, state(), 'turquoise', true);
+    expect(ids.length).toBeGreaterThan(0);
+    expect(ids.length).toBeLessThan(489);
+  });
+
+  it('is bounded by the enabled brands', () => {
+    const ids = bulkOwnershipTargets(
+      catalogue,
+      state({ policy: { ...defaultPolicy(), brands: ['dmc'] } }),
+      '',
+      true,
+    );
+    expect(ids.every((id) => id.startsWith('dmc:'))).toBe(true);
+  });
+
+  it('returns nothing to un-own when nothing is owned', () => {
+    expect(bulkOwnershipTargets(catalogue, state(), '', false)).toEqual([]);
+  });
+});
+
+describe('filteredThreads', () => {
+  it('returns every match, uncapped', () => {
+    expect(filteredThreads(catalogue, state(), '')).toHaveLength(489);
+  });
+});
+
+describe('buildPaletteEntryRows', () => {
+  const palette: LibraryPalette = {
+    id: 'p1',
+    name: 'Mine',
+    revision: 3,
+    createdFrom: 'brands',
+    threadIds: ['dmc:310', 'anchor:403'],
+  };
+
+  it('lists entries in palette order with readable labels', () => {
+    const rows = buildPaletteEntryRows(palette, catalogue);
+    expect(rows.map((r) => r.id)).toEqual(['dmc:310', 'anchor:403']);
+    expect(rows[0]?.label).toContain('DMC 310');
+    expect(rows[0]?.unresolved).toBe(false);
+  });
+
+  it('keeps an entry the catalogue no longer has, and says so', () => {
+    // The slot has to survive: a thread dropped by a catalogue release
+    // must stay visible and movable, not silently vanish from a palette
+    // the user built (M7-PAL-01).
+    const rows = buildPaletteEntryRows(
+      { ...palette, threadIds: ['dmc:310', 'gone:999'] },
+      catalogue,
+    );
+    expect(rows).toHaveLength(2);
+    expect(rows[1]?.unresolved).toBe(true);
+    expect(rows[1]?.label).toContain('not in this catalogue');
+  });
+
+  it('handles an empty palette', () => {
+    expect(buildPaletteEntryRows({ ...palette, threadIds: [] }, catalogue)).toEqual([]);
   });
 });

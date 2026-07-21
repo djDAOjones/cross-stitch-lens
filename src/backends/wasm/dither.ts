@@ -33,10 +33,17 @@ function wasmDither(mod: WasmModule) {
       params.metric === 'lab',
       params.serpentine,
     );
+    // The crate returns the palette-index sidecar alongside the pixels
+    // so this backend identifies threads exactly as the TS reference
+    // does. Deriving indices here from the output RGB instead would be
+    // a guess, and a wrong one wherever two brands share a colour.
+    const pixels = out.pixels;
+    const indices = out.indices;
     return {
       width: input.width,
       height: input.height,
-      data: new Uint8ClampedArray(out.buffer, out.byteOffset, out.length),
+      data: new Uint8ClampedArray(pixels.buffer, pixels.byteOffset, pixels.length),
+      indices: new Uint16Array(indices.buffer, indices.byteOffset, indices.length),
     };
   };
 }

@@ -1494,3 +1494,148 @@ placement does not touch.
 finding: browser placement is parked, and the OS-level arrangement it
 describes needs ICE-TAURI-01 first. Reopening this needs the
 real-browser rehearsal matrix, which is a maintainer task.
+
+## D54 — M6 closed on maintainer acceptance (2026-07-21)
+
+**Verdict:** accepted. The maintainer signed off M6-ACCEPT-01 — the
+legs only a human at a real machine can judge: Photoshop side by side
+at a realistic narrow width with live capture running, the
+aspect-locked crop driven by pointer and keyboard on a Retina display
+and against a window resized mid-session, and the ≥ 4 updates/sec
+promise under that load.
+
+**Why it is recorded rather than assumed:** M6's agent-side work
+shipped 2026-07-21 (D52/D53) but the milestone's acceptance line is a
+human gate by construction — the failure modes it guards (a crop that
+fights the pointer at DPR 2, a layout that only breaks once Photoshop
+is actually beside it) are not reachable from an automated check. The
+acceptance is the evidence; nothing about the shipped code changed.
+
+**Consequences:** M6 leaves the backlog; v0.5.0 stands as the shipped
+companion-layout release. M7 (palette & colour strategy) becomes
+Current.
+
+## D55 — M7: identity is the thread, not the colour (2026-07-21)
+
+**Context:** M7 turns one hard-coded DMC palette into brands,
+inventory, saved palettes, presets, colour counts and per-thread rules.
+Every one of those is a way of *narrowing* which threads a conversion
+may use, and the failure mode they share is narrowing silently.
+
+**Decision 1 — identity is `brandId:reference`; RGB is a display
+value.** `PaletteEntry` is gone; a palette is an ordered set of
+`Thread`s carrying id, brand, reference, name, provenance and status.
+Nothing merges two threads because their colours match. The data makes
+this load-bearing rather than theoretical: 3,338 threads render as only
+2,830 distinct colours, so RGB de-duplication would delete ~500 real,
+separately-buyable threads.
+
+**Decision 2 — a palette-index sidecar, not a reverse lookup.** Once
+two brands can hold the same colour, "which thread is this stitch?" has
+no answer in the pixels. `PixelBuffer.indices` is set by the stages that
+map to a palette and travels the worker boundary as a transferable;
+`EMPTY_INDEX` (0xffff) marks fabric so a black first entry is not
+reported as stitches. The Rust crate was extended to return it too —
+deriving it JS-side from the output RGB would have been exactly the
+guess this exists to remove. A stage that invalidates it (resize after
+reduce, under `reduce-first`) simply omits it, and stats fall back to
+counting colours with no reference rather than inventing one.
+
+**Decision 3 — four restrictions, composed in one place, never
+collapsed.** `palette-policy.ts` holds brands (the universe), source
+(a strict palette or preset within it), `ownedOnly` (the inventory
+overlay) and lock/prefer/exclude. Collapsing any two is how "brand
+enabled" quietly starts meaning "brand preferred". The colour-count
+limit is deliberately *outside* it, in `palette-selection.ts`, because
+it depends on the image — and it is applied **last**, so it selects
+from the permitted set and can never widen one.
+
+**Decision 4 — nothing throws; every failure is an explained
+conflict.** No brand enabled, an empty inventory under "owned only", a
+strict preset that resolved nothing, a lock outside the permitted set:
+all are `PaletteConflict` values with a severity and a full sentence
+naming the way out. These are states a person reaches by clicking two
+checkboxes, and an exception thrown from inside a pixel pipeline is not
+a UI. The UI keeps the three per-thread rules disjoint, so the
+"locked and excluded" contradiction the resolver reports can only come
+from a hand-edited file, never from clicking.
+
+**Decision 5 — selection chooses against the source, never its own
+output.** Count-limited selection is constrained quantisation over the
+catalogue, seeded from a weighted Lab distribution of the design. The
+first implementation fed it the pipeline's *reduced* output, which the
+browser check caught: narrowing to 12 colours then asking for 30
+returned 16, because the distribution only held the 12 already chosen.
+The buffer is now the resized full-RGB twin, fetched once per source or
+geometry change through the export route. Under live capture it is
+deliberately not refreshed per frame — a palette rebuilt every frame
+would make the preview churn.
+
+**Decision 6 — presets ship algorithmic and say so.** Four LCh rules
+(Neutrals, Pastels, Earth tones, Deep shades), each carrying its rule
+as user-facing copy. A preset named "Pastels" promises taste, and taste
+is the owner's to sign off; inventing a curated membership list and
+presenting it as authoritative would be the agent putting words in the
+product's mouth. The resolver already supports curated presets — a
+curated preset is just a rule returning a fixed set.
+
+**Decision 7 — projects store intent *and* the resolved snapshot.**
+Schema v3's palette block holds the policy (what was asked for) and the
+exact ordered threads that rendered (what happened). Policy alone would
+let a catalogue release change a saved design; snapshot alone would
+lose the intent. On reopen the snapshot wins and library drift is
+reported, never repaired by name.
+
+**Consequences:** project schema v3 with a v2 forward migration;
+`PREFERENCE_DISCOUNT = 0.9` is a named product constant whose effect is
+reported back as `preferredUsed`; 96 new tests. Deferred to the
+acceptance gate: palette reordering UI, bulk inventory operations, and
+curated preset membership.
+
+## D56 — The thread data was superseded mid-milestone (2026-07-21)
+
+**Context:** partway through M7 the maintainer replaced the owner data.
+`dmc-anchor-map.csv` (a DMC→Anchor cross-reference, 533 DMC rows) is
+superseded by `thread_list.csv` — 3,338 threads across eight brands
+(Cosmo, DMC, CXC, Sullivans, Anchor, Ariadna, Madeira, Finca), each
+carrying that brand's own colours. A second file, `thread_map.csv`,
+proposes a cross-reference schema but contains **no data rows**.
+
+**Why the architecture absorbed it:** D55's identity model was designed
+for a case that was then an edge (Anchor colours mapped from DMC) and is
+now the norm. Nothing in the policy, selection, or sidecar work changed.
+
+**Decision 1 — one generator, CSV in, JSON out.** The source of truth
+stays CSV: the owner edits it, it diffs in git, it needs no tooling.
+`build-palette.mjs` now emits only `catalogue.json`; `dmc.json` had no
+remaining reader and was deleted. Determinism is unchanged (brands
+alphabetically by id, threads in source order within a brand).
+
+**Decision 2 — references are normalised, brands are not merged.**
+Anchor, CXC and Sullivans repeat their brand name inside the code
+column ("Anchor 403"); the brand is already its own field, so the
+prefix is stripped — otherwise every label reads "Anchor Anchor 403".
+All eight brands are `provenance: "measured"`; the `mapped` variant
+stays in the model for the cross-reference data when it lands.
+
+**Decision 3 — nearest-equivalent ships computed, layered under
+curated.** With measured colours per brand this is already answerable
+from the existing Lab maths, so it ships now — but every result is
+labelled, because a computed match is a suggestion and a published
+conversion is not. The gap is real and measurable: DMC 310 is recorded
+as `#0c0c0c` and Anchor 403 as `#000000`, so the correct answer still
+carries ΔE 3.3. That is the argument for curated data, recorded as a
+test.
+
+**Recommendation on the map format (not yet acted on):**
+`thread_map.csv`'s wide shape — a name/id column pair per brand — makes
+every new brand a schema change and already carries ~400 blank rows.
+A long form (`group_id,brand,code`, one row per thread per equivalence
+group) adds rows instead of columns. Backlogged as M7-BRAND-03.
+
+**Consequences:** the old CSV is retained as owner data but no longer
+read; the protected-doc data tables were corrected in-flight because
+the docs gate blocks on a path that no longer exists (doc-delta filed);
+owner CSVs are excluded from the EditorConfig check, since their BOM
+and CRLF are the exporter's, not this repo's, and the generator
+normalises both at read time.

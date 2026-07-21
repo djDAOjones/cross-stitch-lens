@@ -26,10 +26,10 @@
  * - PATHS checks only inline code spans containing a `/` with a strict
  *   charset; bare filenames, commands, globs, URLs, and placeholder
  *   patterns are skipped.
- * - PATHS skips `pm_skills/CHANGELOG.md` as a SOURCE: it is
- *   append-only history, and old entries legitimately name files that
- *   no longer exist (renamed/merged in later releases). Its links are
- *   still checked.
+ * - PATHS skips append-only sources (`pm_skills/CHANGELOG.md`, the
+ *   decision log, and everything under `pm_skills/project/archive/`):
+ *   old entries legitimately name files that no longer exist
+ *   (renamed/merged/superseded later). Their links are still checked.
  * - Template/example paths that never exist here (archive/, tickets/)
  *   are ignored.
  *
@@ -79,6 +79,22 @@ const PATH_SOURCE_EXCLUDE = new Set([
   'pm_skills/CHANGELOG.md',
   'pm_skills/project/decision-log.md',
 ]);
+
+/**
+ * Directory prefixes under the same append-only rule as the files
+ * above. `pm_skills/project/archive/` holds content pruned out of the
+ * hot memory files and is never rewritten, so an old entry naming a
+ * since-deleted path is a correct historical record, not rot.
+ */
+const PATH_SOURCE_EXCLUDE_PREFIXES = ['pm_skills/project/archive/'];
+
+/** True when a file's backticked paths are exempt from validation. */
+function skipPathCheck(file) {
+  return (
+    PATH_SOURCE_EXCLUDE.has(file) ||
+    PATH_SOURCE_EXCLUDE_PREFIXES.some((prefix) => file.startsWith(prefix))
+  );
+}
 
 /**
  * Directories whose files are not checked at all: distributed
@@ -189,7 +205,7 @@ function problemsIn(file) {
     problems.push({ file, line: lineOf(content, m.index), kind: 'broken link', target });
   }
 
-  if (!PATH_SOURCE_EXCLUDE.has(file)) {
+  if (!skipPathCheck(file)) {
     for (const m of content.matchAll(CODE_SPAN_RE)) {
       const target = codePath(m[1]);
       if (target === null) continue;

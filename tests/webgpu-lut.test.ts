@@ -24,6 +24,7 @@ import { loadDmcPalette, paletteLab, paletteRgb } from '../src/core/palette.ts';
 import type { Palette } from '../src/core/types.ts';
 import { mirrorPalette, nearestBinF32 } from './helpers/lut-f32.ts';
 import { reservedIdentifiers } from './helpers/wgsl-reserved.ts';
+import { thread } from './helpers/threads.ts';
 
 /** Divergence budget: at most this share of bins may disagree. */
 const MAX_MISMATCH_RATE = 0.01;
@@ -37,10 +38,10 @@ const NEAR_TIE_MARGIN = 0.005;
 const TEST_PALETTE: Palette = {
   name: 'test-rwbk',
   entries: [
-    { code: 'R', name: 'red', hex: '#ff0000', rgb: [255, 0, 0], manufacturer: 'test' },
-    { code: 'W', name: 'white', hex: '#ffffff', rgb: [255, 255, 255], manufacturer: 'test' },
-    { code: 'B', name: 'blue', hex: '#0000ff', rgb: [0, 0, 255], manufacturer: 'test' },
-    { code: 'K', name: 'black', hex: '#000000', rgb: [0, 0, 0], manufacturer: 'test' },
+    thread('R', 'red', [255, 0, 0]),
+    thread('W', 'white', [255, 255, 255]),
+    thread('B', 'blue', [0, 0, 255]),
+    thread('K', 'black', [0, 0, 0]),
   ],
 };
 

@@ -27,6 +27,7 @@ import type {
   ProcessRequest,
   WorkerResponse,
 } from '../src/worker/protocol.ts';
+import { thread } from './helpers/threads.ts';
 
 /**
  * Minimal ImageData for the node test environment (workers have the
@@ -66,20 +67,8 @@ const CONFIG: PipelineConfig = {
 const PALETTE: Palette = {
   name: 'test-bw',
   entries: [
-    {
-      code: 'K',
-      name: 'black',
-      hex: '#000000',
-      rgb: [0, 0, 0],
-      manufacturer: 'test',
-    },
-    {
-      code: 'W',
-      name: 'white',
-      hex: '#ffffff',
-      rgb: [255, 255, 255],
-      manufacturer: 'test',
-    },
+    thread('K', 'black', [0, 0, 0]),
+    thread('W', 'white', [255, 255, 255]),
   ],
 };
 
@@ -115,6 +104,7 @@ function result(id: number): WorkerResponse {
     width: 2,
     height: 2,
     pixels: new Uint8ClampedArray(2 * 2 * 4).buffer,
+    indices: null,
     timings: [],
   };
 }

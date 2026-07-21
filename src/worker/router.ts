@@ -62,6 +62,11 @@ export function defaultDeps(
   };
 }
 
+/** Both buffers to transfer, skipping the sidecar when there is none. */
+function transferable(pixels: ArrayBuffer, indices: ArrayBuffer | null): Transferable[] {
+  return indices === null ? [pixels] : [pixels, indices];
+}
+
 /** Wrap a result's pixels in an ImageData for the preview snapshot. */
 function toImageData(response: Extract<WorkerResponse, { type: 'result' }>): ImageData {
   return new ImageData(
@@ -170,8 +175,9 @@ export function createRouter(deps: RouterDeps): (request: WorkerRequest) => void
           width: response.width,
           height: response.height,
           pixels: response.pixels,
+          indices: response.indices,
         },
-        [response.pixels],
+        transferable(response.pixels, response.indices),
       );
     } else {
       deps.post(response, []);
@@ -234,7 +240,7 @@ export function createRouter(deps: RouterDeps): (request: WorkerRequest) => void
         message: describe(error),
       });
     }
-    deps.post(response, [response.pixels]);
+    deps.post(response, transferable(response.pixels, response.indices));
   }
 
   return (request: WorkerRequest): void => {

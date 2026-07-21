@@ -37,8 +37,13 @@ const KEY_MAX_SHARE = 0.4;
 export interface KeyEntry {
   hex: string;
   rgb: [number, number, number];
-  /** Thread code when the colour is in the active palette. */
-  code?: string;
+  /**
+   * Brand and reference of the thread, when the design was identified.
+   * Both, or neither: a chart key that says "310" without saying whose
+   * 310 sends the stitcher to the wrong shelf (M7-BRAND-02).
+   */
+  brand?: string;
+  reference?: string;
 }
 
 export interface PdfOptions {
@@ -197,7 +202,9 @@ export async function buildChartPdf(
       borderWidth: 0.5,
     });
     const label =
-      cell.entry.code === undefined ? cell.entry.hex : `${cell.entry.code} ${cell.entry.hex}`;
+      cell.entry.reference === undefined
+        ? cell.entry.hex
+        : `${cell.entry.brand ?? ''} ${cell.entry.reference} ${cell.entry.hex}`.trim();
     page.drawText(toWinAnsi(label), {
       x: cell.x + KEY_SWATCH + 4,
       y: cell.y + 1,

@@ -25,7 +25,7 @@ const OPTIONS: PdfOptions = {
 };
 
 const ENTRIES: KeyEntry[] = [
-  { hex: '#000000', rgb: [0, 0, 0], code: '310' },
+  { hex: '#000000', rgb: [0, 0, 0], brand: 'DMC', reference: '310' },
   { hex: '#ffffff', rgb: [255, 255, 255] },
 ];
 

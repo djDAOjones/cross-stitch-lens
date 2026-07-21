@@ -28,6 +28,22 @@ interface Job {
   config: PipelineConfig;
 }
 
+/** Rebuild a PixelBuffer from a transferred response, sidecar included. */
+function toBuffer(
+  width: number,
+  height: number,
+  pixels: ArrayBuffer,
+  indices: ArrayBuffer | null,
+): PixelBuffer {
+  const buffer: PixelBuffer = {
+    width,
+    height,
+    data: new Uint8ClampedArray(pixels),
+  };
+  if (indices !== null) buffer.indices = new Uint16Array(indices);
+  return buffer;
+}
+
 /** Wraps the pipeline worker behind a latest-wins submit API. */
 export class PipelineClient {
   private readonly worker: Worker;
@@ -138,11 +154,7 @@ export class PipelineClient {
     if (response.type === 'export-result') {
       const pending = this.pendingExports.get(response.id);
       this.pendingExports.delete(response.id);
-      pending?.resolve({
-        width: response.width,
-        height: response.height,
-        data: new Uint8ClampedArray(response.pixels),
-      });
+      pending?.resolve(toBuffer(response.width, response.height, response.pixels, response.indices));
       return;
     }
     if (response.type === 'error' && this.pendingExports.has(response.id)) {
@@ -156,11 +168,7 @@ export class PipelineClient {
       log.error('worker', 'frame failed', { message: response.message });
     } else if (this.onResult) {
       this.onResult({
-        buffer: {
-          width: response.width,
-          height: response.height,
-          data: new Uint8ClampedArray(response.pixels),
-        },
+        buffer: toBuffer(response.width, response.height, response.pixels, response.indices),
         timings: response.timings,
       });
     }

@@ -15,49 +15,22 @@ line passes and `check` is green. Requirements references are to
 
 ## Active
 
-### M6 — Photoshop companion layout
-
-- [ ] **M6-ACCEPT-01 Companion layout acceptance** [maintainer] [sign-off] (2026-07-21)
-  Intent: the M6 legs that only a human at a real machine can judge — Photoshop side by side at a realistic narrow width with live capture running, the aspect-locked crop driven by pointer and keyboard on a Retina display and against a window resized mid-session, and the ≥ 4 updates/sec promise under that load.
-  Done when: the maintainer confirms the side-by-side workflow, or files what broke. Agent-side M6 shipped 2026-07-21 (see trajectory + D52/D53); this is the human gate on it.
-
 ### M7 — Palette & colour strategy
 
-One connected workflow: brands → inventory → palettes → presets →
-counts → locks → auto-fill. Rides M5 evidence: LUT cache key fixed
-(D46); GPU LUT build 59–655× faster than TS (D47), so per-palette
-rebuild during live editing is plausible.
+Agent-side M7 shipped 2026-07-21 (see trajectory + D55/D56). What
+remains is the human gate plus the two items the new owner data opened
+up.
 
-- [ ] **M7-BRAND-01 Thread-brand data model** [detail]
-  Intent: keep display colour, brand, reference, name, palette membership, inventory status, and availability distinct; ingest a second brand (Anchor cross-reference already on the DMC map).
-  Done when: two brands load with distinct references and near-equal digital colours are never merged.
+- [ ] **M7-BRAND-03 Curated cross-reference ingestion** [detail] (2026-07-21)
+  Intent: ingest owner-reviewed thread equivalences so "nearest equivalent" can answer from published conversions rather than colour distance alone. `thread-map-proposed.csv` is currently a header with no data rows; the recommended shape is long/tidy (`group_id,brand,code`) rather than its current wide one-column-pair-per-brand form, which makes every new brand a schema change (D56).
+  Done when: curated equivalences load, override the computed answer, and are visibly labelled as published rather than computed — with the computed path still filling the gaps.
 
-- [ ] **M7-BRAND-02 Brand selection and restricted conversion** [detail]
-  Intent: enable/disable brands; conversion restricted to enabled brands; brand/reference/name visible per colour; brand switching without manual project rebuild.
-  Done when: conversion provably uses only enabled-brand references and switching preserves the project.
+- [ ] **M7-PAL-02 Palette editing: reorder, bulk inventory, delete/undo** [detail] (2026-07-21)
+  Intent: the M7-PAL-01 editing affordances deferred at ship — keyboard-accessible reordering (order is identity-significant, D46), bulk owned/not-owned operations with confirmation, and recoverable palette deletion.
+  Done when: reordering is reachable by keyboard, a bulk change is confirmable and reversible, and no palette deletion can lose a saved project's rendering.
 
-- [ ] **M7-INV-01 Personal thread inventory** [detail]
-  Intent: reusable cross-project inventory — mark owned, add/remove, filter by brand/family/search, import/export; "only use threads I own" as a conversion restriction.
-  Done when: an inventory-restricted conversion uses only owned references and the inventory persists across projects.
-
-- [ ] **M7-PAL-01 Named custom palettes** [detail]
-  Intent: create/edit/duplicate/delete named palettes seeded from a brand, inventory, or preset; multi-brand; import/export; missing/retired/duplicate references surfaced, not hidden.
-  Done when: a project restricted to a saved palette reproduces identically on reopen, including defined missing-reference behaviour.
-
-- [ ] **M7-PRESET-01 Curated colour-scheme presets** [detail]
-  Intent: ready-made schemes (pastels, earth tones, monochrome, limited-N…) resolving to real references from enabled brands; previewable; duplicable into a custom palette; strict-palette vs preference application kept distinct.
-  Done when: presets apply predictably, degrade visibly when a brand is disabled, and save as personal palettes.
-
-- [ ] **M7-COUNT-01 Target / maximum colour count** [detail]
-  Intent: exact or maximum colour-count requests with automatic reduction; requested vs actual shown with the reason for any gap; edge cases (count > palette, locked > count, indistinguishable threads) defined.
-  Done when: limits are never silently violated and every divergence is explained in the UI.
-
-- [ ] **M7-MIX-01 Locked, preferred, and excluded colours with auto-fill** [detail]
-  Intent: lock/prefer/exclude colours and let the app pick the rest within the permitted set; re-run keeps manual choices; conflicts explained, never silently overridden.
-  Done when: "lock 5, request 15" fills 10 from the permitted palette and each conflict case has a visible explanation.
-
-- [ ] **M7-ACCEPT-01 Palette workflow acceptance** [sign-off] [detail] (2026-07-20)
-  Intent: verify the combined workflow's worked examples under live editing, persistence, and export.
+- [ ] **M7-ACCEPT-01 Palette workflow acceptance** [maintainer] [sign-off] [detail] (2026-07-20)
+  Intent: verify the combined workflow's worked examples under live editing, persistence, and export — the legs only a human at a real machine can judge, above all whether the eight-brand thread list produces plausible, stitchable colour choices.
   Done when: saved projects reproduce identically, exports carry correct brand + reference only from the permitted set, and live editing has no material regression.
 
 *Acceptance: the §3 workflow examples pass end-to-end (choose DMC and
@@ -107,6 +80,10 @@ wins.
 
 <!-- Deferred but worth keeping (post-triage). Needs a decision to
      reactivate. Promote into a milestone when committed. -->
+
+- [ ] **ICE-EXPLORER-01 Colour explorer** [detail] (2026-07-21)
+  Intent: a dedicated view over the 3,338-thread catalogue for browsing rather than converting — filter and sort by brand, hue/lightness/chroma, ownership; inspect one thread and see its nearest equivalents in every other brand side by side. The engine half already exists (`thread-equivalents.ts`); this is the view. Owner-flagged as a later nicety, not MVP.
+  Done when: a thread can be found by eye or by search, and its cross-brand equivalents are readable with their provenance and distance.
 
 - [ ] **ICE-WORKSPACE-01 Automated Photoshop companion workspace** [detail] (2026-07-20)
   Intent: one-button side-by-side arrangement of Photoshop and Cross Stitch Lens. M6-WIN-01 settled the browser half: window placement is parked (D53 — `resizeTo` ignored without error, window-management denied, popups blocked even from a trusted gesture), so this now depends entirely on ICE-TAURI-01 packaging.

@@ -79,12 +79,18 @@ export function executeRequest(
       // bookkeeping, not the stage's cost.
       observe?.(instance.stage.name, buffer);
     }
+    // The sidecar rides along only when the LAST stage produced one:
+    // a resize after the colour stage ('reduce-first') invalidates it,
+    // and silently forwarding a stale one would label every stitch
+    // with the thread its pre-resize neighbour used.
+    const indices = buffer.indices;
     return {
       type: 'result',
       id: request.id,
       width: buffer.width,
       height: buffer.height,
       pixels: buffer.data.buffer as ArrayBuffer,
+      indices: indices === undefined ? null : (indices.buffer as ArrayBuffer),
       timings,
     };
   } catch (error) {

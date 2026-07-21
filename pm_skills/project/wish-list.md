@@ -22,6 +22,7 @@ refer to `docs/requirements.md`.
 
 ## Second stage (spec §25)
 
+- Thorough rename of app/ repository to Pattern Mapper, renaming across files and platforms
 - Full custom processing-order editor (advanced mode, §7)
 - Colour-reduction extras: CIEDE2000, weighting controls,
   merge-similar, min-usage threshold (§6) — max colours and

@@ -17,12 +17,13 @@ import { clearLutCache, getLut, lutCacheSize } from '../src/worker/lut-cache.ts'
 import type { PipelineConfig } from '../src/core/pipeline/config.ts';
 import type { ProcessRequest } from '../src/worker/protocol.ts';
 import type { Palette } from '../src/core/types.ts';
+import { thread } from './helpers/threads.ts';
 
 const PALETTE: Palette = {
   name: 'test-bw',
   entries: [
-    { code: 'K', name: 'black', hex: '#000000', rgb: [0, 0, 0], manufacturer: 'test' },
-    { code: 'W', name: 'white', hex: '#ffffff', rgb: [255, 255, 255], manufacturer: 'test' },
+    thread('K', 'black', [0, 0, 0]),
+    thread('W', 'white', [255, 255, 255]),
   ],
 };
 

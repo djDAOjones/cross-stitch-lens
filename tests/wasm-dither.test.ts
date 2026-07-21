@@ -21,6 +21,7 @@ import { runPipeline } from '../src/core/pipeline/index.ts';
 import { stageInstance } from '../src/core/types.ts';
 import type { Palette, PixelBuffer } from '../src/core/types.ts';
 import { expectBufferMatch, loadGolden } from './helpers/golden.ts';
+import { thread } from './helpers/threads.ts';
 
 const WASM_BYTES_PATH = fileURLToPath(
   new URL('../crates/stitch-engine/pkg/stitch_engine_bg.wasm', import.meta.url),
@@ -30,10 +31,10 @@ const PKG_BUILT = existsSync(WASM_BYTES_PATH);
 const TEST_PALETTE: Palette = {
   name: 'test-rwbk',
   entries: [
-    { code: 'R', name: 'red', hex: '#ff0000', rgb: [255, 0, 0], manufacturer: 'test' },
-    { code: 'W', name: 'white', hex: '#ffffff', rgb: [255, 255, 255], manufacturer: 'test' },
-    { code: 'B', name: 'blue', hex: '#0000ff', rgb: [0, 0, 255], manufacturer: 'test' },
-    { code: 'K', name: 'black', hex: '#000000', rgb: [0, 0, 0], manufacturer: 'test' },
+    thread('R', 'red', [255, 0, 0]),
+    thread('W', 'white', [255, 255, 255]),
+    thread('B', 'blue', [0, 0, 255]),
+    thread('K', 'black', [0, 0, 0]),
   ],
 };
 

@@ -19,7 +19,7 @@ WebGPU as profiled drop-in backends.
 
 Pre-MVP. Work is organised into milestones **M0–M12** in
 [`pm_skills/project/backlog.md`](pm_skills/project/backlog.md).
-**M0–M6 have shipped (v0.5.0)**: the quality-gated scaffold, the full
+**M0–M7 have shipped (v0.5.0)**: the quality-gated scaffold, the full
 TypeScript engine core (resize, CIELAB palette reduction, Floyd–
 Steinberg dithering, stats), still-image import, the preview UI —
 worker-rendered canvas with zoom/pan/fit, grid overlay with row/column
@@ -35,9 +35,15 @@ harness) — and the **Photoshop companion layout**: a preview-first
 responsive shell usable from 320 CSS px, a collapsible settings panel,
 a preview-focus mode, fit-to-space/width/height, and four
 independently-settable resolutions (pattern, capture, preview, export)
-with the capture region aspect-locked to the pattern. Next up:
-**M7 palette & colour strategy** (thread brands, inventory, named
-palettes, colour-count targets).
+with the capture region aspect-locked to the pattern — and the
+**palette & colour strategy**: a thread catalogue of 3,338 threads
+across eight brands, per-brand enable/disable, a cross-project thread
+inventory in IndexedDB with an "only threads I own" restriction, named
+library palettes, algorithmic colour-scheme presets, exact/maximum
+colour-count targets, and lock/prefer/exclude with auto-fill — every
+narrowing explained in words rather than silently applied. Next up:
+**M8 dithering expansion** (algorithm evaluation, then the chosen set
+as user choices with plain-language presets).
 
 ## How to run
 

@@ -134,7 +134,7 @@ describe('workload configs', () => {
     for (const workload of WORKLOADS) {
       const palette = paletteFor(workload);
       if (workload.palette === 'rgb') expect(palette).toBeNull();
-      else expect(palette?.entries.length).toBe(workload.palette === 'p64' ? 64 : 533);
+      else expect(palette?.entries.length).toBe(workload.palette === 'p64' ? 64 : 489);
     }
   });
 

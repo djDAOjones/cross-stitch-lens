@@ -91,6 +91,50 @@ Order is data, not code — it is stored in the project file and the
 UI can reorder it (requirements §7). Default order:
 `adjust → resize → reduce(+dither)`.
 
+### Thread identity and the palette policy (M7)
+
+Identity is `brandId:reference` (`Thread.id`); RGB is a display value
+only. Threads are never merged because their colours match — the
+catalogue holds 3,338 threads across eight brands at just 2,830
+distinct colours, so RGB de-duplication would delete ~500 real threads
+(D55/D56).
+
+Because two threads can render identically, "which thread is this
+stitch?" has no answer in the pixels. Stages that map to a palette
+therefore emit a **palette-index sidecar** on their output buffer
+(`PixelBuffer.indices`, `EMPTY_INDEX = 0xffff` for fabric), transferred
+across the worker boundary alongside the pixels. A stage that
+invalidates it (resize after reduce, under `reduce-first`) omits it,
+and stats fall back to counting colours with no reference rather than
+guessing one.
+
+Which threads a conversion may use is decided by one pure layer:
+
+| Module | Owns |
+| --- | --- |
+| `thread-catalogue.ts` | Brands, threads, identity, union ordering |
+| `palette-policy.ts` | brands ∩ source ∩ ownedOnly − excluded, + locks/preferences → `PermittedSet` + typed conflicts |
+| `palette-selection.ts` | Colour-count selection and lock/prefer auto-fill over a weighted Lab distribution |
+| `palette-resolve.ts` | The single entry point composing the two, count applied **last** |
+| `palette-presets.ts` | Built-in algorithmic LCh schemes |
+| `thread-equivalents.ts` | Nearest cross-brand equivalent, curated over computed |
+
+Nothing there throws: every failure is a `PaletteConflict` with a
+severity and a user-facing sentence. The count limit selects *from* the
+permitted set, so it can never widen one — the invariant M7-ACCEPT-01
+checks.
+
+Count selection reads the resized **full-RGB** grid buffer, never the
+pipeline's own output: selecting from an already-reduced image feeds
+the selector its previous answer, so a design narrowed to 12 colours
+could never widen back to 30. It is fetched once per source or geometry
+change through the export route, not per frame.
+
+Library data (thread inventory, saved palettes) lives in IndexedDB
+behind `src/library/store.ts`, outside `src/core/` — core consumes a
+plain immutable set of allowed identities. The memory fallback is
+announced through `LibraryStore.persistent`, never silent.
+
 ### Colour reduction strategy
 
 1. On palette or metric change, build a LUT: 15-bit quantised RGB
@@ -132,6 +176,18 @@ At the typical 200 × 200 grid the whole pipeline must run ≤ 10 ms.
 
 ## Project file (JSON, versioned)
 
-`{ schemaVersion, grid, source, palette, pipeline[], preview, chart,
-export }` — see requirements §20 for the full field inventory.
-Loading an older `schemaVersion` must migrate, never fail.
+`{ schemaVersion, pipeline, palette, gridStyle, preview, export }` —
+see requirements §20 for the full field inventory. Loading an older
+`schemaVersion` must migrate, never fail (currently v3, with forward
+steps from v1 and v2).
+
+The `palette` block holds **both** halves, and needs both (D55):
+
+- `policy` — the user's intent (enabled brands, source, `ownedOnly`,
+  count request, locks/preferences/exclusions). Policy alone would let
+  a catalogue release silently change a saved design.
+- `snapshot` — the exact ordered threads that rendered it. Snapshot
+  alone would lose the intent, so nothing could be recomputed.
+
+On reopen the snapshot is authoritative; library drift is reported,
+never repaired by name. `null` is full-RGB mode.

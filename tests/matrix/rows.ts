@@ -26,6 +26,7 @@ import type { OrderPreset, PipelineConfig } from '../../src/core/pipeline/config
 import type { ResizeMode } from '../../src/core/pipeline/resize.ts';
 import { loadDmcPalette } from '../../src/core/palette.ts';
 import type { Palette, PixelBuffer } from '../../src/core/types.ts';
+import { thread } from '../helpers/threads.ts';
 
 /**
  * Palette axis. Beyond the size axis the bench matrix carries, these
@@ -279,13 +280,7 @@ function palette64(): Palette {
 function synthetic(name: string, rgb: [number, number, number][]): Palette {
   return {
     name,
-    entries: rgb.map((value, i) => ({
-      code: `S${String(i)}`,
-      name: `${name}-${String(i)}`,
-      hex: `#${value.map((c) => c.toString(16).padStart(2, '0')).join('')}`,
-      rgb: value,
-      manufacturer: 'test',
-    })),
+    entries: rgb.map((value, i) => thread(`S${String(i)}`, `${name}-${String(i)}`, value)),
   };
 }
 

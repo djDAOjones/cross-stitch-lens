@@ -17,8 +17,56 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
+## M7 — Palette & colour strategy (shipped 2026-07-21)
+
+- M7-DATA-01 (2026-07-21) — owner thread data superseded mid-milestone:
+  `thread-list.csv` (3,338 threads, 8 brands, each brand's own measured
+  colours) replaces the DMC→Anchor cross-reference; `dmc.json` retired,
+  `catalogue.json` generated in its place. See decision-log D56.
+- M7-BRAND-01 (2026-07-21) — thread identity is `brandId:reference` and
+  RGB is display-only: `Thread` replaces `PaletteEntry`, a
+  palette-index sidecar runs through reduce, dither, the Rust crate,
+  the worker protocol and stats, so ~500 threads sharing a colour with
+  another stay distinct. See decision-log D55.
+- M7-BRAND-02 (2026-07-21) — brands enable/disable as a checkbox group
+  with deterministic union order; no-brand is an explained error, never
+  full-RGB. Stats, chart key and PDF carry brand + reference. See
+  decision-log D55.
+- M7-INV-01 (2026-07-21) — cross-project thread inventory in IndexedDB
+  behind a `LibraryStore` interface (memory fallback announced, never
+  silent), versioned canonical import/export, additive merge, and an
+  "only threads I own" restriction. See decision-log D55.
+- M7-PAL-01 (2026-07-21) — named library palettes with revisions;
+  project schema v3 stores policy *and* the resolved snapshot, so a
+  reopen reproduces the design even after the library palette is edited
+  or deleted. See decision-log D55.
+- M7-PRESET-01 (2026-07-21) — four algorithmic LCh presets (Neutrals,
+  Pastels, Earth tones, Deep shades), each labelled with its rule;
+  strict vs preference kept distinct; curated membership deferred to
+  owner review. See decision-log D55.
+- M7-COUNT-01 (2026-07-21) — exact/maximum colour counts by greedy
+  weighted-ΔE selection over real permitted threads, chosen against the
+  resized full-RGB source (never the pipeline's own output); selected
+  and used counts reported separately. See decision-log D55.
+- M7-MIX-01 (2026-07-21) — lock / prefer / exclude as three disjoint
+  sets with auto-fill; "lock 5, request 15" fills exactly ten, and
+  every conflict is a typed result with a user-facing sentence. See
+  decision-log D55.
+- M7-EQUIV-01 (2026-07-21) — nearest cross-brand equivalent, curated
+  over computed, each labelled; no curated data exists yet, so every
+  answer today says "closest by colour" with its ΔE. See decision-log D56.
+
+Outcome: eight brands, 3,338 threads, and one policy layer behind them —
+a design can be restricted to a brand, an inventory, a saved palette or
+a preset, capped at a colour count, and pinned with locks, with every
+narrowing explained in words rather than silently applied.
+
 ## M6 — Photoshop companion layout (shipped 2026-07-21)
 
+- M6-ACCEPT-01 (2026-07-21) — maintainer accepted the companion layout
+  gate: side-by-side Photoshop workflow, aspect-locked crop under
+  pointer and keyboard on Retina, and the live-update rate under that
+  load. See decision-log D54.
 - M6-SCALE-01 (2026-07-21) — pattern / capture / preview / export scale
   split into four unit-named quantities in `src/ui/scales.ts`, with
   pattern-dimension controls added and a 4×4 matrix test asserting

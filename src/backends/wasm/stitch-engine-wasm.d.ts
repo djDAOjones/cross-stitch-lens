@@ -17,9 +17,15 @@ declare module 'stitch-engine-wasm' {
     module_or_path: InitInput | Promise<InitInput>;
   }): Promise<unknown>;
 
+  /** RGBA output plus the palette-index sidecar (0xffff = empty). */
+  export interface DitherResult {
+    readonly pixels: Uint8Array;
+    readonly indices: Uint16Array;
+  }
+
   /**
    * Floyd–Steinberg dither (crates/stitch-engine/src/lib.rs). RGBA in,
-   * RGBA out; `pal_lab` may be empty when `use_lab` is false.
+   * RGBA + indices out; `pal_lab` may be empty when `use_lab` is false.
    */
   export function dither_floyd_steinberg(
     width: number,
@@ -29,5 +35,5 @@ declare module 'stitch-engine-wasm' {
     pal_lab: Float32Array,
     use_lab: boolean,
     serpentine: boolean,
-  ): Uint8Array;
+  ): DitherResult;
 }

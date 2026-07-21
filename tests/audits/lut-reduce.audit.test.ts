@@ -27,6 +27,7 @@ import {
   timed,
   type AuditRow,
 } from './audit.ts';
+import { thread } from '../helpers/threads.ts';
 
 function gridBuffer(grid: number): PixelBuffer {
   const source = sourceBuffer(
@@ -46,27 +47,23 @@ describe.skipIf(!AUDIT)('M5-PERF-12 LUT/reduce audit (AUDIT=1)', () => {
   // evidence that the collision cannot come back.
   it('no longer serves a stale LUT across a reordered palette', () => {
     clearLutCache();
-    const entry = (
-      code: string,
-      name: string,
-      hex: string,
-      rgb: [number, number, number],
-    ) => ({ code, name, hex, rgb, manufacturer: 'x' });
+    const entry = (reference: string, name: string, rgb: [number, number, number]) =>
+      thread(reference, name, rgb);
     // Same name, same entry count — only the order differs. Reordering
     // is one of the first things a palette editor will do, and the LUT
     // stores *indices*, so a stale LUT maps colours to the wrong slot.
     const first: Palette = {
       name: 'Collide',
       entries: [
-        entry('1', 'red', '#ff0000', [255, 0, 0]),
-        entry('2', 'green', '#00ff00', [0, 255, 0]),
+        entry('1', 'red', [255, 0, 0]),
+        entry('2', 'green', [0, 255, 0]),
       ],
     };
     const reordered: Palette = {
       name: 'Collide',
       entries: [
-        entry('2', 'green', '#00ff00', [0, 255, 0]),
-        entry('1', 'red', '#ff0000', [255, 0, 0]),
+        entry('2', 'green', [0, 255, 0]),
+        entry('1', 'red', [255, 0, 0]),
       ],
     };
 

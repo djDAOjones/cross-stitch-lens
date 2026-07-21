@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 155 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 173 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 11 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
@@ -24,8 +24,8 @@
 - `crates` — 4 file(s)
 - `docs` — 7 file(s)
 - `scripts` — 6 file(s)
-- `src` — 57 file(s)
-- `tests` — 66 file(s)
+- `src` — 68 file(s)
+- `tests` — 73 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -102,9 +102,15 @@
 - `src/core/color/convert.ts` — sRGB↔linear↔Lab conversions (D65, CIE 1976)
 - `src/core/color/lut.ts` — 15-bit RGB→palette-index LUT builder + exact nearest
 - `src/core/color/metrics.ts` — squared colour distances: Euclidean RGB, ΔE76
-- `src/core/palette.ts` — Palette model, DMC preset load, rgb/Lab flattening, content fingerprint
-- `src/core/palettes/dmc-anchor-map.csv` — owner-supplied DMC/Anchor map (protected)
-- `src/core/palettes/dmc.json` — generated DMC palette, 533 colours (protected)
+- `src/core/palette-policy.ts` — brands/source/inventory/locks → permitted set + explained conflicts
+- `src/core/palette-presets.ts` — built-in algorithmic colour-scheme presets (LCh rules)
+- `src/core/palette-resolve.ts` — the one policy → ordered palette entry point
+- `src/core/palette-selection.ts` — colour-count selection and lock/prefer auto-fill
+- `src/core/palette.ts` — Palette model, DMC preset load, rgb/Lab flattening, colour + identity fingerprints
+- `src/core/palettes/catalogue.json` — generated catalogue, 3,338 threads across 8 brands (protected)
+- `src/core/palettes/dmc-anchor-map.csv` — superseded DMC/Anchor map, kept as owner data (protected)
+- `src/core/palettes/thread-list.csv` — owner-supplied 8-brand thread list (protected)
+- `src/core/palettes/thread-map-proposed.csv` — proposed cross-reference schema, no data yet (protected)
 - `src/core/pipeline/adjust.ts` — adjust hook stage: identity until §9 ops land
 - `src/core/pipeline/config.ts` — PipelineConfig → stage list; §7 presets; full-RGB twin
 - `src/core/pipeline/dither.ts` — Floyd–Steinberg dither: exact errors, serpentine
@@ -114,18 +120,23 @@
 - `src/core/pipeline/resize.ts` — resize stage: area-average, 4 modes, empty cells
 - `src/core/project.ts` — project file v1 (§20): schema, migration, canonical (de)serialisation
 - `src/core/stats.ts` — design stats §11 subset: counts, %, thread refs
+- `src/core/thread-catalogue.ts` — brands, threads, stable `brandId:reference` identity
+- `src/core/thread-equivalents.ts` — nearest cross-brand equivalent (curated over computed)
 - `src/core/types.ts` — core contracts: PixelBuffer, Palette, Stage
 - `src/diagnostics/bundle.ts` — copy-diagnostics bundle: pure builder + fail-closed redaction
 - `src/diagnostics/log.ts` — structured logger: console + ring buffer + global capture
 - `src/export/chart.ts` — styled PNG chart (§14 subset): pure margin/
 - `src/export/pdf.ts` — single-page PDF chart (§18 subset): pure
 - `src/export/png.ts` — clean PNG export (§13 subset): pure nearest-
+- `src/library/records.ts` — Pure library file formats: canonical inventory/palette JSON, validation, additive merge, id-collision rename
+- `src/library/store.ts` — Cross-project library storage behind one interface; IndexedDB impl + memory fallback that announces itself
 - `src/main.ts` — app entry: M2 shell — import, control panel, preview, info panel
 - `src/ui/controls.ts` — Carbon-style field builders: toggle/number/colour/select + clampInt
 - `src/ui/debug-panel.ts` — dev-only profiling panel: rolling timing window (pure) + disclosure DOM
 - `src/ui/diagnostics-button.ts` — the "Copy diagnostics" control + announced status line
 - `src/ui/import.ts` — import routes → decode: filter (pure) + blob→PixelBuffer
 - `src/ui/info-panel.ts` — stats info panel: pure row model + thin DOM half
+- `src/ui/palette-panel.ts` — Colour panel: brands, source, inventory, count, per-thread rules; pure model + thin DOM half
 - `src/ui/preferences.ts` — Shell preferences (panel collapsed) in localStorage; parse falls back to defaults for anything unreadable. Never project data.
 - `src/ui/preview.ts` — preview controller: toolbar, wheel/drag/keys → worker
 - `src/ui/scales.ts` — The four resolutions kept apart — pattern/capture/preview/export — with unit-named fields, reference-sharing updaters, and the visible label set.
@@ -192,10 +203,16 @@
 - `tests/grid.test.ts` — grid-line placement, tick numbering/thinning, auto-hide rule
 - `tests/helpers/golden.ts` — golden harness: fixture load + tolerance compare
 - `tests/helpers/lut-f32.ts` — f32 mirror of the WGSL LUT arithmetic (fround per op)
+- `tests/helpers/threads.ts` — Thread fixtures — one place identity-carrying test palettes are built
 - `tests/helpers/wgsl-reserved.ts` — WGSL reserved-word list + identifier scan (GPU-free shader guard)
 - `tests/info-panel.test.ts` — row cap/overflow, thread-vs-hex labels, percent format
+- `tests/library-records.test.ts` — Library file round trips, corrupt/oversized import, merge, collisions, memory store
 - `tests/lut-cache.test.ts` — cache identity by palette content, LRU bound, GPU-LUT sanity rejection
 - `tests/matrix/rows.ts` — the correctness matrix: row definitions with `proves` text, adversarial palettes, seeded sources
+- `tests/palette-panel.test.ts` — Panel model: disjoint per-thread roles, source round trip, row filtering, count summary
+- `tests/palette-policy.test.ts` — Policy resolution: brands/source/inventory/exclusions and every explained conflict
+- `tests/palette-presets.test.ts` — Preset semantics: real references, enabled-brand only, visible degradation, stated rules
+- `tests/palette-selection.test.ts` — Count limits and auto-fill, incl. the canonical "lock 5, request 15 → 10 filled"
 - `tests/palette.test.ts` — DMC load invariants (533, unique, hex↔rgb)
 - `tests/pipeline-config.test.ts` — preset order, full-RGB, dither-replaces-reduce
 - `tests/pipeline-hello.test.ts` — M0 acceptance: identity golden + purity invariants
@@ -206,6 +223,7 @@
 - `tests/shell.test.ts` — Shell visibility composition, panel/focus label state, and preference fallback including a throwing storage.
 - `tests/stats.test.ts` — stats partition/sum/sort/reference invariants
 - `tests/status-line.test.ts` — Compact-status field order, capture/freshness state coverage, and the never-empty invariant.
+- `tests/thread-equivalents.test.ts` — Nearest cross-brand equivalent: ordering, labelling, curated over computed
 - `tests/ui-import.test.ts` — image-file filtering (pure half of import)
 - `tests/viewport.test.ts` — viewport maths exact cases (fit/anchor/clamp)
 - `tests/wasm-dither.test.ts` — wasm↔TS bit-exact parity: golden fixture, metrics/scan modes, full DMC Lab

@@ -31,8 +31,16 @@ import {
   startCapture,
   type CaptureSession,
 } from './capture/session.ts';
-import type { PipelineConfig } from './core/pipeline/config.ts';
-import { loadDmcPalette } from './core/palette.ts';
+import { fullRgbVariant, type PipelineConfig } from './core/pipeline/config.ts';
+import {
+  defaultPolicy,
+  type PaletteConflict,
+  type PalettePolicy,
+  type PolicyInputs,
+} from './core/palette-policy.ts';
+import { findPreset, resolvePreset } from './core/palette-presets.ts';
+import { resolveProjectPalette } from './core/palette-resolve.ts';
+import { loadCatalogue } from './core/thread-catalogue.ts';
 import {
   parseProject,
   projectFilename,
@@ -41,7 +49,19 @@ import {
   type ProjectFile,
 } from './core/project.ts';
 import { computeStats } from './core/stats.ts';
-import type { PixelBuffer } from './core/types.ts';
+import type { PixelBuffer, Thread } from './core/types.ts';
+import {
+  mergeOwned,
+  parseInventory,
+  serializeInventory,
+  serializePalettes,
+  type LibraryPalette,
+} from './library/records.ts';
+import { openLibrary, MemoryStore, type LibraryStore } from './library/store.ts';
+import {
+  createPalettePanel,
+  type PalettePanelState,
+} from './ui/palette-panel.ts';
 import {
   colorField,
   numberField,
@@ -102,7 +122,9 @@ import { DEFAULT_GRID_STYLE, type GridStyle } from './worker/grid.ts';
 installGlobalCapture(window);
 log.info('boot', `Cross Stitch Lens ${__APP_VERSION__} (${__BUILD_ID__})`);
 
-const DMC = loadDmcPalette();
+const CATALOGUE = loadCatalogue();
+/** Brand id → display name, for thread labels in stats and exports. */
+const BRAND_NAMES = new Map(CATALOGUE.brands.map((b) => [b.id, b.name]));
 
 function toolbarButton(text: string, onClick: () => void): HTMLButtonElement {
   const button = document.createElement('button');
@@ -150,12 +172,165 @@ function build(app: HTMLElement): void {
       height: scales.pattern.heightStitches,
     },
     resizeMode: 'contain',
-    palette: DMC,
+    // Filled by the first `resolvePalette()` below; null is full-RGB.
+    palette: null,
     metric: 'lab',
     dither: true,
     serpentine: true,
   };
   let masterImage: PixelBuffer | null = null;
+
+  // --- M7 palette policy state -------------------------------------
+  // `policy` is intent; `config.palette` is the resolved result. They
+  // are kept separate because every M7 feature (brands, inventory,
+  // presets, counts, locks) edits intent, and exactly one function —
+  // `resolvePalette` — turns intent into the ordered palette the
+  // pipeline runs against.
+  let policy: PalettePolicy = defaultPolicy();
+  let paletteMode = true;
+  let paletteConflicts: PaletteConflict[] = [];
+  let eligibleCount = 0;
+  let owned = new Set<string>();
+  let libraryPalettes: LibraryPalette[] = [];
+  let library: LibraryStore = new MemoryStore();
+  /**
+   * The resized, **un-reduced** grid buffer that colour-count selection
+   * chooses against.
+   *
+   * It must not be the pipeline's output: selecting from an already
+   * reduced image feeds the selector its own previous answer, so a
+   * design narrowed to 12 colours can never be widened back to 30 —
+   * the distribution only contains the 12 it already picked. This is
+   * the full-RGB twin of the current config, run once per source or
+   * geometry change through the export route (which bypasses the
+   * preview and its coalescing), never per frame.
+   */
+  let selectionSource: PixelBuffer | null = null;
+  /** Geometry `selectionSource` was produced for; '' when there is none. */
+  let selectionGeometry = '';
+  let selectionPending = false;
+  /**
+   * Distinct colours the last frame actually used. Declared here, with
+   * the palette state it belongs to, because the Colour panel reports
+   * "selected vs used" and is built long before the capture block that
+   * also reads it.
+   */
+  let lastColorCount: number | null = null;
+
+  /** Error → message, for status text and log data. */
+  function describeError(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
+  }
+
+  /** Assemble the resolver's inputs from the current library state. */
+  function policyInputs(): PolicyInputs {
+    const inputs: PolicyInputs = { catalogue: CATALOGUE, owned };
+    // Bound to a const first: `policy` is mutable, so a narrowing on
+    // `policy.source` does not survive into the callbacks below.
+    const source = policy.source;
+    if (source.kind === 'library') {
+      const found = libraryPalettes.find((p) => p.id === source.paletteId);
+      if (found !== undefined) {
+        inputs.libraryPalette = { name: found.name, threadIds: found.threadIds };
+      }
+    } else if (source.kind === 'preset') {
+      const preset = findPreset(source.presetId);
+      if (preset !== undefined) {
+        inputs.preset = resolvePreset(preset, CATALOGUE, policy.brands, source.mode);
+      }
+    }
+    return inputs;
+  }
+
+  /**
+   * Resolve the policy into `config.palette`.
+   *
+   * The last processed output feeds count-limited selection, which is
+   * why this is called again after each frame: the first frame has no
+   * distribution to select against, so a count limit resolves to the
+   * full permitted set and narrows on the next pass. That is a visible
+   * two-step, not a silently violated limit — the palette shown and the
+   * palette used are always the same one.
+   */
+  function resolvePalette(): void {
+    if (!paletteMode) {
+      config.palette = null;
+      paletteConflicts = [];
+      eligibleCount = 0;
+      return;
+    }
+    const resolved = resolveProjectPalette({
+      policy,
+      inputs: policyInputs(),
+      source: selectionSource ?? undefined,
+      name: paletteName(),
+    });
+    config.palette = resolved.ok ? resolved.palette : null;
+    paletteConflicts = resolved.conflicts;
+    eligibleCount = resolved.eligibleCount;
+  }
+
+  /** Everything the resized full-RGB grid buffer depends on. */
+  function selectionGeometryKey(): string {
+    return [config.preset, config.grid.width, config.grid.height, config.resizeMode].join(':');
+  }
+
+  /** Drop the cached selection source (new artwork, new geometry). */
+  function invalidateSelectionSource(): void {
+    selectionSource = null;
+    selectionGeometry = '';
+  }
+
+  /**
+   * Ensure the selection source exists and matches the current
+   * geometry, then re-resolve and reprocess once it lands.
+   *
+   * Only fetched when a colour-count limit is actually in force —
+   * without one there is nothing to select, so the extra pipeline run
+   * would be pure cost. Under live capture it is deliberately NOT
+   * refreshed per frame: a palette that churned every frame would make
+   * the preview unusable, so the selection holds until the geometry or
+   * the policy changes.
+   */
+  function ensureSelectionSource(): void {
+    if (masterImage === null || !paletteMode || policy.count.mode === 'all') return;
+    const wanted = selectionGeometryKey();
+    if (selectionPending || (selectionSource !== null && selectionGeometry === wanted)) return;
+    selectionPending = true;
+    const copy: PixelBuffer = {
+      width: masterImage.width,
+      height: masterImage.height,
+      data: new Uint8ClampedArray(masterImage.data),
+    };
+    client.exportFrame(copy, fullRgbVariant(config)).then(
+      (buffer) => {
+        selectionPending = false;
+        selectionSource = buffer;
+        selectionGeometry = wanted;
+        resolvePalette();
+        palettePanel.update(panelState());
+        reprocess();
+      },
+      (error: unknown) => {
+        selectionPending = false;
+        log.error('palette', 'could not build the selection source', {
+          message: describeError(error),
+        });
+      },
+    );
+  }
+
+  /** A display name for the resolved palette, from its source. */
+  function paletteName(): string {
+    const source = policy.source;
+    if (source.kind === 'library') {
+      return libraryPalettes.find((p) => p.id === source.paletteId)?.name ?? 'Palette';
+    }
+    if (source.kind === 'preset') {
+      return findPreset(source.presetId)?.name ?? 'Preset';
+    }
+    return policy.brands.map((id) => BRAND_NAMES.get(id) ?? id).join(' + ') || 'Threads';
+  }
 
   // Import controls: labelled native file input; drop and paste are
   // alternatives to it, never the only route (UI-STANDARDS).
@@ -287,7 +462,7 @@ function build(app: HTMLElement): void {
   const canvas = document.createElement('canvas');
   host.append(canvas);
 
-  const info = createInfoPanel(document);
+  const info = createInfoPanel(document, BRAND_NAMES);
 
   // Profiling panel (M5 harness): dev-only per UI-STANDARDS →
   // "Diagnostics affordance" — never mounted in a production build.
@@ -375,6 +550,9 @@ function build(app: HTMLElement): void {
     dimensionsLabel.textContent = patternSummary(pattern);
     reframeCrop();
     updateCompactStatus();
+    // A new grid is a new geometry, so the buffer the colour-count
+    // selection chooses against has to be rebuilt at that size.
+    ensureSelectionSource();
     reprocess();
   }
 
@@ -526,32 +704,163 @@ function build(app: HTMLElement): void {
     ),
   );
 
-  const colourGroup = document.createElement('fieldset');
-  const colourLegend = document.createElement('legend');
-  colourLegend.textContent = 'Colour';
   const ditherToggle = toggleField(document, 'dither-on', 'Dithering', config.dither, (on) => {
     config.dither = on;
     reprocess();
   });
-  colourGroup.append(
-    colourLegend,
-    selectField(
-      document,
-      'colour-mode',
-      'Colour mode',
-      [
-        ['dmc', 'DMC palette'],
-        ['rgb', 'Full RGB'],
-      ],
-      'dmc',
-      (mode) => {
-        config.palette = mode === 'dmc' ? DMC : null;
-        // Dithering only applies when reducing to a palette.
-        ditherToggle.input.disabled = mode === 'rgb';
-        reprocess();
-      },
-    ),
-  );
+
+  /** The panel's view of the current policy, library, and resolution. */
+  function panelState(): PalettePanelState {
+    return {
+      policy,
+      paletteMode,
+      conflicts: paletteConflicts,
+      eligibleCount,
+      selectedCount: config.palette?.entries.length ?? 0,
+      usedCount: lastColorCount,
+      awaitingSource: selectionSource === null,
+      owned,
+      library: libraryPalettes,
+      selectedIds: new Set(config.palette?.entries.map((t) => t.id) ?? []),
+      libraryPersistent: library.persistent,
+    };
+  }
+
+  /** Re-resolve, refresh the panel, and run the pipeline once. */
+  function applyPolicy(): void {
+    ensureSelectionSource();
+    resolvePalette();
+    // Dithering only applies when reducing to a palette.
+    ditherToggle.input.disabled = config.palette === null;
+    palettePanel.update(panelState());
+    reprocess();
+  }
+
+  const palettePanel = createPalettePanel(document, CATALOGUE, panelState(), {
+    setPaletteMode: (on) => {
+      paletteMode = on;
+      applyPolicy();
+    },
+    setPolicy: (next) => {
+      policy = next;
+      applyPolicy();
+    },
+    setOwned: (id, isOwned) => {
+      if (isOwned) owned.add(id);
+      else owned.delete(id);
+      void library.saveOwned(owned).catch((error: unknown) => {
+        log.error('library', 'inventory save failed', { message: describeError(error) });
+        status.textContent = 'Could not save your inventory to browser storage.';
+      });
+      applyPolicy();
+    },
+    savePaletteToLibrary: () => {
+      void saveCurrentPalette();
+    },
+    exportInventory: () => {
+      downloadBlob(
+        document,
+        new Blob([serializeInventory(owned, 'thread-list')], {
+          type: 'application/json',
+        }),
+        'thread-inventory.json',
+      );
+      status.textContent = `Exported ${String(owned.size)} owned threads.`;
+    },
+    importInventory: () => {
+      inventoryInput.click();
+    },
+    exportPalettes: () => {
+      downloadBlob(
+        document,
+        new Blob([serializePalettes(libraryPalettes)], { type: 'application/json' }),
+        'thread-palettes.json',
+      );
+      status.textContent = `Exported ${String(libraryPalettes.length)} saved palettes.`;
+    },
+  });
+  const colourGroup = palettePanel.element;
+  // Resolve once up front so the panel opens showing a real palette
+  // rather than an empty one that only fills in after the library
+  // loads asynchronously.
+  applyPolicy();
+
+  // Inventory import is a file input rather than a bare button so the
+  // native picker (and its keyboard route) does the work; it is merged
+  // into the existing inventory, never replacing it — replace can lose
+  // threads marked on another machine and needs its own confirmation
+  // (M7-INV-01).
+  const inventoryInput = document.createElement('input');
+  inventoryInput.type = 'file';
+  inventoryInput.accept = 'application/json,.json';
+  inventoryInput.hidden = true;
+  inventoryInput.addEventListener('change', () => {
+    const file = inventoryInput.files?.[0];
+    inventoryInput.value = '';
+    if (file !== undefined) void importInventoryFile(file);
+  });
+
+  async function importInventoryFile(file: File): Promise<void> {
+    try {
+      const parsed = parseInventory(await file.text());
+      const before = owned.size;
+      owned = mergeOwned(owned, parsed.owned);
+      await library.saveOwned(owned);
+      const unknown = parsed.owned.filter((id) => !CATALOGUE.byId.has(id)).length;
+      // Unknown references are kept, not dropped: they may be threads
+      // a later catalogue restores, and deleting a user's record of
+      // what they own is not ours to do.
+      status.textContent =
+        `Imported ${String(owned.size - before)} new owned threads (${String(parsed.owned.length)} in the file)` +
+        (unknown > 0
+          ? `. ${String(unknown)} are not in this build's catalogue and are kept but unusable.`
+          : '.');
+      applyPolicy();
+    } catch (error) {
+      const message = describeError(error);
+      status.textContent = `Could not read that inventory file (${message}).`;
+      log.error('library', 'inventory import failed', { message });
+    }
+  }
+
+  /** Freeze the resolved palette as a new named library palette. */
+  async function saveCurrentPalette(): Promise<void> {
+    const entries = config.palette?.entries ?? [];
+    if (entries.length === 0) {
+      status.textContent = 'There is no resolved palette to save yet.';
+      return;
+    }
+    const name = window.prompt('Name for this palette', paletteName());
+    if (name === null || name.trim() === '') return;
+    const palette: LibraryPalette = {
+      id: `pal-${String(Date.now())}`,
+      name: name.trim(),
+      revision: 1,
+      createdFrom: sourceProvenance(),
+      threadIds: entries.map((t) => t.id),
+    };
+    try {
+      await library.putPalette(palette);
+      libraryPalettes = await library.listPalettes();
+      // Switch to the saved palette so what is on screen is what was
+      // saved — copying then silently staying on the preset is the
+      // kind of divergence M7-PRESET-01 calls out.
+      policy = { ...policy, source: { kind: 'library', paletteId: palette.id } };
+      status.textContent = `Saved palette "${palette.name}" (${String(entries.length)} threads).`;
+      applyPolicy();
+    } catch (error) {
+      const message = describeError(error);
+      status.textContent = `Could not save that palette (${message}).`;
+      log.error('library', 'palette save failed', { message });
+    }
+  }
+
+  /** Where a saved palette came from, recorded on the library record. */
+  function sourceProvenance(): string {
+    if (policy.source.kind === 'preset') return `preset:${policy.source.presetId}`;
+    if (policy.source.kind === 'library') return `copy:${policy.source.paletteId}`;
+    return policy.ownedOnly ? 'inventory' : 'brands';
+  }
 
   const ditherGroup = document.createElement('fieldset');
   const ditherLegend = document.createElement('legend');
@@ -819,7 +1128,12 @@ function build(app: HTMLElement): void {
           : computeStats(frame, config.palette).perColor.map((c) => ({
               hex: c.hex,
               rgb: c.rgb,
-              ...(c.code === undefined ? {} : { code: c.code }),
+              ...(c.thread === undefined
+                ? {}
+                : {
+                    brand: BRAND_NAMES.get(c.thread.brandId) ?? c.thread.brandId,
+                    reference: c.thread.reference,
+                  }),
             }));
       const bytes = await buildChartPdf(chartPng, chartL.width, chartL.height, entries, {
         ...pdfOptions,
@@ -878,11 +1192,16 @@ function build(app: HTMLElement): void {
         preset: config.preset,
         grid: { width: config.grid.width, height: config.grid.height },
         resizeMode: config.resizeMode,
-        palette: config.palette === null ? null : config.palette.name,
         metric: config.metric,
         dither: config.dither,
         serpentine: config.serpentine,
       },
+      // Intent *and* the exact threads that rendered it: reopening
+      // must reproduce this design even if the library palette it came
+      // from is later edited or deleted (M7-PAL-01).
+      palette: paletteMode
+        ? { policy, snapshot: config.palette?.entries ?? [] }
+        : null,
       gridStyle: {
         show: gridStyle.show,
         minorInterval: gridStyle.minorInterval,
@@ -942,9 +1261,10 @@ function build(app: HTMLElement): void {
     setFieldValue('pattern-width', String(scales.pattern.widthStitches));
     setFieldValue('pattern-height', String(scales.pattern.heightStitches));
     setFieldValue('order-preset', config.preset);
-    setFieldValue('colour-mode', config.palette === null ? 'rgb' : 'dmc');
+    setFieldValue('colour-mode', paletteMode ? 'threads' : 'rgb');
     setToggleValue('dither-on', config.dither);
     ditherToggle.input.disabled = config.palette === null;
+    palettePanel.update(panelState());
     setToggleValue('grid-show', gridStyle.show);
     setToggleValue('grid-ticks', gridStyle.ticks);
     setFieldValue('grid-minor', String(gridStyle.minorInterval));
@@ -962,20 +1282,64 @@ function build(app: HTMLElement): void {
     setFieldValue('pdf-title', pdfOptions.title);
   }
 
+  /**
+   * Restore a loaded project's palette.
+   *
+   * The **snapshot wins**: a project reopens rendering exactly the
+   * threads it was saved with, even if the library palette it names
+   * has since been edited or deleted, and even if the catalogue has
+   * moved on. The policy is restored alongside it as intent, so the
+   * panel still shows what was asked for and a later edit recomputes
+   * from there — but nothing is silently substituted by name
+   * (M7-PAL-01, M7-INV-01).
+   */
+  function applyLoadedPalette(loaded: ProjectFile['palette']): void {
+    if (loaded === null) {
+      paletteMode = false;
+      policy = defaultPolicy();
+      config.palette = null;
+      paletteConflicts = [];
+      return;
+    }
+    paletteMode = true;
+    policy = loaded.policy;
+    if (loaded.snapshot.length > 0) {
+      config.palette = { name: paletteName(), entries: loaded.snapshot };
+      eligibleCount = loaded.snapshot.length;
+      paletteConflicts = driftConflicts(loaded.snapshot);
+    } else {
+      // A migrated v2 file carries no snapshot — there was nothing to
+      // save. Resolving from the policy is the only option, and it is
+      // exactly what the v2 file meant.
+      resolvePalette();
+    }
+  }
+
+  /**
+   * Compare a loaded snapshot against the current catalogue and
+   * library, and say so. Library drift is reported, never repaired:
+   * the user decides whether to refresh.
+   */
+  function driftConflicts(snapshot: readonly Thread[]): PaletteConflict[] {
+    const missing = snapshot.filter((t) => !CATALOGUE.byId.has(t.id));
+    if (missing.length === 0) return [];
+    return [
+      {
+        kind: 'unresolved-entries',
+        severity: 'warning',
+        ids: missing.map((t) => t.id),
+        message: `${String(missing.length)} thread(s) saved with this project are not in this build's catalogue. The project is rendering from its saved copy of them, so the design is unchanged.`,
+      },
+    ];
+  }
+
   async function loadProject(fileBlob: File): Promise<void> {
     try {
       const file = parseProject(await fileBlob.text());
-      const name = file.pipeline.palette;
-      // v1 knows one palette; refuse rather than silently substitute.
-      if (name !== null && name !== DMC.name) {
-        status.textContent = `Could not load that project (unknown palette "${name}").`;
-        log.error('project', 'unknown palette', { name });
-        return;
-      }
       config.preset = file.pipeline.preset;
       config.grid = { ...file.pipeline.grid };
       config.resizeMode = file.pipeline.resizeMode;
-      config.palette = name === null ? null : DMC;
+      applyLoadedPalette(file.palette);
       config.metric = file.pipeline.metric;
       config.dither = file.pipeline.dither;
       config.serpentine = file.pipeline.serpentine;
@@ -1021,11 +1385,32 @@ function build(app: HTMLElement): void {
     patternGroup,
     gridGroup,
     colourGroup,
+    inventoryInput,
     ditherGroup,
     pipelineGroup,
     exportGroup,
     projectGroup,
   );
+
+  // Open the cross-project library (inventory + saved palettes). It is
+  // async, so the app starts on an empty in-memory store and adopts
+  // the persisted one when it arrives — the alternative is blocking
+  // first paint on IndexedDB, which can be slow or refused entirely.
+  void (async () => {
+    library = await openLibrary(
+      typeof indexedDB === 'undefined' ? undefined : indexedDB,
+    );
+    owned = await library.loadOwned();
+    libraryPalettes = await library.listPalettes();
+    log.info('library', 'opened', {
+      persistent: library.persistent,
+      owned: owned.size,
+      palettes: libraryPalettes.length,
+    });
+    applyPolicy();
+  })().catch((error: unknown) => {
+    log.error('library', 'could not be opened', { message: describeError(error) });
+  });
 
   // Shell bar: the two presentation-mode controls, on a permanent
   // surface at the top of the app. The collapse button lives *outside*
@@ -1192,6 +1577,7 @@ function build(app: HTMLElement): void {
     for (const timing of frame.timings) activeBackends[timing.stage] = timing.backend;
     lastColorCount = stats.colorCount;
     lastFreshness = 'changing';
+    palettePanel.update(panelState());
     updateCompactStatus();
     status.textContent = 'Preview updated.';
     log.info('pipeline', 'frame processed', {
@@ -1210,6 +1596,8 @@ function build(app: HTMLElement): void {
         height: buffer.height,
       });
       masterImage = buffer;
+      invalidateSelectionSource();
+      ensureSelectionSource();
       reprocess();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -1236,7 +1624,6 @@ function build(app: HTMLElement): void {
   // rendered surfaces goes stale silently, and in preview focus it is
   // the only thing reporting whether capture is still running.
   let sessionEnded = false;
-  let lastColorCount: number | null = null;
   let lastFreshness: SourceFreshness = 'changing';
 
   function captureState(): CaptureState {
@@ -1367,6 +1754,8 @@ function build(app: HTMLElement): void {
         height: buffer.height,
       });
       masterImage = buffer;
+      invalidateSelectionSource();
+      ensureSelectionSource();
       reprocess();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -1410,6 +1799,9 @@ function build(app: HTMLElement): void {
       }
       const buffer = await capture.grabFrame(cropRect ?? undefined);
       masterImage = buffer;
+      // Seeds the palette from the first live frame, then holds: a
+      // palette rebuilt every frame would make the preview churn.
+      ensureSelectionSource();
       client.submit(
         { width: buffer.width, height: buffer.height, data: new Uint8ClampedArray(buffer.data) },
         liveConfig(),

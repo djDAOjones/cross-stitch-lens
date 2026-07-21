@@ -68,3 +68,13 @@
   control in this app (source: D50)
 - [ ] 2026-07-21 requirements.md §10 — preview now has fit-width/fit-height and a persisted scale (project schema v2 `preview` block); §20's field inventory predates it (source: M6-VIEW-01 / D52)
 - [ ] 2026-07-21 requirements.md §3–4 — capture region is aspect-locked to the pattern, so a region no longer maps to a derived stitch span; the §4 resize-mode discussion reads as if it still can (source: M6-CAPRES-01 / D52)
+- [ ] 2026-07-21 AGENTS / DEV-INFRASTRUCTURE — protected-data tables edited
+  in-flight (dmc.json deleted, thread-list.csv + catalogue.json added); the
+  gate blocks on a stale path, so the factual list could not wait for a
+  sync (source: D56)
+- [ ] 2026-07-21 AGENTS — "The four resolutions" section should gain the
+  thread-identity contract: identity is `brandId:reference`, RGB is display
+  only, threads are never merged on colour (source: D55)
+- [ ] 2026-07-21 UI-STANDARDS — no guidance yet for the conflict/explanation
+  pattern the Colour panel introduces (aria-live list, severity as a word
+  not a colour) (source: D55)

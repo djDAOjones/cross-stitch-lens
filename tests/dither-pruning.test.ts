@@ -34,16 +34,11 @@ import {
 import { runPipeline } from '../src/core/pipeline/index.ts';
 import { stageInstance } from '../src/core/types.ts';
 import type { Palette, PixelBuffer } from '../src/core/types.ts';
+import { thread } from './helpers/threads.ts';
 function paletteOf(rgbs: [number, number, number][], name = 'test'): Palette {
   return {
     name,
-    entries: rgbs.map((rgb, i) => ({
-      code: `c${String(i)}`,
-      name: `c${String(i)}`,
-      hex: '#000000',
-      rgb,
-      manufacturer: 'test',
-    })),
+    entries: rgbs.map((rgb, i) => thread(`c${String(i)}`, `c${String(i)}`, rgb)),
   };
 }
 

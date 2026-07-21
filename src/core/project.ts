@@ -17,11 +17,22 @@
  */
 
 import type { ColorMetric } from './color/metrics.ts';
+import type { CountMode, PalettePolicy, PresetMode } from './palette-policy.ts';
 import type { OrderPreset } from './pipeline/config.ts';
 import type { ResizeMode } from './pipeline/resize.ts';
+import type { Provenance, Thread, ThreadStatus } from './types.ts';
 
 /** Current project-file schema version. Bump with a forward migration. */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
+
+/**
+ * Hard ceiling on a persisted palette snapshot.
+ *
+ * Project files are untrusted input — a hand-edited or hostile one must
+ * not be able to make the app allocate without bound before a single
+ * validation runs. 4096 is four times the whole two-brand catalogue.
+ */
+export const MAX_PALETTE_ENTRIES = 4096;
 
 /** Grid dimension bounds in stitches (brief: max 1024 per side). */
 export const MAX_GRID_SIDE = 1024;
@@ -36,19 +47,39 @@ export const MIN_PREVIEW_CSS_PX = 0.05;
 export const MAX_PREVIEW_CSS_PX = 64;
 
 /**
- * Pipeline settings as stored. Mirrors `PipelineConfig` except that
- * `palette` is a name reference (e.g. "DMC") resolved by the app on
- * load — palette data is never embedded. `null` = full-RGB mode.
+ * Pipeline settings as stored. Mirrors `PipelineConfig` minus the
+ * palette, which from v3 lives in its own top-level block — a palette
+ * is now a policy plus a snapshot, not a name (M7-PAL-01).
  */
 export interface ProjectPipeline {
   preset: OrderPreset;
   /** Stitch grid, whole stitches, 1–1024 per side. */
   grid: { width: number; height: number };
   resizeMode: ResizeMode;
-  palette: string | null;
   metric: ColorMetric;
   dither: boolean;
   serpentine: boolean;
+}
+
+/**
+ * The palette block (schema v3). Two halves, deliberately:
+ *
+ * - `policy` is the user's **intent** — enabled brands, chosen source,
+ *   inventory restriction, count request, locks. It is what the UI
+ *   shows and what a "refresh" recomputes from.
+ * - `snapshot` is the exact ordered thread data that **rendered** this
+ *   project. It is authoritative on reopen.
+ *
+ * Storing only the policy would mean a project's output changed when
+ * the catalogue shipped a new colour, or when the user edited the
+ * library palette it names. Storing only the snapshot would lose the
+ * intent, so nothing could ever be recomputed. Both, and reopen is
+ * reproducible *and* explicable (M7-INV-01, M7-PAL-01).
+ */
+export interface ProjectPalette {
+  policy: PalettePolicy;
+  /** Ordered threads exactly as rendered. Empty means "not yet run". */
+  snapshot: Thread[];
 }
 
 /**
@@ -109,10 +140,12 @@ export interface ProjectExport {
   };
 }
 
-/** The full project file. This shape is schema v2, verbatim. */
+/** The full project file. This shape is schema v3, verbatim. */
 export interface ProjectFile {
   schemaVersion: typeof SCHEMA_VERSION;
   pipeline: ProjectPipeline;
+  /** `null` = full-RGB mode: no colour reduction, no dithering (§5.1). */
+  palette: ProjectPalette | null;
   gridStyle: ProjectGridStyle;
   preview: ProjectPreview;
   export: ProjectExport;
@@ -133,6 +166,46 @@ export function projectFilename(width: number, height: number): string {
  * makes save → load → save byte-identical regardless of the key
  * order the caller assembled.
  */
+/** Canonical field order for one persisted thread. */
+function canonicalThread(thread: Thread): Thread {
+  return {
+    id: thread.id,
+    brandId: thread.brandId,
+    reference: thread.reference,
+    name: thread.name,
+    hex: thread.hex,
+    rgb: [thread.rgb[0], thread.rgb[1], thread.rgb[2]],
+    provenance: thread.provenance,
+    status: thread.status,
+    mappedFrom: thread.mappedFrom,
+  };
+}
+
+/** Canonical field order for the palette source union, per kind. */
+function canonicalSource(source: PalettePolicy['source']): PalettePolicy['source'] {
+  if (source.kind === 'library') return { kind: 'library', paletteId: source.paletteId };
+  if (source.kind === 'preset') {
+    return { kind: 'preset', presetId: source.presetId, mode: source.mode };
+  }
+  return { kind: 'brands' };
+}
+
+/** Canonical field order for the palette block. */
+function canonicalPalette(palette: ProjectPalette): ProjectPalette {
+  return {
+    policy: {
+      brands: [...palette.policy.brands],
+      source: canonicalSource(palette.policy.source),
+      ownedOnly: palette.policy.ownedOnly,
+      count: { mode: palette.policy.count.mode, n: palette.policy.count.n },
+      locked: [...palette.policy.locked],
+      preferred: [...palette.policy.preferred],
+      excluded: [...palette.policy.excluded],
+    },
+    snapshot: palette.snapshot.map(canonicalThread),
+  };
+}
+
 export function serializeProject(file: ProjectFile): string {
   const canonical: ProjectFile = {
     schemaVersion: file.schemaVersion,
@@ -140,11 +213,11 @@ export function serializeProject(file: ProjectFile): string {
       preset: file.pipeline.preset,
       grid: { width: file.pipeline.grid.width, height: file.pipeline.grid.height },
       resizeMode: file.pipeline.resizeMode,
-      palette: file.pipeline.palette,
       metric: file.pipeline.metric,
       dither: file.pipeline.dither,
       serpentine: file.pipeline.serpentine,
     },
+    palette: file.palette === null ? null : canonicalPalette(file.palette),
     gridStyle: {
       show: file.gridStyle.show,
       minorInterval: file.gridStyle.minorInterval,
@@ -230,6 +303,106 @@ function asOneOf<T extends string>(value: unknown, path: string, allowed: readon
   return value as T;
 }
 
+/** An array of strings, each within a sane length. */
+function asIdList(value: unknown, path: string): string[] {
+  if (!Array.isArray(value)) fail(path, 'an array of thread ids');
+  if (value.length > MAX_PALETTE_ENTRIES) {
+    fail(path, `at most ${String(MAX_PALETTE_ENTRIES)} entries`);
+  }
+  return value.map((entry, i) => {
+    const id = asString(entry, `${path}[${String(i)}]`);
+    if (id.length === 0 || id.length > 128) {
+      fail(`${path}[${String(i)}]`, 'a thread id of 1–128 characters');
+    }
+    return id;
+  });
+}
+
+/** Validate one persisted thread record. */
+function asThread(value: unknown, path: string): Thread {
+  const raw = asRecord(value, path);
+  const rgb = raw['rgb'];
+  if (!Array.isArray(rgb) || rgb.length !== 3) fail(`${path}.rgb`, 'three channel values');
+  const provenance: Provenance = asOneOf(raw['provenance'], `${path}.provenance`, [
+    'measured',
+    'mapped',
+  ]);
+  const status: ThreadStatus = asOneOf(raw['status'], `${path}.status`, [
+    'current',
+    'retired',
+    'unresolved',
+  ]);
+  const mappedFrom = raw['mappedFrom'];
+  if (mappedFrom !== null && typeof mappedFrom !== 'string') {
+    fail(`${path}.mappedFrom`, 'a thread id or null');
+  }
+  return {
+    id: asString(raw['id'], `${path}.id`),
+    brandId: asString(raw['brandId'], `${path}.brandId`),
+    reference: asString(raw['reference'], `${path}.reference`),
+    name: asString(raw['name'], `${path}.name`),
+    hex: asHexColor(raw['hex'], `${path}.hex`),
+    rgb: [
+      asInt(rgb[0], `${path}.rgb[0]`, 0, 255),
+      asInt(rgb[1], `${path}.rgb[1]`, 0, 255),
+      asInt(rgb[2], `${path}.rgb[2]`, 0, 255),
+    ],
+    provenance,
+    status,
+    mappedFrom,
+  };
+}
+
+/** Validate the palette source union. */
+function asSource(value: unknown, path: string): PalettePolicy['source'] {
+  const raw = asRecord(value, path);
+  const kind = asOneOf(raw['kind'], `${path}.kind`, ['brands', 'library', 'preset']);
+  if (kind === 'library') {
+    return { kind, paletteId: asString(raw['paletteId'], `${path}.paletteId`) };
+  }
+  if (kind === 'preset') {
+    const mode: PresetMode = asOneOf(raw['mode'], `${path}.mode`, ['strict', 'prefer']);
+    return { kind, presetId: asString(raw['presetId'], `${path}.presetId`), mode };
+  }
+  return { kind };
+}
+
+/**
+ * Validate the v3 palette block. `null` is full-RGB mode.
+ *
+ * Every list is length-checked before its elements are walked, because
+ * a project file arrives from a download folder, not from this app
+ * (AGENTS.md → "Correctness & data": project files are user data).
+ */
+function parsePalette(value: unknown): ProjectPalette | null {
+  if (value === null || value === undefined) return null;
+  const raw = asRecord(value, 'palette');
+  const policyRaw = asRecord(raw['policy'], 'palette.policy');
+  const countRaw = asRecord(policyRaw['count'], 'palette.policy.count');
+  const mode: CountMode = asOneOf(countRaw['mode'], 'palette.policy.count.mode', [
+    'all',
+    'max',
+    'exact',
+  ]);
+  const snapshotRaw = raw['snapshot'];
+  if (!Array.isArray(snapshotRaw)) fail('palette.snapshot', 'an array of threads');
+  if (snapshotRaw.length > MAX_PALETTE_ENTRIES) {
+    fail('palette.snapshot', `at most ${String(MAX_PALETTE_ENTRIES)} entries`);
+  }
+  return {
+    policy: {
+      brands: asIdList(policyRaw['brands'], 'palette.policy.brands'),
+      source: asSource(policyRaw['source'], 'palette.policy.source'),
+      ownedOnly: asBool(policyRaw['ownedOnly'], 'palette.policy.ownedOnly'),
+      count: { mode, n: asInt(countRaw['n'], 'palette.policy.count.n', 1, MAX_PALETTE_ENTRIES) },
+      locked: asIdList(policyRaw['locked'], 'palette.policy.locked'),
+      preferred: asIdList(policyRaw['preferred'], 'palette.policy.preferred'),
+      excluded: asIdList(policyRaw['excluded'], 'palette.policy.excluded'),
+    },
+    snapshot: snapshotRaw.map((entry, i) => asThread(entry, `palette.snapshot[${String(i)}]`)),
+  };
+}
+
 /**
  * Migrate a raw parsed document from `version` up to SCHEMA_VERSION.
  * Each bump adds its forward step here — loading an older file must
@@ -244,9 +417,39 @@ function migrateProject(raw: Record<string, unknown>, version: number): Record<s
     // files reopened at whatever the view happened to be; fitting to
     // the space is that behaviour named rather than changed.
     if (at === 2) doc = { ...doc, preview: { ...DEFAULT_PREVIEW } };
+    // v2 → v3: `pipeline.palette` was a bare name ("DMC" or null).
+    // That name becomes an enabled-brand policy with no snapshot: a v2
+    // file only ever meant "every DMC thread", which the policy states
+    // exactly. The empty snapshot is honest — the file never carried
+    // the thread data, so there is nothing to reproduce from, and the
+    // first resolve fills it.
+    if (at === 3) doc = migrateV2Palette(doc);
     doc = { ...doc, schemaVersion: at };
   }
   return doc;
+}
+
+/** Lift a v2 `pipeline.palette` name into the v3 palette block. */
+function migrateV2Palette(doc: Record<string, unknown>): Record<string, unknown> {
+  const pipeline = { ...asRecord(doc['pipeline'], 'pipeline') };
+  const name = pipeline['palette'];
+  delete pipeline['palette'];
+  const palette =
+    name === null || name === undefined
+      ? null
+      : {
+          policy: {
+            brands: ['dmc'],
+            source: { kind: 'brands' },
+            ownedOnly: false,
+            count: { mode: 'all', n: 20 },
+            locked: [],
+            preferred: [],
+            excluded: [],
+          },
+          snapshot: [],
+        };
+  return { ...doc, pipeline, palette };
 }
 
 /**
@@ -274,10 +477,6 @@ export function parseProject(json: string): ProjectFile {
 
   const pipeline = asRecord(doc['pipeline'], 'pipeline');
   const grid = asRecord(pipeline['grid'], 'pipeline.grid');
-  const paletteRaw = pipeline['palette'];
-  if (paletteRaw !== null && typeof paletteRaw !== 'string') {
-    fail('pipeline.palette', 'a palette name or null');
-  }
   const gridStyle = asRecord(doc['gridStyle'], 'gridStyle');
   const preview = asRecord(doc['preview'], 'preview');
   const exportPrefs = asRecord(doc['export'], 'export');
@@ -297,11 +496,11 @@ export function parseProject(json: string): ProjectFile {
         'cover',
         'fit',
       ]),
-      palette: paletteRaw,
       metric: asOneOf(pipeline['metric'], 'pipeline.metric', ['rgb', 'lab']),
       dither: asBool(pipeline['dither'], 'pipeline.dither'),
       serpentine: asBool(pipeline['serpentine'], 'pipeline.serpentine'),
     },
+    palette: parsePalette(doc['palette']),
     gridStyle: {
       show: asBool(gridStyle['show'], 'gridStyle.show'),
       minorInterval: asInt(gridStyle['minorInterval'], 'gridStyle.minorInterval', 1, 1000),

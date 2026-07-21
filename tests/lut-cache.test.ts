@@ -18,8 +18,9 @@ import { buildLut, LUT_SIZE, lutKey } from '../src/core/color/lut.ts';
 import { executeRequest } from '../src/worker/execute.ts';
 import { clearLutCache, ensureLut, getLut, lutCacheSize } from '../src/worker/lut-cache.ts';
 import { buildLutGpu } from '../src/backends/webgpu/reduce.ts';
-import type { PaletteEntry, Palette } from '../src/core/types.ts';
+import type { Palette, Thread } from '../src/core/types.ts';
 import type { ProcessRequest } from '../src/worker/protocol.ts';
+import { thread } from './helpers/threads.ts';
 
 vi.mock('../src/backends/webgpu/reduce.ts', () => ({
   buildLutGpu: vi.fn(async () => Promise.resolve(null)),
@@ -28,15 +29,9 @@ vi.mock('../src/backends/webgpu/reduce.ts', () => ({
 
 const gpuBuild = vi.mocked(buildLutGpu);
 
-const RED: PaletteEntry = {
-  code: 'R', name: 'red', hex: '#ff0000', rgb: [255, 0, 0], manufacturer: 'test',
-};
-const BLUE: PaletteEntry = {
-  code: 'B', name: 'blue', hex: '#0000ff', rgb: [0, 0, 255], manufacturer: 'test',
-};
-const GREEN: PaletteEntry = {
-  code: 'G', name: 'green', hex: '#00ff00', rgb: [0, 255, 0], manufacturer: 'test',
-};
+const RED: Thread = thread('R', 'red', [255, 0, 0]);
+const BLUE: Thread = thread('B', 'blue', [0, 0, 255]);
+const GREEN: Thread = thread('G', 'green', [0, 255, 0]);
 
 /** Same name and entry count, opposite order — the collision case. */
 const REDFIRST: Palette = { name: 'two', entries: [RED, BLUE] };

@@ -1,25 +1,26 @@
 /**
- * Palette model over the generated DMC data (owner thread map).
- * Mirrors the invariants build-palette.mjs guarantees, so a bad
- * regeneration is caught here too.
+ * Palette model over the generated thread catalogue. Mirrors the
+ * invariants build-palette.mjs guarantees, so a bad regeneration is
+ * caught here too.
  */
 
 import { describe, expect, it } from 'vitest';
 
 import { loadDmcPalette, paletteLab, paletteRgb } from '../src/core/palette.ts';
+import { loadCatalogue, threadsForBrands } from '../src/core/thread-catalogue.ts';
 
 describe('DMC palette', () => {
   const palette = loadDmcPalette();
 
-  it('loads all 533 colours with unique codes', () => {
-    expect(palette.entries.length).toBe(533);
-    const codes = new Set(palette.entries.map((e) => e.code));
-    expect(codes.size).toBe(palette.entries.length);
+  it('loads every DMC thread with unique references', () => {
+    expect(palette.entries.length).toBe(489);
+    const references = new Set(palette.entries.map((e) => e.reference));
+    expect(references.size).toBe(palette.entries.length);
   });
 
-  it('has the anchor colours White and 310 (black)', () => {
-    expect(palette.entries.some((e) => e.code === 'White')).toBe(true);
-    expect(palette.entries.some((e) => e.code === '310')).toBe(true);
+  it('has 310 (black) and B5200 (snow white)', () => {
+    expect(palette.entries.some((e) => e.reference === '310')).toBe(true);
+    expect(palette.entries.some((e) => e.reference === 'B5200')).toBe(true);
   });
 
   it('hex and rgb agree for every entry', () => {
@@ -43,5 +44,64 @@ describe('DMC palette', () => {
       expect(lab[i * 3] ?? NaN).toBeGreaterThanOrEqual(0);
       expect(lab[i * 3] ?? NaN).toBeLessThanOrEqual(100);
     }
+  });
+});
+
+describe('thread catalogue', () => {
+  const catalogue = loadCatalogue();
+
+  it('loads eight brands with every thread id unique', () => {
+    expect(catalogue.brands.map((b) => b.id)).toEqual([
+      'anchor',
+      'ariadna',
+      'cosmo',
+      'cxc',
+      'dmc',
+      'finca',
+      'madeira',
+      'sullivans',
+    ]);
+    const ids = new Set(catalogue.threads.map((t) => t.id));
+    expect(ids.size).toBe(catalogue.threads.length);
+    expect(catalogue.byId.size).toBe(catalogue.threads.length);
+  });
+
+  it('never merges threads that share a display colour', () => {
+    // The load-bearing invariant of the whole M7 identity model: 3,338
+    // threads render as only 2,830 distinct colours, so ~500 real,
+    // separately-buyable threads would vanish under RGB de-duplication
+    // (M7-BRAND-01).
+    const colours = new Set(catalogue.threads.map((t) => t.hex));
+    expect(catalogue.threads.length).toBe(3338);
+    expect(colours.size).toBe(2830);
+    expect(colours.size).toBeLessThan(catalogue.threads.length);
+  });
+
+  it('strips the redundant brand prefix from a reference', () => {
+    // The source CSV writes Anchor/CXC/Sullivans codes as "Anchor 403";
+    // the brand is already its own field, so a label built from both
+    // would read "Anchor Anchor 403".
+    const anchor = threadsForBrands(catalogue, ['anchor']);
+    expect(anchor.length).toBeGreaterThan(0);
+    expect(anchor.every((t) => !/^anchor /i.test(t.reference))).toBe(true);
+    expect(anchor.some((t) => t.reference === '403')).toBe(true);
+  });
+
+  it('orders threads by enabled-brand order, then catalogue order', () => {
+    const both = threadsForBrands(catalogue, ['dmc', 'anchor']);
+    const firstAnchor = both.findIndex((t) => t.brandId === 'anchor');
+    const lastDmc = both.map((t) => t.brandId).lastIndexOf('dmc');
+    expect(lastDmc).toBeLessThan(firstAnchor);
+    // Reversing the request reverses the blocks — order is the user's,
+    // and it is the nearest-match tie-break (D46).
+    const reversed = threadsForBrands(catalogue, ['anchor', 'dmc']);
+    expect(reversed[0]?.brandId).toBe('anchor');
+  });
+
+  it('reports every brand as measured, none as mapped', () => {
+    // thread-list.csv carries each brand's own colours, unlike the
+    // superseded DMC→Anchor cross-reference (D55).
+    expect(catalogue.brands.every((b) => b.provenance === 'measured')).toBe(true);
+    expect(catalogue.threads.every((t) => t.mappedFrom === null)).toBe(true);
   });
 });

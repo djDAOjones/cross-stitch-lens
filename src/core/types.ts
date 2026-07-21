@@ -5,28 +5,80 @@
  * data always travels as typed arrays — never arrays of objects.
  */
 
-/** RGBA pixel data. `data.length` is always `width * height * 4`, 0–255 sRGB. */
+/**
+ * RGBA pixel data. `data.length` is always `width * height * 4`,
+ * 0–255 sRGB.
+ *
+ * `indices` is the optional palette-index sidecar the architecture
+ * allows ("or index buffers where noted"). A stage that maps to a
+ * palette sets it; every other stage leaves it absent, because a
+ * resize or an adjust invalidates it. It exists so stats, the chart
+ * key, and exports can name the thread that was actually chosen rather
+ * than reverse-guessing a reference from the rendered RGB — a guess
+ * that is ambiguous the moment two brands share a colour
+ * (M7-BRAND-01).
+ */
 export interface PixelBuffer {
   width: number;
   height: number;
   data: Uint8ClampedArray;
+  /** Palette index per cell, length `width * height`. */
+  indices?: Uint16Array;
 }
 
-/** One thread colour in a palette. Hex is `#rrggbb` lowercase. */
-export interface PaletteEntry {
-  /** Manufacturer thread code, e.g. "310" or "White" (DMC). */
-  code: string;
+/**
+ * Sidecar value for a cell that was never matched to a thread — an
+ * empty stitch the dither stage skipped. Distinct from index 0, which
+ * is a real thread; a design whose first palette entry is black must
+ * not report its fabric gaps as black stitches.
+ *
+ * It also caps a palette at 65,535 entries, which is three orders of
+ * magnitude past any real thread range.
+ */
+export const EMPTY_INDEX = 0xffff;
+
+/** How a thread's colour data was obtained. */
+export type Provenance = 'measured' | 'mapped';
+
+/** Whether a thread is still purchasable, or a survivor of a data change. */
+export type ThreadStatus = 'current' | 'retired' | 'unresolved';
+
+/**
+ * One thread: a catalogue record, and the unit a palette is ordered
+ * over. Hex is `#rrggbb` lowercase.
+ *
+ * `id` is the identity; `rgb` is only ever a rendering value. Two
+ * threads may share an RGB and remain distinct records — that is the
+ * normal case for a mapped cross-reference, not an anomaly to
+ * de-duplicate (M7-BRAND-01).
+ */
+export interface Thread {
+  /** `${brandId}:${reference}` — stable across catalogue releases. */
+  id: string;
+  brandId: string;
+  /** Manufacturer catalogue reference, e.g. "310" or "White". */
+  reference: string;
   name: string;
   hex: string;
   /** 0–255 sRGB, index-aligned [r, g, b]. */
   rgb: [number, number, number];
-  manufacturer: string;
+  provenance: Provenance;
+  status: ThreadStatus;
+  /** For mapped records, the thread id the colour was derived from. */
+  mappedFrom: string | null;
 }
 
-/** An ordered set of thread colours; index 0.. maps to output cells. */
+/**
+ * An ordered set of threads; index 0.. maps to output cells.
+ *
+ * Order is identity-significant, not presentation: it is the
+ * nearest-match tie-break and it is what every LUT stores. Reordering
+ * a palette is a real edit even when the rendered pixels do not change
+ * (D46, M7-PAL-01).
+ */
 export interface Palette {
   name: string;
-  entries: PaletteEntry[];
+  entries: Thread[];
 }
 
 /** Execution backends for a stage. 'ts' is mandatory and is ground truth. */

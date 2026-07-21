@@ -132,13 +132,48 @@ fn diffuse(
     work[i + 2] = (work[i + 2] as f64 + err_b * weight) as f32;
 }
 
+/// Sidecar value for a cell that was never matched to a thread — the
+/// empty stitches the loop skips. Mirrors `EMPTY_INDEX` in
+/// `src/core/types.ts`; the two must agree or the TS side reads
+/// fabric as palette entry 0.
+const EMPTY_INDEX: u16 = 0xffff;
+
+/// Dither output: the RGBA buffer plus the palette-index sidecar.
+///
+/// The indices are not a convenience — they are the only unambiguous
+/// answer to "which thread is this stitch?" once a palette can hold
+/// two brands' threads at the same display colour (M7-BRAND-01).
+/// Reconstructing them from the output RGB on the JS side would
+/// silently pick whichever entry came first.
+#[wasm_bindgen]
+pub struct DitherResult {
+    pixels: Vec<u8>,
+    indices: Vec<u16>,
+}
+
+#[wasm_bindgen]
+impl DitherResult {
+    /// RGBA bytes, `width * height * 4`.
+    #[wasm_bindgen(getter)]
+    pub fn pixels(&self) -> Vec<u8> {
+        self.pixels.clone()
+    }
+
+    /// Palette index per cell, `width * height`; `0xffff` = empty.
+    #[wasm_bindgen(getter)]
+    pub fn indices(&self) -> Vec<u16> {
+        self.indices.clone()
+    }
+}
+
 /// Floyd–Steinberg dither of an RGBA buffer against a palette.
 ///
 /// * `pixels` — RGBA bytes, `width * height * 4`.
 /// * `pal_rgb` — palette RGB triples (`paletteRgb` on the TS side).
 /// * `pal_lab` — palette Lab triples as f32 (`paletteLab`); may be
 ///   empty when `use_lab` is false.
-/// * Returns a new RGBA buffer; alpha passes through undiffused.
+/// * Returns a new RGBA buffer plus its palette-index sidecar; alpha
+///   passes through undiffused.
 #[wasm_bindgen]
 pub fn dither_floyd_steinberg(
     width: u32,
@@ -148,11 +183,31 @@ pub fn dither_floyd_steinberg(
     pal_lab: &[f32],
     use_lab: bool,
     serpentine: bool,
-) -> Vec<u8> {
+) -> DitherResult {
+    let (out, indices) = dither_impl(width, height, pixels, pal_rgb, pal_lab, use_lab, serpentine);
+    DitherResult {
+        pixels: out,
+        indices,
+    }
+}
+
+/// The dither itself, returning plain Rust values so the crate's own
+/// tests do not have to go through `wasm_bindgen` types.
+#[allow(clippy::too_many_arguments)]
+fn dither_impl(
+    width: u32,
+    height: u32,
+    pixels: &[u8],
+    pal_rgb: &[u8],
+    pal_lab: &[f32],
+    use_lab: bool,
+    serpentine: bool,
+) -> (Vec<u8>, Vec<u16>) {
     let w = width as i64;
     let h = height as i64;
     let px = (width as usize) * (height as usize);
     let mut out = vec![0u8; pixels.len()];
+    let mut indices = vec![EMPTY_INDEX; px];
 
     // Float working copy of the RGB channels; alpha never diffuses.
     let mut work = vec![0f32; px * 3];
@@ -189,7 +244,9 @@ pub fn dither_floyd_steinberg(
             let g = clamp255(work[wi + 1] as f64);
             let b = clamp255(work[wi + 2] as f64);
 
-            let idx = nearest_index(r, g, b, use_lab, pal_rgb, pal_lab) * 3;
+            let entry = nearest_index(r, g, b, use_lab, pal_rgb, pal_lab);
+            indices[(y * w + x) as usize] = entry as u16;
+            let idx = entry * 3;
             let pr = pal_rgb[idx];
             let pg = pal_rgb[idx + 1];
             let pb = pal_rgb[idx + 2];
@@ -212,7 +269,7 @@ pub fn dither_floyd_steinberg(
         }
     }
 
-    out
+    (out, indices)
 }
 
 #[cfg(test)]
@@ -221,6 +278,23 @@ mod tests {
 
     /// Black + white palette, RGB triples.
     const BW_RGB: [u8; 6] = [0, 0, 0, 255, 255, 255];
+
+    /// The RGBA half of a dither run — what most assertions look at.
+    #[allow(clippy::too_many_arguments)]
+    fn dither_floyd_steinberg(
+        width: u32,
+        height: u32,
+        pixels: &[u8],
+        pal_rgb: &[u8],
+        pal_lab: &[f32],
+        use_lab: bool,
+        serpentine: bool,
+    ) -> Vec<u8> {
+        dither_impl(
+            width, height, pixels, pal_rgb, pal_lab, use_lab, serpentine,
+        )
+        .0
+    }
 
     fn grey_rgba(width: usize, height: usize, value: u8) -> Vec<u8> {
         let mut px = Vec::with_capacity(width * height * 4);
@@ -310,6 +384,29 @@ mod tests {
         let out = dither_floyd_steinberg(4, 4, &pixels, &BW_RGB, &pal_lab, true, true);
         for p in 0..16 {
             assert_eq!(&out[p * 4..p * 4 + 3], &[255, 255, 255]);
+        }
+    }
+
+    #[test]
+    fn indices_name_the_entry_the_pixels_show_and_empty_cells_stay_empty() {
+        // Two transparent cells then six 220-grey against a palette
+        // with no near-black: the sidecar must mark the empty cells
+        // 0xffff rather than palette entry 0, and every stitch's index
+        // must agree with the RGB actually written.
+        let pal: [u8; 6] = [200, 200, 200, 255, 255, 255];
+        let mut padded = vec![0u8, 0, 0, 0, 0, 0, 0, 0];
+        padded.extend_from_slice(&grey_rgba(6, 1, 220));
+        let (out, indices) = dither_impl(8, 1, &padded, &pal, &[], false, false);
+
+        assert_eq!(indices.len(), 8);
+        assert_eq!(indices[0], EMPTY_INDEX);
+        assert_eq!(indices[1], EMPTY_INDEX);
+        for cell in 2..8 {
+            let entry = indices[cell] as usize;
+            assert!(entry < 2, "cell {cell} index {entry}");
+            assert_eq!(out[cell * 4], pal[entry * 3]);
+            assert_eq!(out[cell * 4 + 1], pal[entry * 3 + 1]);
+            assert_eq!(out[cell * 4 + 2], pal[entry * 3 + 2]);
         }
     }
 

@@ -15,12 +15,24 @@ export const ROW_CAP = 30;
 export interface ColorRow {
   /** Swatch colour, #rrggbb. */
   hex: string;
-  /** Visible label: thread "code name" when referenced, else the hex. */
+  /**
+   * Visible label: "brand reference name" when the stitch was
+   * identified, else the hex. Brand and reference are in the label
+   * rather than a tooltip because they are what you take to the shop
+   * (M7-BRAND-02).
+   */
   label: string;
   count: number;
   percentText: string;
   /** Hover tooltip; always carries the hex (colour-fidelity rule). */
   title: string;
+}
+
+/** Options for {@link buildRows}. */
+export interface RowOptions {
+  /** Brand id → display name, e.g. `"dmc"` → `"DMC"`. */
+  brandNames?: ReadonlyMap<string, string> | undefined;
+  cap?: number | undefined;
 }
 
 /** The capped row set plus what the cap folded away. */
@@ -44,15 +56,33 @@ export function formatPercent(percent: number): string {
 }
 
 /** Build the capped, formatted row model from sorted per-colour usage. */
-export function buildRows(perColor: ColorUsage[], cap: number = ROW_CAP): RowSet {
+export function buildRows(perColor: ColorUsage[], options: RowOptions = {}): RowSet {
+  const cap = options.cap ?? ROW_CAP;
   const shown = perColor.slice(0, cap);
-  const rows = shown.map((usage) => ({
-    hex: usage.hex,
-    label: usage.code !== undefined ? `${usage.code} ${usage.name ?? ''}`.trim() : usage.hex,
-    count: usage.count,
-    percentText: formatPercent(usage.percent),
-    title: usage.name === undefined ? usage.hex : `${usage.hex} · ${usage.name}`,
-  }));
+  const rows = shown.map((usage) => {
+    const thread = usage.thread;
+    if (thread === undefined) {
+      return {
+        hex: usage.hex,
+        label: usage.hex,
+        count: usage.count,
+        percentText: formatPercent(usage.percent),
+        title: usage.hex,
+      };
+    }
+    const brand = options.brandNames?.get(thread.brandId) ?? thread.brandId;
+    // A mapped colour is flagged in the tooltip rather than left to
+    // look like a manufacturer measurement (M7-BRAND-01).
+    const provenance =
+      thread.provenance === 'mapped' ? ' · colour mapped, not measured' : '';
+    return {
+      hex: usage.hex,
+      label: `${brand} ${thread.reference} ${thread.name}`.trim(),
+      count: usage.count,
+      percentText: formatPercent(usage.percent),
+      title: `${usage.hex} · ${thread.name}${provenance}`,
+    };
+  });
   const rest = perColor.slice(cap);
   const overflow =
     rest.length === 0
@@ -82,8 +112,17 @@ export interface InfoPanel {
   update(stats: DesignStats): void;
 }
 
-/** Build the panel. Starts in its empty state until the first update. */
-export function createInfoPanel(doc: Document): InfoPanel {
+/**
+ * Build the panel. Starts in its empty state until the first update.
+ *
+ * `brandNames` labels each row with the brand as well as the
+ * reference — "310" alone is not a shopping list once more than one
+ * brand can be enabled.
+ */
+export function createInfoPanel(
+  doc: Document,
+  brandNames?: ReadonlyMap<string, string>,
+): InfoPanel {
   const element = doc.createElement('section');
   element.className = 'info-panel';
 
@@ -111,7 +150,7 @@ export function createInfoPanel(doc: Document): InfoPanel {
 
   function update(stats: DesignStats): void {
     summary.textContent = summaryText(stats);
-    const { rows, overflow } = buildRows(stats.perColor);
+    const { rows, overflow } = buildRows(stats.perColor, { brandNames });
     tbody.replaceChildren();
     for (const row of rows) {
       const tr = doc.createElement('tr');

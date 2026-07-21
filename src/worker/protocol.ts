@@ -90,13 +90,22 @@ export interface StageTiming {
   backend: Backend;
 }
 
-/** Worker → main: one processed frame (pixels transferred back). */
+/**
+ * Worker → main: one processed frame (pixels transferred back).
+ *
+ * `indices` is the palette-index sidecar (`Uint16Array` bytes), also
+ * transferred. It is `null` whenever the final stage did not produce
+ * one — full-RGB mode, or `reduce-first`, where the resize after the
+ * colour stage leaves the output off-palette (D49). Absent means
+ * "cannot be identified", never "identify it yourself from the RGB".
+ */
 export interface ProcessResult {
   type: 'result';
   id: number;
   width: number;
   height: number;
   pixels: ArrayBuffer;
+  indices: ArrayBuffer | null;
   timings: StageTiming[];
 }
 
@@ -107,6 +116,7 @@ export interface ExportResult {
   width: number;
   height: number;
   pixels: ArrayBuffer;
+  indices: ArrayBuffer | null;
 }
 
 /**

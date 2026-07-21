@@ -7,6 +7,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { ColorUsage, DesignStats } from '../src/core/stats.ts';
+import { thread } from './helpers/threads.ts';
 import {
   buildRows,
   formatPercent,
@@ -35,17 +36,44 @@ describe('formatPercent', () => {
 });
 
 describe('buildRows', () => {
-  it('labels referenced colours by thread and others by hex', () => {
-    const { rows } = buildRows([
-      usage({ code: '310', name: 'Black' }),
-      usage({ hex: '#123456' }),
-    ]);
-    expect(rows[0]?.label).toBe('310 Black');
+  const BRANDS = new Map([['dmc', 'DMC']]);
+
+  it('labels referenced colours by brand, reference and name', () => {
+    const { rows } = buildRows(
+      [
+        usage({ thread: thread('310', 'Black', [0, 0, 0], { brandId: 'dmc' }) }),
+        usage({ hex: '#123456' }),
+      ],
+      { brandNames: BRANDS },
+    );
+    expect(rows[0]?.label).toBe('DMC 310 Black');
     expect(rows[1]?.label).toBe('#123456');
   });
 
+  it('falls back to the raw brand id when no display names are given', () => {
+    const { rows } = buildRows([
+      usage({ thread: thread('310', 'Black', [0, 0, 0], { brandId: 'dmc' }) }),
+    ]);
+    expect(rows[0]?.label).toBe('dmc 310 Black');
+  });
+
+  it('flags a mapped colour in the tooltip', () => {
+    const { rows } = buildRows(
+      [
+        usage({
+          thread: thread('403', 'Black', [0, 0, 0], {
+            brandId: 'anchor',
+            provenance: 'mapped',
+          }),
+        }),
+      ],
+      { brandNames: new Map([['anchor', 'Anchor']]) },
+    );
+    expect(rows[0]?.title).toContain('colour mapped, not measured');
+  });
+
   it('always carries the hex in the tooltip', () => {
-    const { rows } = buildRows([usage({ code: '310', name: 'Black' })]);
+    const { rows } = buildRows([usage({ thread: thread('310', 'Black', [0, 0, 0], { brandId: 'dmc' }) })]);
     expect(rows[0]?.title).toBe('#000000 · Black');
   });
 
@@ -79,6 +107,7 @@ describe('summaryText', () => {
       emptyCount: 4500,
       colorCount: 42,
       perColor: [],
+      identified: false,
     };
     expect(summaryText(stats)).toBe(
       '200 × 150 · 25,500 stitches (4,500 empty) · 42 colours',
@@ -94,6 +123,7 @@ describe('summaryText', () => {
       emptyCount: 0,
       colorCount: 1,
       perColor: [],
+      identified: false,
     };
     expect(summaryText(stats)).toBe('1 × 1 · 1 stitch (0 empty) · 1 colour');
   });

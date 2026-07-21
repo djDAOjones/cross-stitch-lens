@@ -17,7 +17,7 @@ import { nearestIndexPruned, type CandidateTable } from '../color/candidates.ts'
 import { nearestIndex } from '../color/lut.ts';
 import type { ColorMetric } from '../color/metrics.ts';
 import { paletteLab, paletteRgb } from '../palette.ts';
-import type { Palette, PixelBuffer, Stage } from '../types.ts';
+import { EMPTY_INDEX, type Palette, type PixelBuffer, type Stage } from '../types.ts';
 
 /** Parameters for {@link ditherStage}; the UI + project-file shape. */
 export interface DitherParams {
@@ -109,6 +109,10 @@ function ditherTs(input: PixelBuffer, params: DitherParams): PixelBuffer {
   const { width, height } = input;
   const src = input.data;
   const out = new Uint8ClampedArray(src.length);
+  // Pre-filled with the empty sentinel so the cells the loop below
+  // skips are reported as fabric rather than as palette entry 0
+  // (M7-BRAND-01).
+  const indices = new Uint16Array(width * height).fill(EMPTY_INDEX);
   const palRgb = paletteRgb(params.palette);
   const usesLab = params.metric === 'lab';
   const palLab = usesLab ? paletteLab(params.palette) : new Float32Array(0);
@@ -164,10 +168,12 @@ function ditherTs(input: PixelBuffer, params: DitherParams): PixelBuffer {
       const g = clamp255(work[wi + 1] ?? 0);
       const b = clamp255(work[wi + 2] ?? 0);
 
-      const idx =
-        (table === null
+      const entry =
+        table === null
           ? nearestIndex(r, g, b, params.metric, palRgb, palLab, labScratch)
-          : nearestIndexPruned(r, g, b, palLab, labScratch, table)) * 3;
+          : nearestIndexPruned(r, g, b, palLab, labScratch, table);
+      indices[y * width + x] = entry;
+      const idx = entry * 3;
       const pr = palRgb[idx] ?? 0;
       const pg = palRgb[idx + 1] ?? 0;
       const pb = palRgb[idx + 2] ?? 0;
@@ -188,7 +194,7 @@ function ditherTs(input: PixelBuffer, params: DitherParams): PixelBuffer {
     }
   }
 
-  return { width, height, data: out };
+  return { width, height, data: out, indices };
 }
 
 /** The Floyd–Steinberg dither stage (TS reference; WASM post-profile). */

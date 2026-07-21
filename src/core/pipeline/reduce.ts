@@ -30,19 +30,29 @@ export interface ReduceParams {
   lut?: Uint16Array;
 }
 
-/** Map `input` to palette colours per `params`; returns a new buffer. */
+/**
+ * Map `input` to palette colours per `params`; returns a new buffer
+ * carrying the palette-index sidecar.
+ *
+ * The sidecar is free here — the index is what the loop already
+ * computes — and it is the only way a downstream consumer can name the
+ * thread that was chosen once two brands can hold the same RGB
+ * (M7-BRAND-01).
+ */
 function reduceTs(input: PixelBuffer, params: ReduceParams): PixelBuffer {
   const { width, height } = input;
   const src = input.data;
   const out = new Uint8ClampedArray(src.length);
+  const indices = new Uint16Array(width * height);
   const palRgb = paletteRgb(params.palette);
   const usesLab = params.metric === 'lab';
 
   if (params.path === 'lut') {
     const lut = params.lut ?? buildLut(params.palette, params.metric);
-    for (let i = 0; i < src.length; i += 4) {
-      const idx =
-        (lut[lutKey(src[i] ?? 0, src[i + 1] ?? 0, src[i + 2] ?? 0)] ?? 0) * 3;
+    for (let i = 0, cell = 0; i < src.length; i += 4, cell++) {
+      const entry = lut[lutKey(src[i] ?? 0, src[i + 1] ?? 0, src[i + 2] ?? 0)] ?? 0;
+      indices[cell] = entry;
+      const idx = entry * 3;
       out[i] = palRgb[idx] ?? 0;
       out[i + 1] = palRgb[idx + 1] ?? 0;
       out[i + 2] = palRgb[idx + 2] ?? 0;
@@ -51,24 +61,25 @@ function reduceTs(input: PixelBuffer, params: ReduceParams): PixelBuffer {
   } else {
     const palLab = usesLab ? paletteLab(params.palette) : new Float32Array(0);
     const labScratch = new Float32Array(3);
-    for (let i = 0; i < src.length; i += 4) {
-      const idx =
-        nearestIndex(
-          src[i] ?? 0,
-          src[i + 1] ?? 0,
-          src[i + 2] ?? 0,
-          params.metric,
-          palRgb,
-          palLab,
-          labScratch,
-        ) * 3;
+    for (let i = 0, cell = 0; i < src.length; i += 4, cell++) {
+      const entry = nearestIndex(
+        src[i] ?? 0,
+        src[i + 1] ?? 0,
+        src[i + 2] ?? 0,
+        params.metric,
+        palRgb,
+        palLab,
+        labScratch,
+      );
+      indices[cell] = entry;
+      const idx = entry * 3;
       out[i] = palRgb[idx] ?? 0;
       out[i + 1] = palRgb[idx + 1] ?? 0;
       out[i + 2] = palRgb[idx + 2] ?? 0;
       out[i + 3] = src[i + 3] ?? 255;
     }
   }
-  return { width, height, data: out };
+  return { width, height, data: out, indices };
 }
 
 /** The reduce stage (TS reference; WASM/WebGPU arrive post-profile). */

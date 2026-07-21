@@ -8,13 +8,14 @@
 import { describe, expect, it } from 'vitest';
 
 import { computeStats } from '../src/core/stats.ts';
-import type { Palette, PixelBuffer } from '../src/core/types.ts';
+import { EMPTY_INDEX, type Palette, type PixelBuffer } from '../src/core/types.ts';
+import { thread } from './helpers/threads.ts';
 
 const PALETTE: Palette = {
   name: 'test-rwb',
   entries: [
-    { code: '666', name: 'bright red', hex: '#ff0000', rgb: [255, 0, 0], manufacturer: 'test' },
-    { code: 'B5200', name: 'snow white', hex: '#ffffff', rgb: [255, 255, 255], manufacturer: 'test' },
+    thread('666', 'bright red', [255, 0, 0]),
+    thread('B5200', 'snow white', [255, 255, 255]),
   ],
 };
 
@@ -63,10 +64,12 @@ describe('computeStats', () => {
     expect(stats.perColor[0]?.percent).toBeCloseTo(400 / 7, 6);
   });
 
-  it('attaches thread references for palette colours only', () => {
-    expect(stats.perColor[0]?.code).toBe('666');
-    expect(stats.perColor[1]?.name).toBe('snow white');
-    expect(stats.perColor[2]?.code).toBeUndefined(); // blue not in palette
+  it('names no thread without the palette-index sidecar', () => {
+    // A buffer with no sidecar cannot say which thread a stitch is —
+    // matching by RGB would be a guess, and the wrong one wherever two
+    // brands share a colour. Colours are still counted (M7-BRAND-01).
+    expect(stats.identified).toBe(false);
+    expect(stats.perColor.every((c) => c.thread === undefined)).toBe(true);
   });
 
   it('handles the all-empty design without dividing by zero', () => {
@@ -86,5 +89,59 @@ describe('computeStats', () => {
     const before = Array.from(buffer.data);
     computeStats(buffer, PALETTE);
     expect(Array.from(buffer.data)).toEqual(before);
+  });
+});
+
+describe('computeStats with a palette-index sidecar', () => {
+  /**
+   * Two threads, one display colour — the case that has no answer in
+   * the pixels. Only the sidecar can tell them apart, and a stitcher
+   * buying thread needs them told apart.
+   */
+  const CROSS_BRAND: Palette = {
+    name: 'cross-brand',
+    entries: [
+      thread('310', 'black', [0, 0, 0], { brandId: 'dmc' }),
+      thread('403', 'black', [0, 0, 0], { brandId: 'anchor', provenance: 'mapped' }),
+    ],
+  };
+
+  /** 4 cells, all rendering #000000: two DMC, one Anchor, one empty. */
+  function identified(): PixelBuffer {
+    const data = new Uint8ClampedArray(4 * 4);
+    for (let i = 0; i < 3; i++) data.set([0, 0, 0, 255], i * 4);
+    data.set([0, 0, 0, 0], 12);
+    return {
+      width: 4,
+      height: 1,
+      data,
+      indices: new Uint16Array([0, 0, 1, EMPTY_INDEX]),
+    };
+  }
+
+  const stats = computeStats(identified(), CROSS_BRAND);
+
+  it('keeps same-RGB threads as separate rows', () => {
+    expect(stats.identified).toBe(true);
+    expect(stats.colorCount).toBe(2);
+    expect(stats.perColor.map((c) => [c.thread?.id, c.count])).toEqual([
+      ['dmc:310', 2],
+      ['anchor:403', 1],
+    ]);
+  });
+
+  it('excludes cells the sidecar marks empty', () => {
+    expect(stats.stitchCount).toBe(3);
+    expect(stats.emptyCount).toBe(1);
+  });
+
+  it('counts by RGB — collapsing the two — when the sidecar is absent', () => {
+    const source = identified();
+    const plain = computeStats(
+      { width: source.width, height: source.height, data: source.data },
+      CROSS_BRAND,
+    );
+    expect(plain.identified).toBe(false);
+    expect(plain.colorCount).toBe(1);
   });
 });

@@ -29,6 +29,13 @@ packaging path).
 
 ## MVP scope (build this, nothing more)
 
+This is the **original** MVP definition, kept as the record of what was
+committed first. M0–M5 delivered it; the roadmap since (M6–M12,
+restructured in D51) deliberately extends past it — most visibly M7,
+which replaced item 1's "one preset thread palette" with an eight-brand
+catalogue and a full policy layer. Read it as intent, not as the
+current feature list; `README.md` has that.
+
 1. **Engine** — image-file import; custom grid width/height; full-RGB
    mode or one preset thread palette; resize to grid; nearest-colour
    palette reduction (CIELAB via LUT); Floyd–Steinberg dithering

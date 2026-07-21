@@ -3,6 +3,7 @@
     "\\.md$",
     "package-lock\\.json",
     "node_modules",
-    "_user-guff"
+    "_user-guff",
+    "src/core/palettes/.*\\.csv$"
   ]
 }

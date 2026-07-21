@@ -1,35 +1,27 @@
 /**
- * Palette model + the built-in DMC preset.
+ * Palette model + palette construction from the thread catalogue.
  *
- * The generated `palettes/dmc.json` (from the owner's thread map via
- * `scripts/build-palette.mjs`) is bundled as data — a build-time JSON
- * import, not I/O, so core purity holds. Do not hand-edit that file.
+ * A palette is an ordered set of catalogue threads. Building one is
+ * pure list work; *choosing* which threads belong in it is the policy
+ * layer's job (`palette-policy.ts`, `palette-selection.ts`).
  */
 
-import dmcData from './palettes/dmc.json';
 import { srgbToLab } from './color/convert.ts';
-import type { Palette, PaletteEntry } from './types.ts';
+import { loadCatalogue, threadsForBrands } from './thread-catalogue.ts';
+import type { Palette, Thread } from './types.ts';
 
-/** Shape of one generated dmc.json colour row. */
-interface DmcColor {
-  code: string;
-  name: string;
-  hex: string;
-  rgb: number[];
-  anchor: string | null;
+/**
+ * The built-in DMC palette (533 threads from the owner thread map) —
+ * the default single-brand palette and the one every pre-M7 project
+ * file names.
+ */
+export function loadDmcPalette(): Palette {
+  return { name: 'DMC', entries: threadsForBrands(loadCatalogue(), ['dmc']) };
 }
 
-/** The built-in DMC palette (533 colours from the owner thread map). */
-export function loadDmcPalette(): Palette {
-  const colors = (dmcData as { colors: DmcColor[] }).colors;
-  const entries: PaletteEntry[] = colors.map((c) => ({
-    code: c.code,
-    name: c.name,
-    hex: c.hex,
-    rgb: [c.rgb[0] ?? 0, c.rgb[1] ?? 0, c.rgb[2] ?? 0],
-    manufacturer: 'DMC',
-  }));
-  return { name: 'DMC', entries };
+/** A palette over an explicit ordered thread list. */
+export function paletteOf(name: string, entries: readonly Thread[]): Palette {
+  return { name, entries: [...entries] };
 }
 
 /**
@@ -46,24 +38,51 @@ export function paletteRgb(palette: Palette): Uint8ClampedArray {
   return rgb;
 }
 
+/** FNV-1a 32-bit, seeded so the two fingerprints below can share it. */
+function fnv1a(hash: number, byte: number): number {
+  return Math.imul(hash ^ byte, 0x01000193);
+}
+
 /**
- * Content fingerprint of a palette: FNV-1a 32-bit over the entry RGB
+ * **Colour** fingerprint of a palette: FNV-1a 32-bit over the entry RGB
  * triples **in order**, returned as 8 hex digits with the entry count
  * appended (`"1a2b3c4d-533"`).
  *
- * Order is part of the identity because anything keyed on a palette —
- * the worker's LUT cache above all — stores palette *indices*: two
- * palettes with the same colours in a different order produce
- * different, non-interchangeable results (D46). Name is deliberately
- * excluded: identical colours in identical order are the same palette
- * whatever it is called.
+ * Order is part of the identity because anything keyed on this — the
+ * worker's LUT cache above all — stores palette *indices*: two palettes
+ * with the same colours in a different order produce different,
+ * non-interchangeable results (D46).
+ *
+ * Thread identity is deliberately **excluded**, and that is safe
+ * precisely because a LUT holds indices rather than references: index
+ * `i` means "entry `i` of whichever palette you apply this with", so
+ * two palettes that agree on ordered RGB can share derived colour maths
+ * without either one ever being labelled with the other's threads
+ * (M7-BRAND-02). For anything that carries identity across time — a
+ * project's palette snapshot — use {@link paletteIdentityFingerprint}.
  */
 export function paletteFingerprint(palette: Palette): string {
   const rgb = paletteRgb(palette);
   let hash = 0x811c9dc5;
-  for (let i = 0; i < rgb.length; i++) {
-    hash ^= rgb[i] ?? 0;
-    hash = Math.imul(hash, 0x01000193);
+  for (let i = 0; i < rgb.length; i++) hash = fnv1a(hash, rgb[i] ?? 0);
+  const hex = (hash >>> 0).toString(16).padStart(8, '0');
+  return `${hex}-${String(palette.entries.length)}`;
+}
+
+/**
+ * **Identity** fingerprint: FNV-1a over the entry thread ids in order.
+ *
+ * This is what detects library drift — a saved project against an
+ * edited library palette — where two entries sharing an RGB but not a
+ * reference must compare unequal (M7-PAL-01).
+ */
+export function paletteIdentityFingerprint(palette: Palette): string {
+  let hash = 0x811c9dc5;
+  for (const entry of palette.entries) {
+    for (let i = 0; i < entry.id.length; i++) {
+      hash = fnv1a(hash, entry.id.charCodeAt(i) & 255);
+    }
+    hash = fnv1a(hash, 0x1f);
   }
   const hex = (hash >>> 0).toString(16).padStart(8, '0');
   return `${hex}-${String(palette.entries.length)}`;

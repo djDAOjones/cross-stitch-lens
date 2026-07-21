@@ -19,6 +19,7 @@ import {
 import { buildStages, type PipelineConfig } from '../src/core/pipeline/config.ts';
 import { runPipeline } from '../src/core/pipeline/index.ts';
 import { loadDmcPalette } from '../src/core/palette.ts';
+import { defaultPolicy } from '../src/core/palette-policy.ts';
 import type { PixelBuffer } from '../src/core/types.ts';
 
 /** A representative, fully-populated current-schema project. */
@@ -29,10 +30,21 @@ function sampleProject(): ProjectFile {
       preset: 'resize-first',
       grid: { width: 200, height: 150 },
       resizeMode: 'contain',
-      palette: 'DMC',
       metric: 'lab',
       dither: true,
       serpentine: true,
+    },
+    palette: {
+      policy: {
+        ...defaultPolicy(),
+        brands: ['dmc', 'anchor'],
+        ownedOnly: true,
+        count: { mode: 'max', n: 20 },
+        locked: ['dmc:310'],
+        preferred: ['anchor:403'],
+        excluded: ['dmc:B5200'],
+      },
+      snapshot: loadDmcPalette().entries.slice(0, 3),
     },
     gridStyle: {
       show: true,
@@ -71,6 +83,7 @@ describe('serializeProject / parseProject round trip', () => {
       export: file.export,
       preview: file.preview,
       gridStyle: file.gridStyle,
+      palette: file.palette,
       pipeline: file.pipeline,
       schemaVersion: file.schemaVersion,
     });
@@ -79,9 +92,9 @@ describe('serializeProject / parseProject round trip', () => {
 
   it('round-trips full-RGB mode (palette null)', () => {
     const file = sampleProject();
-    file.pipeline.palette = null;
+    file.palette = null;
     file.pipeline.dither = false;
-    expect(parseProject(serializeProject(file)).pipeline.palette).toBeNull();
+    expect(parseProject(serializeProject(file)).palette).toBeNull();
   });
 
   it('emits human-readable JSON with a trailing newline', () => {
@@ -257,12 +270,18 @@ describe('a saved project reopens with identical output', () => {
 
   /** `loadProject`'s mapping, as a pure function of the parsed file. */
   function configFrom(file: ProjectFile): PipelineConfig {
-    const name = file.pipeline.palette;
+    const saved = file.palette;
     return {
       preset: file.pipeline.preset,
       grid: { ...file.pipeline.grid },
       resizeMode: file.pipeline.resizeMode,
-      palette: name === null ? null : DMC,
+      // The snapshot is authoritative on reopen; an empty one (a
+      // migrated v2 file) falls back to resolving the policy, which
+      // for these cases is every DMC thread.
+      palette:
+        saved === null ? null : saved.snapshot.length > 0
+          ? { name: 'saved', entries: saved.snapshot }
+          : DMC,
       metric: file.pipeline.metric,
       dither: file.pipeline.dither,
       serpentine: file.pipeline.serpentine,
@@ -289,19 +308,29 @@ describe('a saved project reopens with identical output', () => {
     return runPipeline(source, buildStages(config)).data;
   }
 
+  /** The whole DMC palette, as a saved snapshot. */
+  const DMC_SNAPSHOT: ProjectFile['palette'] = {
+    policy: defaultPolicy(),
+    snapshot: DMC.entries,
+  };
+
   // One row per creative axis the project file carries.
-  const CASES: { name: string; pipeline: ProjectFile['pipeline'] }[] = [
+  const CASES: {
+    name: string;
+    pipeline: ProjectFile['pipeline'];
+    palette: ProjectFile['palette'];
+  }[] = [
     {
       name: 'dithered Lab, contain, serpentine',
       pipeline: {
         preset: 'resize-first',
         grid: { width: 24, height: 16 },
         resizeMode: 'contain',
-        palette: 'DMC',
         metric: 'lab',
         dither: true,
         serpentine: true,
       },
+      palette: DMC_SNAPSHOT,
     },
     {
       name: 'plain RGB reduce, cover, raster',
@@ -309,11 +338,11 @@ describe('a saved project reopens with identical output', () => {
         preset: 'resize-first',
         grid: { width: 16, height: 16 },
         resizeMode: 'cover',
-        palette: 'DMC',
         metric: 'rgb',
         dither: false,
         serpentine: false,
       },
+      palette: DMC_SNAPSHOT,
     },
     {
       name: 'reduce-first preset, fit',
@@ -321,11 +350,11 @@ describe('a saved project reopens with identical output', () => {
         preset: 'reduce-first',
         grid: { width: 20, height: 20 },
         resizeMode: 'fit',
-        palette: 'DMC',
         metric: 'lab',
         dither: false,
         serpentine: true,
       },
+      palette: DMC_SNAPSHOT,
     },
     {
       name: 'full-RGB mode (no palette), stretch',
@@ -333,19 +362,34 @@ describe('a saved project reopens with identical output', () => {
         preset: 'resize-first',
         grid: { width: 18, height: 12 },
         resizeMode: 'stretch',
-        palette: null,
         metric: 'lab',
         dither: false,
         serpentine: true,
       },
+      palette: null,
+    },
+    {
+      name: 'a three-thread saved snapshot, not the whole brand',
+      pipeline: {
+        preset: 'resize-first',
+        grid: { width: 16, height: 16 },
+        resizeMode: 'contain',
+        metric: 'lab',
+        dither: true,
+        serpentine: true,
+      },
+      // The snapshot is what makes a reopen reproducible: this project
+      // renders three threads whatever the catalogue or the library
+      // later says (M7-PAL-01).
+      palette: { policy: defaultPolicy(), snapshot: DMC.entries.slice(0, 3) },
     },
   ];
 
   const source = artwork(40, 30);
 
-  for (const { name, pipeline } of CASES) {
+  for (const { name, pipeline, palette } of CASES) {
     it(`renders identically after save → load — ${name}`, () => {
-      const saved: ProjectFile = { ...sampleProject(), pipeline };
+      const saved: ProjectFile = { ...sampleProject(), pipeline, palette };
       const before = render(configFrom(saved), source);
       const after = render(configFrom(parseProject(serializeProject(saved))), source);
       expect(Array.from(after)).toEqual(Array.from(before));
@@ -355,8 +399,8 @@ describe('a saved project reopens with identical output', () => {
   it('distinguishes the cases — a different project is a different picture', () => {
     // Without this, the assertions above would also pass if `render`
     // ignored the config entirely.
-    const rendered = CASES.map(({ pipeline }) =>
-      render(configFrom({ ...sampleProject(), pipeline }), source).join(','),
+    const rendered = CASES.map(({ pipeline, palette }) =>
+      render(configFrom({ ...sampleProject(), pipeline, palette }), source).join(','),
     );
     expect(new Set(rendered).size).toBe(CASES.length);
   });

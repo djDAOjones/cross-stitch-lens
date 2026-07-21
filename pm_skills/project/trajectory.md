@@ -19,6 +19,11 @@
 
 ## M7 — Palette & colour strategy (shipped 2026-07-21)
 
+- M7-ACCEPT-01 (2026-07-21) — maintainer accepted the combined
+  brands → inventory → palettes → presets → counts → locks workflow.
+  Close triage kept one item ahead of M8 (M7-LIB-01, the library
+  operations that never shipped) and moved the two that depend on
+  owner data to the Icebox (ICE-XREF-01, ICE-PRESET-01). See decision-log D57.
 - M7-DATA-01 (2026-07-21) — owner thread data superseded mid-milestone:
   `thread-list.csv` (3,338 threads, 8 brands, each brand's own measured
   colours) replaces the DMC→Anchor cross-reference; `dmc.json` retired,

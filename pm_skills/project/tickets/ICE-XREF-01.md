@@ -1,4 +1,11 @@
-# M7-BRAND-03 — Curated cross-reference ingestion
+# ICE-XREF-01 — Curated cross-reference ingestion
+
+> **Icebox — blocked twice over.** Moved out of M7 at the close triage
+> (was M7-BRAND-03). It needs data that does not exist yet
+> (`thread-map-proposed.csv` is a header with zero rows) *and* a
+> consumer that does not exist yet (nothing in the UI surfaces
+> equivalents; ICE-EXPLORER-01 is the natural first one). Reactivate
+> when the owner supplies groupings.
 
 ## Outcome
 

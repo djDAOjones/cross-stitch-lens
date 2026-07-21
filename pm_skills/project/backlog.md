@@ -17,25 +17,15 @@ line passes and `check` is green. Requirements references are to
 
 ### M7 — Palette & colour strategy
 
-Agent-side M7 shipped 2026-07-21 (see trajectory + D55/D56). What
-remains is the human gate plus the two items the new owner data opened
-up.
+Shipped and accepted 2026-07-21 (D55/D56/D57). One item remains, and it
+is here rather than in M8 because it completes operations the shipped
+library UI is missing rather than adding anything new: a user can
+create library palettes but never reorder or remove one, and can only
+build an inventory one checkbox at a time.
 
-- [ ] **M7-BRAND-03 Curated cross-reference ingestion** [detail] (2026-07-21)
-  Intent: ingest owner-reviewed thread equivalences so "nearest equivalent" can answer from published conversions rather than colour distance alone. `thread-map-proposed.csv` is currently a header with no data rows; the recommended shape is long/tidy (`group_id,brand,code`) rather than its current wide one-column-pair-per-brand form, which makes every new brand a schema change (D56).
-  Done when: curated equivalences load, override the computed answer, and are visibly labelled as published rather than computed — with the computed path still filling the gaps.
-
-- [ ] **M7-PAL-02 Palette editing: reorder, bulk inventory, delete/undo** [detail] (2026-07-21)
-  Intent: the M7-PAL-01 editing affordances deferred at ship — keyboard-accessible reordering (order is identity-significant, D46), bulk owned/not-owned operations with confirmation, and recoverable palette deletion.
-  Done when: reordering is reachable by keyboard, a bulk change is confirmable and reversible, and no palette deletion can lose a saved project's rendering.
-
-- [ ] **M7-ACCEPT-01 Palette workflow acceptance** [maintainer] [sign-off] [detail] (2026-07-20)
-  Intent: verify the combined workflow's worked examples under live editing, persistence, and export — the legs only a human at a real machine can judge, above all whether the eight-brand thread list produces plausible, stitchable colour choices.
-  Done when: saved projects reproduce identically, exports carry correct brand + reference only from the permitted set, and live editing has no material regression.
-
-*Acceptance: the §3 workflow examples pass end-to-end (choose DMC and
-reduce to 20; owned threads only, best 15; lock 5 and auto-fill;
-preset → edit → save as palette).*
+- [ ] **M7-LIB-01 Complete the thread-library UI** [detail] (2026-07-21)
+  Intent: the library operations deferred at ship — keyboard-accessible palette reordering (order is identity-significant, D46, so its absence means a documented edit cannot be performed at all), bulk owned/not-owned over the current filter with a confirmation, and recoverable palette deletion (no delete route exists today).
+  Done when: reordering is reachable by keyboard, a bulk change states its count and is reversible, and no palette deletion can lose a saved project's rendering.
 
 ### M8 — Dithering expansion
 
@@ -80,6 +70,16 @@ wins.
 
 <!-- Deferred but worth keeping (post-triage). Needs a decision to
      reactivate. Promote into a milestone when committed. -->
+
+- [ ] **ICE-XREF-01 Curated cross-reference ingestion** [blocked: owner data] [detail] (2026-07-21)
+  Intent: ingest owner-reviewed thread equivalences so "nearest equivalent" answers from published conversions rather than colour distance alone. The engine half shipped with M7 (`thread-equivalents.ts` already takes a curated map and prefers it); this is data plus a generator.
+  Done when: curated equivalences load, override the computed answer, and are visibly labelled as published rather than computed — with the computed path still filling the gaps.
+  Blocked twice over: `thread-map-proposed.csv` has a header and zero data rows, and nothing in the UI surfaces equivalents yet — ICE-EXPLORER-01 is its natural first consumer. Reactivate when the owner supplies groupings; the recommended shape is long/tidy (`group_id,brand,code`), not the current wide one-column-pair-per-brand form (D56).
+
+- [ ] **ICE-PRESET-01 Curated colour-scheme presets** [maintainer] (2026-07-21)
+  Intent: replace or supplement the four shipped algorithmic LCh presets with owner-reviewed membership lists, so "Pastels" means what a stitcher expects rather than what a chroma threshold selects. The resolver already supports it — a curated preset is a rule returning a fixed set.
+  Done when: each curated preset has owner-signed membership and the UI distinguishes curated from algorithmic.
+  Blocked on owner taste input, not on code (D55).
 
 - [ ] **ICE-EXPLORER-01 Colour explorer** [detail] (2026-07-21)
   Intent: a dedicated view over the 3,338-thread catalogue for browsing rather than converting — filter and sort by brand, hue/lightness/chroma, ownership; inspect one thread and see its nearest equivalents in every other brand side by side. The engine half already exists (`thread-equivalents.ts`); this is the view. Owner-flagged as a later nicety, not MVP.

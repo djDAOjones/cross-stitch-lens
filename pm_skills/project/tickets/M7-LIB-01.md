@@ -1,10 +1,17 @@
-# M7-PAL-02 — Palette editing: reorder, bulk inventory, delete/undo
+# M7-LIB-01 — Complete the thread-library UI
 
 ## Outcome
 
-The palette-editing affordances M7-PAL-01 specified but did not ship:
-reordering a saved palette, changing ownership in bulk, and deleting a
-palette without risking data.
+The library operations M7-INV-01 and M7-PAL-01 specified but did not
+ship: reordering a saved palette, changing ownership in bulk, and
+deleting a palette without risking data.
+
+Renamed from M7-PAL-02 at the M7 close triage: the work spans the
+inventory as well as palettes, so a `PAL` prefix was too narrow. This
+is the one M7 item kept ahead of M8, because each piece is a *missing
+operation* on a shipped feature rather than a new capability — a user
+can create library palettes but has no route to reorder or remove one,
+and can only build an inventory one checkbox at a time.
 
 ## Current baseline (what shipped)
 

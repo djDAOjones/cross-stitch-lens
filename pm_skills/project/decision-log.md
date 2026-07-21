@@ -1639,3 +1639,47 @@ the docs gate blocks on a path that no longer exists (doc-delta filed);
 owner CSVs are excluded from the EditorConfig check, since their BOM
 and CRLF are the exporter's, not this repo's, and the generator
 normalises both at read time.
+
+## D57 — M7 accepted; the remainder triaged by what blocks it (2026-07-21)
+
+**Verdict:** accepted. The maintainer signed off M7-ACCEPT-01 on the
+shipped workflow — brands, inventory, saved palettes, presets, colour
+counts, and lock/prefer/exclude.
+
+**The triage question:** three items were still open under M7. Rather
+than carry them as one undifferentiated queue, they were sorted by
+*what actually blocks each one*, which turned out to split them cleanly.
+
+**Kept ahead of M8 — M7-LIB-01 (renamed from M7-PAL-02).** Every piece
+of it is a **missing operation on a shipped feature**, not a new
+capability: a user can create library palettes but has no route to
+reorder or delete one, and can only build an inventory a checkbox at a
+time. Reordering is the sharpest case — D46 makes palette order
+identity-significant, so the app documents an edit it provides no way
+to perform. Renamed because the work spans the inventory as well as
+palettes, so the `PAL` prefix was wrong.
+
+**Moved to the Icebox — ICE-XREF-01 (was M7-BRAND-03).** Blocked twice over: the
+curated cross-reference data does not exist (`thread-map-proposed.csv`
+is a header with zero rows), *and* nothing in the UI surfaces
+equivalents, so even complete data would have no consumer.
+ICE-EXPLORER-01 is its natural first one. The engine half already
+shipped and is tested, so reactivation is data plus a generator.
+
+**Moved to the Icebox — ICE-PRESET-01 (new).** D55 deferred curated preset
+membership to owner review but never gave it a backlog home, which is
+how deferred work quietly becomes forgotten work. It is blocked on
+taste, not code: the resolver already treats a curated preset as a rule
+returning a fixed set.
+
+**Why the split matters:** all three would have read as "M7 leftovers"
+in one list, and a next-batch pick would have had to re-derive each
+time that two of them cannot be started at all. Sorting by blocker leaves
+exactly one item in Active that can be started today, and states the
+reactivation condition on the other two.
+
+**Consequences:** M7 closes with one open item; M8 (dithering
+expansion) is the next milestone, entered through its spike. The
+memory budgets tripped at the M7 ship (trajectory over 2,000 words,
+decision log at 46 entries against 20) remain open and are now the
+oldest outstanding housekeeping.

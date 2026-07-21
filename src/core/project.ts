@@ -21,10 +21,19 @@ import type { OrderPreset } from './pipeline/config.ts';
 import type { ResizeMode } from './pipeline/resize.ts';
 
 /** Current project-file schema version. Bump with a forward migration. */
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 /** Grid dimension bounds in stitches (brief: max 1024 per side). */
 export const MAX_GRID_SIDE = 1024;
+
+/**
+ * Preview scale bounds in CSS px per stitch: 5 % – 6400 % of 1:1, the
+ * same window the viewport clamps to. Declared here because the
+ * schema is the outer gate — a hand-edited file must not smuggle in a
+ * zoom the viewport would silently clamp anyway.
+ */
+export const MIN_PREVIEW_CSS_PX = 0.05;
+export const MAX_PREVIEW_CSS_PX = 64;
 
 /**
  * Pipeline settings as stored. Mirrors `PipelineConfig` except that
@@ -61,6 +70,28 @@ export interface ProjectGridStyle {
   tickFontPx: number;
 }
 
+/**
+ * How the preview chooses its scale. Stored as a mode rather than a
+ * bare number because a fit result depends on the viewport, the tick
+ * margins, DPR, and whether the settings panel is open — a saved fit
+ * *scale* would be stale the moment any of those differed.
+ */
+export type PreviewFitMode = 'space' | 'width' | 'height' | 'manual';
+
+/**
+ * Preview scale as stored (§20, schema v2). Screen-side only: nothing
+ * here can change the pattern, the pixels processed, or an export.
+ * `cssPxPerStitch` is in CSS pixels, not device pixels, so a project
+ * saved on a Retina display reopens the same size on a 1× one. Pan is
+ * intentionally absent — restoring a stale offset can reopen a design
+ * almost entirely off-screen.
+ */
+export interface ProjectPreview {
+  mode: PreviewFitMode;
+  /** Honoured in 'manual' mode; the last fitted value otherwise. */
+  cssPxPerStitch: number;
+}
+
 /** Export preferences (§13, §14, §18 subsets). */
 export interface ProjectExport {
   /** Clean-PNG enlargement, pixels per stitch (integer ≥ 1). */
@@ -78,13 +109,17 @@ export interface ProjectExport {
   };
 }
 
-/** The full project file. This shape is schema v1, verbatim. */
+/** The full project file. This shape is schema v2, verbatim. */
 export interface ProjectFile {
   schemaVersion: typeof SCHEMA_VERSION;
   pipeline: ProjectPipeline;
   gridStyle: ProjectGridStyle;
+  preview: ProjectPreview;
   export: ProjectExport;
 }
+
+/** The v2 preview block a migrated v1 file gets: fit to the space. */
+export const DEFAULT_PREVIEW: ProjectPreview = { mode: 'space', cssPxPerStitch: 1 };
 
 /** Download name from the grid size, e.g. `project-200x200.json`. */
 export function projectFilename(width: number, height: number): string {
@@ -119,6 +154,10 @@ export function serializeProject(file: ProjectFile): string {
       majorThickness: file.gridStyle.majorThickness,
       ticks: file.gridStyle.ticks,
       tickFontPx: file.gridStyle.tickFontPx,
+    },
+    preview: {
+      mode: file.preview.mode,
+      cssPxPerStitch: file.preview.cssPxPerStitch,
     },
     export: {
       scale: file.export.scale,
@@ -160,6 +199,19 @@ function asInt(value: unknown, path: string, min: number, max: number): number {
   return value;
 }
 
+/**
+ * A finite (possibly fractional) number in range. Distinct from
+ * {@link asInt} because preview scale is a continuous zoom, not a
+ * count — rounding it to whole pixels per stitch would quantise the
+ * zoom to 100 % steps.
+ */
+function asNumber(value: unknown, path: string, min: number, max: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < min || value > max) {
+    fail(path, `a number between ${min} and ${max}`);
+  }
+  return value;
+}
+
 function asString(value: unknown, path: string): string {
   if (typeof value !== 'string') fail(path, 'a string');
   return value;
@@ -180,16 +232,18 @@ function asOneOf<T extends string>(value: unknown, path: string, allowed: readon
 
 /**
  * Migrate a raw parsed document from `version` up to SCHEMA_VERSION.
- * v1 is the first schema, so this is currently a pass-through; each
- * future bump adds its forward step here (loading older files must
- * migrate, never fail — AGENTS.md).
+ * Each bump adds its forward step here — loading an older file must
+ * migrate, never fail (AGENTS.md).
  */
 function migrateProject(raw: Record<string, unknown>, version: number): Record<string, unknown> {
   let doc = raw;
   let at = version;
   while (at < SCHEMA_VERSION) {
-    // No migrations yet: v1 is the first shipped schema.
     at += 1;
+    // v1 → v2: preview scale became project data (M6-VIEW-01). v1
+    // files reopened at whatever the view happened to be; fitting to
+    // the space is that behaviour named rather than changed.
+    if (at === 2) doc = { ...doc, preview: { ...DEFAULT_PREVIEW } };
     doc = { ...doc, schemaVersion: at };
   }
   return doc;
@@ -225,6 +279,7 @@ export function parseProject(json: string): ProjectFile {
     fail('pipeline.palette', 'a palette name or null');
   }
   const gridStyle = asRecord(doc['gridStyle'], 'gridStyle');
+  const preview = asRecord(doc['preview'], 'preview');
   const exportPrefs = asRecord(doc['export'], 'export');
   const pdf = asRecord(exportPrefs['pdf'], 'export.pdf');
 
@@ -256,6 +311,15 @@ export function parseProject(json: string): ProjectFile {
       majorThickness: asInt(gridStyle['majorThickness'], 'gridStyle.majorThickness', 1, 16),
       ticks: asBool(gridStyle['ticks'], 'gridStyle.ticks'),
       tickFontPx: asInt(gridStyle['tickFontPx'], 'gridStyle.tickFontPx', 4, 96),
+    },
+    preview: {
+      mode: asOneOf(preview['mode'], 'preview.mode', ['space', 'width', 'height', 'manual']),
+      cssPxPerStitch: asNumber(
+        preview['cssPxPerStitch'],
+        'preview.cssPxPerStitch',
+        MIN_PREVIEW_CSS_PX,
+        MAX_PREVIEW_CSS_PX,
+      ),
     },
     export: {
       scale: asInt(exportPrefs['scale'], 'export.scale', 1, 1024),

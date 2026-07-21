@@ -17,44 +17,9 @@ line passes and `check` is green. Requirements references are to
 
 ### M6 — Photoshop companion layout
 
-Make Cross Stitch Lens work well in a tall, narrow window beside
-Photoshop, preview taking most of the space. Terminology contract:
-*pattern resolution* (stitches) / *capture resolution* (source px) /
-*preview scale* (screen px per stitch) / *export scale* are four
-independent things.
-
-- [ ] **M6-CAPRES-01 Rescale the capture frame independently of pattern resolution** [detail]
-  Intent: set the pattern (canvas) resolution explicitly, then resize the on-screen capture frame with its aspect ratio locked to the pattern's — captured pixels rescale onto the fixed stitch grid.
-  Done when: resizing the capture frame changes neither the stitch count nor the grid dimensions, and the frame cannot leave the pattern's aspect.
-
-- [ ] **M6-SCALE-01 Separate pattern, capture, preview, and export scale** [detail]
-  Intent: one model + UI terminology keeping the four resolutions independently settable and impossible to confuse.
-  Done when: changing any one provably leaves the other three untouched, in tests and in the visible labels.
-
-- [ ] **M6-VIEW-01 Preview zoom and fit controls** [detail]
-  Intent: fit-to-space / fit-width / fit-height, user zoom, crisp nearest-neighbour enlargement, stitch-dimensions readout, reset view, persisted preview scale.
-  Done when: the preview enlarges without changing stitch count, colours, or export output, and the chosen scale survives reload.
-
-- [ ] **M6-NARROW-01 Narrow-window layout** [detail]
-  Intent: preview gets most of a tall narrow window; controls reflow; no horizontal scrolling; popovers/dialogs stay visible; targets stay ≥ 44 px.
-  Done when: the app is usable at realistic side-by-side widths while live capture runs, with no material responsiveness regression.
-
-- [ ] **M6-PANEL-01 Collapsible configuration panel** [detail]
-  Intent: collapse/expand the settings panel (keyboard accessible); preview auto-enlarges; essential status stays visible; collapsed state remembered.
-  Done when: collapse works at wide and narrow widths and across resizes without losing settings.
-
-- [ ] **M6-FOCUS-01 Preview-focused mode** [detail]
-  Intent: one consistently-named mode hiding most controls; live updates continue with zoom/fit/pan and a compact status line (grid size, palette, colour count, capture/staleness state).
-  Done when: entry/exit is fast, no state is lost, and the status line stays legible.
-
-- [ ] **M6-WIN-01 Companion-window sizing spike** [spike] [detail]
-  Intent: timebox what the browser can do — resize its own opened window, dedicated companion window, size presets, restore position, multi-monitor — vs. what needs packaging. Feeds ICE-WORKSPACE-01.
-  Done when: findings and a promote/park recommendation are recorded; no capability assumed untested.
-
-*Acceptance: Photoshop + Cross Stitch Lens work side by side at a
-realistic narrow width; pattern dimensions are independent of capture,
-display, and export; the preview enlarges without changing the pattern;
-live editing keeps the ≥ 4 updates/sec promise.*
+- [ ] **M6-ACCEPT-01 Companion layout acceptance** [maintainer] [sign-off] (2026-07-21)
+  Intent: the M6 legs that only a human at a real machine can judge — Photoshop side by side at a realistic narrow width with live capture running, the aspect-locked crop driven by pointer and keyboard on a Retina display and against a window resized mid-session, and the ≥ 4 updates/sec promise under that load.
+  Done when: the maintainer confirms the side-by-side workflow, or files what broke. Agent-side M6 shipped 2026-07-21 (see trajectory + D52/D53); this is the human gate on it.
 
 ### M7 — Palette & colour strategy
 
@@ -123,17 +88,17 @@ wins.
 
 ### Next milestones (stubs — expand into tasks when each becomes Next)
 
-- [ ] **M9 Symbols & B/W charting** — automatic distinct-symbol
+- [ ] **M9 Symbols & B/W charting** [detail] — automatic distinct-symbol
   assignment (stable, reassignable, collision-handled), chart modes
   (colour / colour+symbols / B/W / high-contrast), full sortable colour
   key with brand + reference + stitch count.
-- [ ] **M10 Multi-page PDF chart export** [blocked: M9 for symbol charts] (2026-07-20) —
+- [ ] **M10 Multi-page PDF chart export** [blocked: M9 for symbol charts] [detail] (2026-07-20) —
   A4/Letter pagination, overlap + registration marks, consistent
   coordinates + overview map, vector grid/symbols, export options.
-- [ ] **M11 Grid, ruler & tick styling presets** — minor/major grid
+- [ ] **M11 Grid, ruler & tick styling presets** [detail] — minor/major grid
   styling, numbering/rulers, named style presets incl. high-contrast,
   separate screen vs print settings.
-- [ ] **M12 Fabric & thread estimates** — fabric count → physical
+- [ ] **M12 Fabric & thread estimates** [detail] — fabric count → physical
   size, cut margins, centre point; qualified per-colour thread/skein
   estimates with stated assumptions; recalculates on pattern/palette
   change.
@@ -144,10 +109,10 @@ wins.
      reactivate. Promote into a milestone when committed. -->
 
 - [ ] **ICE-WORKSPACE-01 Automated Photoshop companion workspace** [detail] (2026-07-20)
-  Intent: one-button side-by-side arrangement of Photoshop and Cross Stitch Lens — limited companion-window workflow in the browser, fuller OS window control (incl. moving Photoshop via macOS Accessibility) only in a packaged desktop build. Depends on M6-WIN-01 findings and ICE-TAURI-01.
+  Intent: one-button side-by-side arrangement of Photoshop and Cross Stitch Lens. M6-WIN-01 settled the browser half: window placement is parked (D53 — `resizeTo` ignored without error, window-management denied, popups blocked even from a trusted gesture), so this now depends entirely on ICE-TAURI-01 packaging.
   Done when: the user can select a display and preferred split, arrange both applications predictably, continue live capture, and restore the previous workspace without losing state.
 
-- [ ] **ICE-TAURI-01 Tauri desktop packaging feasibility** [spike] (2026-07-20)
+- [ ] **ICE-TAURI-01 Tauri desktop packaging feasibility** [spike] [detail] (2026-07-20)
   Intent: timebox Tauri fit — capture permissions, window management, macOS notarisation / Windows signing, project-file compatibility, updates — and whether packaging materially improves the Photoshop workflow. Packaging/release work is backlogged only if this passes.
   Done when: a go/no-go recommendation with a delivery outline is recorded.
 

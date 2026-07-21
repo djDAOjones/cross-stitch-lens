@@ -21,10 +21,22 @@ export const MAX_SCALE = 64;
 const VISIBLE_MARGIN = 32;
 
 /**
- * Scale-and-centre `img` inside `view` (letterboxed, never cropped).
- * `margin` reserves device px on every edge — room for the tick
- * numbering drawn outside the design — and only affects the scale:
- * centring is symmetric, so the offsets fall out unchanged.
+ * Which axis a fit satisfies. 'space' letterboxes the whole design;
+ * 'width' and 'height' fill that one axis and let the other overflow,
+ * which is what a tall companion window wants when the design is far
+ * from the window's own proportions.
+ */
+export type FitAxis = 'space' | 'width' | 'height';
+
+/**
+ * Scale-and-centre `img` inside `view`. `margin` reserves device px on
+ * every edge — room for the tick numbering drawn outside the design —
+ * and only affects the scale: centring is symmetric, so the offsets
+ * fall out unchanged. All three axes reserve the same margin, so
+ * switching between them cannot make the numbering jump.
+ *
+ * A single-axis fit can put content off-screen on the other axis by
+ * design; `clampPan` keeps it reachable rather than re-centring.
  */
 export function fitView(
   imgW: number,
@@ -32,14 +44,39 @@ export function fitView(
   viewW: number,
   viewH: number,
   margin = 0,
+  axis: FitAxis = 'space',
 ): ViewState {
   const availW = Math.max(1, viewW - 2 * margin);
   const availH = Math.max(1, viewH - 2 * margin);
-  const scale = clampScale(Math.min(availW / imgW, availH / imgH));
+  const byWidth = availW / imgW;
+  const byHeight = availH / imgH;
+  const scale = clampScale(
+    axis === 'width' ? byWidth : axis === 'height' ? byHeight : Math.min(byWidth, byHeight),
+  );
   return {
     scale,
     tx: (viewW - imgW * scale) / 2,
     ty: (viewH - imgH * scale) / 2,
+  };
+}
+
+/**
+ * Centre `img` at an explicit scale — the manual/restored-zoom path.
+ * Shares fitView's centring so a saved manual scale reopens framed the
+ * same way a fit does.
+ */
+export function scaledView(
+  imgW: number,
+  imgH: number,
+  viewW: number,
+  viewH: number,
+  scale: number,
+): ViewState {
+  const clamped = clampScale(scale);
+  return {
+    scale: clamped,
+    tx: (viewW - imgW * clamped) / 2,
+    ty: (viewH - imgH * clamped) / 2,
   };
 }
 

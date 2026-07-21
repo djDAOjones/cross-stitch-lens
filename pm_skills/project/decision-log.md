@@ -1395,3 +1395,102 @@ lines promoted into M6–M12 were drained.
 **Consequences:** decision-log live entries now exceed the 20-entry
 budget (41 live) — an archive split per `memory-policy.md` should be
 proposed at next maintenance; not auto-pruned here.
+
+## D52 — M6 companion layout: four resolutions named, capture aspect locked (2026-07-21)
+
+**Context:** M6 makes the app usable in a tall narrow window beside
+Photoshop. The recurring failure it guards against is conceptual, not
+visual — "resolution" and "scale" meant four different things across
+`config.grid`, `CropRect`, `ViewState`, and `exportState`, and nothing
+stopped a future change wiring the wrong two together.
+
+**Decision 1 — four named quantities, independence by reference.**
+`src/ui/scales.ts` owns pattern (stitches) / capture (source px) /
+preview (CSS px per stitch) / export (output px per stitch); every
+field name carries its unit and there is no universal `scale` type.
+The `with*` updaters share the three untouched slices *by reference*,
+so the 4×4 matrix test asserts identity, not deep equality — a helper
+that rebuilt an equal-but-new slice would pass `toEqual` and be the
+start of exactly the coupling this exists to prevent. Preview scale is
+persisted in CSS px, never device px, so a Retina project reopens the
+same size on a 1× display.
+
+**Decision 2 — the capture aspect lock is unconditional.** Every crop
+mutation (new session, draw, eight handles, keyboard, source resize,
+pattern change) ends in `constrainRect`. The anchor never moves — a
+drag past the source edge shrinks the region rather than sliding the
+whole selection — and the dragged axis leads, so an edge handle widens
+instead of refusing to. Sizes snap to a whole multiple of the reduced
+pattern ratio where one fits, making the ratio *exact* rather than
+within a pixel; `contain` letterboxes any residue into a visibly empty
+row at small region sizes, which is what made "within a pixel"
+insufficient. `stitchSpan` was deleted: under the lock its answer is
+always the pattern itself.
+
+**Decision 3 — "Fit" is reset view.** The ticket asked for fit-to-space
+and a reset view; its own conservative definition of reset *is*
+fit-to-space, so shipping both would be two names for one behaviour.
+One "Fit" button, plus fit-width and fit-height. "Actual size" stays
+unbuilt — 1:1 is ambiguous between CSS px, device px, and physical
+fabric size until the owner says which.
+
+**Decision 4 — one shell-state model for two hiding features.** Panel
+collapse and preview focus compose through a single `visibility()`
+function rather than two layers of `hidden`. Focus mode wins while on
+but never overwrites the panel's state, so leaving it restores a
+deliberately collapsed panel. Panel state persists in localStorage as a
+*shell preference*, not project data — a shared project must not make a
+collaborator's controls vanish; preview focus is session-only.
+
+**Decision 5 — preview-first DOM, panel on the right.** Rather than
+reorder with CSS `order` (which desynchronises focus order from visual
+order), the preview comes first in the DOM at every width and the
+settings panel sits to its right above 60 rem. Reading, visual, and tab
+order agree at all widths — verified at 320/360/480/800/1000.
+
+**Consequences:** project schema v2 (`preview` block, forward migration
+from v1). Three layout bugs were found only by measuring in a real
+browser, not by reading CSS: `'center'.includes('e')` silently made
+every reframe a north-east anchor; `margin: 0 auto` on `main`
+suppressed cross-axis stretch so preview focus made the preview
+*smaller*; and `height: 100dvh` without `border-box` clipped focus
+mode's only status line under the fold.
+
+## D53 — M6-WIN-01 spike: browser window placement is not worth shipping (2026-07-21)
+
+**Question:** what companion-window workflow can ship in the browser,
+and what needs packaging?
+
+**Measured** (Chromium 148 in the Claude in-app browser, macOS,
+DPR 2): `window.resizeTo()` on a window the script did not create is
+**ignored without error** — no exception, no change, exactly the
+"ignored without error" outcome the ticket named as a first-class
+result. The `window-management` permission returned `denied`;
+`getScreenDetails` exists but is unusable without it, and
+`screen.isExtended` was false. `window.open` was blocked even from a
+**trusted** user gesture. `outerWidth/Height` disagreed with
+`innerWidth/Height` under viewport emulation — which is precisely why
+any preset must *measure* the result and report partial failure rather
+than trust a return value.
+
+**Not measured:** stable Safari, Chrome, and Firefox on the
+maintainer's own macOS setup. An Electron-embedded Chromium result is
+not evidence about those, and the popup leg in particular is
+browser- and user-setting-dependent.
+
+**Decision — option (A), size guidance only.** Park browser window
+placement. The reasoning is that M6-NARROW-01/PANEL-01/FOCUS-01 already
+deliver the actual goal: measured at 320–480 CSS px the preview takes
+93–95 % of the width with no page-level horizontal scrolling, so the
+maintainer resizes the window once by hand and the app fits. Against
+that, a companion window buys little and costs a lot — it introduces
+cross-window ownership of the Worker, the capture stream, project
+state, downloads, and diagnostics, and it cannot preselect Photoshop as
+the captured surface, because `getDisplayMedia` requires the user to
+choose one every time. The friction that remains is the one window
+placement does not touch.
+
+**Consequences:** no production code. ICE-WORKSPACE-01 carries the
+finding: browser placement is parked, and the OS-level arrangement it
+describes needs ICE-TAURI-01 first. Reopening this needs the
+real-browser rehearsal matrix, which is a maintainer task.

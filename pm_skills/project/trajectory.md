@@ -17,6 +17,42 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
+## M6 — Photoshop companion layout (shipped 2026-07-21)
+
+- M6-SCALE-01 (2026-07-21) — pattern / capture / preview / export scale
+  split into four unit-named quantities in `src/ui/scales.ts`, with
+  pattern-dimension controls added and a 4×4 matrix test asserting
+  independence by reference identity. See decision-log D52.
+- M6-CAPRES-01 (2026-07-21) — capture frame aspect-locked to the pattern
+  through `constrainRect` on every mutation route; region size no longer
+  affects stitch count. `stitchSpan` removed as tautological. See
+  decision-log D52.
+- M6-VIEW-01 (2026-07-21) — fit-to-space / fit-width / fit-height, zoom,
+  stitch-dimensions readout, and preview scale persisted in project
+  schema v2 (CSS px per stitch, forward migration from v1). See
+  decision-log D52.
+- M6-PANEL-01 (2026-07-21) — settings panel collapses from a permanent
+  shell bar with `aria-expanded`; preview gains 37 % more area; state
+  remembered in a localStorage shell preference, not project data. See
+  decision-log D52.
+- M6-FOCUS-01 (2026-07-21) — preview focus hides all but the preview,
+  its toolbar, and a compact status line derived from one owned
+  snapshot; live capture continues; Escape plus a persistent exit
+  control. See decision-log D52.
+- M6-NARROW-01 (2026-07-21) — preview-first DOM at every width with the
+  settings panel to its right above 60 rem; verified at 320/360/480/800/
+  1000 CSS px with no page-level horizontal scrolling, no under-44 px
+  targets, and preview before controls in tab order. See decision-log D52.
+- M6-WIN-01 (2026-07-21) — spike: browser window placement parked
+  (option A, size guidance only); `resizeTo` is ignored without error,
+  window-management permission denied, popups blocked even from a
+  trusted gesture. No production code. See decision-log D53.
+
+Outcome: the app works as a tall companion beside Photoshop — at 320–480
+CSS px the preview takes 93–95 % of the width, panel collapse and preview
+focus grow it further, and pattern dimensions are provably independent of
+capture, display, and export scale.
+
 ## M5 — WASM + WebGPU backends (shipped 2026-07-20)
 
 - M5-ACCEPT-02, M5-ACCEPT-03, M5-ACCEPT-04, M5-ACCEPT-05 (2026-07-20) —

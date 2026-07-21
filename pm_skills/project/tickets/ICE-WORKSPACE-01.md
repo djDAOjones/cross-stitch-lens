@@ -1,73 +1,114 @@
 # ICE-WORKSPACE-01 — Automated Photoshop companion workspace
 
-One button arranges Photoshop and Cross Stitch Lens into a useful
-side-by-side workspace. Default: Photoshop left, Cross Stitch Lens
-right in the narrow companion layout (M6), split calculated from the
-usable dimensions of the selected display.
+## Outcome
 
-## Inputs to the calculation
+One action creates a predictable side-by-side Photoshop/Lens arrangement on a
+chosen display and can restore the previous windows safely. The feature has two
+possible tiers: a browser-owned companion window plus manual Photoshop guidance,
+and a packaged macOS workflow that may control both applications after explicit
+permission. Do not promise the second tier until its spikes pass.
 
-Screen dimensions; usable area after menu bar / Dock / taskbar; display
-scaling; multiple monitors; minimum usable width for Photoshop; minimum
-useful width for Cross Stitch Lens; pattern aspect ratio; whether the
-settings panel is collapsed; user-selected split percentage; restoring
-the previous arrangement. Prioritise a useful workspace over matching
-the browser window to the pattern's pixel dimensions.
+## Current baseline and capability boundary
 
-## Browser capability (limited form)
+M6 is building a responsive narrow layout, collapsible controls, focus mode, and
+a browser companion-window spike. The app currently runs in an ordinary browser
+tab and has no OS window-management or Photoshop integration.
 
-Likely possible: detect screen dimensions; open a dedicated companion
-window; size and position that window; auto-enter preview-focused mode;
-preset workspace splits.
+The Screen Capture API deliberately requires the user to choose a capture source
+for each permission request; constraints are applied after selection. It does
+not grant authority to resize the captured application. Browser `moveTo()` and
+`resizeTo()` may be ignored and are generally restricted to script-opened,
+single-tab windows. The experimental Window Management API can describe screens
+and place new windows with permission, but is not Baseline. Therefore the
+browser tier must never claim it can move Photoshop or reliably take over the
+user's existing browser window.
 
-Documented as unlikely for an ordinary webpage: resizing a normal tab
-reliably; controlling an existing multi-tab window; resizing or
-repositioning Photoshop; running local OS automation. **Never describe
-browser control of Photoshop as an expected capability.**
+## Workspace calculation
 
-Browser options: open companion window; preset narrow-window sizes;
-detachable preview; manual guidance for arranging Photoshop.
+Use the selected display's **usable work area**, logical-pixel scale, and stable
+display identity. Inputs include:
 
-## Desktop capability (likely route to full automation)
+- Lens side and user split percentage;
+- minimum useful Lens width established by M6-NARROW-01;
+- minimum Photoshop allocation agreed by owner testing;
+- menu bar/Dock/taskbar exclusion and display scaling;
+- current panel/focus mode and optionally pattern aspect for preview fitting;
+- window states to restore, including display, bounds, maximised/full-screen
+  status where the platform exposes it.
 
-A packaged build (see ICE-TAURI-01) could: detect monitors and usable
-areas; resize/position its own window; identify Photoshop's display;
-invoke a tightly controlled OS helper; resize/position the main
-Photoshop window; apply and restore saved arrangements; remember
-monitor, side, and split.
+Return a pure layout proposal before moving anything. Clamp to both minimums and
+show a visible “display too narrow” result rather than overlapping or placing a
+window off-screen. Prioritise useful application space over matching the preview
+to pattern pixels; preview fit belongs to M6-VIEW-01.
 
-On macOS, investigate Accessibility-based UI scripting or AppleScript
-to control Photoshop. Account for: Accessibility permission prompts;
-Photoshop closed or with no document window; multiple Photoshop
-windows; full-screen mode; multiple monitors; Photoshop version
-differences; macOS window-management changes between versions; failure
-to identify or move the correct window; security implications of
-invoking local scripts. Treat Windows automation separately — do not
-assume it behaves like macOS.
+Suggested starting presets are Lens 25%, 30%, or 35%, on either side, plus
+separate-monitor placement. Defaults need empirical Photoshop/Lens testing.
 
-## Suggested layouts
+## Browser tier
 
-Photoshop 65/70/75% vs Lens 35/30/25%; user-defined split; Lens on
-either side; Lens on a separate monitor.
+M6-WIN-01 should test and, if reliable, expose “Open companion window” from a
+direct user gesture. The child window can request a preset size, enter focus
+mode, and remember its own UI preference. Provide plain manual instructions for
+placing Photoshop. Detect popup blocking and unsupported multi-screen APIs, then
+fall back to opening/using the current tab without data loss.
 
-## Possible controls
+Do not persist absolute coordinates as the only state: monitors disconnect,
+work areas change, and browser chrome changes outer/inner dimensions. Restore by
+display preference + side + split, recalculate against current work area, then
+clamp on screen.
 
-Arrange workspace; open companion window; side toggle (Photoshop
-left/right); monitor selection; split-percentage control; remember this
-arrangement; restore previous arrangement; preview-only mode after
-arranging.
+## Packaged macOS tier
 
-## Spike questions (before committing the feature)
+Tauri can manage its own windows and monitors, but Photoshop control still needs
+a constrained macOS Accessibility/automation helper and explicit user consent.
+The helper should accept only a validated layout command, identify a target
+Photoshop window deterministically, and return structured outcomes. It must not
+offer arbitrary AppleScript/shell execution.
 
-- What can be achieved reliably in a browser (overlaps M6-WIN-01)?
-- Can a dedicated browser window be positioned consistently?
-- Does Tauri provide the necessary monitor and window controls?
-- Can Photoshop be resized reliably on macOS via Accessibility?
-- What permissions and user prompts are required?
-- Does the benefit justify desktop packaging?
-- Is a manual / semi-automatic browser workflow an acceptable fallback?
+Test Photoshop absent, no document, multiple documents/windows, full-screen or
+minimised, multiple displays, Spaces, changed scaling, permission denied/revoked,
+and app-version differences. Windows automation is a separate design; do not
+generalise macOS findings.
+
+## Apply and restore transaction
+
+Before moving anything, snapshot each window's resolvable identity, display,
+bounds, and state. Validate the proposed arrangement, move Lens first, then
+Photoshop only when authorised. If a step fails, report partial state and offer a
+safe restore. Restore must be idempotent, clamp missing-display coordinates to a
+current screen, and never close windows or documents. A stale snapshot should
+expire or require confirmation rather than surprising the user days later.
+
+Persist layout preferences separately from the versioned design project: window
+arrangement is device/app-shell state, not artwork state.
+
+## Likely implementation surface
+
+Browser: a small window-capability adapter, focus-mode command, shell preference
+storage, accessible status/errors, and M6 layout primitives. Desktop: Tauri
+window/monitor adapter plus a narrowly restricted Photoshop automation bridge.
+Both consume the same pure layout proposal and structured result types.
+
+## Acceptance evidence
+
+Record a matrix across single/multiple displays, scaling/Dock positions,
+supported/unsupported browser APIs, popup blocked, resize/move ignored,
+Photoshop states, permission denied/revoked, interrupted apply, display removal,
+and restore. Verify live capture continues, no project/settings are lost,
+windows remain reachable, diagnostics are redacted, and keyboard/screen-reader
+status is clear. The done condition requires a real Photoshop rehearsal, not
+only mocked bounds.
 
 ## Dependencies
 
-- M6-WIN-01 (browser companion-window findings).
-- ICE-TAURI-01 (desktop packaging feasibility) for the full form.
+- M6-NARROW-01, M6-FOCUS-01, and M6-WIN-01 for the browser form.
+- ICE-TAURI-01 for packaged capture/window feasibility.
+- Promote only after the spikes define which tier is credible.
+
+## References
+
+- [Screen Capture specification](https://w3c.github.io/mediacapture-screen-share/).
+- [MDN `window.moveTo()` restrictions](https://developer.mozilla.org/en-US/docs/Web/API/Window/moveTo).
+- [MDN `window.resizeTo()` restrictions](https://developer.mozilla.org/en-US/docs/Web/API/Window/resizeTo).
+- [MDN Window Management API](https://developer.mozilla.org/en-US/docs/Web/API/Window_Management_API).
+- [Tauri window API](https://v2.tauri.app/reference/javascript/api/namespacewindow/).

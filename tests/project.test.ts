@@ -1,12 +1,14 @@
 /**
- * Project file (§20): schema v1 round trips byte-identically
+ * Project file (§20): the current schema round trips byte-identically
  * (AGENTS.md invariant), the parser rejects malformed documents with
- * path-named errors, tolerates unknown extra fields, and refuses
- * files from a newer app version instead of misreading them.
+ * path-named errors, tolerates unknown extra fields, refuses files
+ * from a newer app version instead of misreading them, and migrates
+ * older ones forward rather than failing on them.
  */
 
 import { describe, expect, it } from 'vitest';
 import {
+  DEFAULT_PREVIEW,
   MAX_GRID_SIDE,
   parseProject,
   projectFilename,
@@ -19,7 +21,7 @@ import { runPipeline } from '../src/core/pipeline/index.ts';
 import { loadDmcPalette } from '../src/core/palette.ts';
 import type { PixelBuffer } from '../src/core/types.ts';
 
-/** A representative, fully-populated v1 project. */
+/** A representative, fully-populated current-schema project. */
 function sampleProject(): ProjectFile {
   return {
     schemaVersion: SCHEMA_VERSION,
@@ -42,6 +44,7 @@ function sampleProject(): ProjectFile {
       ticks: true,
       tickFontPx: 11,
     },
+    preview: { mode: 'manual', cssPxPerStitch: 2.5 },
     export: {
       scale: 4,
       background: 'solid',
@@ -66,6 +69,7 @@ describe('serializeProject / parseProject round trip', () => {
     const file = sampleProject();
     const shuffled = JSON.stringify({
       export: file.export,
+      preview: file.preview,
       gridStyle: file.gridStyle,
       pipeline: file.pipeline,
       schemaVersion: file.schemaVersion,
@@ -166,6 +170,66 @@ describe('parseProject validation', () => {
   it('ignores unknown extra fields (forward-friendly)', () => {
     const withExtra = mutated((doc) => (doc['futureFeature'] = { anything: true }));
     expect(parseProject(withExtra)).toEqual(sampleProject());
+  });
+
+  it('rejects an unknown preview mode, naming the path', () => {
+    expect(() =>
+      parseProject(
+        mutated((doc) => ((doc['preview'] as Record<string, unknown>)['mode'] = 'cinema')),
+      ),
+    ).toThrow('preview.mode');
+  });
+
+  it('rejects a preview scale outside the zoom bounds', () => {
+    const scaleTo = (value: unknown) =>
+      mutated((doc) => ((doc['preview'] as Record<string, unknown>)['cssPxPerStitch'] = value));
+    expect(() => parseProject(scaleTo(0))).toThrow('preview.cssPxPerStitch');
+    expect(() => parseProject(scaleTo(1000))).toThrow('preview.cssPxPerStitch');
+    expect(() => parseProject(scaleTo('big'))).toThrow('preview.cssPxPerStitch');
+  });
+
+  it('keeps a fractional preview scale fractional', () => {
+    // asInt would quantise the zoom to 100 % steps; asNumber must not.
+    expect(parseProject(serializeProject(sampleProject())).preview.cssPxPerStitch).toBe(2.5);
+  });
+});
+
+/**
+ * Forward migration (AGENTS.md: loaders migrate old schemaVersions,
+ * never fail on them). v1 files predate the preview block entirely —
+ * they must load, not throw, and must land on the documented default
+ * rather than on whatever the parser happened to leave behind.
+ */
+describe('migration from schema v1', () => {
+  /** A v1 document: the current one minus `preview`, version pinned. */
+  function v1Document(): string {
+    const doc = JSON.parse(serializeProject(sampleProject())) as Record<string, unknown>;
+    delete doc['preview'];
+    doc['schemaVersion'] = 1;
+    return JSON.stringify(doc);
+  }
+
+  it('loads a v1 file instead of failing on it', () => {
+    expect(() => parseProject(v1Document())).not.toThrow();
+  });
+
+  it('fills in the default preview block and stamps the new version', () => {
+    const loaded = parseProject(v1Document());
+    expect(loaded.preview).toEqual(DEFAULT_PREVIEW);
+    expect(loaded.schemaVersion).toBe(SCHEMA_VERSION);
+  });
+
+  it('preserves every v1 field it did understand', () => {
+    const loaded = parseProject(v1Document());
+    const original = sampleProject();
+    expect(loaded.pipeline).toEqual(original.pipeline);
+    expect(loaded.gridStyle).toEqual(original.gridStyle);
+    expect(loaded.export).toEqual(original.export);
+  });
+
+  it('re-saves the migrated file at the current schema, round-trip stable', () => {
+    const migrated = serializeProject(parseProject(v1Document()));
+    expect(serializeProject(parseProject(migrated))).toBe(migrated);
   });
 });
 

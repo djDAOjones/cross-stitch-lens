@@ -13,12 +13,13 @@ import {
 } from './diagnostics/bundle.ts';
 import { installGlobalCapture, log, recentLogs } from './diagnostics/log.ts';
 import {
-  clampRect,
-  fullRect,
+  constrainRect,
+  fullAspectRect,
   hitTest,
   moveRect,
+  oppositeAnchor,
   resizeRect,
-  stitchSpan,
+  type Anchor,
   type CropRect,
   type Handle,
 } from './capture/crop.ts';
@@ -67,7 +68,34 @@ import { createDebugPanel } from './ui/debug-panel.ts';
 import { createDiagnosticsControl } from './ui/diagnostics-button.ts';
 import { decodeImageBlob, imageFiles } from './ui/import.ts';
 import { createInfoPanel } from './ui/info-panel.ts';
+import { loadPreferences, savePreferences, type ShellPreferences } from './ui/preferences.ts';
 import { PreviewController } from './ui/preview.ts';
+import {
+  captureSummary,
+  defaultScales,
+  MAX_PATTERN_SIDE,
+  MIN_PATTERN_SIDE,
+  patternSummary,
+  SCALE_LABELS,
+  withCapture,
+  withExport,
+  withPattern,
+  withPreview,
+  type PatternResolution,
+} from './ui/scales.ts';
+import {
+  defaultShellState,
+  FOCUS_ENTER_LABEL,
+  FOCUS_EXIT_LABEL,
+  panelToggleLabel,
+  visibility,
+  type ShellState,
+} from './ui/shell.ts';
+import {
+  statusLine,
+  type CaptureState,
+  type SourceFreshness,
+} from './ui/status-line.ts';
 import { PipelineClient } from './worker/client.ts';
 import { DEFAULT_GRID_STYLE, type GridStyle } from './worker/grid.ts';
 
@@ -92,12 +120,35 @@ function build(app: HTMLElement): void {
   version.className = 'meta';
   version.textContent = `${__APP_VERSION__} · build ${__BUILD_ID__}`;
 
+  // The four resolutions (M6 terminology contract, src/ui/scales.ts):
+  // pattern in stitches, capture in source px, preview in CSS px per
+  // stitch, export in output px per stitch. This model owns pattern,
+  // preview, and export; `config.grid` below is *derived* from
+  // `scales.pattern`, and `scales.capture` mirrors the crop rect.
+  let scales = defaultScales();
+
+  // Shell presentation state (panel collapsed / preview focus) — one
+  // model for both, so they cannot fight over what is hidden.
+  let shell: ShellState = defaultShellState();
+  const preferenceStore = (() => {
+    try {
+      return window.localStorage;
+    } catch {
+      return null; // storage blocked — preferences simply aren't kept
+    }
+  })();
+  let preferences: ShellPreferences = loadPreferences(preferenceStore);
+  shell = { ...shell, panelCollapsed: preferences.panelCollapsed };
+
   // Current pipeline config: controls mutate it and reprocess the
   // retained master image. Grid-style changes bypass this — they are
   // view-only worker messages, no pipeline run.
   const config: PipelineConfig = {
     preset: 'resize-first',
-    grid: { width: 200, height: 200 },
+    grid: {
+      width: scales.pattern.widthStitches,
+      height: scales.pattern.heightStitches,
+    },
     resizeMode: 'contain',
     palette: DMC,
     metric: 'lab',
@@ -211,7 +262,20 @@ function build(app: HTMLElement): void {
   toolbar.className = 'toolbar';
   const zoomLabel = document.createElement('span');
   zoomLabel.className = 'meta';
-  zoomLabel.setAttribute('aria-label', 'Zoom level');
+  zoomLabel.setAttribute('aria-label', SCALE_LABELS.previewScale);
+  // Stitch dimensions beside the preview scale, so "how big is the
+  // design" and "how big does it look" are never read off one number.
+  const dimensionsLabel = document.createElement('span');
+  dimensionsLabel.className = 'meta';
+  dimensionsLabel.setAttribute('aria-label', 'Pattern dimensions');
+  dimensionsLabel.textContent = patternSummary(scales.pattern);
+  // Compact status for preview focus: one derived line, shown only in
+  // that mode. Polite, not assertive — routine frame updates must not
+  // interrupt a screen reader.
+  const compactStatus = document.createElement('p');
+  compactStatus.className = 'meta compact-status';
+  compactStatus.setAttribute('role', 'status');
+  compactStatus.hidden = true;
   const host = document.createElement('div');
   host.className = 'preview-host';
   host.tabIndex = 0;
@@ -280,7 +344,11 @@ function build(app: HTMLElement): void {
 
   const client = new PipelineClient();
   client.attachCanvas(canvas);
-  const preview = new PreviewController(client, host, zoomLabel);
+  // The controller reports its mode and CSS-px-per-stitch back into the
+  // scale model; nothing it reports can run the pipeline.
+  const preview = new PreviewController(client, host, zoomLabel, (previewScale) => {
+    scales = withPreview(scales, previewScale);
+  });
 
   function reprocess(): void {
     if (masterImage === null) return;
@@ -293,6 +361,34 @@ function build(app: HTMLElement): void {
       },
       config,
     );
+  }
+
+  /**
+   * Set the pattern resolution — the one change that legitimately
+   * alters the output stitch count. It re-aspects the capture frame
+   * (M6-CAPRES-01) but chooses no new capture *size*, no preview
+   * scale, and no export scale on the user's behalf.
+   */
+  function applyPattern(pattern: PatternResolution): void {
+    scales = withPattern(scales, pattern);
+    config.grid = { width: pattern.widthStitches, height: pattern.heightStitches };
+    dimensionsLabel.textContent = patternSummary(pattern);
+    reframeCrop();
+    updateCompactStatus();
+    reprocess();
+  }
+
+  /**
+   * Re-fit the live capture frame to the pattern's aspect, keeping its
+   * centre and as much of the selection as the source allows. The
+   * region signature includes all four crop fields, so a changed frame
+   * already reads as dirty — no gate reset needed.
+   */
+  function reframeCrop(): void {
+    const bounds = captureBounds();
+    if (bounds === null || cropRect === null) return;
+    cropRect = constrainRect(cropRect, bounds, config.grid, 'center');
+    renderCrop();
   }
 
   // Grid overlay: style state lives here (CSS px); thicknesses and
@@ -322,6 +418,46 @@ function build(app: HTMLElement): void {
   const controls = document.createElement('aside');
   controls.className = 'controls';
   controls.setAttribute('aria-label', 'Controls');
+
+  // Pattern group: the design's own resolution, in stitches. Kept in
+  // its own group above Grid because "how many stitches" and "how the
+  // grid lines look" are different questions that shared a legend
+  // before M6 and invited exactly the confusion M6-SCALE-01 exists to
+  // remove.
+  const patternGroup = document.createElement('fieldset');
+  const patternLegend = document.createElement('legend');
+  patternLegend.textContent = 'Pattern';
+  patternGroup.append(
+    patternLegend,
+    numberField(
+      document,
+      'pattern-width',
+      SCALE_LABELS.patternWidth,
+      {
+        min: MIN_PATTERN_SIDE,
+        max: MAX_PATTERN_SIDE,
+        value: scales.pattern.widthStitches,
+        helper: SCALE_LABELS.patternHelper,
+      },
+      (value) => {
+        applyPattern({ ...scales.pattern, widthStitches: value });
+      },
+    ),
+    numberField(
+      document,
+      'pattern-height',
+      SCALE_LABELS.patternHeight,
+      {
+        min: MIN_PATTERN_SIDE,
+        max: MAX_PATTERN_SIDE,
+        value: scales.pattern.heightStitches,
+        helper: SCALE_LABELS.patternHeightHelper,
+      },
+      (value) => {
+        applyPattern({ ...scales.pattern, heightStitches: value });
+      },
+    ),
+  );
 
   const gridGroup = document.createElement('fieldset');
   const gridLegend = document.createElement('legend');
@@ -446,11 +582,12 @@ function build(app: HTMLElement): void {
   // Export group (§13 MVP subset): clean PNG at an integer scale,
   // transparent or solid background. The button stays disabled until
   // a frame has processed (error prevention: no impossible actions).
+  // Export *scale* lives in the scale model (it is one of the four);
+  // background and colour are export preferences, not resolutions, and
+  // stay here.
   const exportState = {
-    scale: 1,
     background: 'transparent',
     color: '#ffffff',
-    chartCell: 10,
   };
   const exportGroup = document.createElement('fieldset');
   const exportLegend = document.createElement('legend');
@@ -487,10 +624,15 @@ function build(app: HTMLElement): void {
     numberField(
       document,
       'export-scale',
-      'Scale',
-      { min: 1, max: 64, value: exportState.scale, helper: 'Pixels per stitch' },
+      SCALE_LABELS.exportScale,
+      {
+        min: 1,
+        max: 64,
+        value: scales.export.cleanPxPerStitch,
+        helper: SCALE_LABELS.exportHelper,
+      },
       (value) => {
-        exportState.scale = value;
+        scales = withExport(scales, { ...scales.export, cleanPxPerStitch: value });
       },
     ),
     selectField(
@@ -513,10 +655,15 @@ function build(app: HTMLElement): void {
     numberField(
       document,
       'chart-cell',
-      'Chart cell size',
-      { min: 4, max: 40, value: exportState.chartCell, helper: 'Pixels per stitch in the chart' },
+      SCALE_LABELS.chartCell,
+      {
+        min: 4,
+        max: 40,
+        value: scales.export.chartCellPx,
+        helper: SCALE_LABELS.chartHelper,
+      },
       (value) => {
-        exportState.chartCell = value;
+        scales = withExport(scales, { ...scales.export, chartCellPx: value });
       },
     ),
     chartButton,
@@ -565,7 +712,8 @@ function build(app: HTMLElement): void {
     if (masterImage === null) return;
     // Clamp so the output canvas stays within browser limits; say so
     // in the status when it bites rather than failing silently.
-    const scale = Math.min(exportState.scale, maxScaleFor(config.grid.width, config.grid.height));
+    const wanted = scales.export.cleanPxPerStitch;
+    const scale = Math.min(wanted, maxScaleFor(config.grid.width, config.grid.height));
     status.textContent = 'Exporting…';
     exportButton.disabled = true;
     try {
@@ -582,7 +730,7 @@ function build(app: HTMLElement): void {
       const filename = pngFilename(frame.width, frame.height, scale);
       downloadBlob(document, await encodePngBlob(out), filename);
       status.textContent =
-        scale < exportState.scale
+        scale < wanted
           ? `Exported ${filename} (scale limited to ${scale}).`
           : `Exported ${filename}.`;
       log.info('export', 'clean png', {
@@ -606,8 +754,9 @@ function build(app: HTMLElement): void {
     // Chart furniture follows the on-screen grid settings (CSS-px
     // thicknesses — the chart's own unit; the DPR scaling is a
     // preview concern). Paper/ink colours are fixed in chart.ts.
+    const wantedCell = scales.export.chartCellPx;
     const cell = Math.min(
-      exportState.chartCell,
+      wantedCell,
       maxCellPx(config.grid.width, config.grid.height, gridStyle),
     );
     status.textContent = 'Exporting…';
@@ -624,7 +773,7 @@ function build(app: HTMLElement): void {
       const filename = chartFilename(frame.width, frame.height);
       downloadBlob(document, await encodeChartPng(frame, gridStyle, cell), filename);
       status.textContent =
-        cell < exportState.chartCell
+        cell < wantedCell
           ? `Exported ${filename} (cell size limited to ${cell}).`
           : `Exported ${filename}.`;
       log.info('export', 'chart png', { filename, cell });
@@ -721,7 +870,7 @@ function build(app: HTMLElement): void {
   });
   projectGroup.append(projectLegend, saveButton, projectLabel, projectInput);
 
-  /** Snapshot the live UI state as a schema-v1 project file. */
+  /** Snapshot the live UI state as a schema-v2 project file. */
   function currentProject(): ProjectFile {
     return {
       schemaVersion: SCHEMA_VERSION,
@@ -744,11 +893,15 @@ function build(app: HTMLElement): void {
         ticks: gridStyle.ticks,
         tickFontPx: gridStyle.tickFontPx,
       },
+      // Preview scale is project data from v2 (M6-VIEW-01): screen
+      // size only, and asked of the controller so a live zoom is not
+      // saved one action out of date.
+      preview: preview.scale(),
       export: {
-        scale: exportState.scale,
+        scale: scales.export.cleanPxPerStitch,
         background: exportState.background === 'solid' ? 'solid' : 'transparent',
         color: exportState.color,
-        chartCell: exportState.chartCell,
+        chartCell: scales.export.chartCellPx,
         pdf: {
           pageSize: pdfOptions.pageSize,
           orientation: pdfOptions.orientation,
@@ -786,6 +939,8 @@ function build(app: HTMLElement): void {
     if (state !== null) state.textContent = on ? 'On' : 'Off';
   }
   function syncControls(): void {
+    setFieldValue('pattern-width', String(scales.pattern.widthStitches));
+    setFieldValue('pattern-height', String(scales.pattern.heightStitches));
     setFieldValue('order-preset', config.preset);
     setFieldValue('colour-mode', config.palette === null ? 'rgb' : 'dmc');
     setToggleValue('dither-on', config.dither);
@@ -797,10 +952,10 @@ function build(app: HTMLElement): void {
     setFieldValue('grid-color', gridStyle.color);
     setFieldValue('grid-minor-thickness', String(gridStyle.minorThickness));
     setFieldValue('grid-major-thickness', String(gridStyle.majorThickness));
-    setFieldValue('export-scale', String(exportState.scale));
+    setFieldValue('export-scale', String(scales.export.cleanPxPerStitch));
     setFieldValue('export-background', exportState.background);
     setFieldValue('export-bg-color', exportState.color);
-    setFieldValue('chart-cell', String(exportState.chartCell));
+    setFieldValue('chart-cell', String(scales.export.chartCellPx));
     setFieldValue('pdf-page', pdfOptions.pageSize);
     setFieldValue('pdf-orientation', pdfOptions.orientation);
     setFieldValue('pdf-margin', String(pdfOptions.marginMm));
@@ -825,16 +980,29 @@ function build(app: HTMLElement): void {
       config.dither = file.pipeline.dither;
       config.serpentine = file.pipeline.serpentine;
       Object.assign(gridStyle, file.gridStyle);
-      exportState.scale = file.export.scale;
+      scales = withPattern(scales, {
+        widthStitches: file.pipeline.grid.width,
+        heightStitches: file.pipeline.grid.height,
+      });
+      scales = withExport(scales, {
+        cleanPxPerStitch: file.export.scale,
+        chartCellPx: file.export.chartCell,
+      });
+      scales = withPreview(scales, file.preview);
       exportState.background = file.export.background;
       exportState.color = file.export.color;
-      exportState.chartCell = file.export.chartCell;
       pdfOptions.pageSize = file.export.pdf.pageSize;
       pdfOptions.orientation = file.export.pdf.orientation;
       pdfOptions.marginMm = file.export.pdf.marginMm;
       pdfOptions.title = file.export.pdf.title;
       syncControls();
       sendGridStyle();
+      dimensionsLabel.textContent = patternSummary(scales.pattern);
+      // A loaded pattern re-aspects the live capture frame the same way
+      // an edited one does — the load must not leave a stale ratio.
+      reframeCrop();
+      preview.setScale(file.preview);
+      updateCompactStatus();
       reprocess();
       status.textContent =
         masterImage === null
@@ -848,7 +1016,98 @@ function build(app: HTMLElement): void {
     }
   }
 
-  controls.append(gridGroup, colourGroup, ditherGroup, pipelineGroup, exportGroup, projectGroup);
+  controls.id = 'controls-panel';
+  controls.append(
+    patternGroup,
+    gridGroup,
+    colourGroup,
+    ditherGroup,
+    pipelineGroup,
+    exportGroup,
+    projectGroup,
+  );
+
+  // Shell bar: the two presentation-mode controls, on a permanent
+  // surface at the top of the app. The collapse button lives *outside*
+  // the region it collapses (otherwise it hides with it), and the exit
+  // route from preview focus is always in this same place —
+  // UI-STANDARDS → "User control and freedom": never trap a mode.
+  const shellBar = document.createElement('div');
+  shellBar.className = 'toolbar shell-bar';
+  const panelToggle = document.createElement('button');
+  panelToggle.type = 'button';
+  panelToggle.id = 'panel-toggle';
+  panelToggle.setAttribute('aria-controls', 'controls-panel');
+  const focusToggle = document.createElement('button');
+  focusToggle.type = 'button';
+  focusToggle.id = 'focus-toggle';
+  shellBar.append(panelToggle, focusToggle);
+
+  /**
+   * Push the shell state onto the DOM. One function, one source of
+   * truth: every `hidden` in the shell is written here and nowhere
+   * else, so "collapsed" and "preview focus" cannot leave a region in
+   * a state neither of them intended.
+   */
+  function applyShell(): void {
+    const show = visibility(shell);
+    // Move focus out before hiding its container, or the page loses
+    // the focus position entirely (WCAG 2.4.3).
+    if (!show.controls && controls.contains(document.activeElement)) panelToggle.focus();
+    if (!show.source && importSection.contains(document.activeElement)) focusToggle.focus();
+    controls.hidden = !show.controls;
+    importSection.hidden = !show.source;
+    info.element.hidden = !show.info;
+    if (debugPanel !== null) debugPanel.element.hidden = !show.debug;
+    if (diagnostics !== null) diagnostics.element.hidden = !show.debug;
+    status.hidden = !show.status;
+    compactStatus.hidden = !show.compactStatus;
+    panelToggle.hidden = !show.panelToggle;
+    panelToggle.textContent = panelToggleLabel(shell.panelCollapsed);
+    panelToggle.setAttribute('aria-expanded', String(!shell.panelCollapsed));
+    focusToggle.textContent = shell.previewFocus ? FOCUS_EXIT_LABEL : FOCUS_ENTER_LABEL;
+    focusToggle.setAttribute('aria-pressed', String(shell.previewFocus));
+    document.body.classList.toggle('preview-focus', shell.previewFocus);
+    document.body.classList.toggle('panel-collapsed', shell.panelCollapsed);
+    if (show.compactStatus) updateCompactStatus();
+  }
+
+  /**
+   * Enter or leave preview focus. Presentation only: it changes no
+   * pipeline config, no capture quality, no project data, and is not
+   * the M4 draft-quality state — the pump keeps running throughout.
+   */
+  function setPreviewFocus(on: boolean): void {
+    if (shell.previewFocus === on) return;
+    shell = { ...shell, previewFocus: on };
+    applyShell();
+    // The preview host is the thing the mode is about, so it takes
+    // focus on entry; on exit, focus returns to the control that did it.
+    if (on) host.focus();
+    else focusToggle.focus();
+    log.info('shell', on ? 'preview focus entered' : 'preview focus exited');
+  }
+
+  panelToggle.addEventListener('click', () => {
+    shell = { ...shell, panelCollapsed: !shell.panelCollapsed };
+    preferences = { ...preferences, panelCollapsed: shell.panelCollapsed };
+    savePreferences(preferenceStore, preferences);
+    applyShell();
+    status.textContent = shell.panelCollapsed
+      ? 'Settings hidden — the preview has the space.'
+      : 'Settings shown.';
+    log.info('shell', shell.panelCollapsed ? 'settings collapsed' : 'settings expanded');
+  });
+  focusToggle.addEventListener('click', () => {
+    setPreviewFocus(!shell.previewFocus);
+  });
+  // Escape is a convenience, never the only exit route.
+  window.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && shell.previewFocus) {
+      event.preventDefault();
+      setPreviewFocus(false);
+    }
+  });
 
   // Split compare (§10): source (full-RGB resize) left of the
   // divider, reduced output right. Native range slider = keyboard
@@ -878,25 +1137,40 @@ function build(app: HTMLElement): void {
   });
   compareToggle.setAttribute('aria-pressed', 'false');
 
+  // View controls. "Fit" *is* reset view — fit-to-space, centred,
+  // automatic refitting back on — so there is one control for one
+  // behaviour rather than two names for it (UI-STANDARDS →
+  // "Consistency": no synonyms). The `0` key does the same.
   toolbar.append(
     toolbarButton('Zoom in', () => preview.zoomCentred(1.25)),
     toolbarButton('Zoom out', () => preview.zoomCentred(1 / 1.25)),
-    toolbarButton('Fit', () => preview.fit()),
+    toolbarButton('Fit', () => preview.resetView()),
+    toolbarButton('Fit width', () => preview.fit('width')),
+    toolbarButton('Fit height', () => preview.fit('height')),
     compareToggle,
     splitWrap,
     zoomLabel,
+    dimensionsLabel,
   );
-  previewSection.append(toolbar, host, info.element);
+  previewSection.append(toolbar, host, compactStatus, info.element);
   if (debugPanel !== null) previewSection.append(debugPanel.element);
   if (diagnostics !== null) previewSection.append(diagnostics.element);
 
+  // Preview first in the DOM at every width (M6-NARROW-01). The
+  // settings panel sits to its right when there is room, so the
+  // reading order, the visual order, and the tab order agree — rather
+  // than being reordered by CSS into disagreement.
   const content = document.createElement('div');
   content.className = 'content';
-  content.append(importSection, status, previewSection);
+  content.append(previewSection, status, importSection);
   const layout = document.createElement('div');
   layout.className = 'app-layout';
-  layout.append(controls, content);
-  app.replaceChildren(heading, version, layout);
+  layout.append(content, controls);
+  const header = document.createElement('header');
+  header.className = 'app-header';
+  header.append(heading, version, shellBar);
+  app.replaceChildren(header, layout);
+  applyShell();
   preview.initSurface();
 
   client.setOnResult((frame) => {
@@ -916,6 +1190,9 @@ function build(app: HTMLElement): void {
     info.update(stats);
     debugPanel?.update(frame.timings, client.droppedFrames);
     for (const timing of frame.timings) activeBackends[timing.stage] = timing.backend;
+    lastColorCount = stats.colorCount;
+    lastFreshness = 'changing';
+    updateCompactStatus();
     status.textContent = 'Preview updated.';
     log.info('pipeline', 'frame processed', {
       timings: frame.timings,
@@ -954,6 +1231,32 @@ function build(app: HTMLElement): void {
   const draftGovernor = new DraftGovernor();
   let draftMode = false;
 
+  // Compact-status inputs, owned here rather than read back out of
+  // rendered DOM strings — a status line assembled from several
+  // rendered surfaces goes stale silently, and in preview focus it is
+  // the only thing reporting whether capture is still running.
+  let sessionEnded = false;
+  let lastColorCount: number | null = null;
+  let lastFreshness: SourceFreshness = 'changing';
+
+  function captureState(): CaptureState {
+    if (capture === null) return sessionEnded ? 'ended' : 'off';
+    return capturePaused ? 'paused' : 'live';
+  }
+
+  /** Refresh the compact line from owned state (preview focus only). */
+  function updateCompactStatus(): void {
+    if (!shell.previewFocus) return;
+    compactStatus.textContent = statusLine({
+      pattern: scales.pattern,
+      paletteName: config.palette?.name ?? null,
+      colorCount: lastColorCount,
+      capture: captureState(),
+      freshness: lastFreshness,
+      draft: draftMode,
+    });
+  }
+
   function setDraftMode(on: boolean): void {
     if (draftMode === on) return;
     draftMode = on;
@@ -964,6 +1267,7 @@ function build(app: HTMLElement): void {
     status.textContent = on
       ? 'Preview switched to draft quality (dithering off).'
       : 'Full quality restored.';
+    updateCompactStatus();
     log.info('capture', on ? 'draft quality entered' : 'draft quality exited');
   }
 
@@ -994,8 +1298,11 @@ function build(app: HTMLElement): void {
     cropRectEl.style.top = `${String(cropRect.y / scale)}px`;
     cropRectEl.style.width = `${String(cropRect.width / scale)}px`;
     cropRectEl.style.height = `${String(cropRect.height / scale)}px`;
-    const span = stitchSpan(cropRect, config.grid);
-    cropReadout.textContent = `Region ${String(cropRect.width)} × ${String(cropRect.height)} px → ${String(span.width)} × ${String(span.height)} stitches`;
+    // `capture` is a projection of the crop, not a second owner of it.
+    // The readout can name the pattern directly rather than deriving a
+    // stitch span, because the aspect lock guarantees they agree.
+    scales = withCapture(scales, { widthPx: cropRect.width, heightPx: cropRect.height });
+    cropReadout.textContent = captureSummary(scales);
   }
 
   function stopPumpNow(): void {
@@ -1036,6 +1343,8 @@ function build(app: HTMLElement): void {
     captureMeta.hidden = true;
     thumbWrap.hidden = true;
     cropReadout.hidden = true;
+    sessionEnded = true;
+    updateCompactStatus();
     status.textContent = message;
   }
 
@@ -1086,10 +1395,16 @@ function build(app: HTMLElement): void {
         hashPixels(sampleVideo(capture.video, cropRect ?? undefined)),
         cropRect,
       );
+      const skippedBefore = dirtyGate.skippedCount;
       if (!dirtyGate.shouldProcess(signature, Date.now())) {
         if (status.textContent !== 'Source unchanged.') {
           status.textContent = 'Source unchanged.';
         }
+        // Two skips in a row means the forced refresh is what will
+        // break the tie next — say so rather than repeat "unchanged".
+        lastFreshness =
+          dirtyGate.skippedCount > skippedBefore + 1 ? 'refresh-pending' : 'unchanged';
+        updateCompactStatus();
         if (pumpGate.grabDone()) void pumpGrab();
         return;
       }
@@ -1128,15 +1443,22 @@ function build(app: HTMLElement): void {
       thumbWrap.prepend(session.video);
       thumbWrap.hidden = false;
       cropReadout.hidden = false;
-      cropRect = fullRect({ width: session.video.videoWidth, height: session.video.videoHeight });
+      sessionEnded = false;
+      // Largest region with the pattern's aspect, centred — the source
+      // rarely shares the design's proportions, so a full-frame default
+      // would start the session outside the lock.
+      cropRect = fullAspectRect(
+        { width: session.video.videoWidth, height: session.video.videoHeight },
+        config.grid,
+      );
       renderCrop();
       // Source dimensions can change mid-session (e.g. the shared
-      // window is resized): re-clamp the region rather than let it
-      // point off-frame.
+      // window is resized): re-fit the region rather than let it point
+      // off-frame, keeping the aspect on the way.
       session.video.addEventListener('resize', () => {
         const bounds = captureBounds();
         if (bounds === null || cropRect === null) return;
-        cropRect = clampRect(cropRect, bounds);
+        cropRect = constrainRect(cropRect, bounds, config.grid, 'center');
         renderCrop();
       });
       session.onEnded(() => {
@@ -1185,6 +1507,7 @@ function build(app: HTMLElement): void {
       status.textContent = 'Capture resumed.';
       log.info('capture', 'resumed');
     }
+    updateCompactStatus();
   });
   lockButton.addEventListener('click', () => {
     cropLocked = !cropLocked;
@@ -1203,6 +1526,15 @@ function build(app: HTMLElement): void {
     startY: number;
     startRect: CropRect;
   } | null = null;
+
+  /**
+   * The corner a freshly drawn rectangle pivots about: wherever the
+   * drag began. Without this a draw would re-aspect about its centre
+   * and slide out from under the pointer.
+   */
+  function drawAnchor(startX: number, startY: number, x: number, y: number): Anchor {
+    return `${y >= startY ? 'n' : 's'}${x >= startX ? 'w' : 'e'}` as Anchor;
+  }
 
   function overlayToSource(event: PointerEvent): { x: number; y: number } {
     const box = cropOverlay.getBoundingClientRect();
@@ -1233,10 +1565,12 @@ function build(app: HTMLElement): void {
     const point = overlayToSource(event);
     const dx = point.x - cropDrag.startX;
     const dy = point.y - cropDrag.startY;
+    // A move changes no dimension, so it needs no re-aspecting; every
+    // route that *can* change one ends in constrainRect.
     if (cropDrag.mode === 'inside') {
       cropRect = moveRect(cropDrag.startRect, dx, dy, bounds);
     } else if (cropDrag.mode === 'draw') {
-      cropRect = clampRect(
+      cropRect = constrainRect(
         {
           x: Math.min(cropDrag.startX, point.x),
           y: Math.min(cropDrag.startY, point.y),
@@ -1244,9 +1578,16 @@ function build(app: HTMLElement): void {
           height: Math.abs(dy),
         },
         bounds,
+        config.grid,
+        drawAnchor(cropDrag.startX, cropDrag.startY, point.x, point.y),
       );
     } else {
-      cropRect = resizeRect(cropDrag.startRect, cropDrag.mode, dx, dy, bounds);
+      cropRect = constrainRect(
+        resizeRect(cropDrag.startRect, cropDrag.mode, dx, dy, bounds),
+        bounds,
+        config.grid,
+        oppositeAnchor(cropDrag.mode),
+      );
     }
     renderCrop();
   });
@@ -1273,7 +1614,12 @@ function build(app: HTMLElement): void {
     const move = delta[event.key];
     if (move === undefined) return;
     cropRect = event.shiftKey
-      ? resizeRect(cropRect, 'se', move[0], move[1], bounds)
+      ? constrainRect(
+          resizeRect(cropRect, 'se', move[0], move[1], bounds),
+          bounds,
+          config.grid,
+          'nw',
+        )
       : moveRect(cropRect, move[0], move[1], bounds);
     renderCrop();
     event.preventDefault();

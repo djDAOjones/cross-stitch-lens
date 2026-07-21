@@ -55,12 +55,36 @@ the Carbon/WCAG/Nielsen defaults above do not.
 
 ### Layout model
 
-- Single-window app: large central preview canvas; Carbon side panel
-  for controls grouped as **Source / Grid / Colour / Dither / Pipeline
-  / Export**; info strip (stitch & colour stats) docked below the
-  preview.
+- Single-window app: large preview canvas; Carbon side panel for
+  controls grouped as **Pattern / Grid / Colour / Dither / Pipeline /
+  Export / Project**; info strip (stitch & colour stats) docked below
+  the preview.
 - The preview canvas is the product. Panels collapse; the canvas never
   does.
+- **Preview-first DOM order at every width**, with the settings panel to
+  its right above 60 rem and stacked below it under that. Never reorder
+  regions with CSS `order`: reading order, visual order, and tab order
+  must agree (M6-NARROW-01 / D52).
+- **Companion-window baseline.** The app must stay usable as a tall
+  narrow window beside Photoshop: no page-level horizontal scrolling at
+  320 CSS px, wide tables scrolling inside their own container, and the
+  preview keeping the majority of the width.
+
+### Shell presentation modes
+
+Panel collapse and preview focus are **app-shell presentation state**,
+never pipeline configuration, project data, or the M4 draft-quality
+state. Both compose through one model (`src/ui/shell.ts`); a second
+independent `hidden` layer is the anti-pattern.
+
+- The control that reveals a collapsed region lives **outside** it.
+- Preview focus keeps a persistent, predictably-placed exit control;
+  `Escape` may be a convenience but never the only route.
+- When a mode hides the focused element, move focus deliberately (to
+  the toggle, or to the preview host) — never let the page lose it.
+- Shell preferences persist in a UI-preference store, **not** the
+  project file: a shared project must not rearrange a collaborator's
+  interface. Preview focus is session-only.
 
 ### Canvas accessibility
 

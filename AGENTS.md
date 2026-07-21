@@ -335,6 +335,24 @@ The canonical entities (full definitions in `architecture.md`):
 Do **not** represent pixel data as arrays of objects, mutate a stage's
 input buffer, or encode pipeline order as hard-coded call sequences.
 
+### The four resolutions (M6 terminology contract — D52)
+
+**Pattern** (stitches) / **capture** (source px) / **preview** (CSS px
+per stitch) / **export** (output px per stitch) are four independent
+quantities, owned by `src/ui/scales.ts`. Changing one must leave the
+other three untouched — the sole exception being that a new pattern
+legitimately changes the output stitch count.
+
+- Never introduce a shared `scale` or `resolution` type, field, or
+  label: a single name for four things is how they get wired together.
+  Field names carry their unit.
+- Preview scale crosses persistence in **CSS** px per stitch, never
+  device px, so a project reopens the same size at any DPR.
+- The capture region's aspect is **locked** to the pattern. Every crop
+  mutation goes through `constrainRect`; there is no unconstrained
+  path. A region chooses _which_ source pixels feed the pipeline, never
+  _how many_ stitches come out.
+
 ---
 
 ## Processing pipeline (domain subsystem)

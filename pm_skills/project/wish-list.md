@@ -55,3 +55,5 @@ refer to `docs/requirements.md`.
 - Manual backend override: debug-panel select + ?backend= URL param forcing ts/wasm/webgpu per stage (architecture already anticipates it) (from: 2026-07-19 M5-SELECT)
 - semi-transparent dither participation: whether an alpha 1-127 cell (which renders as fabric per D9) should take part in error diffusion; M5-ACCEPT-01 fixed alpha===0 only
 - crates/stitch-engine/pkg can go stale silently: no local Rust toolchain means the wasm parity suite runs against whatever pkg was last built, so a Rust source change is only really verified in CI
+- Tick-numbering margin: FIT_MARGIN (24 CSS px) clips 3-digit row labels at fit-width on a narrow window — the labels are drawn centred on the row so they overhang the reserved margin (seen at 420 px, M6-NARROW-01 rehearsal; M11 territory)
+- Companion-window rehearsal in stable Safari / Chrome / Firefox on the maintainer's macOS setup — the leg D53 could not measure from an embedded Chromium; only worth doing if browser placement is reconsidered

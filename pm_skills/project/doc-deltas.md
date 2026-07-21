@@ -66,3 +66,5 @@
   Carbon *icon* button, but also that visible label and accessible name must
   match; shipped as a text button to satisfy both, consistent with every other
   control in this app (source: D50)
+- [ ] 2026-07-21 requirements.md §10 — preview now has fit-width/fit-height and a persisted scale (project schema v2 `preview` block); §20's field inventory predates it (source: M6-VIEW-01 / D52)
+- [ ] 2026-07-21 requirements.md §3–4 — capture region is aspect-locked to the pattern, so a region no longer maps to a derived stitch span; the §4 resize-mode discussion reads as if it still can (source: M6-CAPRES-01 / D52)

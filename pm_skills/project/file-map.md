@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 148 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 155 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 11 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
@@ -24,8 +24,8 @@
 - `crates` — 4 file(s)
 - `docs` — 7 file(s)
 - `scripts` — 6 file(s)
-- `src` — 53 file(s)
-- `tests` — 63 file(s)
+- `src` — 57 file(s)
+- `tests` — 66 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -126,7 +126,11 @@
 - `src/ui/diagnostics-button.ts` — the "Copy diagnostics" control + announced status line
 - `src/ui/import.ts` — import routes → decode: filter (pure) + blob→PixelBuffer
 - `src/ui/info-panel.ts` — stats info panel: pure row model + thin DOM half
+- `src/ui/preferences.ts` — Shell preferences (panel collapsed) in localStorage; parse falls back to defaults for anything unreadable. Never project data.
 - `src/ui/preview.ts` — preview controller: toolbar, wheel/drag/keys → worker
+- `src/ui/scales.ts` — The four resolutions kept apart — pattern/capture/preview/export — with unit-named fields, reference-sharing updaters, and the visible label set.
+- `src/ui/shell.ts` — One shell-state model for panel collapse + preview focus; `visibility()` is the single composition rule for what is hidden.
+- `src/ui/status-line.ts` — Compact status line for preview focus, derived from one owned snapshot rather than scraped DOM.
 - `src/ui/viewport.ts` — pure viewport maths: fit, anchored zoom, pan clamp
 - `src/vite-env.d.ts` — ambient types for injected version/build globals
 - `src/worker/backend-select.ts` — auto backend pick: one-shot calibration + hysteresis policy + selection map
@@ -198,7 +202,10 @@
 - `tests/project.test.ts` — project file: byte-identical round trip, validation errors, version refusal
 - `tests/reduce.test.ts` — reduce golden + invariants (membership, fixed point, LUT↔exact)
 - `tests/resize.test.ts` — resize golden + geometry/average/bounds invariants
+- `tests/scales.test.ts` — The 4×4 independence matrix (identity, not equality) plus the label-distinctness checks.
+- `tests/shell.test.ts` — Shell visibility composition, panel/focus label state, and preference fallback including a throwing storage.
 - `tests/stats.test.ts` — stats partition/sum/sort/reference invariants
+- `tests/status-line.test.ts` — Compact-status field order, capture/freshness state coverage, and the never-empty invariant.
 - `tests/ui-import.test.ts` — image-file filtering (pure half of import)
 - `tests/viewport.test.ts` — viewport maths exact cases (fit/anchor/clamp)
 - `tests/wasm-dither.test.ts` — wasm↔TS bit-exact parity: golden fixture, metrics/scan modes, full DMC Lab

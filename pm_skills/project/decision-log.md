@@ -928,3 +928,40 @@ was **not** extended with algorithm rows — budgets stay bound to the
 FS rows, and the D61 audit artefact carries the per-method timings
 (all within ~10–20% of no-dither; a matrix extension would need a
 boundary-version bump).
+
+## D63 — Roadmap refactor: M13 visual-processing performance; M8 maintainer gates deferred (2026-07-22)
+
+**Decision:** the backlog's single active milestone is now **M13 —
+Visual processing performance**: thirteen tasks in five dependency-ordered
+phases (measurement refresh → component profiling → a `[sign-off]`
+synthesis → conditional evidence-approved implementation → integrated
+automated + maintainer acceptance). No ticket files were created — the
+owner will generate each performance ticket pack independently, so no
+new task carries `[detail]` yet.
+
+**Deferrals — explicitly not passed, cut, completed or shipped:** the
+two open M8 maintainer gates, **M8-ACCEPT-01** (visual-quality
+acceptance session) and **M8-GOLD-01** (golden-fixture decision), were
+**intentionally deferred** to the Icebox with IDs, wording, dates, flags
+and the M8-ACCEPT-01 ticket file preserved. The M9–M12 milestone stubs
+moved from "Next milestones" (section removed) to the Icebox verbatim,
+ticket files intact. Nothing moved to the trajectory (nothing shipped);
+existing ICE-* items are unchanged.
+
+**Rationale:** re-measurement precedes optimisation — the M5 evidence
+is historical input (its attributions were overturned once already,
+D48), M8 added four dither methods the frozen bench matrix and budget
+rows never covered (D62), there is no 300² budget row despite the
+product promise binding there, and the browser-only boundaries
+(`preview-update`, `interaction`, `export`) are still manual-only. The
+synthesis gate (M13-SYNTH-01) keeps implementation conditional on
+evidence rather than encoding speculative speedups as acceptance
+criteria.
+
+**Alternatives:** running the M8 gates first (rejected by the owner for
+now — deferred, not abandoned); splitting the five phases into separate
+milestones (rejected: one milestone keeps the dependency chain and the
+single synthesis/evidence doc in one place). Wish-list overlap noted and
+left in place by owner decision: the browser test-runner idea
+(M13-MEAS-02 territory), the manual `?backend=` override (M13-PROF-03),
+and the 1024-cap revisit (M13-SYNTH-01).

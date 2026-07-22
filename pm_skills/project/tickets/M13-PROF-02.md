@@ -102,3 +102,15 @@ Read architecture “Thread identity” and “Colour reduction strategy”, D46
 D55/D56/D63, then trace `resolveProjectPalette` → `ensureSelectionSource` →
 `ensureLut`/`getCandidates`. Verify the completed bv2 palette vocabulary before
 constructing cases; never quote `p533` without checking the entry count.
+
+## Status (2026-07-22, D66)
+
+Node half published: `tests/audits/m13-prep.audit.test.ts` times the
+policy/selection/flattening/build path per palette size and proves
+cache behaviour with the new `lutCacheStats` counters (A→B→A hit,
+metric keying, reorder rebuild, rename hit, candidate cap-2 churn).
+Findings in `docs/performance-evidence.md` → "M13 profiling, node
+halves"; note the p489 candidate-table build discrepancy vs the bench
+cold row (~2.7×, measurement sensitivity). Remaining: GPU LUT
+end-to-end and selection-source/live-preview contention from the
+MEAS-02 owner run.

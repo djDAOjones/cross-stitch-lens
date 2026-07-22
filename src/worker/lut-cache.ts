@@ -42,6 +42,35 @@ const MAX_ENTRIES = 8;
 /** Insertion-ordered, so the oldest key is the first Map key (LRU). */
 const cache = new Map<string, Uint16Array>();
 
+/**
+ * Hit/miss/eviction counters per cache (M13-PROF-02): a cache hit must
+ * be provable by counters, never inferred from a fast time. Pure
+ * diagnostics — nothing reads them on the frame path.
+ */
+export interface CacheStats {
+  hits: number;
+  misses: number;
+  evictions: number;
+}
+
+const lutStats: CacheStats = { hits: 0, misses: 0, evictions: 0 };
+const candidateStats: CacheStats = { hits: 0, misses: 0, evictions: 0 };
+
+/** Snapshot of both caches' counters (copies — safe to hold). */
+export function lutCacheStats(): { lut: CacheStats; candidates: CacheStats } {
+  return { lut: { ...lutStats }, candidates: { ...candidateStats } };
+}
+
+/** Zero the counters (audits; never touches the cached entries). */
+export function resetLutCacheStats(): void {
+  lutStats.hits = 0;
+  lutStats.misses = 0;
+  lutStats.evictions = 0;
+  candidateStats.hits = 0;
+  candidateStats.misses = 0;
+  candidateStats.evictions = 0;
+}
+
 /** Cache key for a palette+metric pair: content, not name. */
 function keyFor(palette: Palette, metric: ColorMetric): string {
   return `v${String(LUT_SCHEMA_VERSION)}:${paletteFingerprint(palette)}:${metric}`;
@@ -55,13 +84,18 @@ function store(key: string, lut: Uint16Array): void {
     const oldest = cache.keys().next();
     if (oldest.done === true) break;
     cache.delete(oldest.value);
+    lutStats.evictions++;
   }
 }
 
 /** Read a LUT and mark it most recently used. */
 function touch(key: string): Uint16Array | undefined {
   const hit = cache.get(key);
-  if (hit === undefined) return undefined;
+  if (hit === undefined) {
+    lutStats.misses++;
+    return undefined;
+  }
+  lutStats.hits++;
   cache.delete(key);
   cache.set(key, hit);
   return hit;
@@ -152,16 +186,19 @@ export function getCandidates(palette: Palette): CandidateTable {
   const key = keyFor(palette, 'lab');
   const hit = candidateCache.get(key);
   if (hit) {
+    candidateStats.hits++;
     candidateCache.delete(key);
     candidateCache.set(key, hit);
     return hit;
   }
+  candidateStats.misses++;
   const table = buildCandidateTable(palette);
   candidateCache.set(key, table);
   while (candidateCache.size > MAX_CANDIDATE_ENTRIES) {
     const oldest = candidateCache.keys().next();
     if (oldest.done === true) break;
     candidateCache.delete(oldest.value);
+    candidateStats.evictions++;
   }
   log.info('lut-cache', 'candidate table built', {
     key,

@@ -1044,3 +1044,39 @@ counters; `startFramePump` passes rvfc metadata through untouched;
 leg:** the maintainer's browser run itself — `getDisplayMedia` needs
 the owner's gesture, so the item stays open at "code complete,
 evidence pending".
+
+## D66 — M13-PROF-01/02 node halves: the match is the cost, selection is the sleeper (2026-07-22)
+
+**Decision — publish the node halves now, hold the browser halves.**
+Both audits (`npm run audit` → `m13-stage`, `m13-prep`) publish ranked,
+artefact-backed node evidence and record the browser questions as
+explicit gaps: per-stage node↔browser ratios, GPU LUT end-to-end and
+selection-source/live-preview contention all need the M13-MEAS-02
+harness run, which requires the owner's capture gesture. Nothing
+node-side is extrapolated to the browser (M5 measured resize ~3.5× vs
+dither ~1.1× — there is no single multiplier).
+
+**Stage findings (node):** dither dominates every ranked cell, and the
+per-stitch exact match is ~92% of it (pruned scan 27.8 ms of a 30.3 ms
+FS stage at 300²/p64; conversion ~10.5 ms of that; kernel propagation
+~1 ms). The five methods sit within ±14% of each other everywhere —
+the shared match, not any method, is the only meaningful target.
+Pruning is worth 3.0× at p489 and near-nothing at p64 (consistent with
+D48). Resize follows the source (28.1 ms from 1280², 13.9 ms from a
+grid-sized 1024² input).
+
+**Preparation findings (node):** below the candidate table, the
+count-limited selection path is the sleeper — 121 ms to resolve
+"30 from all eight brands" (116 ms in `selectThreads`) vs 0.65 ms
+without a count. Candidate tables stay the dominant cold cost (30.7 /
+549.9 / 1,325.6 ms at p64/p489/pfull), but the p489 figure disagrees
+with the bench cold row by ~2.7× — recorded as measurement
+sensitivity, both artefacts carry it. Cache behaviour is now proven by
+counters (`lutCacheStats`, additive diagnostics in
+`src/worker/lut-cache.ts`): content keying and reorder-rebuilds behave
+as designed; **the candidate cap of 2 rebuilds on any 3-palette
+cycle**.
+
+**Scope note:** engine untouched beyond the additive cache counters
+(explicitly in the ticket's surface). Both items stay `[~]` until the
+browser halves land.

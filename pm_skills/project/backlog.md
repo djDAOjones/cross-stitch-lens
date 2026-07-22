@@ -32,13 +32,15 @@ dither methods are uncovered by the frozen bench matrix (D62).
 
 Each task files defects for performance-sensitive bugs it uncovers.
 
-- [ ] **M13-PROF-01 Stage profile: resize, reduce, every dither family** [detail] (2026-07-22)
+- [~] **M13-PROF-01 Stage profile: resize, reduce, every dither family** [detail] (2026-07-22)
   Intent: per-stage costs at 300² and 1024², node and browser, per dither family and palette size — replacing M5-era attributions.
   Done when: an audit artefact ranks per-stage costs (workload IDs, runtime named) and records node↔browser ratios.
+  Status 2026-07-22: node half published (D66, `m13-stage` audit); browser ratios await the MEAS-02 owner run.
 
-- [ ] **M13-PROF-02 Preparation & cache profile: palette resolution, LUT, candidate table** [detail] (2026-07-22)
+- [~] **M13-PROF-02 Preparation & cache profile: palette resolution, LUT, candidate table** [detail] (2026-07-22)
   Intent: measure the palette-change path — policy/selection, LUT and candidate-table builds, cache hit/miss/invalidation churn, cold vs warm.
   Done when: preparation costs published per palette size; cache behaviour characterised on realistic switching patterns.
+  Status 2026-07-22: node half published (D66, `m13-prep` audit + `lutCacheStats` counters); GPU end-to-end and selection-source contention await the MEAS-02 owner run.
 
 - [ ] **M13-PROF-03 Backend end-to-end comparison: TS / WASM / WebGPU** [detail] [blocked: M13-MEAS-02] (2026-07-22)
   Intent: complete costs (setup, dispatch, copy, upload, transfer, readback) across workload sizes on a production build; post-M8 validity of categorical routing (lab→ts, rgb→wasm, FS-only wasm); whether wiring `mapPaletteGpu` is justified.

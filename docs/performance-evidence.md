@@ -530,3 +530,56 @@ use: Bayer 8×8 0.02 ms, blue-noise 32×32 generation 12.1 ms. The pfull
 candidate table is the standout: a user enabling every brand pays ~3.5 s
 of preparation on first dithered use — M13-PROF-02 owns whether that
 path is reachable enough to matter.
+
+## M13 profiling, node halves (M13-PROF-01/02, 2026-07-22, D66)
+
+Artefacts: `bench-reports/audit-m13-prof-01-*.json` /
+`audit-m13-prof-02-*.json` (regenerate with `npm run audit`). Browser
+halves — per-stage node↔browser ratios, GPU LUT end-to-end, whether the
+selection-source export blocks live preview — await the M13-MEAS-02
+harness run and are explicit gaps in both artefacts, never node-derived
+guesses.
+
+### Stage profile (PROF-01, node)
+
+- **Dither dominates every ranked cell**, and the match — not the
+  kernel — is the cost. At 300²/p64 the pruned candidate scan alone is
+  27.8 ms of the 30.3 ms Floyd–Steinberg stage (~92%), of which
+  sRGB→Lab conversion is ~10.5 ms; the diffusion-vs-pointwise delta
+  (FS 30.3 vs ordered 29.2 ms) puts kernel propagation + serpentine at
+  ~1 ms; work-buffer init is 0.05 ms.
+- **Method spread is small at every grid/palette**: all five methods
+  land within ±14% of each other (1024²/p489: ordered/blue-noise
+  ~414 ms, FS 433, Atkinson 447, Jarvis 471 ms). No method is an
+  optimisation target on its own — the shared exact match is.
+- **Pruning is the palette-size lever**: exact scan 121.8 ms vs pruned
+  40.9 ms at 300²/p489 (3.0×); at p64 the gap is 30.6 vs 27.8 ms
+  (pruning near-neutral on small palettes, as D48 found).
+- **Resize is source-bound, exactly as documented**: 1280²→1024²
+  28.1 ms vs grid-sized 1024² input 13.9 ms; crop→300² 10.6 ms.
+  Reduce via LUT stays trivial at 300² (1.3 ms).
+
+### Preparation & cache profile (PROF-02, node)
+
+- **Selection, not policy, is the palette-change heavyweight below the
+  candidate table**: `resolveProjectPalette` with no count is 0.18 ms
+  (DMC) / 0.65 ms (all brands), but a count limit costs 20 ms at DMC
+  and **121 ms over the eight-brand union** (`selectThreads` 30-from-
+  3,338 = 116 ms of it). `buildDistribution` is 3.9 ms at 300² /
+  34.3 ms at 1024².
+- **Candidate tables re-confirmed as the dominant cold cost**: 30.7 /
+  549.9 / 1,325.6 ms at p64/p489/pfull in this run. The p489 figure
+  disagrees with the bench cold row (179.8–207 ms) by ~2.7× —
+  flagged as measurement sensitivity (heap/GC state differs between
+  harnesses); the synthesis must not quote either number without the
+  spread and both artefacts.
+- **Cache behaviour proven by counters, not timings** (new
+  `lutCacheStats` diagnostics): A→B→A toggling hits (1 hit/2 misses);
+  metric is part of the LUT key; a reorder rebuilds by design (D46); a
+  rename never rebuilds (content keying). **The candidate cap of 2
+  rebuilds on any 3-palette cycle** (A→B→C→A = 4 misses, 2 evictions)
+  — whether real switching reaches that is a synthesis question.
+- `paletteRgb`/`paletteLab` are allocated per stage call today
+  (0.006–0.42 ms and 0.2–40 KB per call by palette size) — real but
+  small; a reuse candidate for the synthesis list, not a proven
+  bottleneck.

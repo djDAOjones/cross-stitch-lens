@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 186 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 188 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 12 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
@@ -25,7 +25,7 @@
 - `docs` — 8 file(s)
 - `scripts` — 6 file(s)
 - `src` — 78 file(s)
-- `tests` — 74 file(s)
+- `tests` — 76 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -161,7 +161,7 @@
 - `src/worker/coalesce.ts` — latest-wins scheduler (no queue), drop counter
 - `src/worker/execute.ts` — timed frame execution; errors become responses
 - `src/worker/grid.ts` — pure grid/tick geometry: line placement, auto-hide, label thinning
-- `src/worker/lut-cache.ts` — one LUT per palette content+metric; LRU-bounded; rejects implausible GPU LUTs
+- `src/worker/lut-cache.ts` — one LUT per palette content+metric; LRU-bounded; rejects implausible GPU LUTs; hit/miss/eviction counters
 - `src/worker/pipeline-worker.ts` — worker entry shell: owns worker scope, wires router
 - `src/worker/preview-surface.ts` — worker: OffscreenCanvas; view/grid/tick/compare redraw (no clip)
 - `src/worker/protocol.ts` — main↔worker message types, transferred buffers, absolute-clock frame marks
@@ -176,6 +176,8 @@
 - `tests/audits/candidates/resize-candidates.ts` — resize prototypes: hoisted (bit-exact), separable, summed-area
 - `tests/audits/dither.audit.test.ts` — M5-PERF-13/14: conversion decomposition + exact-pruning proof
 - `tests/audits/lut-reduce.audit.test.ts` — M5-PERF-12: LUT build vs map, stale-cache-key repro
+- `tests/audits/m13-prep.audit.test.ts` — M13-PROF-02 node half: policy/selection/build timings per palette size, counter-proven cache behaviour
+- `tests/audits/m13-stage.audit.test.ts` — M13-PROF-01 node half: stage ranking per grid/palette/method + dither-leader decomposition
 - `tests/audits/m8-dither.audit.test.ts` — M8-SPIKE-01 evaluation (AUDIT=1): quality/structure metrics, timings, HTML gallery artefact
 - `tests/audits/orchestration.audit.test.ts` — M5-PERF-10: palette rebuild, `?? 0` tax, allocation inventory
 - `tests/audits/resize.audit.test.ts` — M5-PERF-11: candidate timings + byte-equality across the mode matrix

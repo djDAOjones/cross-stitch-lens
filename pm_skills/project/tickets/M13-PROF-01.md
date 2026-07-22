@@ -105,3 +105,12 @@ defect follow-ups—never a projected speed-up as acceptance.
 Read D48, D61–D63, `docs/dither-evaluation.md`, the completed bv2 contract and
 the three pipeline stage files. Confirm whether the latest report is clean before
 using it. Begin with the full stage ranking, then decompose only the leaders.
+
+## Status (2026-07-22, D66)
+
+Node half published: `tests/audits/m13-stage.audit.test.ts` ranks every
+stage × grid × palette × method and decomposes the leader (the exact
+match is ~92% of dither at 300²/p64; methods within ±14% everywhere;
+pruning 3.0× at p489). Findings in `docs/performance-evidence.md` →
+"M13 profiling, node halves". Remaining: the browser half (per-stage
+node↔browser ratios) from the MEAS-02 owner run.

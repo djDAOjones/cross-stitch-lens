@@ -322,8 +322,10 @@ The canonical entities (full definitions in `architecture.md`):
 
 - **`PixelBuffer`** — `{ width, height, data: Uint8ClampedArray }`
   (RGBA, length `w*h*4`). The unit of currency between stages.
-- **`Palette`** — an ordered set of thread colours (hex + RGB + name +
-  number + manufacturer per entry); index 0.. maps to output cells.
+- **`Thread` / `Palette`** — a palette is an ordered set of `Thread`s
+  (id, brand, reference, name, provenance, status). Identity is
+  **`brandId:reference`**; RGB is a display value only. Index 0.. maps
+  to output cells via the palette-index sidecar (`PixelBuffer.indices`).
 - **`Stage<P>`** — `{ name, backends: { ts, wasm?, webgpu? } }`; `ts` is
   mandatory and is the reference.
 - **`Pipeline`** — an ordered list of stage instances + params. Order is
@@ -353,6 +355,18 @@ legitimately changes the output stitch count.
   path. A region chooses _which_ source pixels feed the pipeline, never
   _how many_ stitches come out.
 
+### Thread identity (M7 terminology contract — D55/D56)
+
+A thread's identity is **`brandId:reference`** (`Thread.id`), never its
+colour. RGB is display-only, and nothing merges two threads because
+their colours match: the catalogue's 3,338 threads across eight brands
+render as only 2,830 distinct colours, so RGB de-duplication would
+delete ~500 real, separately-buyable threads. Because two threads can
+render identically, "which thread is this stitch?" has no answer in the
+pixels — it lives in the palette-index sidecar (`PixelBuffer.indices`,
+`EMPTY_INDEX` for fabric). Full contract in `architecture.md` → "Thread
+identity and the palette policy".
+
 ---
 
 ## Processing pipeline (domain subsystem)
@@ -362,7 +376,11 @@ executed in `src/worker`). Its full contract — stage purity, the
 `Backend` interface, LUT-based colour reduction, worker scheduling and
 frame coalescing, and the performance budgets — lives in
 `architecture.md`. The invariants that must never be violated are in
-"Engine purity", "Backend discipline", and "Performance" above.
+"Engine purity", "Backend discipline", and "Performance" above. Note:
+the identity `adjust` stage is currently omitted from built pipelines
+until §9 adjustment params exist — the canonical
+`adjust → resize → reduce(+dither)` order is unchanged; only the
+stage's presence in a run is conditional (D48).
 
 ---
 

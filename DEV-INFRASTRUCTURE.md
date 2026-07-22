@@ -41,14 +41,12 @@ Package manager: **npm** (Node LTS).
 | `test` | `vitest run` | Vitest incl. golden suite | After every change |
 | `bench` | `BENCH=1 vitest run tests/benchmark.test.ts` | Workload matrix + JSON report to `bench-reports`, then budget assertions | Perf-sensitive changes, pre-release |
 | `audit` | `AUDIT=1 vitest run tests/audits` | M5B component decompositions + defect reproductions; JSON artefacts to `bench-reports` | Investigating where a cost or a defect lives |
-| `check` | typecheck + lint + test + build | **Quality gate** | Before calling a task done |
+| `matrix` | `MATRIX_FULL=1 vitest run tests/acceptance-matrix.test.ts` | Full acceptance/parity matrix incl. the 1024² ceiling row | Verifying composed-pipeline correctness across axes |
+| `matrix:write` | `node scripts/write-acceptance-matrix.mjs` | Regenerate `docs/acceptance-matrix.md`, the matrix coverage table | After a matrix row change — `check` fails if the committed copy drifts (staleness gate) |
+| `check` | 7 non-mutating steps: types, lint, wasm, test, build, docs, secrets | **Quality gate** | Before calling a task done |
 | `lint:fix` | `eslint . --fix` | Auto-fix (separate from the gate) | Cleanup, never the CI pass/fail |
 
 Do not add scripts without updating this table.
-
-<!-- Until M0 wires up Vite/TS/Vitest, the repo's `check` is the docs
-     lint baseline (markdownlint + link/doc checks). M0 replaces it with
-     the full pipeline above. -->
 
 ---
 
@@ -63,6 +61,11 @@ Do not add scripts without updating this table.
 
 All development and testing should use this URL. Do not hard-code
 alternative ports or URLs.
+
+- **Parallel sessions:** `vite.config.ts` honours a `PORT` env var and
+  `launch.json` sets `autoPort`, so a second session's dev server
+  coexists with a running one instead of colliding on 5173 (D27). The
+  env var is the sanctioned override; hard-coding a port is still out.
 
 <!-- `?backend=ts|wasm|webgpu` URL override forces a backend for manual
      testing (see "Maintainer diagnostics"). -->
@@ -132,7 +135,7 @@ native DevTools console.
 
 | Script | Command | Purpose |
 | --- | --- | --- |
-| `check` | `tsc --noEmit && eslint . && check:wasm && vitest run && vite build` | The quality gate — run before calling a task done |
+| `check` | `check:types && check:lint && check:wasm && check:test && check:build && check:docs && check:secrets` | The quality gate — run before calling a task done |
 | `check:wasm` | `node scripts/check-wasm.mjs` | Rust crate tests + wasm-pack build; skips (warns) without the toolchain locally, hard-fails in CI |
 | `lint:fix` | `eslint . --fix` | Auto-fix (separate from the gate; never the CI pass/fail) |
 
@@ -141,17 +144,16 @@ native DevTools console.
   `wasm-pack build`, toolchain-aware — **before** Vitest so the
   wasm-parity suite has a fresh pkg), Vitest (incl. the golden and
   wasm-parity suites), and a production `vite build`. Plus the
-  Markdown lint + link-check baseline on project memory.
+  Markdown lint + link-check baseline on project memory
+  (`check:docs`) and the report-only secret scan (`check:secrets`).
 - **Non-mutating:** `check` only reports; fixes live in `lint:fix` and
   format-on-save. Formatting is never a gate failure.
 - **CI parity:** the CI workflow runs `npm run check`, so local green =
   CI green. Benchmarks run with a ×3 tolerance multiplier in CI
   (`CI=true`).
-- **Omits:** `bench` (its own verb; runs on perf-sensitive changes and
-  pre-release) and any future e2e — slow, kept out of `check`. `check`
-  must stay under ~2 minutes locally.
-- **Pre-M0:** until M0 wires up Vite/TS/Vitest, `check` is the docs lint
-  baseline only. Deferring the full gate to M0 is deliberate.
+- **Omits:** `bench` and `audit` (their own verbs; run on
+  perf-sensitive changes and pre-release) and any future e2e — slow,
+  kept out of `check`. `check` must stay under ~2 minutes locally.
 
 ---
 

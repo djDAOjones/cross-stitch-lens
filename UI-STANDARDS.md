@@ -124,6 +124,22 @@ independent `hidden` layer is the anti-pattern.
 - Crop rectangle: draggable, resizable via handles and arrow keys,
   lockable; dimensions readout in source pixels and resulting stitches.
 
+### Conflict and explanation pattern (Colour panel)
+
+Palette narrowing can reach states a user creates with two clicks — no
+brand enabled, an empty inventory under "owned only", a strict preset
+that resolved nothing, a lock outside the permitted set. These are
+**not errors and never throw**: each surfaces as a `PaletteConflict`
+carrying a severity and a full sentence naming the way out (D55).
+
+- Present conflicts as an **`aria-live` list** so a change announces
+  itself programmatically, not only visually.
+- Severity is carried by a **word** ("blocked", "warning"), never by
+  colour alone — the app-wide no-colour-only rule applies.
+- Keep the three per-thread rules (lock / prefer / exclude) **disjoint
+  controls** in the UI, so a "locked and excluded" contradiction can
+  only come from a hand-edited file, never from clicking.
+
 ---
 
 ## Usability heuristics
@@ -277,9 +293,11 @@ toasts, or critical status.
 - **Dev-only by default.** Hidden in production unless an explicit
   opt-in is set (gated per `DEV-INFRASTRUCTURE.md` → "Maintainer
   diagnostics"); production exposure requires a redaction review.
-- **Carbon icon button** with a tooltip naming the action in sentence
-  case (e.g. "Copy diagnostics"). Visible label and accessible name
-  must match.
+- **Carbon button with a visible text label** (not icon-only), naming
+  the action in sentence case (e.g. "Copy diagnostics"). A bare icon
+  cannot satisfy this project's rule that the visible label and
+  accessible name match, and every other control in this app is a text
+  button, so this is one too — `title` and text identical (D50).
 - **≥ 44 × 44 CSS px** target, visible focus ring, fully keyboard
   operable.
 - **Feedback after copy.** Announce success or failure programmatically,

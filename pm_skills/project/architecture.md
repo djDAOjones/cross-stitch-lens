@@ -64,6 +64,14 @@ All pipeline stages are pure functions `(PixelBuffer, params) →
 PixelBuffer` (or index buffers where noted). No stage touches the
 DOM, reads globals, or mutates its input.
 
+Fully transparent cells (`alpha === 0`) take no part in the dither
+scan or error diffusion — they carry no colour, and quantising them as
+opaque black would diffuse phantom error into the stitches beside a
+`contain`/`fit` letterbox band. This is `=== 0` exactly, not the D9
+`< 128` fabric threshold (a semi-transparent cell has a real colour);
+the rule is mirrored bit-for-bit in the TS and Rust dither backends
+(D49).
+
 ### Stage backends
 
 ```ts
@@ -81,15 +89,24 @@ interface Stage<P> {
 - WASM/WebGPU implementations must be bit-exact vs. the TS reference
   where the algorithm is deterministic (error diffusion), or within a
   documented tolerance where not (GPU float rounding in colour math).
-- Backend selection is per-stage, automatic by default (profiled),
-  user-overridable in a debug panel.
+- Backend selection is per-stage, routed by the colour **metric**, not
+  by runtime profiling: `lab → ts` (the TS path prunes candidates),
+  `rgb → wasm`. Routing holds no state — D42's startup calibration was
+  removed, not retuned (D48). A recorded per-stage override exists
+  (`setSelectedBackend`, applied where routing has no opinion) but is
+  currently reachable only from tests and audits — there is no
+  user-facing backend override yet.
 
 ### Pipeline
 
 Ordered list of stage instances + params, executed in the worker.
 Order is data, not code — it is stored in the project file and the
 UI can reorder it (requirements §7). Default order:
-`adjust → resize → reduce(+dither)`.
+`adjust → resize → reduce(+dither)`. The `adjust` stage is a pure
+identity until §9 image-adjustment params exist, so it is currently
+**omitted from the built stage list** rather than run as a no-op; the
+canonical order is unchanged and the slot returns when adjustments
+land (D48).
 
 ### Thread identity and the palette policy (M7)
 
@@ -162,17 +179,30 @@ announced through `LibraryStore.persistent`, never silent.
 - Preview may run at reduced quality under load; **exports always
   re-run the pipeline at full quality**.
 
-## Performance budgets (checked in CI via benchmark test)
+## Performance budgets (measured baselines, asserted by `npm run bench`)
 
-| Stage (1024 × 1024 grid, 64-colour palette) | Budget |
-| --- | --- |
-| Resize (GPU-backed `drawImage`) | ≤ 5 ms |
-| Palette reduce via LUT | ≤ 10 ms |
-| Floyd–Steinberg (WASM) | ≤ 15 ms |
-| Preview render | ≤ 5 ms |
-| **Whole pipeline** | **≤ 100 ms** |
+The bar that binds is the product promise: **≥ 4 preview updates/sec at
+≤ 300² in the browser** (measured 11.6–17.4/sec before the M5D wins).
+1024² is an export/finishing grid, not a live-editing one.
 
-At the typical 200 × 200 grid the whole pipeline must run ≤ 10 ms.
+Per-stage budgets are **measured baselines, not aspirations**: each row
+records an observed median naming its **runtime, workload ID and
+build**, guarded by a regression multiplier (×1.35) and a staleness
+guard (a row running > 2× faster than recorded fails, so the baseline
+cannot go slack). The canonical rows and the measurement boundaries
+they bind to live in `docs/measurement-contract.md` (boundary contract
+**bv1**); `npm run bench` writes the report, then asserts them. Budgets
+bind to **warm, steady-state** calls — preparation is budgeted
+separately and cache misses publish as their own cold rows.
+
+Node is **not** a browser proxy (the same TS resize runs ~3.5× slower
+in-browser while dither is ~1.1×), so every row names the runtime it was
+taken on; the `preview-update`, `interaction` and `export` boundaries
+are browser-only and are measured by the manual rehearsal in
+`docs/measurement-contract.md`. The aspirational 5/10/15/100 ms table
+that stood here missed every row but preview-render from the day it was
+written (D43) and was replaced by measured reality at M5C/M5D
+(D47/D48).
 
 ## Project file (JSON, versioned)
 

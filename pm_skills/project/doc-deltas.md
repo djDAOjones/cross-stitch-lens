@@ -24,57 +24,64 @@
 
 ## Open
 
-- [ ] 2026-07-17 DEV-INFRASTRUCTURE — pre-M0 comments stale (full gate now
+- [x] 2026-07-17 DEV-INFRASTRUCTURE — pre-M0 comments stale (full gate now
   live); scripts table missing the shipped script surface (source: M0)
-- [ ] 2026-07-19 DEV-INFRASTRUCTURE — dev server port now env-overridable
+- [x] 2026-07-19 DEV-INFRASTRUCTURE — dev server port now env-overridable
   (`PORT` + launch.json `autoPort`) for parallel sessions (source: D27)
-- [ ] 2026-07-19 architecture — performance-budget table assumes GPU-backed
+- [x] 2026-07-19 architecture — performance-budget table assumes GPU-backed
   resize and a LUT-accelerated dither; implementation uses CPU box-average
   resize and exact-search dither, and misses every budget (measured: D43) —
   budgets and/or implementation strategy need an owner decision (source: D43)
-- [ ] 2026-07-19 architecture — budget table states no measurement boundary;
+- [x] 2026-07-19 architecture — budget table states no measurement boundary;
   each row now binds to one workload at one boundary under contract bv1
   (`docs/measurement-contract.md`), and the preview-render row is
   browser-only (source: D44)
-- [ ] 2026-07-19 architecture — the preview-render ≤ 5 ms row now has browser
+- [x] 2026-07-19 architecture — the preview-render ≤ 5 ms row now has browser
   evidence for the first time (components total ~2 ms at 1024²; it passes),
   and the resize ≤ 5 ms and dither ≤ 15 ms rows are unreachable on M5B
   evidence (best bit-exact CPU resize 24.4 ms; canvas 8.1 ms but not
   area-averaging). M5C/ACCEPT-04 owns revising them (source: D45)
-- [ ] 2026-07-19 architecture — budget rows are stated without a runtime, but
+- [x] 2026-07-19 architecture — budget rows are stated without a runtime, but
   the same TS resize measures ~3.5× slower in-browser than in node on one
   machine while TS dither is only ~1.1× slower; a node median is not a
   browser claim and the table should say which runtime binds (source: D45)
-- [ ] 2026-07-20 `architecture.md` → "Performance budgets" — the table still
+- [x] 2026-07-20 `architecture.md` → "Performance budgets" — the table still
       states the aspirational 5/10/15/100 ms rows. M5D replaced them in the
       test suite with measured baselines naming runtime + workload + build
       (D47 shape, D48). M5-ACCEPT-04 owns this edit.
-- [ ] 2026-07-20 `architecture.md` → "Stage backends" — says backend selection
+- [x] 2026-07-20 `architecture.md` → "Stage backends" — says backend selection
       is "automatic by default (profiled)". D42's startup calibration is gone;
       selection is per-workload routing by metric (D48, M5-PERF-27).
-- [ ] 2026-07-20 `AGENTS.md` → "Processing pipeline" / `architecture.md` — the
+- [x] 2026-07-20 `AGENTS.md` → "Processing pipeline" / `architecture.md` — the
       default order is documented as `adjust → resize → reduce(+dither)`, but
       the identity `adjust` is now omitted from the built stage list until §9
       populates its params (D48, M5-PERF-25). The slot is unchanged; only its
       presence in a run is conditional.
-- [ ] 2026-07-20 `architecture.md` → "Core contracts" — the dither stage now
+- [x] 2026-07-20 `architecture.md` → "Core contracts" — the dither stage now
   excludes fully transparent cells from the scan and from error diffusion; no
   contract states it (source: D49)
-- [ ] 2026-07-20 DEV-INFRASTRUCTURE — scripts table missing `matrix` /
+- [x] 2026-07-20 DEV-INFRASTRUCTURE — scripts table missing `matrix` /
   `matrix:write`, and the generated-doc staleness gate they back (source: D49)
-- [ ] 2026-07-20 `UI-STANDARDS.md` → "Diagnostics affordance" — specifies a
+- [x] 2026-07-20 `UI-STANDARDS.md` → "Diagnostics affordance" — specifies a
   Carbon *icon* button, but also that visible label and accessible name must
   match; shipped as a text button to satisfy both, consistent with every other
   control in this app (source: D50)
-- [ ] 2026-07-21 requirements.md §10 — preview now has fit-width/fit-height and a persisted scale (project schema v2 `preview` block); §20's field inventory predates it (source: M6-VIEW-01 / D52)
-- [ ] 2026-07-21 requirements.md §3–4 — capture region is aspect-locked to the pattern, so a region no longer maps to a derived stitch span; the §4 resize-mode discussion reads as if it still can (source: M6-CAPRES-01 / D52)
-- [ ] 2026-07-21 AGENTS / DEV-INFRASTRUCTURE — protected-data tables edited
+- [x] 2026-07-21 AGENTS / DEV-INFRASTRUCTURE — protected-data tables edited
   in-flight (dmc.json deleted, thread-list.csv + catalogue.json added); the
   gate blocks on a stale path, so the factual list could not wait for a
   sync (source: D56)
-- [ ] 2026-07-21 AGENTS — "The four resolutions" section should gain the
+- [x] 2026-07-21 AGENTS — "The four resolutions" section should gain the
   thread-identity contract: identity is `brandId:reference`, RGB is display
   only, threads are never merged on colour (source: D55)
-- [ ] 2026-07-21 UI-STANDARDS — no guidance yet for the conflict/explanation
+- [x] 2026-07-21 UI-STANDARDS — no guidance yet for the conflict/explanation
   pattern the Colour panel introduces (aria-live list, severity as a word
   not a colour) (source: D55)
+- [ ] 2026-07-21 DEV-INFRASTRUCTURE — claims a `?backend=ts|wasm|webgpu` URL
+  override twice (Dev server, Maintainer diagnostics) but no such wiring
+  exists in `src/` — `setSelectedBackend` is reachable only from
+  tests/audits; build the override or delete the claim (source: perf-area
+  review 2026-07-21, `src/worker/backend-select.ts`)
+- [ ] 2026-07-21 AGENTS §Performance — says the benchmark budgets "are part
+  of `check`", but `bench` is `BENCH=1`-gated and deliberately out of
+  `check` since D43; the gate runs the bench *machinery* tests, not the
+  budget assertions (source: perf-area review 2026-07-21, D43/D44)

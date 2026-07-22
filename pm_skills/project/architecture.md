@@ -191,7 +191,7 @@ build**, guarded by a regression multiplier (×1.35) and a staleness
 guard (a row running > 2× faster than recorded fails, so the baseline
 cannot go slack). The canonical rows and the measurement boundaries
 they bind to live in `docs/measurement-contract.md` (boundary contract
-**bv1**); `npm run bench` writes the report, then asserts them. Budgets
+**bv2**); `npm run bench` writes the report, then asserts them. Budgets
 bind to **warm, steady-state** calls — preparation is budgeted
 separately and cache misses publish as their own cold rows.
 

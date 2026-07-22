@@ -31,6 +31,7 @@ import {
   writeReport,
 } from './bench/env-node.ts';
 import {
+  assessValidity,
   buildReport,
   formatReport,
   serialiseReport,
@@ -69,13 +70,25 @@ describe.skipIf(!BENCH)('performance budgets (BENCH=1)', () => {
       log.warn('bench', 'wasm pkg not built — dither rows measure the ts reference');
     }
 
+    // Both clocks bracket the run: wall time advances through a sleep
+    // while the monotonic clock may not, so their disagreement is the
+    // interruption detector (M13-MEAS-01).
+    const wallStartMs = Date.now();
+    const monoStartMs = performance.now();
     const rows = runMatrix({ budgetMultiplier: MULT });
+    const validity = assessValidity(rows, {
+      wallStartMs,
+      wallEndMs: Date.now(),
+      monoStartMs,
+      monoEndMs: performance.now(),
+    });
     report = buildReport(
       {
         boundaryVersion: BOUNDARY_VERSION,
         startedAt: new Date().toISOString(),
         build,
         environment: environmentIdentity(MULT),
+        validity,
       },
       rows,
     );
@@ -96,6 +109,17 @@ describe.skipIf(!BENCH)('performance budgets (BENCH=1)', () => {
       if (row.status === 'measured') expect(row.summary).not.toBeNull();
       else expect(row.reason).toBeTruthy();
     }
+  });
+
+  /**
+   * A tainted run is not evidence (M13-MEAS-01): an interrupted or
+   * stalled run must fail loudly with its findings rather than publish
+   * a clean-looking median. The report — samples included — is already
+   * on disk, so nothing is lost; re-run in a controlled session.
+   */
+  it('run is untainted — interruption and stall detection', () => {
+    expect(report?.validity.findings ?? ['no report produced']).toEqual([]);
+    expect(report?.validity.tainted).toBe(false);
   });
 
   it.each([...BUDGETS.keys()])('no regression against baseline: %s', (key) => {

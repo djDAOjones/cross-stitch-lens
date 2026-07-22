@@ -965,3 +965,44 @@ single synthesis/evidence doc in one place). Wish-list overlap noted and
 left in place by owner decision: the browser test-runner idea
 (M13-MEAS-02 territory), the manual `?backend=` override (M13-PROF-03),
 and the 1024-cap revisit (M13-SYNTH-01).
+
+## D64 — M13-MEAS-01: bv2 — the bench contract now tells the truth about M8 and the palette (2026-07-22)
+
+**Decision — bump the node bench to boundary version bv2.** The six
+marks are unchanged; the workload meaning changed, which is the same
+comparability break. bv1 and bv2 reports must not be diffed.
+
+- **Dither axis = the engine's `DitherConfig` union.** bv1's Boolean
+  froze before M8, so every `dither` row silently meant FS/serpentine/
+  strength 1 and the four M8 methods had no coverage. The ID token is
+  now `nodither | <method>-s<pct>[-serp|-raster]` — percent-granular so
+  the dot-separated grammar survives; two executable configs can never
+  share an ID. A mandatory method block covers each M8 method at 300²
+  and 1024²; targeted rows cover half strength, raster scan and
+  threshold strength 1.5.
+- **`p533` → `p489`.** `loadDmcPalette()` returns the catalogue's 489
+  DMC threads; the old ID named a count that never existed. The
+  large-palette stress is the full eight-brand union (3,338 threads) as
+  `pfull` — **preparation rows only** (`prep.pfull.lab`): a per-frame
+  pipeline row over the whole catalogue measures no product path.
+- **Preparation coverage extended.** Cold candidate-table builds
+  (27 / 180 / 3,296 ms at p64 / p489 / pfull — the pfull figure is the
+  standout, M13-PROF-02's territory), threshold-tile first use (Bayer
+  0.02 ms, blue-noise generation 12.1 ms), pfull LUT 206 ms.
+- **Run validity.** Every run is assessed — wall-vs-monotonic clock
+  drift (sleep/suspension), samples over 120 s, stall-shaped outliers —
+  and a tainted run fails loudly with findings; samples are never
+  deleted. This is the e703ed4 lesson (a ~5.8 M ms sample of unknown
+  cause) made mechanical.
+- **Re-baseline: ten budget rows** at `v0.5.0+20260722.33d021b`, node
+  24.5, M1 Max. Headline finding: FS dither 1024²/p64 is 231.9 →
+  296.7 ms (**+28 %**, inside the ×1.35 guard) — D62's flat-kernel fix
+  restored *tolerance*, not parity. Recorded, not rebased away;
+  decomposing the cause is M13-PROF-01's job. New guards: the 300²
+  pipeline row (37.0 ms — a node component baseline, never a proxy for
+  the in-browser promise) and per-method 1024² dither rows (290–338 ms,
+  all TS; no method is an outlier vs FS).
+
+**Run notes (auto-jazz):** gateless; the audits' bv1 workload IDs were
+mechanically renamed so they still resolve; their pre-existing stale
+post-M8 assertions were parked on the wish-list, not fixed here.

@@ -58,3 +58,4 @@ refer to `docs/requirements.md`.
 - crates/stitch-engine/pkg can go stale silently: no local Rust toolchain means the wasm parity suite runs against whatever pkg was last built, so a Rust source change is only really verified in CI
 - Tick-numbering margin: FIT_MARGIN (24 CSS px) clips 3-digit row labels at fit-width on a narrow window — the labels are drawn centred on the row so they overhang the reserved margin (seen at 420 px, M6-NARROW-01 rehearsal; M11 territory)
 - Companion-window rehearsal in stable Safari / Chrome / Firefox on the maintainer's macOS setup — the leg D53 could not measure from an embedded Chromium; only worth doing if browser placement is reconsidered
+- tests/audits carry stale post-M8 assertions (a Boolean-dither draft-isolation check in runtime.audit; "533" labels for the 489-thread DMC palette) — sweep next time the audits run under AUDIT=1 (from: 2026-07-22 M13-MEAS-01)

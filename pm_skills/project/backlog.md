@@ -23,10 +23,6 @@ dither methods are uncovered by the frozen bench matrix (D62).
 
 #### Phase 1 — Measurement refresh & instrumentation
 
-- [ ] **M13-MEAS-01 Node bench refresh: M8-era workloads and re-baseline** [detail]
-  Intent: extend the bv1 matrix — every shipped dither family, a 300² budget workload, p533/metric coverage, warm/cold/preparation boundaries kept — re-baseline under a boundary-version bump.
-  Done when: `npm run bench` publishes a fresh baseline report over the extended matrix (raw samples + spread); no budget row weakened without a decision-log entry.
-
 - [ ] **M13-MEAS-02 Browser/Worker measurement harness** [detail]
   Intent: production-build, in-Worker measurement of `preview-update`, `interaction` and `export`, extending `bench.html`/`src/bench-browser.ts`, plus live-capture cadence, staleness and dropped-frame counters.
   Done when: a repeatable documented run yields boundary-tagged browser rows (workload ID + build identity) for all three; new dev deps proposed, never assumed.
@@ -35,11 +31,11 @@ dither methods are uncovered by the frozen bench matrix (D62).
 
 Each task files defects for performance-sensitive bugs it uncovers.
 
-- [ ] **M13-PROF-01 Stage profile: resize, reduce, every dither family** [detail] [blocked: M13-MEAS-01] (2026-07-22)
+- [ ] **M13-PROF-01 Stage profile: resize, reduce, every dither family** [detail] (2026-07-22)
   Intent: per-stage costs at 300² and 1024², node and browser, per dither family and palette size — replacing M5-era attributions.
   Done when: an audit artefact ranks per-stage costs (workload IDs, runtime named) and records node↔browser ratios.
 
-- [ ] **M13-PROF-02 Preparation & cache profile: palette resolution, LUT, candidate table** [detail] [blocked: M13-MEAS-01] (2026-07-22)
+- [ ] **M13-PROF-02 Preparation & cache profile: palette resolution, LUT, candidate table** [detail] (2026-07-22)
   Intent: measure the palette-change path — policy/selection, LUT and candidate-table builds, cache hit/miss/invalidation churn, cold vs warm.
   Done when: preparation costs published per palette size; cache behaviour characterised on realistic switching patterns.
 

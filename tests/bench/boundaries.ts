@@ -6,12 +6,15 @@
  * boundary it was taken under and every report stamps the contract
  * version it was taken against.
  *
- * Bump BOUNDARY_VERSION whenever a start/end mark moves. Reports from
- * different versions are not comparable and must not be diffed.
+ * Bump BOUNDARY_VERSION whenever a start/end mark moves — or when the
+ * workload matrix changes meaning, as bv2 did (M13-MEAS-01: the dither
+ * axis gained the M8 methods and `p533` was renamed to the truthful
+ * `p489`; the six marks themselves are unchanged from bv1). Reports
+ * from different versions are not comparable and must not be diffed.
  */
 
 /** Contract version stamped into every report. Bump on any mark move. */
-export const BOUNDARY_VERSION = 'bv1';
+export const BOUNDARY_VERSION = 'bv2';
 
 /** The measurement boundaries defined by the contract. */
 export type BoundaryId =

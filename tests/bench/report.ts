@@ -93,13 +93,98 @@ export interface EnvironmentIdentity {
   budgetMultiplier: number;
 }
 
-/** A complete run: schema + contract + identity + every row. */
+/**
+ * Run-validity verdict (M13-MEAS-01). A research run at e703ed4 carried
+ * a single ~5.8-million-ms sample — sleep, suspension or a stall, never
+ * established — and the honest response is to mark the whole run
+ * tainted, not to delete the sample or publish the remaining median as
+ * clean evidence. Samples are always preserved; this flag tells a
+ * reader the run must be re-taken in a controlled session.
+ */
+export interface RunValidity {
+  tainted: boolean;
+  /** Human-readable findings; empty when the run is clean. */
+  findings: string[];
+}
+
+/** Clock readings around a whole run, for interruption detection. */
+export interface ClockCheck {
+  /** `Date.now()` at run start and end — advances through a sleep. */
+  wallStartMs: number;
+  wallEndMs: number;
+  /** Monotonic clock at run start and end — may pause through a sleep. */
+  monoStartMs: number;
+  monoEndMs: number;
+}
+
+/**
+ * A single sample above this is implausible for any matrix row (the
+ * slowest legitimate rows are seconds, not minutes) and taints the run.
+ */
+export const IMPLAUSIBLE_SAMPLE_MS = 120_000;
+
+/**
+ * Wall-vs-monotonic disagreement above this means the environment was
+ * interrupted (sleep/suspension) during the run.
+ */
+export const CLOCK_DRIFT_TOLERANCE_MS = 5_000;
+
+/** Max/median ratio above which a slow row's worst sample is suspect. */
+const SUSPECT_SPREAD_RATIO = 20;
+
+/** A suspect worst sample must also be absolutely slow to matter. */
+const SUSPECT_SAMPLE_MS = 5_000;
+
+/**
+ * Assess a run's validity: environmental interruption (the two clocks
+ * disagree), implausible single samples, and stall-shaped outliers.
+ * Pure over its inputs so the rules are testable without a real run.
+ */
+export function assessValidity(
+  rows: readonly BenchRow[],
+  clock: ClockCheck,
+): RunValidity {
+  const findings: string[] = [];
+  const wall = clock.wallEndMs - clock.wallStartMs;
+  const mono = clock.monoEndMs - clock.monoStartMs;
+  const drift = Math.abs(wall - mono);
+  if (drift > CLOCK_DRIFT_TOLERANCE_MS) {
+    findings.push(
+      `environment interruption: wall clock and monotonic clock disagree by ` +
+        `${(drift / 1000).toFixed(1)} s over the run (sleep or suspension?)`,
+    );
+  }
+  for (const row of rows) {
+    if (row.status !== 'measured' || row.summary === null) continue;
+    const key = `${row.boundary}/${row.label} [${row.workloadId}]`;
+    if (row.summary.max > IMPLAUSIBLE_SAMPLE_MS) {
+      findings.push(
+        `${key}: worst sample ${row.summary.max.toFixed(0)} ms exceeds the ` +
+          `${String(IMPLAUSIBLE_SAMPLE_MS)} ms plausibility ceiling`,
+      );
+    } else if (
+      row.summary.max > SUSPECT_SAMPLE_MS &&
+      row.summary.max / Math.max(row.summary.median, 1e-9) > SUSPECT_SPREAD_RATIO
+    ) {
+      findings.push(
+        `${key}: worst sample ${row.summary.max.toFixed(0)} ms is ` +
+          `${(row.summary.max / Math.max(row.summary.median, 1e-9)).toFixed(0)}× its ` +
+          `median — possible stall or machine contention`,
+      );
+    }
+  }
+  return { tainted: findings.length > 0, findings };
+}
+
+/** A complete run: schema + contract + identity + validity + every row. */
 export interface BenchReport {
   schemaVersion: number;
   boundaryVersion: string;
   startedAt: string;
   build: BuildIdentity;
   environment: EnvironmentIdentity;
+  /** Additive in bv2; absent from bv1-era reports (schema still 1). */
+  validity: RunValidity;
   rows: BenchRow[];
 }
 
@@ -224,6 +309,7 @@ export function buildReport(
     startedAt: string;
     build: BuildIdentity;
     environment: EnvironmentIdentity;
+    validity: RunValidity;
   },
   rows: BenchRow[],
 ): BenchReport {
@@ -233,6 +319,7 @@ export function buildReport(
     startedAt: meta.startedAt,
     build: meta.build,
     environment: meta.environment,
+    validity: meta.validity,
     rows,
   };
 }
@@ -258,6 +345,10 @@ export function formatReport(report: BenchReport): string {
       `${report.environment.cpuModel} · ${report.environment.runtime} ` +
       `${report.environment.runtimeVersion}`,
   ];
+  if (report.validity.tainted) {
+    lines.push(`  TAINTED RUN — not evidence; re-run in a controlled session:`);
+    for (const finding of report.validity.findings) lines.push(`    - ${finding}`);
+  }
   for (const row of report.rows) {
     const head = `${row.boundary}/${row.label} [${row.workloadId}]`;
     if (row.summary === null) {

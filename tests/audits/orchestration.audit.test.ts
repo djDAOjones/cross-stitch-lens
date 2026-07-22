@@ -34,8 +34,8 @@ import {
 } from './audit.ts';
 
 /** The two matrix rows the budget table binds to. */
-const W1024 = 'noise.w1280.opaque.g1024.p64.lab.dither.resize-first.stretch.still';
-const W200 = 'noise.w1280.opaque.g200.p64.lab.dither.resize-first.stretch.still';
+const W1024 = 'noise.w1280.opaque.g1024.p64.lab.fs-s100-serp.resize-first.stretch.still';
+const W200 = 'noise.w1280.opaque.g200.p64.lab.fs-s100-serp.resize-first.stretch.still';
 
 /** Wall time of one warm pipeline run, for share-of-frame arithmetic. */
 function pipelineMs(workloadId: string): number {
@@ -141,7 +141,7 @@ describe.skipIf(!AUDIT)('M5-PERF-10 orchestration audit (AUDIT=1)', () => {
 
   it('measures the noUncheckedIndexedAccess read tax', () => {
     const source = sourceBuffer(workloadById(W1024));
-    const grid = sourceBuffer(workloadById('noise.grid.opaque.g1024.p64.lab.dither.resize-first.stretch.still'));
+    const grid = sourceBuffer(workloadById('noise.grid.opaque.g1024.p64.lab.fs-s100-serp.resize-first.stretch.still'));
     for (const [name, buffer] of [
       ['1280² source', source],
       ['1024² grid', grid],

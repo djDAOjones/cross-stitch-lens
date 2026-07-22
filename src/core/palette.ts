@@ -11,8 +11,8 @@ import { loadCatalogue, threadsForBrands } from './thread-catalogue.ts';
 import type { Palette, Thread } from './types.ts';
 
 /**
- * The built-in DMC palette (533 threads from the owner thread map) —
- * the default single-brand palette and the one every pre-M7 project
+ * The built-in DMC palette (the catalogue's 489 DMC threads) — the
+ * default single-brand palette and the one every pre-M7 project
  * file names.
  */
 export function loadDmcPalette(): Palette {

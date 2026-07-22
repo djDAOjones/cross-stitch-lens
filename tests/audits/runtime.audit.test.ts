@@ -33,8 +33,8 @@ import {
   type AuditRow,
 } from './audit.ts';
 
-const W300 = 'noise.w1280.opaque.g300.p64.lab.dither.resize-first.stretch.still';
-const W1024 = 'noise.w1280.opaque.g1024.p64.lab.dither.resize-first.stretch.still';
+const W300 = 'noise.w1280.opaque.g300.p64.lab.fs-s100-serp.resize-first.stretch.still';
+const W1024 = 'noise.w1280.opaque.g1024.p64.lab.fs-s100-serp.resize-first.stretch.still';
 
 /** Area-average a source down to DIRTY_SAMPLE², as the sampler does. */
 function downsample(source: PixelBuffer): Uint8ClampedArray {

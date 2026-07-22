@@ -8,11 +8,14 @@ numbers into project memory.
 Moved out of `pm_skills/project/tickets/M5-PERF.md` when the M5-PERF item
 shipped (2026-07-20, D47) — the item closed but its evidence is still
 load-bearing for M5D/M5F. Sibling references: `docs/measurement-contract.md`
-(boundary contract bv1, workload matrix, report schema) and
+(boundary contract — now bv2, workload matrix, report schema) and
 `docs/browser-measurement.md` (the browser-only procedure).
 
 Re-measure with `npm run bench` (budgets) or `npm run audit` (component
 audits); compare only against reports carrying the same boundary version.
+**The comparison base is now bv2** — see "bv2 re-baseline" at the end of
+this document; the M5-era sections above it are bv1 history and must not
+be diffed against bv2 reports.
 
 **Superseded content has been removed**, not archived: the pre-M5B
 "Leads by component" (every lead was verified or overturned — read the
@@ -470,3 +473,60 @@ today's path. That buys real browser-side time at the ceiling grid but
 makes the product's core spatial reduction visibly wrong in its default
 mode, and reinstates the full mode cost: 3× parity matrix, per-mode
 fixtures, project-file enum + migration, UI control, ACCEPT-02 sign-off.
+
+---
+
+## bv2 re-baseline (M13-MEAS-01, 2026-07-22, D64)
+
+Everything above this line is **bv1 evidence** — still load-bearing as
+history, no longer the comparison base. bv2 re-baselined the node
+matrix for the shipped M7/M8 product: the dither axis became the
+engine's `DitherConfig` union (bv1's `dither` token only ever meant
+Floyd–Steinberg/serpentine/strength 1), `p533` was renamed to the
+truthful `p489`, every shipped M8 method gained mandatory rows at 300²
+and 1024², and reports now carry a run-validity verdict. Grammar and
+rules: `docs/measurement-contract.md`.
+
+Recorded run: build `v0.5.0+20260722.33d021b`, node 24.5.0, Apple
+M1 Max, macOS (darwin 25.5.0), wasm built, untainted, 150 rows
+(`bench-reports/bench-v0.5.0_20260722.33d021b.json` — regenerable,
+gitignored; medians quoted below).
+
+### bv1 → bv2 continuity (same rows, renamed IDs)
+
+| Row | bv1 baseline (2026-07-20) | bv2 (2026-07-22) | Drift |
+| --- | --- | --- | --- |
+| resize 1280→1024 (ts) | 24.4 ms | 24.5 ms | none |
+| reduce LUT 1024²/64 | 12.4 ms | 13.5 ms | +9% |
+| dither FS 1024²/64 (ts) | 231.9 ms | 296.7 ms | **+28%** |
+| whole pipeline 1024² | 256.3 ms | 321.4 ms | **+25%** |
+| whole pipeline 200² | 17.0 ms | 19.8 ms | +16% |
+
+**The FS drift is the run's headline finding.** All rows stayed inside
+the ×1.35 regression guard — D62's flat-kernel fix restored *tolerance*
+after the 2.3× kernel-as-tuples regression, not parity — but the
+1024² dither row has quietly absorbed ~65 ms since the pre-M8 baseline.
+Decomposing where (M8 union dispatch, kernel generalisation, machine
+state) is M13-PROF-01's job; the bv2 baselines record today's truth
+rather than hiding it behind a green guard.
+
+### New bv2 coverage (no prior baseline exists)
+
+Per-method dither at 1024²/p64/lab, all TS (the crate implements only
+FS at strength 1 — D62): Atkinson 337.9 ms, Jarvis 331.5 ms, ordered
+290.8 ms, blue-noise 289.8 ms. D61's "within ~10–20% of no-dither"
+held at 300² with pruning; at 1024² every method lands within ±14% of
+FS — the palette scan dominates, and no method is an outlier.
+
+Whole pipeline at 300² (the product-promise grid): 37.0 ms — a node
+component baseline, not a proxy for the in-browser ≥ 4 updates/sec
+promise (that stays with `bench.html` and M13-MEAS-02).
+
+Cold preparation (previously unpublished beyond LUT builds):
+candidate-table build 27.3 ms (p64) / 179.8 ms (p489) /
+**3,295.7 ms (pfull — the 3,338-thread eight-brand union)**; LUT build
+8.8 / 37.2 / 206.4 ms on the same palettes (lab); threshold-tile first
+use: Bayer 8×8 0.02 ms, blue-noise 32×32 generation 12.1 ms. The pfull
+candidate table is the standout: a user enabling every brand pays ~3.5 s
+of preparation on first dithered use — M13-PROF-02 owns whether that
+path is reachable enough to matter.

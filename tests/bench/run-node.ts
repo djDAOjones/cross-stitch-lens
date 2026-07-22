@@ -1,6 +1,7 @@
 /**
- * Node matrix runner: executes the M5-PERF-01 workload matrix under the
- * M5-PERF-02 boundaries and returns M5-PERF-03 report rows.
+ * Node matrix runner: executes the bv2 workload matrix under the
+ * boundary contract and returns report rows (M13-MEAS-01; the shape is
+ * M5-PERF-01/02/03's, re-baselined for the shipped M7/M8 product).
  *
  * The bias this file exists to remove (M5-PERF-02 lead): the previous
  * benchmark constructed its request — a ~6.5 MB `data.slice()` plus a
@@ -13,8 +14,15 @@
  * work and is measured in situ rather than in an artificial harness.
  */
 
+import { buildCandidateTable } from '../../src/core/color/candidates.ts';
+import type { Palette } from '../../src/core/types.ts';
 import { buildStages } from '../../src/core/pipeline/config.ts';
 import { ditherStage } from '../../src/core/pipeline/dither.ts';
+import {
+  bayerTile,
+  BLUE_NOISE_SEED,
+  blueNoiseTile,
+} from '../../src/core/pipeline/threshold-tiles.ts';
 import type { Backend } from '../../src/core/types.ts';
 import { clearLutCache, getLut } from '../../src/worker/lut-cache.ts';
 import { executeRequest } from '../../src/worker/execute.ts';
@@ -25,6 +33,7 @@ import { measuredRow, skippedRow, type BenchRow } from './report.ts';
 import {
   configFor,
   paletteFor,
+  paletteFull,
   sourceBuffer,
   WORKLOADS,
   type Workload,
@@ -62,9 +71,19 @@ export interface Baseline {
   tolerance: number;
 }
 
-/** Node baselines, re-taken 2026-07-20 after the M5D wins landed. */
+/**
+ * Node baselines, re-taken 2026-07-22 under the bv2 matrix
+ * (M13-MEAS-01, decision-log D64). The bv1-era rows drifted since
+ * their pre-M8 2026-07-20 figures — most visibly Floyd–Steinberg at
+ * 1024²/p64: 231.9 → 296.7 ms (+28%, inside the ×1.35 guard; D62's
+ * flat-kernel fix restored tolerance, not parity). The drift is
+ * recorded, not hidden: the bv1→bv2 comparison table lives in
+ * docs/performance-evidence.md, and decomposing the cause is
+ * M13-PROF-01's job. The 300² pipeline row and the per-method dither
+ * rows are new bv2 coverage.
+ */
 const NODE = 'node 24.5, Apple M1 Max';
-const TAKEN = 'v0.5.0+20260720.89046be';
+const TAKEN = 'v0.5.0+20260722.33d021b';
 
 /**
  * Measured baselines mapped onto specific matrix rows. A baseline
@@ -74,40 +93,67 @@ const TAKEN = 'v0.5.0+20260720.89046be';
  * The product promise — **≥ 4 preview updates/sec at ≤ 300²** — is
  * deliberately NOT here: it is defined at the in-browser preview-update
  * boundary, and node cannot measure it. Asserting a node proxy for it
- * would be green-washing a promise about a different runtime. It is
- * owned by `bench.html` (`docs/browser-measurement.md`) and confirmed
- * live at M5-ACCEPT-03.
+ * would be green-washing a promise about a different runtime. The
+ * explicit 300² rows below are component baselines on the node runtime,
+ * not proxies for the promise. It is owned by `bench.html`
+ * (`docs/browser-measurement.md`) and the browser harness (M13-MEAS-02).
  */
 export const BUDGETS: ReadonlyMap<string, Baseline> = new Map([
   // Resize 1280² → 1024² grid. Was an aspirational 5 ms; no bit-exact
   // CPU path reaches it (M5B), and the hoist got it to ~24 ms (D47).
   [
-    'noise.w1280.opaque.g1024.p64.lab.dither.resize-first.stretch.still|stage|resize',
-    { ms: 24.4, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
+    'noise.w1280.opaque.g1024.p64.lab.fs-s100-serp.resize-first.stretch.still|stage|resize',
+    { ms: 24.5, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
   ],
   // Palette reduce via LUT at 1024²/64 — memory-bound per-pixel
   // mapping; the old 10 ms row was never met.
   [
     'noise.w1280.opaque.g1024.p64.lab.nodither.resize-first.stretch.still|stage|reduce',
-    { ms: 12.4, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
+    { ms: 13.5, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
   ],
-  // Floyd–Steinberg at 1024²/64, lab. The old 15 ms row assumed the
-  // wasm backend; routing now sends lab to TS (M5-PERF-27), and the
-  // bit-exact wins took this from ~858 ms to ~232 ms.
+  // Floyd–Steinberg at 1024²/64, lab. Routing sends lab to TS
+  // (M5-PERF-27); the +28% drift from the pre-M8 232 ms is the D64
+  // finding above.
   [
-    'noise.w1280.opaque.g1024.p64.lab.dither.resize-first.stretch.still|stage|dither',
-    { ms: 231.9, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
+    'noise.w1280.opaque.g1024.p64.lab.fs-s100-serp.resize-first.stretch.still|stage|dither',
+    { ms: 296.7, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
   ],
   // Whole pipeline at the 1024² ceiling — an export/finishing grid,
   // stated plainly as such (D47), not a live-editing grid.
   [
-    'noise.w1280.opaque.g1024.p64.lab.dither.resize-first.stretch.still|pipeline-compute|pipeline',
-    { ms: 256.3, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
+    'noise.w1280.opaque.g1024.p64.lab.fs-s100-serp.resize-first.stretch.still|pipeline-compute|pipeline',
+    { ms: 321.4, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
   ],
   // Whole pipeline at the typical 200² grid.
   [
-    'noise.w1280.opaque.g200.p64.lab.dither.resize-first.stretch.still|pipeline-compute|pipeline',
-    { ms: 17.0, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
+    'noise.w1280.opaque.g200.p64.lab.fs-s100-serp.resize-first.stretch.still|pipeline-compute|pipeline',
+    { ms: 19.8, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
+  ],
+  // Whole pipeline at 300² — the grid the product promise binds at,
+  // as a node component baseline (new in bv2; M13-MEAS-01).
+  [
+    'noise.w1280.opaque.g300.p64.lab.fs-s100-serp.resize-first.stretch.still|pipeline-compute|pipeline',
+    { ms: 37.0, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
+  ],
+  // The four M8 methods at 1024²/p64 (new in bv2): each shipped
+  // method carries its own regression guard, so none can regress
+  // silently behind the FS row. All run the TS reference — the Rust
+  // crate implements only FS at strength 1 (D62).
+  [
+    'noise.w1280.opaque.g1024.p64.lab.atkinson-s100-serp.resize-first.stretch.still|stage|dither',
+    { ms: 337.9, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
+  ],
+  [
+    'noise.w1280.opaque.g1024.p64.lab.jarvis-s100-serp.resize-first.stretch.still|stage|dither',
+    { ms: 331.5, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
+  ],
+  [
+    'noise.w1280.opaque.g1024.p64.lab.ordered-s100.resize-first.stretch.still|stage|dither',
+    { ms: 290.8, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
+  ],
+  [
+    'noise.w1280.opaque.g1024.p64.lab.bluenoise-s100.resize-first.stretch.still|stage|dither',
+    { ms: 289.8, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
   ],
 ]);
 
@@ -133,8 +179,9 @@ function budgetFor(
 function expectedMs(workload: Workload): number {
   const cells = workload.grid * workload.grid;
   const paletteSize =
-    workload.palette === 'p533' ? 533 : workload.palette === 'p64' ? 64 : 1;
-  const perCell = workload.dither ? paletteSize * 4e-7 : paletteSize * 2e-8;
+    workload.palette === 'p489' ? 489 : workload.palette === 'p64' ? 64 : 1;
+  const perCell =
+    workload.dither.algorithm !== 'none' ? paletteSize * 4e-7 : paletteSize * 2e-8;
   return (cells * perCell) / 1000 + cells * 2e-5;
 }
 
@@ -226,9 +273,10 @@ function runWorkload(workload: Workload, options: MatrixOptions): BenchRow[] {
         'pipeline',
         options.budgetMultiplier,
       ),
+      // The identity-adjust clone bv1 listed here was removed from
+      // built pipelines by D48; listing it was stale evidence.
       allocations: [
         { label: 'source buffer', bytes: source.data.byteLength },
-        { label: 'adjust clone (identity)', bytes: source.data.byteLength },
         { label: 'grid output', bytes: outputBytes },
       ],
     }),
@@ -252,20 +300,38 @@ function runWorkload(workload: Workload, options: MatrixOptions): BenchRow[] {
 }
 
 /**
- * Cold-cache LUT build cost, measured once per palette+metric rather
- * than per workload (the LUT does not depend on the grid). Reported as
- * its own row: budgets bind to warm steady state, so a cache miss must
- * never be averaged into — or hidden behind — a warm median.
+ * Pseudo-ID for a preparation-stress row whose palette is deliberately
+ * not a pipeline workload (the full catalogue union). The `prep.`
+ * prefix cannot collide with matrix IDs — every real ID starts with a
+ * source class — and the grammar is documented in
+ * `docs/measurement-contract.md`.
+ */
+function prepId(palette: string, metric: string): string {
+  return `prep.${palette}.${metric}`;
+}
+
+/**
+ * Cold-cache preparation costs (M13-MEAS-01): LUT builds, candidate-
+ * table builds and threshold-tile generation, each measured once per
+ * distinct input rather than per workload (none depends on the grid).
+ * Reported as their own rows: budgets bind to warm steady state, so a
+ * cache miss must never be averaged into — or hidden behind — a warm
+ * median. bv1 published only the LUT builds; the candidate table is
+ * 20–35× a LUT's size and the M8 tiles never appeared at all.
  */
 function coldPrepareRows(): BenchRow[] {
-  const seen = new Set<string>();
   const rows: BenchRow[] = [];
+  const coldPlan = { warmup: 0, runs: 3 };
+
+  // LUT builds: one per palette+metric pair the matrix reaches through
+  // the LUT path, attached to a real workload ID.
+  const seenLut = new Set<string>();
   for (const workload of WORKLOADS) {
     const palette = paletteFor(workload);
-    if (palette === null || workload.dither) continue;
+    if (palette === null || workload.dither.algorithm !== 'none') continue;
     const key = `${palette.name}:${workload.metric}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
+    if (seenLut.has(key)) continue;
+    seenLut.add(key);
     rows.push(
       measuredRow({
         workloadId: workload.id,
@@ -273,16 +339,95 @@ function coldPrepareRows(): BenchRow[] {
         label: `lut-build (${key})`,
         cache: 'cold',
         warmupRuns: 0,
-        samples: measure(
-          () => {
-            clearLutCache();
-            getLut(palette, workload.metric);
-          },
-          { warmup: 0, runs: 3 },
-        ),
+        samples: measure(() => {
+          clearLutCache();
+          getLut(palette, workload.metric);
+        }, coldPlan),
       }),
     );
   }
+
+  // Candidate-table builds (lab-only pruning structure): one per
+  // distinct palette the dithered lab rows use.
+  const seenCandidates = new Set<string>();
+  for (const workload of WORKLOADS) {
+    const palette = paletteFor(workload);
+    if (palette === null) continue;
+    if (workload.dither.algorithm === 'none' || workload.metric !== 'lab') continue;
+    if (seenCandidates.has(palette.name)) continue;
+    seenCandidates.add(palette.name);
+    rows.push(
+      measuredRow({
+        workloadId: workload.id,
+        boundary: 'prepare',
+        label: `candidate-table (${palette.name})`,
+        cache: 'cold',
+        warmupRuns: 0,
+        samples: measure(() => buildCandidateTable(palette), coldPlan),
+      }),
+    );
+  }
+
+  // Full-catalogue preparation stress (3,338 threads, eight brands):
+  // the worst palette a user can construct, measured for preparation
+  // only — it is deliberately not a pipeline workload (see workloads.ts).
+  const full: Palette = paletteFull();
+  rows.push(
+    measuredRow({
+      workloadId: prepId('pfull', 'lab'),
+      boundary: 'prepare',
+      label: `lut-build (${full.name}:lab)`,
+      cache: 'cold',
+      warmupRuns: 0,
+      samples: measure(() => {
+        clearLutCache();
+        getLut(full, 'lab');
+      }, coldPlan),
+    }),
+    measuredRow({
+      workloadId: prepId('pfull', 'lab'),
+      boundary: 'prepare',
+      label: `candidate-table (${full.name})`,
+      cache: 'cold',
+      warmupRuns: 0,
+      samples: measure(() => buildCandidateTable(full), coldPlan),
+    }),
+  );
+
+  // M8 threshold-tile first use: the pure builders, so the cost is
+  // measured without reaching into the module-level memo. Attached to
+  // the 300² method rows that consume each tile.
+  const orderedRow = WORKLOADS.find(
+    (w) => w.dither.algorithm === 'ordered' && w.grid === 300,
+  );
+  const blueNoiseRow = WORKLOADS.find(
+    (w) => w.dither.algorithm === 'blue-noise' && w.grid === 300,
+  );
+  if (orderedRow !== undefined) {
+    rows.push(
+      measuredRow({
+        workloadId: orderedRow.id,
+        boundary: 'prepare',
+        label: 'threshold-tile (bayer 8×8)',
+        cache: 'cold',
+        warmupRuns: 0,
+        samples: measure(() => bayerTile(8), coldPlan),
+      }),
+    );
+  }
+  if (blueNoiseRow !== undefined) {
+    rows.push(
+      measuredRow({
+        workloadId: blueNoiseRow.id,
+        boundary: 'prepare',
+        label: `threshold-tile (blue-noise 32×32, seed 0x${BLUE_NOISE_SEED.toString(16)})`,
+        cache: 'cold',
+        warmupRuns: 0,
+        samples: measure(() => blueNoiseTile(32, BLUE_NOISE_SEED), coldPlan),
+      }),
+    );
+  }
+
   clearLutCache();
   return rows;
 }

@@ -32,7 +32,7 @@ import {
 
 function gridBuffer(grid: number): PixelBuffer {
   const source = sourceBuffer(
-    workloadById('noise.w1280.opaque.g1024.p64.lab.dither.resize-first.stretch.still'),
+    workloadById('noise.w1280.opaque.g1024.p64.lab.fs-s100-serp.resize-first.stretch.still'),
   );
   return resizeStage.backends.ts(source, { width: grid, height: grid, mode: 'stretch' });
 }

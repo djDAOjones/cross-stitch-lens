@@ -1,19 +1,27 @@
-# Measurement contract (M5)
+# Measurement contract (bv2)
 
 What every Cross Stitch Lens performance number means, what it is taken
-over, and how to reproduce it. Written for M5A (`M5-PERF-01/02/03`);
-every later M5 claim — audits, optimisations, the M5C decision gate —
-cites this document.
+over, and how to reproduce it. Written for M5A (`M5-PERF-01/02/03`) as
+bv1; revised to **bv2** by M13-MEAS-01 for the shipped M7/M8 product.
+Every later performance claim — audits, optimisations, the M13
+synthesis gate — cites this document.
 
 The rule this exists to enforce: **a timing without its boundary and
 its workload is not evidence.** Moving a start mark changes whether a
 budget passes without changing the product; testing one friendly image
 makes a regression look like a win.
 
-- Contract version: **bv1** (`tests/bench/boundaries.ts`)
-- Report schema version: **1** (`tests/bench/report.ts`)
+- Contract version: **bv2** (`tests/bench/boundaries.ts`)
+- Report schema version: **1** (`tests/bench/report.ts` — bv2 only adds
+  the `validity` block, so the shape stays backwards-compatible)
 - Reports from different contract versions are **not comparable** and
-  must not be diffed.
+  must not be diffed. **bv1 reports in particular must not be diffed
+  against bv2 reports**: the six boundary marks are unchanged, but the
+  workload IDs changed meaning — bv1's `dither` token silently meant
+  Floyd–Steinberg/serpentine/strength 1, and its `p533` axis named a
+  palette size the catalogue never had (the built-in DMC palette has
+  489 threads). The bv1 grammar and its recorded baseline stay
+  documented in `docs/performance-evidence.md`.
 
 ---
 
@@ -97,7 +105,7 @@ before bv1 are not comparable with numbers after it.
 
 ---
 
-## 2. Workload matrix (M5-PERF-01)
+## 2. Workload matrix (bv2 — M13-MEAS-01)
 
 Defined in `tests/bench/workloads.ts`. Every row has a derived, stable,
 unique ID; a report row is comparable across machines only through it.
@@ -109,33 +117,66 @@ unique ID; a report row is comparable across machines only through it.
 ```
 
 Example:
-`noise.w1280.opaque.g1024.p64.lab.dither.resize-first.stretch.still`
+`noise.w1280.opaque.g1024.p64.lab.fs-s100-serp.resize-first.stretch.still`
+
+The `<dither>` token names the method **and every cost-relevant
+setting** — a method name alone is not an identity, and two executable
+configs must never share an ID:
+
+```text
+nodither | <method>-s<pct>[-serp|-raster]
+```
+
+- `method` ∈ `fs`, `atkinson`, `jarvis`, `ordered`, `bluenoise`.
+- `s<pct>` is strength as whole percent, zero-padded to three digits
+  (`s050`, `s100`, `s150`) — the ID is dot-separated, so a fractional
+  strength must not inject a `.`; percent granularity is part of the
+  contract and the frozen matrix only uses exact percents.
+- `-serp`/`-raster` appears only for diffusion methods, where a scan
+  direction exists; threshold methods carry no direction token.
 
 `metric` and `dither` are inert for `rgb` (full-RGB) rows; they stay in
 the ID so the grammar is uniform and IDs never collide.
+
+Preparation-stress rows whose palette is deliberately not a pipeline
+workload use the pseudo-ID form `prep.<palette>.<metric>` (currently
+only `prep.pfull.lab`); the `prep.` prefix cannot collide with matrix
+IDs because every real ID starts with a source class.
 
 ### Axes
 
 | Axis | Values | Why it is in the matrix |
 | --- | --- | --- |
 | `source` | `noise`, `gradient`, `flat` | worst-case variation; the content dithering is judged on; cache and dirty-skip behaviour |
-| `sourceSize` | `grid`, `w1280`, `crop` | source-resolution work (resize, the identity adjust clone) scales with the source, not the grid |
+| `sourceSize` | `grid`, `w1280`, `crop` | source-resolution work (resize) scales with the source, not the grid |
 | `alpha` | `opaque`, `mixed` | alpha edges change resize and dither behaviour at empty cells |
-| `grid` | 200, 300, 1024 | the typical grid, the stated interactive ceiling, the maximum |
-| `palette` | `p64`, `p533`, `rgb` | the budget palette, the full built-in DMC set, and no colour stage at all |
+| `grid` | 200, 300, 1024 | the typical grid, the product-promise grid, the maximum |
+| `palette` | `p64`, `p489`, `rgb` | the budget palette, the actual built-in DMC set (489 threads — bv1's `p533` was a count the catalogue never had), and no colour stage at all |
 | `metric` | `lab`, `rgb` | isolates the per-pixel transcendental load |
-| `dither` | on, off | dither and reduce are different quantisers, not a flag on one |
+| `dither` | the engine's `DitherConfig` union | every shipped method and setting is expressible; bv1's Boolean could only mean pre-M8 Floyd–Steinberg |
 | `order` | `resize-first`, `reduce-first` | the §7 order comparison; colour work at source resolution |
 | `resizeMode` | `stretch`, `contain`, `cover`, `fit` | letterboxing, crop overflow, and the never-enlarge path |
 | `path` | `still`, `live` | first-frame versus steady-state cost |
 
-### Mandatory core
+### Mandatory blocks
 
-Grid × palette size × dither, under core defaults (`noise`, `w1280`,
-`opaque`, `lab`, `resize-first`, `stretch`, `still`) — 12 rows. This
-block must never lose a cell; `tests/bench-matrix.test.ts` fails if it
-does. Everything else is a targeted expansion moving one axis off core,
-and each carries a `note` saying why it earns its place.
+Two blocks must never lose a cell (`tests/bench-matrix.test.ts` fails
+if they do):
+
+1. **Core cross-product** — grid × palette size × {no-dither,
+   Floyd–Steinberg default}, under core defaults (`noise`, `w1280`,
+   `opaque`, `lab`, `resize-first`, `stretch`, `still`) — 12 rows,
+   bv1's block kept for continuity.
+2. **Method block** — every shipped M8 method (`atkinson`, `jarvis`,
+   `ordered`, `bluenoise`) at its D61 defaults, at 300² (the
+   product-promise grid) and 1024² (the export ceiling), p64 — 8 rows.
+   bv1 had no coverage of these methods at all (D62 deferred the
+   extension to this boundary bump).
+
+Everything else is a targeted expansion moving one axis off core, and
+each carries a `note` saying why it earns its place — including one row
+each for non-default strength (`fs-s050-serp`, `ordered-s150`) and
+raster scan (`fs-s100-raster`).
 
 ### Deliberate exclusions
 
@@ -144,12 +185,29 @@ and each carries a `note` saying why it earns its place.
   class does not interact with resize mode. One axis is moved at a time.
 - **Non-square grids.** The grid axis is square-only; a non-square grid
   changes cell count, which the 200/300/1024 axis already covers.
-- **`p533` expansions.** Palette size is exercised across the whole core
+- **`p489` expansions.** Palette size is exercised across the whole core
   block; repeating it on every expansion multiplies runtime without
   adding a distinct risk.
+- **Method × palette-size cross-product.** Method cost scales with the
+  same palette scan the FS rows already exercise across p64/p489; a
+  per-method p489 block multiplies the slowest rows without a distinct
+  risk.
+- **A full-catalogue pipeline row.** The eight-brand union (3,338
+  threads, `paletteFull()`) is the justified multi-brand *preparation*
+  stress — cold LUT and candidate-table builds only. A per-frame
+  pipeline row over the whole catalogue is an exact-scan of every
+  thread a user could ever enable and measures no product path.
 - **WebGPU stage rows.** The mapping kernel is not routed by the
-  executor yet (D41); only the GPU LUT build is reachable, and it is
-  covered by the cold `prepare` row.
+  executor (D41, declined again at D48); only the GPU LUT build is
+  reachable, and it is covered by the cold `prepare` row.
+
+### Timing versus perceptual palettes
+
+`palette64()` (the first 64 DMC threads) is a **performance** palette:
+stable, cheap, representative of scan cost. It is not the colour-spread
+palette perceptual comparisons need — D61's first quality run drowned
+in its −16 L\* coverage bias — so quality work must use a named spread
+palette instead, and neither may be mistaken for the other.
 
 ---
 
@@ -168,11 +226,45 @@ Every report records:
   was built;
 - environment — runtime and version, OS, arch, CPU model and count,
   memory, CI flag, budget multiplier;
+- a **run-validity verdict** (bv2 — see below);
 - per row — workload ID, boundary, label, backend actually used, cache
   state, warm-up count, **raw samples**, and a summary of
   count/min/median/p90/p95/max/mean/stdDev/relative spread;
 - countable allocations where known (typed-array byte lengths), not GC
   guesses.
+
+### Cold preparation rows (extended in bv2)
+
+Cold costs are published as their own `prepare` rows, never averaged
+into a warm median: LUT builds per palette+metric pair the matrix
+reaches, **candidate-table builds** per lab palette (the pruning
+structure is 20–35× a LUT's size and bv1 never published its build),
+the **threshold-tile first use** (Bayer 8×8 and the blue-noise 32×32
+void-and-cluster generation, via the pure builders), and the
+full-catalogue preparation stress under `prep.pfull.lab`. Deeper
+palette-change-path profiling (policy/selection, cache switching
+patterns) is M13-PROF-02's scope.
+
+### Run validity (bv2 — M13-MEAS-01)
+
+A research run at `e703ed4` carried a single ~5.8-million-ms sample —
+sleep, suspension, contention or a stall, never established. bv2
+therefore assesses every run (`assessValidity` in
+`tests/bench/report.ts`) and stamps the verdict into the report:
+
+- **Environment interruption** — wall clock (`Date.now`) and monotonic
+  clock (`performance.now`) bracket the run; disagreement beyond 5 s
+  means the machine slept or was suspended mid-run.
+- **Implausible samples** — any single sample over 120 s is beyond what
+  any legitimate matrix row can cost.
+- **Stall-shaped outliers** — a worst sample over 5 s that is also
+  \>20× its row median points at contention.
+
+A finding marks the run **tainted** and fails the bench loudly with the
+findings listed. Samples are never deleted and the report is written
+before the assertions run — a tainted run is classified evidence of an
+invalid session, not evidence about the code. Re-run in a controlled
+session.
 
 Two invariants the schema enforces, both covered by
 `tests/bench-report.test.ts`:
@@ -198,20 +290,33 @@ nature, and a machine-variance failure must never block the gate. The
 deterministic parts — matrix coverage, percentile math, warm-up
 exclusion, schema round-trip — do run in the gate.
 
-### Budget bindings
+### Budget bindings (bv2 baselines, 2026-07-22)
 
 Budgets attach to one workload at one boundary (`BUDGETS` in
 `tests/bench/run-node.ts`). An unattached budget number is exactly the
-ambiguity this contract removes.
+ambiguity this contract removes. Since D47 these are **measured
+baselines with a ×1.35 regression guard**, not aspirational targets;
+the figures below were re-taken under bv2 on 2026-07-22 (node 24.5,
+Apple M1 Max, build `v0.5.0+20260722.33d021b` — D64, with the bv1→bv2
+comparison in `docs/performance-evidence.md`). Product-target choices
+wait for M13-SYNTH-01; committed rebinding waits for M13-IMPL-02.
 
-| Budget | Bound to |
+Core defaults elided from the IDs below:
+`noise.w1280.opaque.…lab….resize-first.stretch.still`.
+
+| Baseline | Bound to |
 | --- | --- |
-| Resize ≤ 5 ms | `stage`/`resize` on `noise.w1280.opaque.g1024.p64.lab.dither.resize-first.stretch.still` |
-| Reduce via LUT ≤ 10 ms | `stage`/`reduce` on the same workload with `nodither` |
-| Floyd–Steinberg ≤ 15 ms | `stage`/`dither` on the `dither` workload |
-| Whole pipeline ≤ 100 ms | `pipeline-compute` on the 1024 `dither` workload |
-| Whole pipeline ≤ 10 ms | `pipeline-compute` on the 200 `dither` workload |
-| Preview render ≤ 5 ms | not node-measurable — browser rehearsal below |
+| Resize 24.5 ms | `stage`/`resize` on `g1024.p64` `fs-s100-serp` |
+| Reduce via LUT 13.5 ms | `stage`/`reduce` on `g1024.p64` `nodither` |
+| Floyd–Steinberg 296.7 ms | `stage`/`dither` on `g1024.p64` `fs-s100-serp` |
+| Atkinson 337.9 ms | `stage`/`dither` on `g1024.p64` `atkinson-s100-serp` |
+| Jarvis 331.5 ms | `stage`/`dither` on `g1024.p64` `jarvis-s100-serp` |
+| Ordered 290.8 ms | `stage`/`dither` on `g1024.p64` `ordered-s100` |
+| Blue-noise 289.8 ms | `stage`/`dither` on `g1024.p64` `bluenoise-s100` |
+| Whole pipeline 321.4 ms | `pipeline-compute` on the 1024² `fs-s100-serp` workload |
+| Whole pipeline 37.0 ms | `pipeline-compute` on the 300² `fs-s100-serp` workload (new in bv2 — the grid the product promise binds at, as a node component baseline, **not** a proxy for the in-browser promise) |
+| Whole pipeline 19.8 ms | `pipeline-compute` on the 200² `fs-s100-serp` workload |
+| Preview render | not node-measurable — browser rehearsal below |
 
 Budgets stretch ×3 under `CI=true`. The multiplier is recorded in the
 report, so a CI number is never mistaken for a local one.

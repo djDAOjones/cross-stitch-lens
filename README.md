@@ -17,8 +17,9 @@ WebGPU as profiled drop-in backends.
 
 ## Status
 
-Pre-MVP. Work is organised into milestones **M0–M12** in
-[`pm_skills/project/backlog.md`](pm_skills/project/backlog.md).
+Pre-MVP. Work is organised into milestones in
+[`pm_skills/project/backlog.md`](pm_skills/project/backlog.md);
+**M13 (visual processing performance)** is the active milestone.
 **M0–M7 have shipped (v0.5.0)**: the quality-gated scaffold, the full
 TypeScript engine core (resize, CIELAB palette reduction, Floyd–
 Steinberg dithering, stats), still-image import, the preview UI —

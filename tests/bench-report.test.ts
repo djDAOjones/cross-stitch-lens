@@ -10,14 +10,18 @@ import { describe, expect, it } from 'vitest';
 import { BOUNDARIES, BOUNDARY_VERSION, measurableOn } from './bench/boundaries.ts';
 import { measure, measureInterleaved, planFor, type Clock } from './bench/harness.ts';
 import {
+  assessValidity,
   buildReport,
+  CLOCK_DRIFT_TOLERANCE_MS,
   formatReport,
+  IMPLAUSIBLE_SAMPLE_MS,
   measuredRow,
   REPORT_SCHEMA_VERSION,
   serialiseReport,
   skippedRow,
   summarise,
   type BuildIdentity,
+  type ClockCheck,
   type EnvironmentIdentity,
 } from './bench/report.ts';
 
@@ -171,6 +175,74 @@ describe('report rows', () => {
   });
 });
 
+describe('run validity (M13-MEAS-01)', () => {
+  /** A clock pair that agrees: no interruption. */
+  const CLEAN_CLOCK: ClockCheck = {
+    wallStartMs: 1_000_000,
+    wallEndMs: 1_060_000,
+    monoStartMs: 500_000,
+    monoEndMs: 560_000,
+  };
+
+  function cleanRow(samples: number[]) {
+    return measuredRow({
+      workloadId: 'w',
+      boundary: 'stage',
+      label: 'dither',
+      warmupRuns: 1,
+      samples,
+    });
+  }
+
+  it('passes a clean run', () => {
+    const validity = assessValidity([cleanRow([10, 11, 12])], CLEAN_CLOCK);
+    expect(validity.tainted).toBe(false);
+    expect(validity.findings).toEqual([]);
+  });
+
+  it('taints a run when the wall and monotonic clocks disagree', () => {
+    const validity = assessValidity([cleanRow([10, 11, 12])], {
+      ...CLEAN_CLOCK,
+      // The wall clock advanced through a sleep the monotonic clock
+      // never saw — the e703ed4 failure shape.
+      wallEndMs: CLEAN_CLOCK.wallEndMs + CLOCK_DRIFT_TOLERANCE_MS + 60_000,
+    });
+    expect(validity.tainted).toBe(true);
+    expect(validity.findings.join(' ')).toMatch(/interruption/);
+  });
+
+  it('taints a run carrying an implausible sample, keeping the sample', () => {
+    const row = cleanRow([12, IMPLAUSIBLE_SAMPLE_MS + 1, 11]);
+    const validity = assessValidity([row], CLEAN_CLOCK);
+    expect(validity.tainted).toBe(true);
+    expect(validity.findings.join(' ')).toMatch(/plausibility ceiling/);
+    // The evidence is marked, never deleted.
+    expect(row.samples).toContain(IMPLAUSIBLE_SAMPLE_MS + 1);
+  });
+
+  it('flags a stall-shaped outlier on a slow row', () => {
+    const validity = assessValidity([cleanRow([300, 310, 9_000])], CLEAN_CLOCK);
+    expect(validity.tainted).toBe(true);
+    expect(validity.findings.join(' ')).toMatch(/stall or machine contention/);
+  });
+
+  it('ignores wide spread on fast rows (JIT noise, not a stall)', () => {
+    const validity = assessValidity([cleanRow([0.2, 0.3, 30])], CLEAN_CLOCK);
+    expect(validity.tainted).toBe(false);
+  });
+
+  it('ignores unmeasured rows', () => {
+    const skipped = skippedRow({
+      workloadId: 'w',
+      boundary: 'preview-update',
+      label: 'preview-update',
+      status: 'unsupported',
+      reason: 'browser-only boundary',
+    });
+    expect(assessValidity([skipped], CLEAN_CLOCK).tainted).toBe(false);
+  });
+});
+
 describe('report assembly', () => {
   const report = buildReport(
     {
@@ -178,10 +250,11 @@ describe('report assembly', () => {
       startedAt: '2026-07-19T12:00:00.000Z',
       build: BUILD,
       environment: ENV,
+      validity: { tainted: false, findings: [] },
     },
     [
       measuredRow({
-        workloadId: 'noise.w1280.opaque.g1024.p64.lab.dither.resize-first.stretch.still',
+        workloadId: 'noise.w1280.opaque.g1024.p64.lab.fs-s100-serp.resize-first.stretch.still',
         boundary: 'stage',
         label: 'resize',
         backend: 'ts',
@@ -191,7 +264,7 @@ describe('report assembly', () => {
         budgetMs: 5,
       }),
       skippedRow({
-        workloadId: 'noise.w1280.opaque.g300.p64.lab.dither.resize-first.stretch.live',
+        workloadId: 'noise.w1280.opaque.g300.p64.lab.fs-s100-serp.resize-first.stretch.live',
         boundary: 'interaction',
         label: 'interaction',
         status: 'unsupported',
@@ -219,6 +292,23 @@ describe('report assembly', () => {
     expect(text).toContain('MISS');
     expect(text).toContain('unsupported');
     expect(text).toContain(BUILD.buildId);
+    expect(text).not.toContain('TAINTED');
+  });
+
+  it('announces a tainted run at the top of the summary', () => {
+    const tainted = buildReport(
+      {
+        boundaryVersion: BOUNDARY_VERSION,
+        startedAt: '2026-07-19T12:00:00.000Z',
+        build: BUILD,
+        environment: ENV,
+        validity: { tainted: true, findings: ['environment interruption: …'] },
+      },
+      [],
+    );
+    const text = formatReport(tainted);
+    expect(text).toContain('TAINTED RUN');
+    expect(text).toContain('environment interruption');
   });
 });
 

@@ -72,8 +72,8 @@
 - `docs/acceptance-visual-review.md` — M5-ACCEPT-02 review sheet: review set, protocol, verdict record
 - `docs/browser-measurement.md` — browser-only boundary procedure + recorded results (M5-PERF-18)
 - `docs/dither-evaluation.md` — M8-SPIKE-01 evidence: method, findings, committed set, control surface (D61)
-- `docs/measurement-contract.md` — M5 boundary contract (bv1), workload matrix, report schema, browser rehearsal
-- `docs/performance-evidence.md` — M5 measured evidence: bv1 baseline, component audits, M5C decisions
+- `docs/measurement-contract.md` — boundary contract (bv2): workload ID grammar, matrix blocks, report schema + run validity, budget bindings, browser rehearsal
+- `docs/performance-evidence.md` — measured evidence: bv1 history (M5 audits, M5C decisions) + the bv2 re-baseline (M13-MEAS-01)
 - `docs/requirements.md` — full combined requirements spec (reference only)
 
 ## scripts
@@ -175,15 +175,15 @@
 - `tests/audits/runtime.audit.test.ts` — M5-PERF-16/17/19: compare cost, gate stalls, dirty sensitivity, export isolation
 - `tests/audits/wasm-boundary.audit.test.ts` — M5-PERF-15: boundary vs Rust split, calibration representativeness
 - `tests/backend-select.test.ts` — selection policy/calibration + ts fallback with both backends disabled
-- `tests/bench-matrix.test.ts` — workload-matrix invariants: unique/derived IDs, core cross-product, axis coverage
-- `tests/bench-report.test.ts` — boundary contract, percentile math, warm-up exclusion, schema round-trip
+- `tests/bench-matrix.test.ts` — workload-matrix invariants: dither ID tokens, unique/derived IDs, core + method blocks, axis coverage
+- `tests/bench-report.test.ts` — boundary contract, percentile math, warm-up exclusion, run-validity rules, schema round-trip
 - `tests/bench/boundaries.ts` — the six measurement boundaries + BOUNDARY_VERSION (code copy of the contract)
 - `tests/bench/env-node.ts` — node build/environment capture + report output dir
 - `tests/bench/harness.ts` — warm-up policy, sample collection, interleaved candidate timing
-- `tests/bench/report.ts` — report schema, percentiles, unmeasured-never-zero rows (pure)
-- `tests/bench/run-node.ts` — matrix runner + budget-to-row bindings
-- `tests/bench/workloads.ts` — the frozen M5 workload matrix + seeded source generators
-- `tests/benchmark.test.ts` — BENCH=1-gated: runs the matrix, writes the report, then asserts budgets
+- `tests/bench/report.ts` — report schema, percentiles, unmeasured-never-zero rows, run-validity assessment (pure)
+- `tests/bench/run-node.ts` — matrix runner + budget-to-row bindings + cold preparation rows
+- `tests/bench/workloads.ts` — the frozen bv2 workload matrix (DitherConfig axis) + seeded source generators
+- `tests/benchmark.test.ts` — BENCH=1-gated: runs the matrix, writes the report, then asserts validity and budgets
 - `tests/capture-crop.test.ts` — crop geometry: bounds/min-size, handles, hit-test, span
 - `tests/capture-dirty.test.ts` — hash determinism/sensitivity, region-aware signatures, staleness bound
 - `tests/capture-draft.test.ts` — governor hysteresis: enter/exit runs, gap, reset

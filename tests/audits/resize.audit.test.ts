@@ -94,16 +94,16 @@ interface Case {
 
 function cases(): Case[] {
   const w1280 = sourceBuffer(
-    workloadById('noise.w1280.opaque.g1024.p64.lab.dither.resize-first.stretch.still'),
+    workloadById('noise.w1280.opaque.g1024.p64.lab.fs-s100-serp.resize-first.stretch.still'),
   );
   const crop = sourceBuffer(
-    workloadById('noise.crop.opaque.g300.p64.lab.dither.resize-first.stretch.still'),
+    workloadById('noise.crop.opaque.g300.p64.lab.fs-s100-serp.resize-first.stretch.still'),
   );
   const grid1024 = sourceBuffer(
-    workloadById('noise.grid.opaque.g1024.p64.lab.dither.resize-first.stretch.still'),
+    workloadById('noise.grid.opaque.g1024.p64.lab.fs-s100-serp.resize-first.stretch.still'),
   );
   const alpha = sourceBuffer(
-    workloadById('noise.w1280.mixed.g300.p64.lab.dither.resize-first.contain.still'),
+    workloadById('noise.w1280.mixed.g300.p64.lab.fs-s100-serp.resize-first.contain.still'),
   );
   return [
     { name: '1280²→200 stretch (6.4× down)', source: w1280, grid: 200, mode: 'stretch', expected: 12 },

@@ -17,6 +17,17 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
+## M13 — Visual processing performance (in progress)
+
+- M13-MEAS-01 (2026-07-22) — bv2 node bench contract: the dither axis
+  became the `DitherConfig` union with method-and-settings ID tokens,
+  `p533` renamed to the truthful `p489`, a mandatory M8 method block at
+  300²/1024², cold candidate-table / threshold-tile / full-catalogue
+  preparation rows, run-validity tainting (clock drift, implausible
+  samples, stalls), and a ten-row re-baseline — the FS 1024² +28 % drift
+  since pre-M8 recorded as evidence for M13-PROF-01. See decision-log
+  D64.
+
 ## M8 — Dithering expansion (engine + controls shipped 2026-07-22; maintainer acceptance open)
 
 - M8-CTRL-01 (2026-07-22) — the Dither group: preset + algorithm

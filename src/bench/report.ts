@@ -14,7 +14,7 @@
  *   rather than two isolated medians.
  */
 
-import type { Backend } from '../../src/core/types.ts';
+import type { Backend } from '../core/types.ts';
 import type { BoundaryId, CacheState } from './boundaries.ts';
 
 /** Bump when the report shape changes incompatibly. */
@@ -67,6 +67,12 @@ export interface BenchRow {
   /** Null when there is no budget or no measurement. */
   withinBudget: boolean | null;
   allocations?: AllocationNote[];
+  /**
+   * Row-level context that is not a timing: capture counters, track
+   * settings, phase decompositions (bv2 browser rows — M13-MEAS-02).
+   * Additive; absent from node rows.
+   */
+  meta?: Record<string, string | number | boolean>;
 }
 
 /** Build identity — which code produced these numbers. */
@@ -247,6 +253,7 @@ export interface RowInput {
   samples: number[];
   budgetMs?: number | null;
   allocations?: AllocationNote[];
+  meta?: Record<string, string | number | boolean>;
 }
 
 /**
@@ -270,6 +277,7 @@ export function measuredRow(input: RowInput): BenchRow {
     budgetMs,
     withinBudget: summary === null || budgetMs === null ? null : summary.median <= budgetMs,
     ...(input.allocations === undefined ? {} : { allocations: input.allocations }),
+    ...(input.meta === undefined ? {} : { meta: input.meta }),
   };
 }
 
@@ -284,6 +292,7 @@ export function skippedRow(
     reason: string;
     backend?: Backend | 'n/a';
     budgetMs?: number | null;
+    meta?: Record<string, string | number | boolean>;
   },
 ): BenchRow {
   return {
@@ -299,6 +308,7 @@ export function skippedRow(
     summary: null,
     budgetMs: input.budgetMs ?? null,
     withinBudget: null,
+    ...(input.meta === undefined ? {} : { meta: input.meta }),
   };
 }
 

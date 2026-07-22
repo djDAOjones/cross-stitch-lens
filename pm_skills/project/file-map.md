@@ -15,8 +15,8 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 181 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
-- `(root)` — 11 file(s)
+<!-- 186 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+- `(root)` — 12 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
 - `.github` — 1 file(s)
@@ -24,8 +24,8 @@
 - `crates` — 4 file(s)
 - `docs` — 8 file(s)
 - `scripts` — 6 file(s)
-- `src` — 71 file(s)
-- `tests` — 77 file(s)
+- `src` — 78 file(s)
+- `tests` — 74 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -34,6 +34,7 @@
 - `DEV-INFRASTRUCTURE.md` — build/run/test/version/deploy rulebook
 - `README.md` — project front door: what it is, how to run it
 - `UI-STANDARDS.md` — Carbon-first UI + WCAG 2.2 AAA rulebook
+- `bench-source.html` — entry for the controlled capture source the harness's interaction rows share (M13-MEAS-02)
 - `bench.html` — entry for the production-build browser measurement harness; built by Vite alongside the app so its figures are not dev-server artefacts
 - `cspell.json` — spelling dictionary + ignore paths for the docs gate
 - `eslint.config.js` — flat config; core-isolation + no-console rules
@@ -93,7 +94,14 @@
 - `src/backends/webgpu/device.ts` — WebGPU feature detect + one lazy shared device (null on failure)
 - `src/backends/webgpu/reduce.ts` — async GPU kernels: LUT build + palette map; null → ts fallback
 - `src/backends/webgpu/wgsl.ts` — WGSL sources + binding indices: lut-build (metric-baked) + integer palette-map
-- `src/bench-browser.ts` — the harness itself: production-build GPU-vs-TS comparison (M5-PERF-23 gate), real-GPU LUT bin agreement (M5-PERF-32), in-browser pipeline timings. Not imported by the app
+- `src/bench-browser.ts` — the bv2 browser harness: preview-update/interaction/export rows through the shipped Worker route, live-capture counters, the M5 GPU gates, downloadable bv2 report. Not imported by the app
+- `src/bench-source.ts` — controlled interaction source: repaints on BroadcastChannel command, replies with its own paint timestamp
+- `src/bench/boundaries.ts` — the six measurement boundaries + BOUNDARY_VERSION (code copy of the contract; moved from tests/bench so production entries never import test modules)
+- `src/bench/clock.ts` — absolute cross-context timestamps (timeOrigin + now) + timer-resolution probe
+- `src/bench/counters.ts` — capture-path counter ledger: interval snapshots + conservation checks (pure)
+- `src/bench/harness.ts` — warm-up policy, sync/async sample collection, interleaved candidate timing
+- `src/bench/report.ts` — report schema, percentiles, unmeasured-never-zero rows, run-validity assessment (pure)
+- `src/bench/workloads.ts` — the frozen bv2 workload matrix (DitherConfig axis) + seeded source generators
 - `src/capture/crop.ts` — pure crop-rect geometry: clamp/move/resize, hit-test, stitch span
 - `src/capture/dirty.ts` — dirty-frame skip: 64×64 sampler, FNV-1a hash, region signature, staleness gate
 - `src/capture/draft.ts` — draft-quality governor: pure hysteresis over frame times
@@ -149,14 +157,14 @@
 - `src/ui/viewport.ts` — pure viewport maths: fit, anchored zoom, pan clamp
 - `src/vite-env.d.ts` — ambient types for injected version/build globals
 - `src/worker/backend-select.ts` — auto backend pick: one-shot calibration + hysteresis policy + selection map
-- `src/worker/client.ts` — main-thread client: Worker + coalescing + transfer
+- `src/worker/client.ts` — main-thread client: Worker + coalescing + transfer + optional measurement observer
 - `src/worker/coalesce.ts` — latest-wins scheduler (no queue), drop counter
 - `src/worker/execute.ts` — timed frame execution; errors become responses
 - `src/worker/grid.ts` — pure grid/tick geometry: line placement, auto-hide, label thinning
 - `src/worker/lut-cache.ts` — one LUT per palette content+metric; LRU-bounded; rejects implausible GPU LUTs
 - `src/worker/pipeline-worker.ts` — worker entry shell: owns worker scope, wires router
 - `src/worker/preview-surface.ts` — worker: OffscreenCanvas; view/grid/tick/compare redraw (no clip)
-- `src/worker/protocol.ts` — main↔worker message types, transferred buffers
+- `src/worker/protocol.ts` — main↔worker message types, transferred buffers, absolute-clock frame marks
 - `src/worker/router.ts` — message routing + compare source cache; guarantees one response per request
 
 ## tests
@@ -175,14 +183,11 @@
 - `tests/audits/runtime.audit.test.ts` — M5-PERF-16/17/19: compare cost, gate stalls, dirty sensitivity, export isolation
 - `tests/audits/wasm-boundary.audit.test.ts` — M5-PERF-15: boundary vs Rust split, calibration representativeness
 - `tests/backend-select.test.ts` — selection policy/calibration + ts fallback with both backends disabled
+- `tests/bench-counters.test.ts` — capture-counter ledger: interval deltas, conservation violations, meta flattening
 - `tests/bench-matrix.test.ts` — workload-matrix invariants: dither ID tokens, unique/derived IDs, core + method blocks, axis coverage
 - `tests/bench-report.test.ts` — boundary contract, percentile math, warm-up exclusion, run-validity rules, schema round-trip
-- `tests/bench/boundaries.ts` — the six measurement boundaries + BOUNDARY_VERSION (code copy of the contract)
 - `tests/bench/env-node.ts` — node build/environment capture + report output dir
-- `tests/bench/harness.ts` — warm-up policy, sample collection, interleaved candidate timing
-- `tests/bench/report.ts` — report schema, percentiles, unmeasured-never-zero rows, run-validity assessment (pure)
 - `tests/bench/run-node.ts` — matrix runner + budget-to-row bindings + cold preparation rows
-- `tests/bench/workloads.ts` — the frozen bv2 workload matrix (DitherConfig axis) + seeded source generators
 - `tests/benchmark.test.ts` — BENCH=1-gated: runs the matrix, writes the report, then asserts validity and budgets
 - `tests/capture-crop.test.ts` — crop geometry: bounds/min-size, handles, hit-test, span
 - `tests/capture-dirty.test.ts` — hash determinism/sensitivity, region-aware signatures, staleness bound

@@ -18,7 +18,7 @@ import { paletteLab, paletteRgb, loadDmcPalette } from '../../src/core/palette.t
 import { ditherStage, type DitherParams } from '../../src/core/pipeline/dither.ts';
 import { resizeStage } from '../../src/core/pipeline/resize.ts';
 import type { Palette, PixelBuffer } from '../../src/core/types.ts';
-import { palette64, sourceBuffer, workloadById } from '../bench/workloads.ts';
+import { palette64, sourceBuffer, workloadById } from '../../src/bench/workloads.ts';
 import {
   buildCandidateTable,
   captureWorkValues,

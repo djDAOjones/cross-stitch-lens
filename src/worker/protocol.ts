@@ -91,6 +91,29 @@ export interface StageTiming {
 }
 
 /**
+ * Worker-side phase marks for one processed frame (M13-MEAS-02).
+ *
+ * All values are **absolute monotonic milliseconds**
+ * (`performance.timeOrigin + performance.now()`), because the Window
+ * and the Worker have different time origins and a raw `now()` from
+ * one context means nothing in the other. `drawDoneAt` is the
+ * measurement contract's preview-update end mark — the preview
+ * surface draw returning inside the worker; everything the main
+ * thread observes afterwards is transfer and DOM work, reported as a
+ * separate diagnostic phase, never folded into preview-update.
+ */
+export interface FrameMarks {
+  /** The process request reached the worker's router. */
+  receivedAt: number;
+  /** Pipeline compute finished (all stages returned). */
+  computeDoneAt: number;
+  /** ImageBitmap for the preview snapshot was ready. */
+  bitmapDoneAt: number;
+  /** The preview surface draw returned (the contract's end mark). */
+  drawDoneAt: number;
+}
+
+/**
  * Worker → main: one processed frame (pixels transferred back).
  *
  * `indices` is the palette-index sidecar (`Uint16Array` bytes), also
@@ -107,6 +130,12 @@ export interface ProcessResult {
   pixels: ArrayBuffer;
   indices: ArrayBuffer | null;
   timings: StageTiming[];
+  /**
+   * Absolute-clock phase marks (M13-MEAS-02). Optional and additive:
+   * absent when the preview snapshot failed (the frame still returns —
+   * D46's gate-release invariant outranks measurement).
+   */
+  marks?: FrameMarks;
 }
 
 /** Worker → main: one export re-run (pixels transferred back). */

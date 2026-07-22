@@ -128,3 +128,16 @@ Do not start by installing a browser runner or timing direct core calls.
 - [`requestVideoFrameCallback`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLVideoElement/requestVideoFrameCallback)
   documents cadence and `presentedFrames` metadata, and warns that callbacks do
   not strictly guarantee display synchronisation.
+
+## Status (2026-07-22, D65)
+
+Code complete; evidence pending. Shipped: the bv2 vocabulary moved to
+`src/bench/`, worker `FrameMarks` + client job observer, the controlled
+source window (`bench-source.html`), the counter ledger
+(`src/bench/counters.ts`, gate-tested), rvfc metadata pass-through,
+`npm run bench:browser`, and the run document
+(`docs/browser-measurement.md` → "The bv2 harness run").
+
+Remaining: the owner performs the documented run (buttons 1–8; capture
+picker gestures cannot be automated) and attaches the downloaded bv2
+JSON. That report is the input M13-PROF-03/04/05 are blocked on.

@@ -15,7 +15,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import pkg from '../../package.json' with { type: 'json' };
-import type { BuildIdentity, EnvironmentIdentity } from './report.ts';
+import type { BuildIdentity, EnvironmentIdentity } from '../../src/bench/report.ts';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 

@@ -56,6 +56,26 @@ export function measure(
 }
 
 /**
+ * Async twin of {@link measure} for work that must be awaited (worker
+ * round-trips, GPU readbacks, encoders). Same warm-up policy; awaiting
+ * inside the clock is deliberate — the completion is the mark.
+ */
+export async function measureAsync(
+  fn: () => Promise<unknown>,
+  plan: RunPlan,
+  now: Clock = defaultClock,
+): Promise<number[]> {
+  for (let i = 0; i < plan.warmup; i++) await fn();
+  const samples: number[] = [];
+  for (let i = 0; i < plan.runs; i++) {
+    const start = now();
+    await fn();
+    samples.push(now() - start);
+  }
+  return samples;
+}
+
+/**
  * Measure several candidates round-robin: every candidate is warmed
  * first, then one timed run each per round. Comparing backends any
  * other way lets the machine's state, not the code, pick the winner.

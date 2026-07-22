@@ -10,8 +10,10 @@ import type { PipelineConfig } from '../core/pipeline/config.ts';
 import type { PixelBuffer } from '../core/types.ts';
 import { Coalescer } from './coalesce.ts';
 import type { GridStyle } from './grid.ts';
+import { absNow } from '../bench/clock.ts';
 import type {
   ExportRequest,
+  FrameMarks,
   ProcessRequest,
   StageTiming,
   WorkerResponse,
@@ -21,6 +23,23 @@ import type {
 export interface FrameResult {
   buffer: PixelBuffer;
   timings: StageTiming[];
+}
+
+/**
+ * Measurement hook (M13-MEAS-02): observes when a job actually starts
+ * (posted to the worker — not when a frame merely replaces the pending
+ * one) and when its response arrives, in absolute monotonic ms so the
+ * spans line up with the worker's {@link FrameMarks}. Purely additive:
+ * the app never sets one; only the browser harness does.
+ */
+export interface JobObserver {
+  jobStarted(id: number, atAbsMs: number): void;
+  jobSettled(
+    id: number,
+    atAbsMs: number,
+    outcome: 'result' | 'error',
+    marks?: FrameMarks,
+  ): void;
 }
 
 interface Job {
@@ -50,6 +69,7 @@ export class PipelineClient {
   private readonly coalescer = new Coalescer<Job>();
   private nextId = 0;
   private onResult: ((frame: FrameResult) => void) | null = null;
+  private observer: JobObserver | null = null;
   /** Export runs awaiting their result, keyed by request id. */
   private readonly pendingExports = new Map<
     number,
@@ -68,6 +88,11 @@ export class PipelineClient {
   /** Register the sink for processed frames (latest frame only). */
   setOnResult(callback: (frame: FrameResult) => void): void {
     this.onResult = callback;
+  }
+
+  /** Register the measurement observer (harness only; additive). */
+  setObserver(observer: JobObserver | null): void {
+    this.observer = observer;
   }
 
   /**
@@ -145,6 +170,7 @@ export class PipelineClient {
       pixels: job.buffer.data.buffer as ArrayBuffer,
       config: job.config,
     };
+    this.observer?.jobStarted(request.id, absNow());
     this.worker.postMessage(request, [request.pixels]);
   }
 
@@ -166,8 +192,10 @@ export class PipelineClient {
     }
     if (response.type === 'error') {
       log.error('worker', 'frame failed', { message: response.message });
-    } else if (this.onResult) {
-      this.onResult({
+      this.observer?.jobSettled(response.id, absNow(), 'error');
+    } else {
+      this.observer?.jobSettled(response.id, absNow(), 'result', response.marks);
+      this.onResult?.({
         buffer: toBuffer(response.width, response.height, response.pixels, response.indices),
         timings: response.timings,
       });

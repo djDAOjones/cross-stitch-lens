@@ -23,17 +23,17 @@
  * comparable across machines and builds only through its ID.
  */
 
-import type { ColorMetric } from '../../src/core/color/metrics.ts';
+import type { ColorMetric } from '../core/color/metrics.ts';
 import type {
   DitherConfig,
   OrderPreset,
   PipelineConfig,
-} from '../../src/core/pipeline/config.ts';
-import type { DitherAlgorithm } from '../../src/core/pipeline/dither.ts';
-import type { ResizeMode } from '../../src/core/pipeline/resize.ts';
-import { loadDmcPalette } from '../../src/core/palette.ts';
-import { loadCatalogue, threadsForBrands } from '../../src/core/thread-catalogue.ts';
-import type { Palette, PixelBuffer } from '../../src/core/types.ts';
+} from '../core/pipeline/config.ts';
+import type { DitherAlgorithm } from '../core/pipeline/dither.ts';
+import type { ResizeMode } from '../core/pipeline/resize.ts';
+import { loadDmcPalette } from '../core/palette.ts';
+import { loadCatalogue, threadsForBrands } from '../core/thread-catalogue.ts';
+import type { Palette, PixelBuffer } from '../core/types.ts';
 
 /** Source content class — each exercises a different engine behaviour. */
 export type SourceClass =

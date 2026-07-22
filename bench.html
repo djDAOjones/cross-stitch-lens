@@ -6,11 +6,15 @@
     <title>Cross Stitch Lens — browser measurement harness</title>
   </head>
   <body>
-    <h1>Browser measurement harness</h1>
+    <h1>Browser measurement harness (bv2)</h1>
     <p>
-      Production-build measurements for M5-PERF-23 (the mapPaletteGpu gate),
-      M5-PERF-24 (the in-browser product promise) and M5-PERF-32 (real-GPU
-      correctness). Results appear below and on <code>window.__BENCH__</code>.
+      Production-build measurement of the browser-only boundaries —
+      <code>preview-update</code>, <code>interaction</code> and
+      <code>export</code> — through the shipped Worker route, plus the
+      M5-era GPU gates. Procedure:
+      <code>docs/browser-measurement.md</code>. Results appear below, on
+      <code>window.__BENCH__</code>, and as a downloadable bv2 JSON
+      report. No captured pixels or surface names enter the report.
     </p>
     <script type="module" src="/src/bench-browser.ts"></script>
   </body>

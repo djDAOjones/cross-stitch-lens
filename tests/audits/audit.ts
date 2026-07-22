@@ -20,15 +20,15 @@ import { readFileSync } from 'node:fs';
 import { registerWasmDither } from '../../src/backends/wasm/dither.ts';
 import { log } from '../../src/diagnostics/log.ts';
 import { setSelectedBackend } from '../../src/worker/backend-select.ts';
-import { BOUNDARY_VERSION } from '../bench/boundaries.ts';
+import { BOUNDARY_VERSION } from '../../src/bench/boundaries.ts';
 import {
   buildIdentity,
   environmentIdentity,
   WASM_BYTES_PATH,
   writeReport,
 } from '../bench/env-node.ts';
-import { measure, planFor } from '../bench/harness.ts';
-import { summarise, type Summary } from '../bench/report.ts';
+import { measure, planFor } from '../../src/bench/harness.ts';
+import { summarise, type Summary } from '../../src/bench/report.ts';
 
 /** True when the audits should actually run (`npm run audit`). */
 export const AUDIT = process.env['AUDIT'] === '1';

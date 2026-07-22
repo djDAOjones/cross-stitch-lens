@@ -75,6 +75,7 @@
     "RGBA",
     "rrggbb",
     "rustflags",
+    "rvfc",
     "rustup",
     "seedable",
     "serde",

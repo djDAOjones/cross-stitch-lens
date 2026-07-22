@@ -1,12 +1,15 @@
-# Browser measurement procedure (M5-PERF-18)
+# Browser measurement procedure
 
 Three boundaries in `measurement-contract.md` — `preview-update`,
-`interaction` and `export` — cannot be observed in node, and the M5A
+`interaction` and `export` — cannot be observed in node, and the node
 matrix records them as explicit `unsupported` rows rather than zeros.
-This is the procedure that fills them, plus the recorded results of the
-first run. It also covers the two node-invisible engine questions:
-GPU LUT build (M5-PERF-12) and the canvas resize candidate
-(M5-PERF-11).
+**The current procedure is the bv2 production harness run at the end of
+this document (M13-MEAS-02)** — one page, one report, all three
+boundaries. The M5-era sections before it are kept as recorded history:
+the console-probe procedure (M5-PERF-18), its findings, and the first
+production-harness results (M5D). It also covers the two node-invisible
+engine questions of that era: GPU LUT build (M5-PERF-12) and the canvas
+resize candidate (M5-PERF-11).
 
 ## Why a separate procedure
 
@@ -230,3 +233,80 @@ larger one. That was JIT warmup: 200² was measured first and absorbed
 the compilation cost of the whole shared pipeline. It would have been
 published as a product-promise **failure**. Every grid is now exercised
 once before any grid is timed. Any probe added here must do the same.
+
+---
+
+## The bv2 harness run (M13-MEAS-02) — current procedure
+
+One documented run of `/bench.html` on a production build emits
+boundary-tagged, build-identified bv2 rows for `preview-update`,
+`interaction` and `export`, plus capture cadence, dirty-skip,
+forced-stale and both latest-wins drop counters with per-interval
+snapshots and conservation checks. It measures the **shipped Worker
+route** — `PipelineClient` → worker router → preview-surface draw —
+using the worker's absolute-clock phase marks (`FrameMarks` in
+`src/worker/protocol.ts`); Window and Worker have different
+`performance.timeOrigin`s, so every cross-context mark travels as
+`timeOrigin + now()`.
+
+### Procedure
+
+1. **Build and serve the production bundle:**
+
+   ```sh
+   npm run bench:browser     # vite build && vite preview (port 4173)
+   # open http://localhost:4173/bench.html
+   ```
+
+2. **Fix the environment** — one browser window, foreground and
+   visible, mains power, no other heavy applications. The report
+   records viewport, DPR, visibility, timer resolution, WebGPU/WASM
+   capability and build identity; a hidden page during a live window
+   taints the run.
+3. **Buttons 1–3 need no capture**: still-input `preview-update` rows
+   (200², 300², via real worker submits), the M5-era GPU gates
+   (LUT agreement + the `mapPaletteGpu` comparison, now bv2 rows), and
+   the `export` rows (composite clean-PNG/chart/PDF spans plus their
+   pipeline/scale/encode/assembly children).
+4. **Button 4 opens the controlled source window**
+   (`/bench-source.html`) — the repeatable stand-in for "an edit in
+   Photoshop". It repaints on command and reports its own paint
+   timestamp over a same-origin `BroadcastChannel`, giving
+   `interaction` a genuine start mark. Real Photoshop interaction
+   remains the manual M13-ACCEPT-02 leg — never reconstructed here.
+5. **Button 5 starts capture** — the browser's picker requires the
+   owner to choose the shared surface each run (choose the source
+   window for interaction rows; any surface for live-preview rows).
+   A declined prompt is recorded as a `not-measured` row, never a zero.
+6. **Button 6 measures a 30 s live window** — the shipped
+   pump → dirty-gate → latest-wins → worker loop at a 300² grid, with
+   counters snapshotted every 5 s, rvfc cadence metadata
+   (`presentedFrames`) where the browser supports it, and
+   counter-conservation violations reported as findings.
+7. **Button 7 runs the controlled interaction sequence** (8 changes,
+   each span: source paint mark → preview draw return of the first job
+   started after it; misses are counted, not invented).
+8. **Button 8 assembles the report** — bv2 JSON (schema 1, additive
+   row `meta`), validity-assessed (clock drift, implausible samples,
+   findings), downloadable and on `window.__BENCH__`. No captured
+   pixels, surface names or source-window content enter it.
+
+### Row identity
+
+Still rows use bv2 matrix IDs. Rows whose input is the user-shared
+surface use the `capture.g<grid>.<palette>.<metric>.<dither>` pseudo-ID
+(the source is not a generated matrix class, and an ID must not lie
+about its input — see `docs/measurement-contract.md`); actual capture
+dimensions ride in the row's `meta`.
+
+### Interpretation limits
+
+- The still `preview-update` rows start at the client's job post, not
+  at a capture event — they exclude grab and dirty-sample cost. The
+  live rows include the full path; compare like with like.
+- `interaction` spans include the capture pipeline's own cadence
+  (rvfc tick → grab → dirty check), which is the point: it is the
+  user-visible number, never a sum of medians.
+- The draft governor runs during live windows; its transitions are
+  counted in the row meta, so a draft-mode window cannot pass as a
+  full-quality figure.

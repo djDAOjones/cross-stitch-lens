@@ -30,7 +30,7 @@ import { loadDmcPalette } from '../../src/core/palette.ts';
 import { ditherStage, type DitherParams } from '../../src/core/pipeline/dither.ts';
 import { EMPTY_INDEX, type Palette, type PixelBuffer } from '../../src/core/types.ts';
 import { writeReport } from '../bench/env-node.ts';
-import { palette64 } from '../bench/workloads.ts';
+import { palette64 } from '../../src/bench/workloads.ts';
 import {
   allCandidates,
   bayerTile,

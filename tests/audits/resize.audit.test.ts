@@ -15,7 +15,7 @@ import { describe, expect, it } from 'vitest';
 
 import { resizeStage, type ResizeMode } from '../../src/core/pipeline/resize.ts';
 import type { PixelBuffer } from '../../src/core/types.ts';
-import { sourceBuffer, workloadById } from '../bench/workloads.ts';
+import { sourceBuffer, workloadById } from '../../src/bench/workloads.ts';
 import {
   resizeCallV0,
   resizeHoisted,

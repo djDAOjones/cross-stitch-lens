@@ -252,20 +252,29 @@ is overwritten on every build.
   code, and nothing in `src/` may import them. Browser-only boundaries
   are **not** covered here; their procedure is
   `docs/browser-measurement.md`.
-- **`bench`** — runs the M5 workload matrix under the boundary contract
+- **`bench`** — runs the bv2 workload matrix under the boundary contract
   in `docs/measurement-contract.md`, writes a machine-readable report to
   `bench-reports` (gitignored — regenerated, never committed), logs a
-  human summary, and only then asserts the `architecture.md` budgets
-  (×3 tolerance in CI). The report is written **before** the assertions,
-  so a missed budget still leaves complete evidence on disk. Gated
-  behind `BENCH=1` so the suite skips visibly in a plain `vitest run`.
-  The `preview-update`, `interaction` and `export` boundaries — and with
-  them the preview-render budget — are browser-only: they appear in
-  every node report as explicit `unsupported` rows and are measured by
-  the manual rehearsal in `docs/measurement-contract.md`. Report
-  schema, matrix coverage and warm-up policy are unit-tested in
-  `tests/bench-matrix.test.ts` and `tests/bench-report.test.ts`, which
-  **do** run in `check`.
+  human summary, and only then asserts the budgets (×3 tolerance in CI).
+  The report is written **before** the assertions, so a missed budget
+  still leaves complete evidence on disk, and a run that was interrupted
+  or stalled is marked **tainted** and fails loudly rather than
+  publishing a dirty median. Gated behind `BENCH=1` so the suite skips
+  visibly in a plain `vitest run`. Report schema, matrix coverage,
+  warm-up policy, validity rules and capture-counter conservation are
+  unit-tested in `tests/bench-matrix.test.ts`,
+  `tests/bench-report.test.ts` and `tests/bench-counters.test.ts`,
+  which **do** run in `check`.
+- **`bench:browser`** — production build + `vite preview` (port 4173);
+  open `http://localhost:4173/bench.html`. The bv2 browser harness for
+  the browser-only boundaries (`preview-update`, `interaction`,
+  `export`) and the capture counters — user-gesture-driven because
+  `getDisplayMedia` requires the owner to choose the shared surface.
+  Ready when the harness page reports "Production harness ready".
+  Procedure and interpretation limits:
+  `docs/browser-measurement.md` → "The bv2 harness run". Shares the bv2
+  vocabulary through `src/bench/` (moved from `tests/bench/` so
+  production entries never import test modules).
 
 ---
 

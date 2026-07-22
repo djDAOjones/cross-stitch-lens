@@ -20,7 +20,7 @@ import { ditherStage, type DitherParams } from '../../src/core/pipeline/dither.t
 import { resizeStage } from '../../src/core/pipeline/resize.ts';
 import type { PixelBuffer } from '../../src/core/types.ts';
 import { WASM_BYTES_PATH } from '../bench/env-node.ts';
-import { palette64, sourceBuffer, workloadById } from '../bench/workloads.ts';
+import { palette64, sourceBuffer, workloadById } from '../../src/bench/workloads.ts';
 import {
   AUDIT,
   AUDIT_TIMEOUT_MS,

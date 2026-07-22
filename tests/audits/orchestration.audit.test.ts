@@ -22,7 +22,7 @@ import type { PixelBuffer } from '../../src/core/types.ts';
 import { executeRequest } from '../../src/worker/execute.ts';
 import { getLut } from '../../src/worker/lut-cache.ts';
 import type { ProcessRequest } from '../../src/worker/protocol.ts';
-import { configFor, palette64, sourceBuffer, workloadById } from '../bench/workloads.ts';
+import { configFor, palette64, sourceBuffer, workloadById } from '../../src/bench/workloads.ts';
 import {
   AUDIT,
   AUDIT_TIMEOUT_MS,

@@ -27,9 +27,9 @@ import type { Backend } from '../../src/core/types.ts';
 import { clearLutCache, getLut } from '../../src/worker/lut-cache.ts';
 import { executeRequest } from '../../src/worker/execute.ts';
 import type { ProcessRequest } from '../../src/worker/protocol.ts';
-import type { BoundaryId } from './boundaries.ts';
-import { measure, planFor, type RunPlan } from './harness.ts';
-import { measuredRow, skippedRow, type BenchRow } from './report.ts';
+import type { BoundaryId } from '../../src/bench/boundaries.ts';
+import { measure, planFor, type RunPlan } from '../../src/bench/harness.ts';
+import { measuredRow, skippedRow, type BenchRow } from '../../src/bench/report.ts';
 import {
   configFor,
   paletteFor,
@@ -37,7 +37,7 @@ import {
   sourceBuffer,
   WORKLOADS,
   type Workload,
-} from './workloads.ts';
+} from '../../src/bench/workloads.ts';
 
 /**
  * A measured performance baseline with a regression guard.

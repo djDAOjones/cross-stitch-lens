@@ -25,7 +25,7 @@ import {
   workloadId,
   WORKLOADS,
   type Workload,
-} from './bench/workloads.ts';
+} from '../src/bench/workloads.ts';
 
 /** Distinct values of one axis across the whole matrix. */
 function axis<K extends keyof Workload>(key: K): Set<Workload[K]> {

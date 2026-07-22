@@ -22,7 +22,7 @@ import type { PixelBuffer } from '../../src/core/types.ts';
 import { Coalescer } from '../../src/worker/coalesce.ts';
 import { executeRequest } from '../../src/worker/execute.ts';
 import type { ProcessRequest } from '../../src/worker/protocol.ts';
-import { configFor, sourceBuffer, workloadById } from '../bench/workloads.ts';
+import { configFor, sourceBuffer, workloadById } from '../../src/bench/workloads.ts';
 import {
   AUDIT,
   AUDIT_TIMEOUT_MS,

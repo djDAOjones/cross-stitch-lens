@@ -138,10 +138,17 @@ nodither | <method>-s<pct>[-serp|-raster]
 `metric` and `dither` are inert for `rgb` (full-RGB) rows; they stay in
 the ID so the grammar is uniform and IDs never collide.
 
-Preparation-stress rows whose palette is deliberately not a pipeline
-workload use the pseudo-ID form `prep.<palette>.<metric>` (currently
-only `prep.pfull.lab`); the `prep.` prefix cannot collide with matrix
-IDs because every real ID starts with a source class.
+Two pseudo-ID forms exist for rows whose input is not a generated
+matrix workload — neither prefix can collide with matrix IDs because
+every real ID starts with a source class:
+
+- `prep.<palette>.<metric>` — preparation-stress rows whose palette is
+  deliberately not a pipeline workload (currently only
+  `prep.pfull.lab`).
+- `capture.g<grid>.<palette>.<metric>.<dither>` — browser-harness rows
+  whose input is the **user-shared capture surface** (M13-MEAS-02): the
+  source is whatever the owner shares, so a matrix ID would lie about
+  the input. Actual capture dimensions ride in the row's `meta`.
 
 ### Axes
 
@@ -323,12 +330,23 @@ report, so a CI number is never mistaken for a local one.
 
 ---
 
-## 4. Browser rehearsal procedure
+## 4. Browser measurement
 
-`preview-update`, `interaction` and `export` cannot be measured in node.
+`preview-update`, `interaction` and `export` cannot be measured in
+node. **The primary source is the bv2 production harness**
+(`npm run bench:browser` → `/bench.html`) — one documented run emits
+boundary-tagged bv2 rows for all three, with capture counters and a
+validity verdict; procedure and interpretation limits in
+`docs/browser-measurement.md` → "The bv2 harness run". Its
+`interaction` rows use a controlled same-origin source window with a
+real paint mark; interaction against **real Photoshop** has no
+programmatic start mark and stays a manual rehearsal (below), owned by
+M13-PROF-04 / M13-ACCEPT-02.
+
+### Manual rehearsal (live Photoshop legs)
+
 Run this by hand on the development Mac and attach the result to the
-ticket; it is the only source for those three boundaries and for the
-preview-render budget row.
+ticket.
 
 1. **Build for production** — `npm run build`, then serve `dist/`. Never
    measure the dev server: HMR and unminified modules are not the

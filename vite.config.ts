@@ -64,6 +64,10 @@ export default defineConfig({
       input: {
         main: fileURLToPath(new URL('./index.html', import.meta.url)),
         bench: fileURLToPath(new URL('./bench.html', import.meta.url)),
+        // The controlled interaction source the harness captures
+        // (M13-MEAS-02) — same-origin so its BroadcastChannel paint
+        // marks reach the harness.
+        benchSource: fileURLToPath(new URL('./bench-source.html', import.meta.url)),
       },
     },
   },

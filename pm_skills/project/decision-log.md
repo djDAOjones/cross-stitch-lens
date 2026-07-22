@@ -1006,3 +1006,41 @@ comparability break. bv1 and bv2 reports must not be diffed.
 **Run notes (auto-jazz):** gateless; the audits' bv1 workload IDs were
 mechanically renamed so they still resolve; their pre-existing stale
 post-M8 assertions were parked on the wish-list, not fixed here.
+
+## D65 — M13-MEAS-02: the browser harness measures the shipped route, and shared bv2 types moved into src (2026-07-22)
+
+**Decision — the bv2 vocabulary lives in `src/bench/`.** The harness
+must emit real bv2 rows, production code must not import test modules,
+and two drifting copies of the schema is the worse failure — so the
+pure modules (`boundaries`, `report`, `harness`, `workloads`) moved
+from `tests/bench/` to `src/bench/`; node-only `env-node`/`run-node`
+stay in tests. Only the bench entries import them, so the app bundle is
+unchanged.
+
+**Decision — boundaries are measured where they happen.** The worker
+now stamps additive absolute-clock `FrameMarks` (received / compute /
+bitmap / preview-draw-return) on each `ProcessResult` — Window and
+Worker have different `timeOrigin`s, so marks travel as
+`timeOrigin + now()`. `PipelineClient` gains an optional job observer
+(job actually posted / settled). `preview-update` = post → draw-return,
+per the contract; main-thread receipt is a separate diagnostic phase.
+Marks are attached only when the draw happened — a failed snapshot must
+not report a preview it never made — and the D46 answer-exactly-once
+invariant is untouched.
+
+**Decision — `interaction` gets a controlled start mark.** A Photoshop
+edit has no programmatic timestamp, so repeatable interaction rows use
+a same-origin `bench-source.html` window that repaints on
+BroadcastChannel command and replies with its own double-rAF paint
+timestamp; the owner shares it in the capture picker. Real-Photoshop
+interaction stays manual (M13-PROF-04/M13-ACCEPT-02). Capture-input
+rows use a `capture.g<grid>.…` pseudo-ID — a matrix ID would lie about
+the input.
+
+**Also:** a pure `CounterTracker` ledger (interval deltas +
+conservation checks, gate-tested) for the pump/dirty/coalescing
+counters; `startFramePump` passes rvfc metadata through untouched;
+`npm run bench:browser` is the documented run command. **Remaining
+leg:** the maintainer's browser run itself — `getDisplayMedia` needs
+the owner's gesture, so the item stays open at "code complete,
+evidence pending".

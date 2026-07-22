@@ -23,7 +23,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { registerWasmDither } from '../src/backends/wasm/dither.ts';
 import { log } from '../src/diagnostics/log.ts';
 import { setSelectedBackend } from '../src/worker/backend-select.ts';
-import { BOUNDARY_VERSION } from './bench/boundaries.ts';
+import { BOUNDARY_VERSION } from '../src/bench/boundaries.ts';
 import {
   buildIdentity,
   environmentIdentity,
@@ -37,7 +37,7 @@ import {
   serialiseReport,
   type BenchReport,
   type BenchRow,
-} from './bench/report.ts';
+} from '../src/bench/report.ts';
 import { BUDGETS, runMatrix } from './bench/run-node.ts';
 
 const BENCH = process.env['BENCH'] === '1';

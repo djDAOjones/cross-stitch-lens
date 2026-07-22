@@ -14,6 +14,7 @@
  * `respondOnce` rather than a floating `void (async () => …)()`.
  */
 
+import { absNow } from '../bench/clock.ts';
 import { fullRgbVariant, type PipelineConfig } from '../core/pipeline/config.ts';
 import { log } from '../diagnostics/log.ts';
 import { executeRequest, type StageObserver } from './execute.ts';
@@ -185,6 +186,7 @@ export function createRouter(deps: RouterDeps): (request: WorkerRequest) => void
   }
 
   async function runProcess(request: ProcessRequest): Promise<void> {
+    const receivedAt = absNow();
     lastFrame = {
       width: request.width,
       height: request.height,
@@ -214,6 +216,7 @@ export function createRouter(deps: RouterDeps): (request: WorkerRequest) => void
       : undefined;
 
     const response = deps.execute(request, observe);
+    const computeDoneAt = absNow();
 
     if (compareEnabled) {
       const geometry = geometryKey(fullRgbVariant(request.config));
@@ -234,7 +237,13 @@ export function createRouter(deps: RouterDeps): (request: WorkerRequest) => void
     // buffer — but a failed snapshot only costs the preview redraw, so
     // the pixels still go back and the gate still releases.
     try {
-      setFrame(await deps.toBitmap(toImageData(response)));
+      const bitmap = await deps.toBitmap(toImageData(response));
+      const bitmapDoneAt = absNow();
+      setFrame(bitmap);
+      // Phase marks for the harness (M13-MEAS-02): absolute-clock, and
+      // only attached when the draw actually happened — a failed
+      // snapshot must not report a preview-update it never made.
+      response.marks = { receivedAt, computeDoneAt, bitmapDoneAt, drawDoneAt: absNow() };
     } catch (error) {
       log.warn('worker', 'preview bitmap failed — frame still returned', {
         message: describe(error),

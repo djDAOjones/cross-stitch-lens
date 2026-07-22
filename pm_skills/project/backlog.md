@@ -23,9 +23,10 @@ dither methods are uncovered by the frozen bench matrix (D62).
 
 #### Phase 1 — Measurement refresh & instrumentation
 
-- [ ] **M13-MEAS-02 Browser/Worker measurement harness** [detail]
+- [~] **M13-MEAS-02 Browser/Worker measurement harness** [detail] [maintainer]
   Intent: production-build, in-Worker measurement of `preview-update`, `interaction` and `export`, extending `bench.html`/`src/bench-browser.ts`, plus live-capture cadence, staleness and dropped-frame counters.
   Done when: a repeatable documented run yields boundary-tagged browser rows (workload ID + build identity) for all three; new dev deps proposed, never assumed.
+  Status 2026-07-22: code complete (D65) — harness, controlled source window, frame marks, counters, docs. Remaining: the owner's browser run (`npm run bench:browser` → docs/browser-measurement.md → "The bv2 harness run"); `getDisplayMedia` needs a human gesture.
 
 #### Phase 2 — Component profiling & defect discovery
 

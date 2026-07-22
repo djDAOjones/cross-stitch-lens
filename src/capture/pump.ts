@@ -61,13 +61,23 @@ export class PumpGate {
  * (ticks only on genuinely new frames), falling back to
  * `requestAnimationFrame`. Returns a stop function; stopping is
  * idempotent.
+ *
+ * `onFrame` receives the rvfc metadata where the browser provides it
+ * (`presentedFrames` exposes missed callbacks; `presentationTime` /
+ * `expectedDisplayTime` characterise capture cadence — M13-MEAS-02).
+ * Under the rAF fallback it is `undefined` — an unsupported reading is
+ * reported as absent, never zero. Purely observational: the pump's
+ * policy does not read it.
  */
-export function startFramePump(video: HTMLVideoElement, onFrame: () => void): () => void {
+export function startFramePump(
+  video: HTMLVideoElement,
+  onFrame: (metadata?: VideoFrameCallbackMetadata) => void,
+): () => void {
   let stopped = false;
   if (typeof video.requestVideoFrameCallback === 'function') {
-    const tick = (): void => {
+    const tick = (_now: number, metadata: VideoFrameCallbackMetadata): void => {
       if (stopped) return;
-      onFrame();
+      onFrame(metadata);
       video.requestVideoFrameCallback(tick);
     };
     video.requestVideoFrameCallback(tick);

@@ -7,8 +7,8 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { BOUNDARIES, BOUNDARY_VERSION, measurableOn } from './bench/boundaries.ts';
-import { measure, measureInterleaved, planFor, type Clock } from './bench/harness.ts';
+import { BOUNDARIES, BOUNDARY_VERSION, measurableOn } from '../src/bench/boundaries.ts';
+import { measure, measureInterleaved, planFor, type Clock } from '../src/bench/harness.ts';
 import {
   assessValidity,
   buildReport,
@@ -23,7 +23,7 @@ import {
   type BuildIdentity,
   type ClockCheck,
   type EnvironmentIdentity,
-} from './bench/report.ts';
+} from '../src/bench/report.ts';
 
 /** Clock that hands out a fixed script of readings, in order. */
 function scriptedClock(readings: number[]): Clock {
@@ -172,6 +172,26 @@ describe('report rows', () => {
       allocations: [{ label: 'source buffer', bytes: 6553600 }],
     });
     expect(row.allocations?.[0]?.bytes).toBe(6553600);
+  });
+
+  it('carries row meta (browser counters/phases) and omits it otherwise', () => {
+    const withMeta = measuredRow({
+      workloadId: 'w',
+      boundary: 'preview-update',
+      label: 'preview-update (live capture)',
+      warmupRuns: 0,
+      samples: [40, 41],
+      meta: { 'counter callbacks': 120, 'page visible': true },
+    });
+    expect(withMeta.meta?.['counter callbacks']).toBe(120);
+    const without = measuredRow({
+      workloadId: 'w',
+      boundary: 'stage',
+      label: 'resize',
+      warmupRuns: 1,
+      samples: [1],
+    });
+    expect('meta' in without).toBe(false);
   });
 });
 

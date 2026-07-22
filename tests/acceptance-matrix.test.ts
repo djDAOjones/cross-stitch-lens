@@ -94,6 +94,10 @@ describe('matrix definition', () => {
     expect(seen('source')).toEqual(new Set(['noise', 'gradient', 'flat']));
     expect(seen('serpentine')).toEqual(new Set([true, false]));
     expect(seen('dither')).toEqual(new Set([true, false]));
+    // Every shipped M8 method reaches the composed pipeline (D61);
+    // `undefined` is the pre-M8 default, Floyd–Steinberg.
+    expect(new Set(MATRIX.filter((r) => r.dither).map((r) => r.algorithm ?? 'floyd-steinberg')))
+      .toEqual(new Set(['floyd-steinberg', 'atkinson', 'jarvis', 'ordered', 'blue-noise']));
   });
 });
 

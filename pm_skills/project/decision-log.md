@@ -832,3 +832,99 @@ spec, explicitly "reference only": shipped behaviour belongs to
 ownership), where these facts already live. **requirements.md is
 frozen reference** — do not capture future implementation drift
 against it.
+
+## D61 — M8-SPIKE-01: six dither methods earn a slot; matrix size, phase and seed do not (2026-07-22)
+
+**Question:** which dither methods are materially different and useful
+for cross-stitch output, and which controls does each genuinely need?
+
+**Method:** a scratch harness in `tests/audits/` (the M5B candidates
+pattern, `AUDIT=1`-gated): nine candidates — FS/Atkinson/JJN/Stucki/
+Sierra Lite through one kernel-as-data loop asserted byte-identical to
+the shipped stage for the FS kernel, Bayer 4×4/8×8, a generated
+32×32 void-and-cluster blue-noise tile (seed `0x5eed`), and no-dither —
+over seven 300² fixtures, scored on tone ΔE (4×4 box average), isolated-
+stitch %, L\* bias, distinctness vs FS, and node timing. Full evidence:
+`docs/dither-evaluation.md`, the published audit artefact, and an HTML
+side-by-side gallery for the owner's eye.
+
+**Decision — commit none, floyd-steinberg, atkinson, jarvis, ordered
+(Bayer 8×8) and blue-noise (32×32); cut Stucki, Sierra Lite and
+Bayer 4×4.** Diffusion owns tone fidelity on smooth content (organic
+tone ΔE 1.45–2.67 vs none 8.05); Atkinson buys a third of FS's isolated
+stitches for a small tone cost; Jarvis is the only large kernel that is
+not FS-within-noise (Stucki and Sierra Lite are, and are cut).
+Threshold methods leave flat and near-palette content untouched where
+diffusion peppers it (flat-art isolation 2.3% vs 18.5%) — the graphic-
+content answer; blue-noise halves ordered's isolated stitches with no
+periodic texture. Bayer 4 vs 8 is indistinguishable at stitch scale, so
+one ordered method ships and **matrix size gets no control**.
+
+**Control surface:** algorithm selector; **strength** everywhere but
+none, with per-family definitions (diffusion: fraction of error
+diffused 0–1 — at 0.5 it *improves* tiny-palette tone; threshold:
+0–2 × a ±48/255 base amplitude — tiny palettes need > 1); **serpentine**
+diffusion-only. No phase, no seed — nothing stochastic ships.
+
+**Performance:** every candidate is within ~10–20% of the no-dither
+reduce loop (the palette scan dominates); no accelerated backend is
+justified by this evidence. Ordered/blue-noise are pointwise and
+WebGPU-shaped if a profile ever asks.
+
+**Run notes (auto-jazz):** spike mode, gateless; the committed set is
+the conservative numeric pick, explicitly reviewable at the M8-ACCEPT-01
+visual session, whose failure routing may reopen this decision. First
+run used the bench `palette64()` (first-64 chunk) and drowned quality
+in −16 L\* palette-coverage bias; quality rows were re-taken on a
+64-thread spread palette — worth remembering for any future perceptual
+comparison.
+
+## D62 — M8 shipped: the dither union, FS-only wasm guard, and the flat-kernel lesson (2026-07-22)
+
+**Context:** implementing the D61 set (M8-ALG-01/M8-CTRL-01 plus the
+automated half of M8-ACCEPT-01) in one auto-jazz run.
+
+**Decision 1 — dithering is a discriminated union, schema v4.**
+`PipelineConfig.dither: boolean` (+ top-level `serpentine`) became
+`DitherConfig`: `none` carries nothing, diffusion carries
+`serpentine` + `strength` (0–1, fraction of error), threshold carries
+`strength` alone (0–2 × a ±48/255 base amplitude). Invalid
+combinations cannot be expressed rather than runtime-guessed. The
+v3→v4 migration maps `true` to Floyd–Steinberg/full-strength/stored
+scan direction — old projects render byte-identically (asserted); the
+dropped `serpentine` of a `dither:false` file had no observable effect.
+Stage params keep optional `algorithm`/`strength` with FS/1 defaults so
+every pre-M8 caller keeps its exact meaning.
+
+**Decision 2 — a backend may never substitute a different method.** The
+Rust crate implements exactly FS at strength 1, so `routeDither` routes
+everything else to `ts` unconditionally, and the wasm adapter
+defensively delegates to the TS reference when params say otherwise —
+a stale manual override cannot silently swap algorithms.
+
+**Decision 3 — the readable kernel table needs a hot-loop shape.** The
+first generic diffusion loop iterated `readonly [dx, dy, w][]` tuples
+per pixel and cost **2.3×** the unrolled pre-M8 FS on the 1024² budget
+row (`npm run bench` caught it). Flattening each kernel once into
+parallel typed arrays (mirrored dx pair for serpentine) restored the
+budget with the kernel-as-data source of truth intact. Lesson: in the
+per-pixel loop, tuple destructuring is an allocation-adjacent cost V8
+does not forgive; the benchmark gate is what made this visible before
+merge.
+
+**Decision 4 — presets are evidence-bearing data.** Each of the seven
+presets (None/Subtle/Balanced/Strong/Photograph/Graphic/Very limited
+palette) carries a `basis` line quoting its D61 evidence; the UI model
+is pure (`src/ui/dither-model.ts`), presets resolve by structural
+equality so any edit lands the selector on a disabled "Custom" option,
+and per-method last-settings memory is deliberately session-only — the
+project file stores exactly one canonical configuration.
+
+**Deferred to the owner:** the visual acceptance session
+(M8-ACCEPT-01, maintainer) and the golden-fixture decision
+(M8-GOLD-01, `tests/golden/**` is protected); ordinary deterministic
+fixtures prove the implementations meanwhile. The frozen bench matrix
+was **not** extended with algorithm rows — budgets stay bound to the
+FS rows, and the D61 audit artefact carries the per-method timings
+(all within ~10–20% of no-dither; a matrix extension would need a
+boundary-version bump).

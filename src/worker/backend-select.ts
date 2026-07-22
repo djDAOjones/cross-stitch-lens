@@ -17,6 +17,7 @@
  */
 
 import type { ColorMetric } from '../core/color/metrics.ts';
+import type { DitherAlgorithm } from '../core/pipeline/dither.ts';
 import type { Backend } from '../core/types.ts';
 
 /** Selected backend per stage name; empty = everything runs 'ts'. */
@@ -28,6 +29,10 @@ export interface DitherWorkload {
   grid: number;
   paletteSize: number;
   metric: ColorMetric;
+  /** Method to run — the crate implements Floyd–Steinberg only (M8). */
+  algorithm: DitherAlgorithm;
+  /** Error/amplitude scale; the crate implements only the exact 1. */
+  strength: number;
 }
 
 /**
@@ -56,8 +61,15 @@ export interface DitherWorkload {
  *
  * The TS reference stays the fallback everywhere: an unregistered wasm
  * backend falls through to `backends.ts` in the executor.
+ *
+ * M8-ALG-01: the crate implements exactly Floyd–Steinberg at strength
+ * 1, so every other algorithm — and any damped strength — routes 'ts'
+ * unconditionally. Backend fallback may substitute a backend for the
+ * *same* algorithm, never a different dither method; the wasm adapter
+ * enforces the same guard defensively for manual overrides.
  */
 export function routeDither(workload: DitherWorkload): Backend {
+  if (workload.algorithm !== 'floyd-steinberg' || workload.strength !== 1) return 'ts';
   return workload.metric === 'rgb' ? 'wasm' : 'ts';
 }
 

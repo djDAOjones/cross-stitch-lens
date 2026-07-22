@@ -17,25 +17,17 @@ line passes and `check` is green. Requirements references are to
 
 ### M8 — Dithering expansion
 
-Rides the M5 search structures; algorithms land as user choices, not
-fidelity tiers (D47). Bayer/blue-noise are the natural first WebGPU
-wins.
+Engine, schema, controls and automated acceptance shipped (D61, D62);
+the milestone closes on the maintainer's visual session.
 
-- [ ] **M8-SPIKE-01 Dither algorithm evaluation** [spike] [detail]
-  Intent: evaluate Atkinson, Jarvis–Judice–Ninke, Stucki, Sierra family, ordered/Bayer, blue-noise on representative content (gradients, photos, flat art, tiny palettes) for quality, cost, and WebGPU fit; pick the committed set and control surface.
-  Done when: the committed algorithm set and which controls earn UI exposure are recorded with evidence.
+- [ ] **M8-ACCEPT-01 Visual-quality acceptance session** [maintainer] [detail] (2026-07-22)
+  Intent: the human half of the M8 gate — judge the five shipped methods on the audit gallery and on live Photoshop capture: banding, noise, edge damage, isolated stitches, stitchability, and whether the labels/presets predict what the eye sees.
+  Done when: owner pass/fail notes are recorded per method (failure routing per the ticket) and live editing stays usable across all shipped methods.
+  The automated matrix, per-method suites, bench evidence, and the regenerable gallery (`npm run audit` → `bench-reports/m8-spike-01-gallery.html`) are already in place — see the ticket for the session checklist.
 
-- [ ] **M8-ALG-01 Implement the chosen algorithms** [blocked: M8-SPIKE-01] [detail] (2026-07-20)
-  Intent: each chosen algorithm as a deterministic stage variant — TS reference first, parity-gated accelerated path where justified; no silent fallback between methods.
-  Done when: each algorithm is golden-tested, deterministic, selectable without losing other settings, and export matches preview.
-
-- [ ] **M8-CTRL-01 Dithering controls and presets** [detail]
-  Intent: only controls with understandable visible effects (strength, serpentine, matrix size — as spike evidence supports), plus plain-language presets (None/Subtle/Balanced/Strong/Photograph/Graphic/Very limited palette) mapping to documented settings.
-  Done when: every shipped control and preset has a documented, reproducible effect that survives save/reopen.
-
-- [ ] **M8-ACCEPT-01 Comparison view and visual-quality acceptance** [detail]
-  Intent: compare against no-dither (split compare exists) and between methods; inspect stitch placement at zoom; judge banding, noise, edge damage, isolated stitches, stitchability on the representative set.
-  Done when: the evaluation evidence is recorded and live editing stays usable across all shipped methods.
+- [ ] **M8-GOLD-01 Golden fixtures for the M8 methods** [maintainer] [sign-off] (2026-07-22)
+  Intent: decide whether the four new algorithms join `tests/golden/**` (protected — owner approval with a stated algorithm reason required). Ordinary deterministic fixtures already prove the implementations; golden fixtures would pin them against future backends.
+  Done when: the owner approves (and fixtures land) or declines (and the decision is recorded).
 
 ### Next milestones (stubs — expand into tasks when each becomes Next)
 

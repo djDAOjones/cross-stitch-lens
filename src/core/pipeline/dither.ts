@@ -1,36 +1,85 @@
 /**
- * Floyd–Steinberg error-diffusion dither against the active palette.
+ * Palette dithering against the active palette — two deterministic
+ * families behind one stage (M8-ALG-01, D61):
  *
- * Error terms use exact arithmetic in a float working buffer (D6:
- * quantisation shortcuts are for the LUT path; diffusion quality
- * depends on exact errors), so palette matching here always uses the
- * exact path — never the LUT. Deterministic: same input + params →
- * same output, bit-exact; this is the reference future WASM backends
- * must match exactly.
+ * - **Error diffusion** (Floyd–Steinberg, Atkinson, Jarvis–Judice–
+ *   Ninke): kernels as data over one scan loop. Error terms use exact
+ *   arithmetic in a float working buffer (D6: quantisation shortcuts
+ *   are for the LUT path; diffusion quality depends on exact errors),
+ *   so palette matching here always uses the exact path — never the
+ *   LUT. Serpentine mirrors the row direction and the horizontal
+ *   kernel offsets on right-to-left rows.
+ * - **Threshold** (ordered/Bayer 8×8, blue-noise 32×32): a signed,
+ *   tile-driven offset added to every channel before an exact match.
+ *   Pointwise — no error feedback — so flat and near-palette content
+ *   is left almost untouched and no directional artefacts exist.
  *
- * Kernel (raster order):        serpentine mirrors the row direction
- *        x    7/16               and the horizontal offsets on
- * 3/16  5/16  1/16               right-to-left rows.
+ * Deterministic: same input + params → same output, bit-exact; this is
+ * the reference any accelerated backend must match exactly. With the
+ * default params (`floyd-steinberg`, strength 1) the output is
+ * byte-identical to the pre-M8 stage — the golden suite pins that.
+ *
+ * Floyd–Steinberg kernel (raster order):
+ *        x    7/16
+ * 3/16  5/16  1/16
  */
 
 import { nearestIndexPruned, type CandidateTable } from '../color/candidates.ts';
 import { nearestIndex } from '../color/lut.ts';
 import type { ColorMetric } from '../color/metrics.ts';
 import { paletteLab, paletteRgb } from '../palette.ts';
+import { bayer8, blueNoise32, type ThresholdTile } from './threshold-tiles.ts';
 import { EMPTY_INDEX, type Palette, type PixelBuffer, type Stage } from '../types.ts';
+
+/** Diffusion methods shipped by M8 (D61). */
+export type DiffusionAlgorithm = 'floyd-steinberg' | 'atkinson' | 'jarvis';
+
+/** Threshold methods shipped by M8 (D61). */
+export type ThresholdAlgorithm = 'ordered' | 'blue-noise';
+
+/** Every dithering method the stage can run. */
+export type DitherAlgorithm = DiffusionAlgorithm | ThresholdAlgorithm;
+
+/**
+ * Default threshold amplitude in 8-bit channel units at `strength: 1`.
+ * Ordered dithering against a non-uniform thread palette has no exact
+ * per-cell quantisation step to scale by; a fixed base amplitude near
+ * the typical inter-thread spacing keeps the method deterministic and
+ * palette-independent, with `strength` (0–2) scaling it linearly —
+ * tiny palettes need more than 1 to bridge their wider gaps (D61).
+ */
+export const THRESHOLD_BASE_AMPLITUDE = 48;
 
 /** Parameters for {@link ditherStage}; the UI + project-file shape. */
 export interface DitherParams {
   palette: Palette;
   /** 'lab' (CIELAB ΔE76) or 'rgb' (Euclidean) — see metrics.ts. */
   metric: ColorMetric;
-  /** Alternate row direction (reduces directional worm artefacts). */
+  /**
+   * Method to run. Optional with a 'floyd-steinberg' default so every
+   * pre-M8 caller (and the wasm adapter contract) keeps its exact
+   * meaning; the config layer always sets it explicitly.
+   */
+  algorithm?: DitherAlgorithm;
+  /**
+   * Diffusion: fraction of the quantisation error diffused, 0–1.
+   * Threshold: scale over {@link THRESHOLD_BASE_AMPLITUDE}, 0–2.
+   * Default 1 — at which Floyd–Steinberg is byte-identical to the
+   * pre-M8 stage (`e * 1 === e` exactly in IEEE 754).
+   */
+  strength?: number;
+  /**
+   * Alternate row direction (reduces directional worm artefacts).
+   * Meaningful for diffusion algorithms only; threshold methods have
+   * no scan direction and ignore it.
+   */
   serpentine: boolean;
   /**
    * Seed for stochastic dither variants (conventions.md: randomised
-   * algorithms take an explicit seed). Floyd–Steinberg is fully
-   * deterministic, so the seed is carried in the params schema but
-   * unused until a random/blue-noise variant ships (wish-list §8).
+   * algorithms take an explicit seed). Every shipped method is fully
+   * deterministic — the blue-noise tile is fixed data — so the seed is
+   * carried in the params schema but unused (D61: nothing stochastic
+   * ships).
    */
   seed?: number;
   /**
@@ -46,6 +95,47 @@ export interface DitherParams {
    */
   candidates?: CandidateTable;
 }
+
+/** One diffusion tap: x/y offsets (rightward scan) and its weight. */
+type KernelTap = readonly [dx: number, dy: number, weight: number];
+
+/**
+ * Diffusion kernels as data. Tap order preserves the pre-M8 unrolled
+ * Floyd–Steinberg sequence; weights are exact IEEE dyadic-rational
+ * quotients evaluated once at module load. Atkinson's taps sum to 6/8
+ * by design — it sheds a quarter of the error, trading tonal accuracy
+ * at the extremes for a sparser, calmer texture (D61).
+ */
+const KERNELS: Record<DiffusionAlgorithm, readonly KernelTap[]> = {
+  'floyd-steinberg': [
+    [1, 0, 7 / 16],
+    [-1, 1, 3 / 16],
+    [0, 1, 5 / 16],
+    [1, 1, 1 / 16],
+  ],
+  atkinson: [
+    [1, 0, 1 / 8],
+    [2, 0, 1 / 8],
+    [-1, 1, 1 / 8],
+    [0, 1, 1 / 8],
+    [1, 1, 1 / 8],
+    [0, 2, 1 / 8],
+  ],
+  jarvis: [
+    [1, 0, 7 / 48],
+    [2, 0, 5 / 48],
+    [-2, 1, 3 / 48],
+    [-1, 1, 5 / 48],
+    [0, 1, 7 / 48],
+    [1, 1, 5 / 48],
+    [2, 1, 3 / 48],
+    [-2, 2, 1 / 48],
+    [-1, 2, 3 / 48],
+    [0, 2, 5 / 48],
+    [1, 2, 3 / 48],
+    [2, 2, 1 / 48],
+  ],
+};
 
 /**
  * Reusable float working buffer (M5-PERF-25).
@@ -81,31 +171,53 @@ export function releaseDitherWorkBuffer(): void {
   workBuffer = new Float32Array(0);
 }
 
-/** Diffuse `error * weight` into the working buffer at (x, y). */
-function diffuse(
-  work: Float32Array,
-  width: number,
-  height: number,
-  x: number,
-  y: number,
-  errR: number,
-  errG: number,
-  errB: number,
-  weight: number,
-): void {
-  if (x < 0 || x >= width || y >= height) return;
-  const i = (y * width + x) * 3;
-  work[i] = (work[i] ?? 0) + errR * weight;
-  work[i + 1] = (work[i + 1] ?? 0) + errG * weight;
-  work[i + 2] = (work[i + 2] ?? 0) + errB * weight;
-}
-
 /** Clamp a working value to displayable sRGB range. */
 function clamp255(v: number): number {
   return v < 0 ? 0 : v > 255 ? 255 : v;
 }
 
-function ditherTs(input: PixelBuffer, params: DitherParams): PixelBuffer {
+/**
+ * A kernel flattened into parallel typed arrays, one per scan
+ * direction, so the per-pixel tap loop reads typed-array slots instead
+ * of destructuring tuple objects. The tuple form of {@link KERNELS} is
+ * the readable source of truth; this is its hot-loop shape, computed
+ * once per algorithm at first use. Without it the generic loop cost
+ * 2.3× the pre-M8 unrolled Floyd–Steinberg on the benchmark's 1024²
+ * budget row (M8-ALG-01); with it the row is back inside tolerance.
+ */
+interface FlatKernel {
+  count: number;
+  /** Horizontal offsets for a rightward scan, and their mirror. */
+  dxRight: Int32Array;
+  dxLeft: Int32Array;
+  dy: Int32Array;
+  weight: Float64Array;
+}
+
+const flatKernels = new Map<DiffusionAlgorithm, FlatKernel>();
+
+function flatKernel(algorithm: DiffusionAlgorithm): FlatKernel {
+  const cached = flatKernels.get(algorithm);
+  if (cached !== undefined) return cached;
+  const taps = KERNELS[algorithm];
+  const flat: FlatKernel = {
+    count: taps.length,
+    dxRight: new Int32Array(taps.map(([dx]) => dx)),
+    dxLeft: new Int32Array(taps.map(([dx]) => -dx)),
+    dy: new Int32Array(taps.map(([, dy]) => dy)),
+    weight: new Float64Array(taps.map(([, , w]) => w)),
+  };
+  flatKernels.set(algorithm, flat);
+  return flat;
+}
+
+/** The error-diffusion family: one scan loop, kernel as data. */
+function diffuseTs(
+  input: PixelBuffer,
+  params: DitherParams,
+  kernel: FlatKernel,
+  strength: number,
+): PixelBuffer {
   const { width, height } = input;
   const src = input.data;
   const out = new Uint8ClampedArray(src.length);
@@ -133,13 +245,17 @@ function ditherTs(input: PixelBuffer, params: DitherParams): PixelBuffer {
     work[p * 3 + 2] = src[p * 4 + 2] ?? 0;
   }
 
+  const tapCount = kernel.count;
+  const tapDy = kernel.dy;
+  const tapWeight = kernel.weight;
+
   for (let y = 0; y < height; y++) {
     const rightward = !params.serpentine || y % 2 === 0;
     const xStart = rightward ? 0 : width - 1;
     const xEnd = rightward ? width : -1;
     const xStep = rightward ? 1 : -1;
     // Horizontal kernel offsets mirror with the scan direction.
-    const ahead = xStep;
+    const tapDx = rightward ? kernel.dxRight : kernel.dxLeft;
 
     for (let x = xStart; x !== xEnd; x += xStep) {
       const oi = (y * width + x) * 4;
@@ -183,21 +299,89 @@ function ditherTs(input: PixelBuffer, params: DitherParams): PixelBuffer {
       out[oi + 2] = pb;
       out[oi + 3] = src[oi + 3] ?? 255;
 
-      const errR = r - pr;
-      const errG = g - pg;
-      const errB = b - pb;
+      // Strength scales the diffused error; at the default 1 the
+      // multiplication is an exact IEEE identity, preserving pre-M8
+      // Floyd–Steinberg output byte-for-byte.
+      const errR = (r - pr) * strength;
+      const errG = (g - pg) * strength;
+      const errB = (b - pb) * strength;
 
-      diffuse(work, width, height, x + ahead, y, errR, errG, errB, 7 / 16);
-      diffuse(work, width, height, x - ahead, y + 1, errR, errG, errB, 3 / 16);
-      diffuse(work, width, height, x, y + 1, errR, errG, errB, 5 / 16);
-      diffuse(work, width, height, x + ahead, y + 1, errR, errG, errB, 1 / 16);
+      for (let t = 0; t < tapCount; t++) {
+        const tx = x + (tapDx[t] ?? 0);
+        const ty = y + (tapDy[t] ?? 0);
+        if (tx < 0 || tx >= width || ty >= height) continue;
+        const weight = tapWeight[t] ?? 0;
+        const ti = (ty * width + tx) * 3;
+        work[ti] = (work[ti] ?? 0) + errR * weight;
+        work[ti + 1] = (work[ti + 1] ?? 0) + errG * weight;
+        work[ti + 2] = (work[ti + 2] ?? 0) + errB * weight;
+      }
     }
   }
 
   return { width, height, data: out, indices };
 }
 
-/** The Floyd–Steinberg dither stage (TS reference; WASM post-profile). */
+/**
+ * The threshold family: add a signed tile offset to every channel,
+ * then match exactly. Each cell depends only on its own value and
+ * coordinates — no error feedback — so the empty-stitch rule needs no
+ * boundary handling: a skipped cell influences nothing.
+ */
+function thresholdTs(
+  input: PixelBuffer,
+  params: DitherParams,
+  tile: ThresholdTile,
+  strength: number,
+): PixelBuffer {
+  const { width, height } = input;
+  const src = input.data;
+  const out = new Uint8ClampedArray(src.length);
+  const indices = new Uint16Array(width * height).fill(EMPTY_INDEX);
+  const palRgb = paletteRgb(params.palette);
+  const usesLab = params.metric === 'lab';
+  const palLab = usesLab ? paletteLab(params.palette) : new Float32Array(0);
+  const labScratch = new Float32Array(3);
+  const table = usesLab ? (params.candidates ?? null) : null;
+  const amplitude = THRESHOLD_BASE_AMPLITUDE * strength;
+
+  for (let y = 0; y < height; y++) {
+    const rowBase = (y % tile.size) * tile.size;
+    for (let x = 0; x < width; x++) {
+      const oi = (y * width + x) * 4;
+      // Same empty-stitch contract as diffusion (D9/D49).
+      if ((src[oi + 3] ?? 255) === 0) continue;
+
+      const t = ((tile.thresholds[rowBase + (x % tile.size)] ?? 0.5) - 0.5) * amplitude;
+      const r = clamp255((src[oi] ?? 0) + t);
+      const g = clamp255((src[oi + 1] ?? 0) + t);
+      const b = clamp255((src[oi + 2] ?? 0) + t);
+
+      const entry =
+        table === null
+          ? nearestIndex(r, g, b, params.metric, palRgb, palLab, labScratch)
+          : nearestIndexPruned(r, g, b, palLab, labScratch, table);
+      indices[y * width + x] = entry;
+      const idx = entry * 3;
+      out[oi] = palRgb[idx] ?? 0;
+      out[oi + 1] = palRgb[idx + 1] ?? 0;
+      out[oi + 2] = palRgb[idx + 2] ?? 0;
+      out[oi + 3] = src[oi + 3] ?? 255;
+    }
+  }
+
+  return { width, height, data: out, indices };
+}
+
+function ditherTs(input: PixelBuffer, params: DitherParams): PixelBuffer {
+  const algorithm = params.algorithm ?? 'floyd-steinberg';
+  const strength = params.strength ?? 1;
+  if (algorithm === 'ordered') return thresholdTs(input, params, bayer8(), strength);
+  if (algorithm === 'blue-noise') return thresholdTs(input, params, blueNoise32(), strength);
+  return diffuseTs(input, params, flatKernel(algorithm), strength);
+}
+
+/** The dither stage (TS reference; WASM covers Floyd–Steinberg only). */
 export const ditherStage: Stage<DitherParams> = {
   name: 'dither',
   backends: { ts: ditherTs },

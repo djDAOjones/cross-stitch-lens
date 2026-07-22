@@ -54,8 +54,7 @@ function reduceOneRedPixel(palette: Palette): [number, number, number] {
       resizeMode: 'stretch',
       palette,
       metric: 'rgb',
-      dither: false,
-      serpentine: true,
+      dither: { algorithm: 'none' },
     },
   };
   const response = executeRequest(request);

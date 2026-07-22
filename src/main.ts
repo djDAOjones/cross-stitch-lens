@@ -31,7 +31,11 @@ import {
   startCapture,
   type CaptureSession,
 } from './capture/session.ts';
-import { fullRgbVariant, type PipelineConfig } from './core/pipeline/config.ts';
+import {
+  DEFAULT_DITHER,
+  fullRgbVariant,
+  type PipelineConfig,
+} from './core/pipeline/config.ts';
 import {
   defaultPolicy,
   type PaletteConflict,
@@ -87,6 +91,7 @@ import {
 } from './export/png.ts';
 import { createDebugPanel } from './ui/debug-panel.ts';
 import { createDiagnosticsControl } from './ui/diagnostics-button.ts';
+import { createDitherControls } from './ui/dither-panel.ts';
 import { decodeImageBlob, imageFiles } from './ui/import.ts';
 import { createInfoPanel } from './ui/info-panel.ts';
 import { loadPreferences, savePreferences, type ShellPreferences } from './ui/preferences.ts';
@@ -176,8 +181,7 @@ function build(app: HTMLElement): void {
     // Filled by the first `resolvePalette()` below; null is full-RGB.
     palette: null,
     metric: 'lab',
-    dither: true,
-    serpentine: true,
+    dither: { ...DEFAULT_DITHER },
   };
   let masterImage: PixelBuffer | null = null;
 
@@ -707,8 +711,13 @@ function build(app: HTMLElement): void {
     ),
   );
 
-  const ditherToggle = toggleField(document, 'dither-on', 'Dithering', config.dither, (on) => {
-    config.dither = on;
+  // The Dither group (M8-CTRL-01): preset + algorithm selectors and
+  // the method-specific controls, all decided by the pure model in
+  // src/ui/dither-model.ts. Session memory of each method's last
+  // settings lives inside the controls; the project file stores only
+  // the one canonical active configuration.
+  const ditherControls = createDitherControls(document, config.dither, (next) => {
+    config.dither = next;
     reprocess();
   });
 
@@ -735,7 +744,7 @@ function build(app: HTMLElement): void {
     ensureSelectionSource();
     resolvePalette();
     // Dithering only applies when reducing to a palette.
-    ditherToggle.input.disabled = config.palette === null;
+    ditherControls.update(config.dither, config.palette === null);
     palettePanel.update(panelState());
     reprocess();
   }
@@ -984,10 +993,7 @@ function build(app: HTMLElement): void {
     return policy.ownedOnly ? 'inventory' : 'brands';
   }
 
-  const ditherGroup = document.createElement('fieldset');
-  const ditherLegend = document.createElement('legend');
-  ditherLegend.textContent = 'Dither';
-  ditherGroup.append(ditherLegend, ditherToggle.element);
+  const ditherGroup = ditherControls.element;
 
   const pipelineGroup = document.createElement('fieldset');
   const pipelineLegend = document.createElement('legend');
@@ -1316,7 +1322,6 @@ function build(app: HTMLElement): void {
         resizeMode: config.resizeMode,
         metric: config.metric,
         dither: config.dither,
-        serpentine: config.serpentine,
       },
       // Intent *and* the exact threads that rendered it: reopening
       // must reproduce this design even if the library palette it came
@@ -1384,8 +1389,7 @@ function build(app: HTMLElement): void {
     setFieldValue('pattern-height', String(scales.pattern.heightStitches));
     setFieldValue('order-preset', config.preset);
     setFieldValue('colour-mode', paletteMode ? 'threads' : 'rgb');
-    setToggleValue('dither-on', config.dither);
-    ditherToggle.input.disabled = config.palette === null;
+    ditherControls.update(config.dither, config.palette === null);
     palettePanel.update(panelState());
     setToggleValue('grid-show', gridStyle.show);
     setToggleValue('grid-ticks', gridStyle.ticks);
@@ -1464,7 +1468,6 @@ function build(app: HTMLElement): void {
       applyLoadedPalette(file.palette);
       config.metric = file.pipeline.metric;
       config.dither = file.pipeline.dither;
-      config.serpentine = file.pipeline.serpentine;
       Object.assign(gridStyle, file.gridStyle);
       scales = withPattern(scales, {
         widthStitches: file.pipeline.grid.width,
@@ -1782,8 +1785,8 @@ function build(app: HTMLElement): void {
 
   /** Live config: draft drops dithering; exports never use this. */
   function liveConfig(): PipelineConfig {
-    if (draftMode && config.palette !== null && config.dither) {
-      return { ...config, dither: false };
+    if (draftMode && config.palette !== null && config.dither.algorithm !== 'none') {
+      return { ...config, dither: { algorithm: 'none' } };
     }
     return config;
   }

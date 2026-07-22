@@ -60,11 +60,13 @@ function ditherRequest(metric: 'rgb' | 'lab' = 'rgb'): ProcessRequest {
       resizeMode: 'stretch',
       palette: PALETTE,
       metric,
-      dither: true,
-      serpentine: true,
+      dither: { algorithm: 'floyd-steinberg', serpentine: true, strength: 1 },
     },
   };
 }
+
+/** Routing facts for the pre-M8 workload rows: FS at full strength. */
+const FS = { algorithm: 'floyd-steinberg', strength: 1 } as const;
 
 afterEach(() => {
   clearSelectedBackends();
@@ -92,16 +94,37 @@ describe('workload routing (M5-PERF-27)', () => {
   it('routes lab to ts and rgb to wasm, at every grid and palette size', () => {
     for (const grid of [96, 200, 300, 1024]) {
       for (const paletteSize of [2, 64, 533]) {
-        expect(routeDither({ grid, paletteSize, metric: 'lab' })).toBe('ts');
-        expect(routeDither({ grid, paletteSize, metric: 'rgb' })).toBe('wasm');
+        expect(routeDither({ grid, paletteSize, metric: 'lab', ...FS })).toBe('ts');
+        expect(routeDither({ grid, paletteSize, metric: 'rgb', ...FS })).toBe('wasm');
       }
+    }
+  });
+
+  it('routes every non-FS algorithm (and damped FS) to ts — the crate is FS-only', () => {
+    // M8-ALG-01: backend fallback may swap backends for the SAME
+    // algorithm, never substitute a different dither method.
+    for (const metric of ['rgb', 'lab'] as const) {
+      for (const algorithm of ['atkinson', 'jarvis', 'ordered', 'blue-noise'] as const) {
+        expect(routeDither({ grid: 300, paletteSize: 64, metric, algorithm, strength: 1 })).toBe(
+          'ts',
+        );
+      }
+      expect(
+        routeDither({
+          grid: 300,
+          paletteSize: 64,
+          metric,
+          algorithm: 'floyd-steinberg',
+          strength: 0.5,
+        }),
+      ).toBe('ts');
     }
   });
 
   it('is a pure function of the workload — no startup state to go stale', () => {
     // D42's failing mode: one calibration at startup, applied forever.
     // Routing cannot drift because it holds nothing.
-    const workload = { grid: 300, paletteSize: 64, metric: 'lab' as const };
+    const workload = { grid: 300, paletteSize: 64, metric: 'lab' as const, ...FS };
     const first = routeDither(workload);
     clearSelectedBackends();
     setSelectedBackend('dither', 'wasm');

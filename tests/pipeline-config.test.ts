@@ -8,9 +8,12 @@ import { describe, expect, it } from 'vitest';
 import { adjustIsIdentity, type AdjustParams } from '../src/core/pipeline/adjust.ts';
 import {
   buildStages,
+  DEFAULT_DITHER,
   fullRgbVariant,
+  type DitherConfig,
   type PipelineConfig,
 } from '../src/core/pipeline/config.ts';
+import type { DitherParams } from '../src/core/pipeline/dither.ts';
 import type { Palette } from '../src/core/types.ts';
 import { thread } from './helpers/threads.ts';
 
@@ -22,6 +25,8 @@ const PALETTE: Palette = {
   ],
 };
 
+const FS: DitherConfig = { ...DEFAULT_DITHER };
+
 function config(overrides: Partial<PipelineConfig> = {}): PipelineConfig {
   return {
     preset: 'resize-first',
@@ -29,8 +34,7 @@ function config(overrides: Partial<PipelineConfig> = {}): PipelineConfig {
     resizeMode: 'stretch',
     palette: PALETTE,
     metric: 'lab',
-    dither: false,
-    serpentine: true,
+    dither: { algorithm: 'none' },
     ...overrides,
   };
 }
@@ -53,16 +57,33 @@ describe('pipeline config builder', () => {
   });
 
   it('dither replaces reduce as the quantiser in both presets', () => {
-    expect(names(config({ dither: true }))).toEqual(['resize', 'dither']);
-    expect(names(config({ dither: true, preset: 'reduce-first' }))).toEqual([
+    expect(names(config({ dither: FS }))).toEqual(['resize', 'dither']);
+    expect(names(config({ dither: FS, preset: 'reduce-first' }))).toEqual([
       'dither',
       'resize',
     ]);
   });
 
+  it('every M8 algorithm builds the dither stage with its own params', () => {
+    const configs: Exclude<DitherConfig, { algorithm: 'none' }>[] = [
+      { algorithm: 'atkinson', serpentine: false, strength: 0.5 },
+      { algorithm: 'jarvis', serpentine: true, strength: 1 },
+      { algorithm: 'ordered', strength: 1.5 },
+      { algorithm: 'blue-noise', strength: 1 },
+    ];
+    for (const dither of configs) {
+      const stages = buildStages(config({ dither }));
+      expect(stages.map((s) => s.stage.name)).toEqual(['resize', 'dither']);
+      const params = stages[1]?.params as DitherParams;
+      expect(params.algorithm).toBe(dither.algorithm);
+      expect(params.strength).toBe(dither.strength);
+      expect(params.serpentine).toBe('serpentine' in dither ? dither.serpentine : false);
+    }
+  });
+
   it('full-RGB mode (palette null) runs no colour stage', () => {
     expect(names(config({ palette: null }))).toEqual(['resize']);
-    expect(names(config({ palette: null, dither: true }))).toEqual(['resize']);
+    expect(names(config({ palette: null, dither: FS }))).toEqual(['resize']);
   });
 
   it('every emitted stage allocates its own output — the ownership invariant', () => {
@@ -72,7 +93,7 @@ describe('pipeline config builder', () => {
     // response, so an alias would detach a buffer still in use (M5B).
     for (const c of [
       config(),
-      config({ dither: true }),
+      config({ dither: FS }),
       config({ palette: null }),
       config({ preset: 'reduce-first' }),
     ]) {
@@ -97,7 +118,7 @@ describe('pipeline config builder', () => {
   });
 
   it('full-RGB variant keeps geometry and drops every colour stage', () => {
-    const variant = fullRgbVariant(config({ dither: true, resizeMode: 'contain' }));
+    const variant = fullRgbVariant(config({ dither: FS, resizeMode: 'contain' }));
     expect(variant.palette).toBeNull();
     expect(variant.grid).toEqual({ width: 8, height: 8 });
     expect(variant.resizeMode).toBe('contain');

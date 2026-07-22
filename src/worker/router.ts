@@ -45,7 +45,7 @@ export interface RouterDeps {
  * getLut remains the safety net if this is skipped.
  */
 export async function ensureLutFor(config: PipelineConfig): Promise<void> {
-  if (config.palette === null || config.dither) return;
+  if (config.palette === null || config.dither.algorithm !== 'none') return;
   await ensureLut(config.palette, config.metric);
 }
 

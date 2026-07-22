@@ -23,6 +23,17 @@ type WasmModule = typeof import('stitch-engine-wasm');
 /** Build the StageFn over an initialised module. */
 function wasmDither(mod: WasmModule) {
   return (input: PixelBuffer, params: DitherParams): PixelBuffer => {
+    // The crate implements exactly Floyd–Steinberg at strength 1.
+    // Routing already prefers 'ts' for anything else (M8-ALG-01), but a
+    // recorded manual override could still land here — and substituting
+    // a different dither method silently is forbidden, so delegate to
+    // the TS reference for the algorithm actually requested.
+    if (
+      (params.algorithm ?? 'floyd-steinberg') !== 'floyd-steinberg' ||
+      (params.strength ?? 1) !== 1
+    ) {
+      return ditherStage.backends.ts(input, params);
+    }
     const palRgb = paletteRgb(params.palette);
     const out = mod.dither_floyd_steinberg(
       input.width,

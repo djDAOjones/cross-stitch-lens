@@ -33,10 +33,13 @@ export type StageObserver = (stage: string, buffer: PixelBuffer) => void;
  */
 function routeFor(stageName: string, config: PipelineConfig): Backend | undefined {
   if (stageName !== 'dither' || config.palette === null) return undefined;
+  if (config.dither.algorithm === 'none') return undefined;
   return routeDither({
     grid: Math.max(config.grid.width, config.grid.height),
     paletteSize: config.palette.entries.length,
     metric: config.metric,
+    algorithm: config.dither.algorithm,
+    strength: config.dither.strength,
   });
 }
 

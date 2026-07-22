@@ -31,8 +31,7 @@ function sampleProject(): ProjectFile {
       grid: { width: 200, height: 150 },
       resizeMode: 'contain',
       metric: 'lab',
-      dither: true,
-      serpentine: true,
+      dither: { algorithm: 'floyd-steinberg', serpentine: true, strength: 1 },
     },
     palette: {
       policy: {
@@ -93,8 +92,26 @@ describe('serializeProject / parseProject round trip', () => {
   it('round-trips full-RGB mode (palette null)', () => {
     const file = sampleProject();
     file.palette = null;
-    file.pipeline.dither = false;
+    file.pipeline.dither = { algorithm: 'none' };
     expect(parseProject(serializeProject(file)).palette).toBeNull();
+  });
+
+  it('round-trips every dither algorithm byte-identically', () => {
+    const variants: ProjectFile['pipeline']['dither'][] = [
+      { algorithm: 'none' },
+      { algorithm: 'floyd-steinberg', serpentine: false, strength: 0.5 },
+      { algorithm: 'atkinson', serpentine: true, strength: 1 },
+      { algorithm: 'jarvis', serpentine: true, strength: 0.75 },
+      { algorithm: 'ordered', strength: 1.5 },
+      { algorithm: 'blue-noise', strength: 1 },
+    ];
+    for (const dither of variants) {
+      const file = sampleProject();
+      file.pipeline.dither = dither;
+      const saved = serializeProject(file);
+      expect(serializeProject(parseProject(saved))).toBe(saved);
+      expect(parseProject(saved).pipeline.dither).toEqual(dither);
+    }
   });
 
   it('emits human-readable JSON with a trailing newline', () => {
@@ -153,12 +170,39 @@ describe('parseProject validation', () => {
     );
   });
 
-  it('rejects a non-boolean dither flag', () => {
+  it('rejects a non-object dither block', () => {
     expect(() =>
       parseProject(
         mutated((doc) => ((doc['pipeline'] as Record<string, unknown>)['dither'] = 'yes')),
       ),
     ).toThrow('pipeline.dither');
+  });
+
+  it('rejects an unknown dither algorithm, naming the path', () => {
+    const ditherOf = (doc: Record<string, unknown>): Record<string, unknown> =>
+      (doc['pipeline'] as Record<string, unknown>)['dither'] as Record<string, unknown>;
+    expect(() =>
+      parseProject(mutated((doc) => (ditherOf(doc)['algorithm'] = 'stucki'))),
+    ).toThrow('pipeline.dither.algorithm');
+  });
+
+  it('rejects per-family out-of-range strengths', () => {
+    const setDither = (value: unknown) =>
+      mutated((doc) => ((doc['pipeline'] as Record<string, unknown>)['dither'] = value));
+    // Diffusion strength is a 0–1 error fraction.
+    expect(() =>
+      parseProject(
+        setDither({ algorithm: 'floyd-steinberg', serpentine: true, strength: 1.5 }),
+      ),
+    ).toThrow('pipeline.dither.strength');
+    // Threshold strength scales the base amplitude, 0–2.
+    expect(() => parseProject(setDither({ algorithm: 'ordered', strength: 2.5 }))).toThrow(
+      'pipeline.dither.strength',
+    );
+    // Diffusion requires its scan direction.
+    expect(() =>
+      parseProject(setDither({ algorithm: 'atkinson', strength: 1 })),
+    ).toThrow('pipeline.dither.serpentine');
   });
 
   it('rejects a malformed grid-line colour', () => {
@@ -214,10 +258,16 @@ describe('parseProject validation', () => {
  * rather than on whatever the parser happened to leave behind.
  */
 describe('migration from schema v1', () => {
-  /** A v1 document: the current one minus `preview`, version pinned. */
+  /**
+   * A v1 document: the current one minus `preview`, with the pre-v4
+   * Boolean dither + top-level serpentine pair, version pinned.
+   */
   function v1Document(): string {
     const doc = JSON.parse(serializeProject(sampleProject())) as Record<string, unknown>;
     delete doc['preview'];
+    const pipeline = doc['pipeline'] as Record<string, unknown>;
+    pipeline['dither'] = true;
+    pipeline['serpentine'] = true;
     doc['schemaVersion'] = 1;
     return JSON.stringify(doc);
   }
@@ -242,6 +292,47 @@ describe('migration from schema v1', () => {
 
   it('re-saves the migrated file at the current schema, round-trip stable', () => {
     const migrated = serializeProject(parseProject(v1Document()));
+    expect(serializeProject(parseProject(migrated))).toBe(migrated);
+  });
+});
+
+/**
+ * v3 → v4 (M8-ALG-01): the Boolean `dither` + top-level `serpentine`
+ * pair becomes the discriminated union. `true` only ever meant
+ * Floyd–Steinberg at full strength, so the migrated file must state
+ * exactly that — old projects render unchanged.
+ */
+describe('migration from schema v3 dither', () => {
+  function v3Document(dither: boolean, serpentine: boolean): string {
+    const doc = JSON.parse(serializeProject(sampleProject())) as Record<string, unknown>;
+    const pipeline = doc['pipeline'] as Record<string, unknown>;
+    pipeline['dither'] = dither;
+    pipeline['serpentine'] = serpentine;
+    doc['schemaVersion'] = 3;
+    return JSON.stringify(doc);
+  }
+
+  it('lifts dither: true into Floyd–Steinberg, preserving the scan direction', () => {
+    expect(parseProject(v3Document(true, true)).pipeline.dither).toEqual({
+      algorithm: 'floyd-steinberg',
+      serpentine: true,
+      strength: 1,
+    });
+    expect(parseProject(v3Document(true, false)).pipeline.dither).toEqual({
+      algorithm: 'floyd-steinberg',
+      serpentine: false,
+      strength: 1,
+    });
+  });
+
+  it('lifts dither: false into none', () => {
+    expect(parseProject(v3Document(false, true)).pipeline.dither).toEqual({
+      algorithm: 'none',
+    });
+  });
+
+  it('re-saves the migrated file at the current schema, round-trip stable', () => {
+    const migrated = serializeProject(parseProject(v3Document(true, false)));
     expect(serializeProject(parseProject(migrated))).toBe(migrated);
   });
 });
@@ -284,7 +375,6 @@ describe('a saved project reopens with identical output', () => {
           : DMC,
       metric: file.pipeline.metric,
       dither: file.pipeline.dither,
-      serpentine: file.pipeline.serpentine,
     };
   }
 
@@ -327,8 +417,7 @@ describe('a saved project reopens with identical output', () => {
         grid: { width: 24, height: 16 },
         resizeMode: 'contain',
         metric: 'lab',
-        dither: true,
-        serpentine: true,
+        dither: { algorithm: 'floyd-steinberg', serpentine: true, strength: 1 },
       },
       palette: DMC_SNAPSHOT,
     },
@@ -339,8 +428,7 @@ describe('a saved project reopens with identical output', () => {
         grid: { width: 16, height: 16 },
         resizeMode: 'cover',
         metric: 'rgb',
-        dither: false,
-        serpentine: false,
+        dither: { algorithm: 'none' },
       },
       palette: DMC_SNAPSHOT,
     },
@@ -351,8 +439,7 @@ describe('a saved project reopens with identical output', () => {
         grid: { width: 20, height: 20 },
         resizeMode: 'fit',
         metric: 'lab',
-        dither: false,
-        serpentine: true,
+        dither: { algorithm: 'none' },
       },
       palette: DMC_SNAPSHOT,
     },
@@ -363,8 +450,7 @@ describe('a saved project reopens with identical output', () => {
         grid: { width: 18, height: 12 },
         resizeMode: 'stretch',
         metric: 'lab',
-        dither: false,
-        serpentine: true,
+        dither: { algorithm: 'none' },
       },
       palette: null,
     },
@@ -375,13 +461,34 @@ describe('a saved project reopens with identical output', () => {
         grid: { width: 16, height: 16 },
         resizeMode: 'contain',
         metric: 'lab',
-        dither: true,
-        serpentine: true,
+        dither: { algorithm: 'floyd-steinberg', serpentine: true, strength: 1 },
       },
       // The snapshot is what makes a reopen reproducible: this project
       // renders three threads whatever the catalogue or the library
       // later says (M7-PAL-01).
       palette: { policy: defaultPolicy(), snapshot: DMC.entries.slice(0, 3) },
+    },
+    {
+      name: 'atkinson at half strength',
+      pipeline: {
+        preset: 'resize-first',
+        grid: { width: 24, height: 16 },
+        resizeMode: 'contain',
+        metric: 'lab',
+        dither: { algorithm: 'atkinson', serpentine: false, strength: 0.5 },
+      },
+      palette: DMC_SNAPSHOT,
+    },
+    {
+      name: 'blue-noise threshold',
+      pipeline: {
+        preset: 'resize-first',
+        grid: { width: 24, height: 16 },
+        resizeMode: 'contain',
+        metric: 'lab',
+        dither: { algorithm: 'blue-noise', strength: 1 },
+      },
+      palette: DMC_SNAPSHOT,
     },
   ];
 

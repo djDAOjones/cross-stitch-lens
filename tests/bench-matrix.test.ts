@@ -143,7 +143,7 @@ describe('workload configs', () => {
       const config = configFor(workload);
       if (workload.palette === 'rgb') {
         expect(config.palette).toBeNull();
-        expect(config.dither).toBe(false);
+        expect(config.dither).toEqual({ algorithm: 'none' });
       }
       expect(config.grid).toEqual({ width: workload.grid, height: workload.grid });
       expect(config.preset).toBe(workload.order);

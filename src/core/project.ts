@@ -18,12 +18,12 @@
 
 import type { ColorMetric } from './color/metrics.ts';
 import type { CountMode, PalettePolicy, PresetMode } from './palette-policy.ts';
-import type { OrderPreset } from './pipeline/config.ts';
+import type { DitherConfig, OrderPreset } from './pipeline/config.ts';
 import type { ResizeMode } from './pipeline/resize.ts';
 import type { Provenance, Thread, ThreadStatus } from './types.ts';
 
 /** Current project-file schema version. Bump with a forward migration. */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 /**
  * Hard ceiling on a persisted palette snapshot.
@@ -57,8 +57,12 @@ export interface ProjectPipeline {
   grid: { width: number; height: number };
   resizeMode: ResizeMode;
   metric: ColorMetric;
-  dither: boolean;
-  serpentine: boolean;
+  /**
+   * Dithering as a discriminated union (schema v4, M8-ALG-01). Stable
+   * algorithm identifiers are persisted, never display labels; fields
+   * exist only where the algorithm defines them.
+   */
+  dither: DitherConfig;
 }
 
 /**
@@ -206,6 +210,19 @@ function canonicalPalette(palette: ProjectPalette): ProjectPalette {
   };
 }
 
+/** Canonical field order for the dither union, per algorithm family. */
+function canonicalDither(dither: DitherConfig): DitherConfig {
+  if (dither.algorithm === 'none') return { algorithm: 'none' };
+  if ('serpentine' in dither) {
+    return {
+      algorithm: dither.algorithm,
+      serpentine: dither.serpentine,
+      strength: dither.strength,
+    };
+  }
+  return { algorithm: dither.algorithm, strength: dither.strength };
+}
+
 export function serializeProject(file: ProjectFile): string {
   const canonical: ProjectFile = {
     schemaVersion: file.schemaVersion,
@@ -214,8 +231,7 @@ export function serializeProject(file: ProjectFile): string {
       grid: { width: file.pipeline.grid.width, height: file.pipeline.grid.height },
       resizeMode: file.pipeline.resizeMode,
       metric: file.pipeline.metric,
-      dither: file.pipeline.dither,
-      serpentine: file.pipeline.serpentine,
+      dither: canonicalDither(file.pipeline.dither),
     },
     palette: file.palette === null ? null : canonicalPalette(file.palette),
     gridStyle: {
@@ -404,6 +420,35 @@ function parsePalette(value: unknown): ProjectPalette | null {
 }
 
 /**
+ * Validate the v4 dither union. Strength bounds are per-family: a
+ * diffusion strength is a fraction of the error (0–1), a threshold
+ * strength scales the base amplitude (0–2) — see `DitherConfig`.
+ */
+function parseDither(value: unknown): DitherConfig {
+  const raw = asRecord(value, 'pipeline.dither');
+  const algorithm = asOneOf(raw['algorithm'], 'pipeline.dither.algorithm', [
+    'none',
+    'floyd-steinberg',
+    'atkinson',
+    'jarvis',
+    'ordered',
+    'blue-noise',
+  ]);
+  if (algorithm === 'none') return { algorithm };
+  if (algorithm === 'ordered' || algorithm === 'blue-noise') {
+    return {
+      algorithm,
+      strength: asNumber(raw['strength'], 'pipeline.dither.strength', 0, 2),
+    };
+  }
+  return {
+    algorithm,
+    serpentine: asBool(raw['serpentine'], 'pipeline.dither.serpentine'),
+    strength: asNumber(raw['strength'], 'pipeline.dither.strength', 0, 1),
+  };
+}
+
+/**
  * Migrate a raw parsed document from `version` up to SCHEMA_VERSION.
  * Each bump adds its forward step here — loading an older file must
  * migrate, never fail (AGENTS.md).
@@ -424,9 +469,28 @@ function migrateProject(raw: Record<string, unknown>, version: number): Record<s
     // the thread data, so there is nothing to reproduce from, and the
     // first resolve fills it.
     if (at === 3) doc = migrateV2Palette(doc);
+    // v3 → v4: the Boolean `dither` (+ top-level `serpentine`) became
+    // the discriminated DitherConfig (M8-ALG-01). `true` only ever
+    // meant Floyd–Steinberg at full strength with the stored scan
+    // direction, which the union states exactly — rendered output is
+    // unchanged. `false` becomes 'none'; its stored serpentine had no
+    // effect and is dropped.
+    if (at === 4) doc = migrateV3Dither(doc);
     doc = { ...doc, schemaVersion: at };
   }
   return doc;
+}
+
+/** Lift the v3 Boolean dither + serpentine pair into the v4 union. */
+function migrateV3Dither(doc: Record<string, unknown>): Record<string, unknown> {
+  const pipeline = { ...asRecord(doc['pipeline'], 'pipeline') };
+  const on = asBool(pipeline['dither'], 'pipeline.dither');
+  const serpentine = asBool(pipeline['serpentine'], 'pipeline.serpentine');
+  delete pipeline['serpentine'];
+  pipeline['dither'] = on
+    ? { algorithm: 'floyd-steinberg', serpentine, strength: 1 }
+    : { algorithm: 'none' };
+  return { ...doc, pipeline };
 }
 
 /** Lift a v2 `pipeline.palette` name into the v3 palette block. */
@@ -497,8 +561,7 @@ export function parseProject(json: string): ProjectFile {
         'fit',
       ]),
       metric: asOneOf(pipeline['metric'], 'pipeline.metric', ['rgb', 'lab']),
-      dither: asBool(pipeline['dither'], 'pipeline.dither'),
-      serpentine: asBool(pipeline['serpentine'], 'pipeline.serpentine'),
+      dither: parseDither(pipeline['dither']),
     },
     palette: parsePalette(doc['palette']),
     gridStyle: {

@@ -89,6 +89,8 @@ describe.skipIf(!AUDIT)('M5-PERF-27 routing audit (AUDIT=1)', () => {
             grid,
             paletteSize: palette.entries.length,
             metric,
+            algorithm: 'floyd-steinberg',
+            strength: 1,
           });
           if (routed !== winner) flips++;
           rows.push(tsRow, wasmRow);

@@ -60,8 +60,7 @@ const CONFIG: PipelineConfig = {
   resizeMode: 'stretch',
   palette: null,
   metric: 'rgb',
-  dither: false,
-  serpentine: true,
+  dither: { algorithm: 'none' },
 };
 
 const PALETTE: Palette = {
@@ -251,11 +250,10 @@ describe('export isolation (AGENTS.md: preview quality never leaks)', () => {
     resizeMode: 'stretch',
     palette: PALETTE,
     metric: 'lab',
-    dither: true,
-    serpentine: true,
+    dither: { algorithm: 'floyd-steinberg', serpentine: true, strength: 1 },
   };
   /** What the draft governor substitutes under load: dithering off. */
-  const DRAFT: PipelineConfig = { ...DITHERED, dither: false };
+  const DRAFT: PipelineConfig = { ...DITHERED, dither: { algorithm: 'none' } };
 
   /** A gradient big enough that dither and plain reduce disagree. */
   function source(): ArrayBuffer {
@@ -430,7 +428,7 @@ describe('split compare recomputation (M5-PERF-28)', () => {
     const config: PipelineConfig = {
       ...CONFIG,
       palette: PALETTE,
-      dither: false,
+      dither: { algorithm: 'none' },
       metric: 'rgb',
     };
     const { deps, bitmaps } = harness();

@@ -85,3 +85,11 @@
   of `check`", but `bench` is `BENCH=1`-gated and deliberately out of
   `check` since D43; the gate runs the bench *machinery* tests, not the
   budget assertions (source: perf-area review 2026-07-21, D43/D44)
+- [ ] 2026-07-22 architecture §Repository layout + §Core contracts — `dither.ts`
+  is described as "Floyd–Steinberg (error diffusion)" only; M8 shipped five
+  methods behind a `DitherConfig` union (schema v4), a `threshold-tiles.ts`
+  sibling, and FS-only wasm routing (source: D61/D62)
+- [ ] 2026-07-22 AGENTS §Scope guards / brief — "multiple dithering algorithms
+  beyond Floyd–Steinberg" is listed as out-of-MVP-scope; M8 deliberately
+  shipped them post-MVP, so the guard reads as stale against the current
+  feature set (source: D61/D62)

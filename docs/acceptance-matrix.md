@@ -54,35 +54,41 @@ conditions:
 | Row ID | Grid | Palette | Metric | Colour | Scan | Order | Resize | Alpha | Proves |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `noise.g32x32.p64.lab.nodither.serp.resize-first.stretch.opaque` | 32×32 | p64 | lab | reduce | serpentine | resize-first | stretch | opaque | resize-first × lab × reduce composes and routes |
-| `noise.g32x32.p64.lab.dither.serp.resize-first.stretch.opaque` | 32×32 | p64 | lab | dither | serpentine | resize-first | stretch | opaque | resize-first × lab × dither composes and routes |
+| `noise.g32x32.p64.lab.dither.serp.resize-first.stretch.opaque` | 32×32 | p64 | lab | floyd-steinberg | serpentine | resize-first | stretch | opaque | resize-first × lab × dither composes and routes |
 | `noise.g32x32.p64.rgb.nodither.serp.resize-first.stretch.opaque` | 32×32 | p64 | rgb | reduce | serpentine | resize-first | stretch | opaque | resize-first × rgb × reduce composes and routes |
-| `noise.g32x32.p64.rgb.dither.serp.resize-first.stretch.opaque` | 32×32 | p64 | rgb | dither | serpentine | resize-first | stretch | opaque | resize-first × rgb × dither composes and routes |
+| `noise.g32x32.p64.rgb.dither.serp.resize-first.stretch.opaque` | 32×32 | p64 | rgb | floyd-steinberg | serpentine | resize-first | stretch | opaque | resize-first × rgb × dither composes and routes |
 | `noise.g32x32.p64.lab.nodither.serp.reduce-first.stretch.opaque` | 32×32 | p64 | lab | reduce | serpentine | reduce-first | stretch | opaque | reduce-first × lab × reduce composes and routes |
-| `noise.g32x32.p64.lab.dither.serp.reduce-first.stretch.opaque` | 32×32 | p64 | lab | dither | serpentine | reduce-first | stretch | opaque | reduce-first × lab × dither composes and routes |
+| `noise.g32x32.p64.lab.dither.serp.reduce-first.stretch.opaque` | 32×32 | p64 | lab | floyd-steinberg | serpentine | reduce-first | stretch | opaque | reduce-first × lab × dither composes and routes |
 | `noise.g32x32.p64.rgb.nodither.serp.reduce-first.stretch.opaque` | 32×32 | p64 | rgb | reduce | serpentine | reduce-first | stretch | opaque | reduce-first × rgb × reduce composes and routes |
-| `noise.g32x32.p64.rgb.dither.serp.reduce-first.stretch.opaque` | 32×32 | p64 | rgb | dither | serpentine | reduce-first | stretch | opaque | reduce-first × rgb × dither composes and routes |
-| `noise.g32x32.p64.lab.dither.serp.resize-first.contain.letterbox` | 32×32 | p64 | lab | dither | serpentine | resize-first | contain | letterbox | contain letterboxes with empty cells that take no part in diffusion |
-| `noise.g32x32.p64.lab.dither.serp.resize-first.cover.opaque` | 32×32 | p64 | lab | dither | serpentine | resize-first | cover | opaque | cover crops the overflow and leaves no empty cell |
-| `noise.g32x32.p64.lab.dither.serp.resize-first.fit.letterbox` | 32×32 | p64 | lab | dither | serpentine | resize-first | fit | letterbox | fit never enlarges — a smaller source is centred unscaled |
-| `noise.g40x11.p64.lab.dither.serp.resize-first.contain.letterbox` | 40×11 | p64 | lab | dither | serpentine | resize-first | contain | letterbox | non-square grid with an odd edge — row/column indexing off the square case |
-| `noise.g1x1.p64.lab.dither.serp.resize-first.stretch.opaque` | 1×1 | p64 | lab | dither | serpentine | resize-first | stretch | opaque | MIN_GRID: a 1×1 grid is a whole design, not a degenerate buffer |
-| `noise.g1x9.p64.lab.dither.serp.resize-first.stretch.opaque` | 1×9 | p64 | lab | dither | serpentine | resize-first | stretch | opaque | single-column grid — serpentine has no horizontal run to reverse |
-| `noise.g9x1.p64.lab.dither.serp.resize-first.stretch.opaque` | 9×1 | p64 | lab | dither | serpentine | resize-first | stretch | opaque | single-row grid — no row below to diffuse into |
-| `noise.g200x200.p64.lab.dither.serp.resize-first.stretch.opaque` | 200×200 | p64 | lab | dither | serpentine | resize-first | stretch | opaque | the typical live-editing grid from the brief |
-| `noise.g300x300.p64.lab.dither.serp.resize-first.stretch.opaque` | 300×300 | p64 | lab | dither | serpentine | resize-first | stretch | opaque | the upper bound of the product promise (≥ 4 updates/sec at ≤ 300²) |
-| `noise.g1024x1024.p64.lab.dither.serp.resize-first.stretch.opaque` | 1024×1024 | p64 | lab | dither | serpentine | resize-first | stretch | opaque | MAX_GRID: the export/finishing ceiling (D47) *(MATRIX_FULL only)* |
+| `noise.g32x32.p64.rgb.dither.serp.reduce-first.stretch.opaque` | 32×32 | p64 | rgb | floyd-steinberg | serpentine | reduce-first | stretch | opaque | reduce-first × rgb × dither composes and routes |
+| `noise.g32x32.p64.lab.dither.serp.resize-first.contain.letterbox` | 32×32 | p64 | lab | floyd-steinberg | serpentine | resize-first | contain | letterbox | contain letterboxes with empty cells that take no part in diffusion |
+| `noise.g32x32.p64.lab.dither.serp.resize-first.cover.opaque` | 32×32 | p64 | lab | floyd-steinberg | serpentine | resize-first | cover | opaque | cover crops the overflow and leaves no empty cell |
+| `noise.g32x32.p64.lab.dither.serp.resize-first.fit.letterbox` | 32×32 | p64 | lab | floyd-steinberg | serpentine | resize-first | fit | letterbox | fit never enlarges — a smaller source is centred unscaled |
+| `noise.g40x11.p64.lab.dither.serp.resize-first.contain.letterbox` | 40×11 | p64 | lab | floyd-steinberg | serpentine | resize-first | contain | letterbox | non-square grid with an odd edge — row/column indexing off the square case |
+| `noise.g1x1.p64.lab.dither.serp.resize-first.stretch.opaque` | 1×1 | p64 | lab | floyd-steinberg | serpentine | resize-first | stretch | opaque | MIN_GRID: a 1×1 grid is a whole design, not a degenerate buffer |
+| `noise.g1x9.p64.lab.dither.serp.resize-first.stretch.opaque` | 1×9 | p64 | lab | floyd-steinberg | serpentine | resize-first | stretch | opaque | single-column grid — serpentine has no horizontal run to reverse |
+| `noise.g9x1.p64.lab.dither.serp.resize-first.stretch.opaque` | 9×1 | p64 | lab | floyd-steinberg | serpentine | resize-first | stretch | opaque | single-row grid — no row below to diffuse into |
+| `noise.g200x200.p64.lab.dither.serp.resize-first.stretch.opaque` | 200×200 | p64 | lab | floyd-steinberg | serpentine | resize-first | stretch | opaque | the typical live-editing grid from the brief |
+| `noise.g300x300.p64.lab.dither.serp.resize-first.stretch.opaque` | 300×300 | p64 | lab | floyd-steinberg | serpentine | resize-first | stretch | opaque | the upper bound of the product promise (≥ 4 updates/sec at ≤ 300²) |
+| `noise.g1024x1024.p64.lab.dither.serp.resize-first.stretch.opaque` | 1024×1024 | p64 | lab | floyd-steinberg | serpentine | resize-first | stretch | opaque | MAX_GRID: the export/finishing ceiling (D47) *(MATRIX_FULL only)* |
 | `noise.g32x32.rgb.lab.nodither.serp.resize-first.stretch.opaque` | 32×32 | rgb | — | none | serpentine | resize-first | stretch | opaque | full-RGB mode runs no colour stage and keeps source colours |
-| `noise.g32x32.p2.lab.dither.serp.resize-first.stretch.opaque` | 32×32 | p2 | lab | dither | serpentine | resize-first | stretch | opaque | two-colour palette — maximal quantisation error |
-| `noise.g32x32.p533.lab.dither.serp.resize-first.stretch.opaque` | 32×32 | p533 | lab | dither | serpentine | resize-first | stretch | opaque | full DMC set — the 533-entry scan and pruning path |
-| `noise.g32x32.dup.lab.dither.serp.resize-first.stretch.opaque` | 32×32 | dup | lab | dither | serpentine | resize-first | stretch | opaque | duplicate palette entries resolve to the FIRST index, both paths |
-| `noise.g32x32.neartie.lab.dither.serp.resize-first.stretch.opaque` | 32×32 | neartie | lab | dither | serpentine | resize-first | stretch | opaque | near-ties are decided identically by the LUT and exact paths |
-| `noise.g32x32.nodark.lab.dither.serp.resize-first.contain.letterbox` | 32×32 | nodark | lab | dither | serpentine | resize-first | contain | letterbox | the empty-cell diffusion defect: no near-black to absorb a phantom error |
-| `noise.g32x32.p64.lab.dither.serp.resize-first.stretch.ramp` | 32×32 | p64 | lab | dither | serpentine | resize-first | stretch | ramp | semitransparent edges survive resize and reduction |
-| `noise.g32x32.p64.lab.dither.serp.resize-first.stretch.empty` | 32×32 | p64 | lab | dither | serpentine | resize-first | stretch | empty | a fully transparent source yields a fully empty design, not black |
-| `noise.g32x32.p64.lab.dither.serp.reduce-first.stretch.ramp` | 32×32 | p64 | lab | dither | serpentine | reduce-first | stretch | ramp | alpha ramp under colour-work-first, where resize runs last |
-| `noise.g32x32.p64.lab.dither.raster.resize-first.stretch.opaque` | 32×32 | p64 | lab | dither | raster | resize-first | stretch | opaque | raster scan — the un-mirrored kernel |
-| `gradient.g16x16.p64.lab.dither.raster.resize-first.stretch.opaque` | 16×16 | p64 | lab | dither | raster | resize-first | stretch | opaque | smooth gradient, raster — the content dithering is judged on |
-| `flat.g32x32.p64.lab.dither.serp.resize-first.stretch.opaque` | 32×32 | p64 | lab | dither | serpentine | resize-first | stretch | opaque | flat blocks — long identical runs |
-| `gradient.g32x32.p64.rgb.dither.serp.resize-first.stretch.opaque` | 32×32 | p64 | rgb | dither | serpentine | resize-first | stretch | opaque | RGB metric on a gradient — routes to wasm, no Lab conversion |
+| `noise.g32x32.p2.lab.dither.serp.resize-first.stretch.opaque` | 32×32 | p2 | lab | floyd-steinberg | serpentine | resize-first | stretch | opaque | two-colour palette — maximal quantisation error |
+| `noise.g32x32.p533.lab.dither.serp.resize-first.stretch.opaque` | 32×32 | p533 | lab | floyd-steinberg | serpentine | resize-first | stretch | opaque | full DMC set — the 533-entry scan and pruning path |
+| `noise.g32x32.dup.lab.dither.serp.resize-first.stretch.opaque` | 32×32 | dup | lab | floyd-steinberg | serpentine | resize-first | stretch | opaque | duplicate palette entries resolve to the FIRST index, both paths |
+| `noise.g32x32.neartie.lab.dither.serp.resize-first.stretch.opaque` | 32×32 | neartie | lab | floyd-steinberg | serpentine | resize-first | stretch | opaque | near-ties are decided identically by the LUT and exact paths |
+| `noise.g32x32.nodark.lab.dither.serp.resize-first.contain.letterbox` | 32×32 | nodark | lab | floyd-steinberg | serpentine | resize-first | contain | letterbox | the empty-cell diffusion defect: no near-black to absorb a phantom error |
+| `noise.g32x32.p64.lab.dither.serp.resize-first.stretch.ramp` | 32×32 | p64 | lab | floyd-steinberg | serpentine | resize-first | stretch | ramp | semitransparent edges survive resize and reduction |
+| `noise.g32x32.p64.lab.dither.serp.resize-first.stretch.empty` | 32×32 | p64 | lab | floyd-steinberg | serpentine | resize-first | stretch | empty | a fully transparent source yields a fully empty design, not black |
+| `noise.g32x32.p64.lab.dither.serp.reduce-first.stretch.ramp` | 32×32 | p64 | lab | floyd-steinberg | serpentine | reduce-first | stretch | ramp | alpha ramp under colour-work-first, where resize runs last |
+| `noise.g32x32.p64.lab.dither.raster.resize-first.stretch.opaque` | 32×32 | p64 | lab | floyd-steinberg | raster | resize-first | stretch | opaque | raster scan — the un-mirrored kernel |
+| `gradient.g16x16.p64.lab.dither.raster.resize-first.stretch.opaque` | 16×16 | p64 | lab | floyd-steinberg | raster | resize-first | stretch | opaque | smooth gradient, raster — the content dithering is judged on |
+| `flat.g32x32.p64.lab.dither.serp.resize-first.stretch.opaque` | 32×32 | p64 | lab | floyd-steinberg | serpentine | resize-first | stretch | opaque | flat blocks — long identical runs |
+| `gradient.g32x32.p64.rgb.dither.serp.resize-first.stretch.opaque` | 32×32 | p64 | rgb | floyd-steinberg | serpentine | resize-first | stretch | opaque | RGB metric on a gradient — routes to wasm, no Lab conversion |
+| `gradient.g32x32.p64.lab.atkinson.serp.resize-first.stretch.opaque` | 32×32 | p64 | lab | atkinson | serpentine | resize-first | stretch | opaque | Atkinson kernel composes through the executor and stays on-palette |
+| `noise.g32x32.p64.lab.jarvis.serp.resize-first.contain.letterbox` | 32×32 | p64 | lab | jarvis | serpentine | resize-first | contain | letterbox | the three-row Jarvis kernel diffuses no error across empty letterbox cells |
+| `gradient.g32x32.p64.lab.ordered.serp.resize-first.stretch.opaque` | 32×32 | p64 | lab | ordered | serpentine | resize-first | stretch | opaque | ordered threshold dithering composes — pointwise, no error feedback |
+| `gradient.g32x32.p64.lab.blue-noise.serp.resize-first.stretch.opaque` | 32×32 | p64 | lab | blue-noise | serpentine | resize-first | stretch | opaque | blue-noise threshold tile composes and repeats deterministically |
+| `noise.g32x32.p64.rgb.ordered.serp.resize-first.stretch.opaque` | 32×32 | p64 | rgb | ordered | serpentine | resize-first | stretch | opaque | a non-FS method under rgb routes ts — the FS-only crate is never substituted |
+| `gradient.g32x32.p64.lab.atkinson-s50.serp.resize-first.stretch.opaque` | 32×32 | p64 | lab | atkinson @50% | serpentine | resize-first | stretch | opaque | a damped diffusion strength flows from config to output through the executor |
 
 <!-- matrix-coverage:end -->

@@ -47,8 +47,7 @@ function request(configOverrides: Partial<PipelineConfig> = {}): ProcessRequest 
       resizeMode: 'stretch',
       palette: PALETTE,
       metric: 'rgb',
-      dither: false,
-      serpentine: true,
+      dither: { algorithm: 'none' },
       ...configOverrides,
     },
   };

@@ -11,13 +11,39 @@
 import type { CandidateTable } from '../color/candidates.ts';
 import type { ColorMetric } from '../color/metrics.ts';
 import { adjustIsIdentity, adjustStage, type AdjustParams } from './adjust.ts';
-import { ditherStage } from './dither.ts';
+import {
+  ditherStage,
+  type DiffusionAlgorithm,
+  type ThresholdAlgorithm,
+} from './dither.ts';
 import { reduceStage } from './reduce.ts';
 import { resizeStage, type ResizeMode } from './resize.ts';
 import { stageInstance, type Palette, type StageInstance } from '../types.ts';
 
 /** The two §7 comparison presets. 'resize-first' is the D3 default. */
 export type OrderPreset = 'resize-first' | 'reduce-first';
+
+/**
+ * Dithering as configured — a discriminated union so an invalid
+ * combination is unrepresentable rather than runtime-guessed
+ * (M8-ALG-01): serpentine exists only where a scan direction does
+ * (diffusion), threshold methods carry only their strength, and 'none'
+ * carries nothing. Strength units are per-family — diffusion is the
+ * fraction of error diffused (0–1), threshold scales a base amplitude
+ * (0–2) — which is why no shared percentage label exists (D61).
+ * Identifiers are stable and persisted; display labels live in the UI.
+ */
+export type DitherConfig =
+  | { algorithm: 'none' }
+  | { algorithm: DiffusionAlgorithm; serpentine: boolean; strength: number }
+  | { algorithm: ThresholdAlgorithm; strength: number };
+
+/** The default dithering for a new project: the pre-M8 behaviour. */
+export const DEFAULT_DITHER: DitherConfig = {
+  algorithm: 'floyd-steinberg',
+  serpentine: true,
+  strength: 1,
+};
 
 /**
  * Everything needed to build the stage list; plain serialisable data
@@ -30,9 +56,8 @@ export interface PipelineConfig {
   /** null = full-RGB mode: no colour reduction, no dithering (§5.1). */
   palette: Palette | null;
   metric: ColorMetric;
-  /** Dithered quantisation (dither stage) vs plain nearest (reduce). */
-  dither: boolean;
-  serpentine: boolean;
+  /** 'none' = plain nearest via reduce; anything else runs the dither stage. */
+  dither: DitherConfig;
 }
 
 /**
@@ -43,7 +68,7 @@ export interface PipelineConfig {
  * shown is exactly the colour reduction.
  */
 export function fullRgbVariant(config: PipelineConfig): PipelineConfig {
-  return { ...config, palette: null, dither: false };
+  return { ...config, palette: null, dither: { algorithm: 'none' } };
 }
 
 /** Optional LUT supplier so a host (the worker) can inject its cache. */
@@ -93,15 +118,20 @@ export function buildStages(
 
   const colour: StageInstance[] = [];
   if (config.palette !== null) {
-    if (config.dither) {
+    if (config.dither.algorithm !== 'none') {
       // Pruning is Lab-only; under 'rgb' the stage keeps the full scan.
+      // It is valid for both families: diffusion and threshold match
+      // through the same exact path.
       const candidates =
         config.metric === 'lab' ? providers.candidates?.(config.palette) : undefined;
       colour.push(
         stageInstance(ditherStage, {
           palette: config.palette,
           metric: config.metric,
-          serpentine: config.serpentine,
+          algorithm: config.dither.algorithm,
+          strength: config.dither.strength,
+          // Threshold methods have no scan direction; false is inert.
+          serpentine: 'serpentine' in config.dither ? config.dither.serpentine : false,
           ...(candidates === undefined ? {} : { candidates }),
         }),
       );

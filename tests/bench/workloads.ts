@@ -283,14 +283,19 @@ export function paletteFor(workload: Workload): Palette | null {
 
 /** The pipeline config a workload runs under. */
 export function configFor(workload: Workload): PipelineConfig {
+  // The matrix's dither axis is Boolean by design: it froze before M8,
+  // and its dithered rows mean the pre-M8 behaviour — Floyd–Steinberg,
+  // serpentine, full strength — which the union states exactly.
+  const dithered = workload.palette !== 'rgb' && workload.dither;
   return {
     preset: workload.order,
     grid: { width: workload.grid, height: workload.grid },
     resizeMode: workload.resizeMode,
     palette: paletteFor(workload),
     metric: workload.metric,
-    dither: workload.palette !== 'rgb' && workload.dither,
-    serpentine: true,
+    dither: dithered
+      ? { algorithm: 'floyd-steinberg', serpentine: true, strength: 1 }
+      : { algorithm: 'none' },
   };
 }
 

@@ -41,9 +41,13 @@ across eight brands, per-brand enable/disable, a cross-project thread
 inventory in IndexedDB with an "only threads I own" restriction, named
 library palettes, algorithmic colour-scheme presets, exact/maximum
 colour-count targets, and lock/prefer/exclude with auto-fill — every
-narrowing explained in words rather than silently applied. Next up:
-**M8 dithering expansion** (algorithm evaluation, then the chosen set
-as user choices with plain-language presets).
+narrowing explained in words rather than silently applied. **M8
+dithering expansion** has shipped its engine and controls: five dither
+methods as user choices (Floyd–Steinberg, Atkinson, Jarvis, ordered
+Bayer 8×8, blue-noise) behind a discriminated config with per-family
+strength, serpentine where a scan direction exists, and seven
+evidence-based presets (see `docs/dither-evaluation.md`); the
+milestone closes on the maintainer's visual acceptance session.
 
 ## How to run
 

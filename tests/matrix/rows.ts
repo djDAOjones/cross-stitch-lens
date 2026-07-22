@@ -23,6 +23,7 @@
 
 import type { ColorMetric } from '../../src/core/color/metrics.ts';
 import type { OrderPreset, PipelineConfig } from '../../src/core/pipeline/config.ts';
+import type { DitherAlgorithm } from '../../src/core/pipeline/dither.ts';
 import type { ResizeMode } from '../../src/core/pipeline/resize.ts';
 import { loadDmcPalette } from '../../src/core/palette.ts';
 import type { Palette, PixelBuffer } from '../../src/core/types.ts';
@@ -73,6 +74,13 @@ export interface MatrixRow {
   palette: PaletteAxis;
   metric: ColorMetric;
   dither: boolean;
+  /**
+   * Dither method for dithered rows (M8). Omitted means the pre-M8
+   * default, Floyd–Steinberg — existing row IDs stay stable.
+   */
+  algorithm?: DitherAlgorithm;
+  /** Non-default strength (engine units); omitted means 1. */
+  strength?: number;
   serpentine: boolean;
   order: OrderPreset;
   resizeMode: ResizeMode;
@@ -87,12 +95,24 @@ type RowSpec = Omit<MatrixRow, 'id'>;
 
 /** Derive a row ID from its axes: dot-separated, greppable, collision-free. */
 export function rowId(spec: RowSpec): string {
+  // The colour segment stays 'dither' for the pre-M8 default so
+  // existing IDs — quoted in evidence documents — do not move; an M8
+  // algorithm names itself, and a non-default strength is suffixed as
+  // a percentage.
+  const method =
+    spec.algorithm === undefined || spec.algorithm === 'floyd-steinberg'
+      ? 'dither'
+      : spec.algorithm;
+  const strength =
+    spec.strength === undefined || spec.strength === 1
+      ? ''
+      : `-s${String(Math.round(spec.strength * 100))}`;
   return [
     spec.source,
     `g${String(spec.grid.width)}x${String(spec.grid.height)}`,
     spec.palette,
     spec.metric,
-    spec.dither ? 'dither' : 'nodither',
+    spec.dither ? `${method}${strength}` : 'nodither',
     spec.serpentine ? 'serp' : 'raster',
     spec.order,
     spec.resizeMode,
@@ -260,6 +280,46 @@ function expansions(): MatrixRow[] {
       metric: 'rgb',
       proves: 'RGB metric on a gradient — routes to wasm, no Lab conversion',
     }),
+
+    // ---- M8 dither algorithms (D61) -----------------------------------
+    row({
+      ...base,
+      algorithm: 'atkinson',
+      source: 'gradient',
+      proves: 'Atkinson kernel composes through the executor and stays on-palette',
+    }),
+    row({
+      ...base,
+      algorithm: 'jarvis',
+      resizeMode: 'contain',
+      alpha: 'letterbox',
+      proves: 'the three-row Jarvis kernel diffuses no error across empty letterbox cells',
+    }),
+    row({
+      ...base,
+      algorithm: 'ordered',
+      source: 'gradient',
+      proves: 'ordered threshold dithering composes — pointwise, no error feedback',
+    }),
+    row({
+      ...base,
+      algorithm: 'blue-noise',
+      source: 'gradient',
+      proves: 'blue-noise threshold tile composes and repeats deterministically',
+    }),
+    row({
+      ...base,
+      algorithm: 'ordered',
+      metric: 'rgb',
+      proves: 'a non-FS method under rgb routes ts — the FS-only crate is never substituted',
+    }),
+    row({
+      ...base,
+      algorithm: 'atkinson',
+      strength: 0.5,
+      source: 'gradient',
+      proves: 'a damped diffusion strength flows from config to output through the executor',
+    }),
   ];
 }
 
@@ -327,14 +387,23 @@ export function paletteFor(spec: Pick<MatrixRow, 'palette'>): Palette | null {
 
 /** The pipeline config a row runs under. */
 export function configFor(spec: MatrixRow): PipelineConfig {
+  // A dithered row runs its named M8 algorithm, defaulting to the
+  // pre-M8 behaviour: Floyd–Steinberg, full strength, the row's scan
+  // direction. Threshold methods have no scan direction to carry.
+  const algorithm = spec.algorithm ?? 'floyd-steinberg';
+  const strength = spec.strength ?? 1;
+  const dithered = spec.palette !== 'rgb' && spec.dither;
   return {
     preset: spec.order,
     grid: { ...spec.grid },
     resizeMode: spec.resizeMode,
     palette: paletteFor(spec),
     metric: spec.metric,
-    dither: spec.palette !== 'rgb' && spec.dither,
-    serpentine: spec.serpentine,
+    dither: !dithered
+      ? { algorithm: 'none' }
+      : algorithm === 'ordered' || algorithm === 'blue-noise'
+        ? { algorithm, strength }
+        : { algorithm, serpentine: spec.serpentine, strength },
   };
 }
 
@@ -434,7 +503,15 @@ export function renderCoverageMarkdown(rows: readonly MatrixRow[]): string {
       `${String(r.grid.width)}×${String(r.grid.height)}`,
       r.palette,
       r.palette === 'rgb' ? '—' : r.metric,
-      r.palette === 'rgb' ? 'none' : r.dither ? 'dither' : 'reduce',
+      r.palette === 'rgb'
+        ? 'none'
+        : !r.dither
+          ? 'reduce'
+          : `${r.algorithm ?? 'floyd-steinberg'}${
+              r.strength !== undefined && r.strength !== 1
+                ? ` @${String(Math.round(r.strength * 100))}%`
+                : ''
+            }`,
       r.serpentine ? 'serpentine' : 'raster',
       r.order,
       r.resizeMode,

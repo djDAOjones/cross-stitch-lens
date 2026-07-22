@@ -17,6 +17,27 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
+## M8 — Dithering expansion (engine + controls shipped 2026-07-22; maintainer acceptance open)
+
+- M8-CTRL-01 (2026-07-22) — the Dither group: preset + algorithm
+  selectors with method-specific controls only where the method defines
+  them (strength per family, serpentine diffusion-only), seven
+  evidence-based presets, a disabled "Custom" state, and session
+  memory of each method's last settings. Pure model in
+  `src/ui/dither-model.ts`. See decision-log D62.
+- M8-ALG-01 (2026-07-22) — four new deterministic dither methods beside
+  Floyd–Steinberg (Atkinson, Jarvis, ordered Bayer 8×8, blue-noise
+  32×32) behind one stage; `DitherConfig` union, schema v4 migration
+  keeping old projects byte-identical; wasm routing gated FS-only so a
+  backend can never substitute a different method; a bench-caught 2.3×
+  regression fixed by flattening kernels to typed arrays. See
+  decision-log D62.
+- M8-SPIKE-01 (2026-07-22) — dither evaluation spike: nine candidates
+  measured on tone fidelity, isolated-stitch rate, distinctness and
+  cost; committed set of six user choices, matrix size/phase/seed
+  earn no control; evidence in `docs/dither-evaluation.md` + audit
+  artefact + HTML gallery. See decision-log D61.
+
 ## M7 — Palette & colour strategy (shipped 2026-07-21)
 
 - M7-LIB-01 (2026-07-21) — the library operations that never shipped:

@@ -15,17 +15,17 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 173 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 181 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 11 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
 - `.github` — 1 file(s)
 - `.windsurf` — 1 file(s)
 - `crates` — 4 file(s)
-- `docs` — 7 file(s)
+- `docs` — 8 file(s)
 - `scripts` — 6 file(s)
-- `src` — 68 file(s)
-- `tests` — 73 file(s)
+- `src` — 71 file(s)
+- `tests` — 77 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -71,6 +71,7 @@
 - `docs/acceptance-matrix.md` — M5-ACCEPT-01 evidence: generated coverage table, per-row invariants, explicit skips
 - `docs/acceptance-visual-review.md` — M5-ACCEPT-02 review sheet: review set, protocol, verdict record
 - `docs/browser-measurement.md` — browser-only boundary procedure + recorded results (M5-PERF-18)
+- `docs/dither-evaluation.md` — M8-SPIKE-01 evidence: method, findings, committed set, control surface (D61)
 - `docs/measurement-contract.md` — M5 boundary contract (bv1), workload matrix, report schema, browser rehearsal
 - `docs/performance-evidence.md` — M5 measured evidence: bv1 baseline, component audits, M5C decisions
 - `docs/requirements.md` — full combined requirements spec (reference only)
@@ -118,6 +119,7 @@
 - `src/core/pipeline/index.ts` — pipeline executor: backend pick + ts fallback
 - `src/core/pipeline/reduce.ts` — reduce stage: LUT + exact paths, alpha passthrough
 - `src/core/pipeline/resize.ts` — resize stage: area-average, 4 modes, empty cells
+- `src/core/pipeline/threshold-tiles.ts` — Bayer + void-and-cluster blue-noise threshold tiles: fixed data, documented provenance, memoised
 - `src/core/project.ts` — project file v1 (§20): schema, migration, canonical (de)serialisation
 - `src/core/stats.ts` — design stats §11 subset: counts, %, thread refs
 - `src/core/thread-catalogue.ts` — brands, threads, stable `brandId:reference` identity
@@ -134,6 +136,8 @@
 - `src/ui/controls.ts` — Carbon-style field builders: toggle/number/colour/select + clampInt
 - `src/ui/debug-panel.ts` — dev-only profiling panel: rolling timing window (pure) + disclosure DOM
 - `src/ui/diagnostics-button.ts` — the "Copy diagnostics" control + announced status line
+- `src/ui/dither-model.ts` — pure Dither-controls model: algorithm options, per-family strength, evidence-bearing presets, session memory
+- `src/ui/dither-panel.ts` — mounts the Dither group: preset/algorithm selects + method-specific controls, rebuilt only on algorithm change
 - `src/ui/import.ts` — import routes → decode: filter (pure) + blob→PixelBuffer
 - `src/ui/info-panel.ts` — stats info panel: pure row model + thin DOM half
 - `src/ui/palette-panel.ts` — Colour panel: brands, source, inventory, count, per-thread rules; pure model + thin DOM half
@@ -160,9 +164,11 @@
 - `tests/acceptance-matrix.test.ts` — M5-ACCEPT-01 driver: per-row invariants through the worker entry, tie-break oracles, coverage-table staleness gate
 - `tests/audits/audit.ts` — audit harness: AUDIT=1 gate, timed/counted rows, JSON artefacts
 - `tests/audits/candidates/dither-candidates.ts` — dither prototypes: exact pruning table, hoisted scan, rounded conversion
+- `tests/audits/candidates/m8-dither-candidates.ts` — M8-SPIKE-01 prototypes: kernel-as-data diffusion, threshold tiles, candidate registry — never imported by src/
 - `tests/audits/candidates/resize-candidates.ts` — resize prototypes: hoisted (bit-exact), separable, summed-area
 - `tests/audits/dither.audit.test.ts` — M5-PERF-13/14: conversion decomposition + exact-pruning proof
 - `tests/audits/lut-reduce.audit.test.ts` — M5-PERF-12: LUT build vs map, stale-cache-key repro
+- `tests/audits/m8-dither.audit.test.ts` — M8-SPIKE-01 evaluation (AUDIT=1): quality/structure metrics, timings, HTML gallery artefact
 - `tests/audits/orchestration.audit.test.ts` — M5-PERF-10: palette rebuild, `?? 0` tax, allocation inventory
 - `tests/audits/resize.audit.test.ts` — M5-PERF-11: candidate timings + byte-equality across the mode matrix
 - `tests/audits/routing.audit.test.ts` — sweeps grid × palette × metric on both dither backends and asserts `routeDither` agrees with the measured winner on every row (M5-PERF-27 evidence)
@@ -187,6 +193,8 @@
 - `tests/controls.test.ts` — number-input clamping (pure half of controls)
 - `tests/debug-panel.test.ts` — timing-window aggregation, cap, stage-change reset, ms formatting
 - `tests/diagnostics-bundle.test.ts` — redaction (secret keys/values, fail-closed, caps), bundle shape, status text
+- `tests/dither-algorithms.test.ts` — M8 method invariants: determinism, membership+sidecar, boundaries, distinctness, tile validity
+- `tests/dither-model.test.ts` — dither-control state matrix: families, strength semantics, preset↔custom, per-method memory
 - `tests/dither-pruning.test.ts` — pruning exactness over 138,688 adversarial values × 5 palettes, dither byte-equality with and without a table, and the shared f32 work-buffer reuse guards (M5-PERF-22/25)
 - `tests/dither.test.ts` — dither golden + determinism/mean/serpentine invariants
 - `tests/export-chart.test.ts` — chart layout: label margin + edge pad,

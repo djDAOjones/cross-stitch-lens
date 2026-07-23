@@ -263,11 +263,29 @@ using the worker's absolute-clock phase marks (`FrameMarks` in
    records viewport, DPR, visibility, timer resolution, WebGPU/WASM
    capability and build identity; a hidden page during a live window
    taints the run.
-3. **Buttons 1–3 need no capture**: still-input `preview-update` rows
-   (200², 300², via real worker submits), the M5-era GPU gates
-   (LUT agreement + the `mapPaletteGpu` comparison, now bv2 rows), and
-   the `export` rows (composite clean-PNG/chart/PDF spans plus their
-   pipeline/scale/encode/assembly children).
+3. **Buttons 1–3b need no capture**: still-input `preview-update` rows
+   (200², 300², via real worker submits), the M13-PROF-01 stage matrix
+   (per-stage `StageTiming` rows over the shared bv2 workload IDs,
+   through the real worker route), the M5-era GPU gates (LUT agreement
+   plus the `mapPaletteGpu` comparison, now bv2 rows), the M13-PROF-02
+   LUT-build timing (TS vs WebGPU end-to-end, first-call cold row
+   separated), the `export` rows (composite clean-PNG/chart/PDF spans
+   plus their pipeline/scale/encode/assembly children), and the
+   selection-source contention probe (a 250 ms still-submit pump with
+   full-RGB `exportFrame` calls interleaved — the worker-side half of
+   "does palette selection block live preview?"; the capture-path
+   confirmation stays with M13-PROF-04).
+
+   **Unattended form**: `bench.html?auto=still,stage,gpu,lut,contention`
+   runs the listed no-capture legs on load;
+   `&post=http://127.0.0.1:<port>/report` POSTs the finished bv2 JSON
+   to a local collector. This exists so an agent can run the
+   gestureless half in a real, foreground browser window it cannot
+   script. **The page must be visible for the whole run**: a hidden or
+   backgrounded page is CPU-throttled to the point of 10–20× inflated
+   samples (measured 2026-07-23 — the in-app preview pane always
+   reports `hidden` and can never be a measurement surface). The env
+   row records visibility, so a background run is self-incriminating.
 4. **Button 4 opens the controlled source window**
    (`/bench-source.html`) — the repeatable stand-in for "an edit in
    Photoshop". It repaints on command and reports its own paint

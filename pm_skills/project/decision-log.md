@@ -1120,3 +1120,40 @@ from a dirty tree still stamped 8adb5d2; the close commit lands the
 code the reports measured.
 
 **Unblocks:** M13-PROF-03/04/05; the browser halves of PROF-01/02.
+
+## D68 — M13-PROF-01/02 browser halves: ratios are stage-specific both ways, and a hidden page is not a measurement surface (2026-07-23)
+
+**Decision:** publish the browser halves from an unattended foreground
+Chrome run and close both PROF items. The harness gained three
+gestureless legs — a worker-route stage matrix over 18 shared bv2
+workload IDs (the executor's own `StageTiming[]`, so browser stage rows
+pair with node rows by ID + label), timed GPU-vs-TS LUT builds, and a
+selection-source contention probe — plus an `?auto=<legs>&post=<url>`
+mode so an agent can run the gestureless half in a real browser window
+it cannot script. Evidence: `docs/performance-evidence.md` → "M13
+profiling, browser halves";
+`bench-reports/browser-bench-v0.5.0_20260723.170dcba-auto.json`.
+
+**Findings:** dither browser ≈ node (1.00–1.11 across all five methods,
+grids, palettes); resize 1.12–1.28× (the M5-era 3.5× is superseded on a
+production build); reduce ~2.3× **faster** in browser — so node medians
+must be translated per stage, in both directions. GPU LUT build is a
+clear wired-in win (3.6/2.4 ms vs TS 8.3/39.7 ms at p64/p489,
+dispatch-bound, EXACT ×5). `mapPaletteGpu` loses end-to-end here
+(8.0 vs 5.4 ms) — M5-PERF-23 stands. The selection-source export blocks
+overlapping frames by ≤ one export (~51 ms) with zero drops/errors —
+bounded, no race, no wedge; the capture-path confirmation moves to
+M13-PROF-04's live leg.
+
+**The lesson:** the first attempt ran in the in-app preview pane, which
+always reports `hidden`; the whole renderer — worker included — was
+CPU-throttled to 10–20× inflated samples. Discarded. The auto mode and
+a doc warning encode it; the env row's visibility field makes a
+background run self-incriminating.
+
+**Auto-jazz assumptions:** scope = browser halves via harness extension
+(no engine changes — additive bench entry only); design = executor
+timings over page-context stage calls; contention measured worker-side
+under a synthetic 250 ms still pump, caveat named in the row labels.
+Same dirty-tree caveat as D67: the report is stamped `170dcba`, this
+close commit lands the measured harness code.

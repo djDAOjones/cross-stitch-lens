@@ -26,7 +26,7 @@
 import { isWebGpuAvailable } from './backends/webgpu/device.ts';
 import { buildLutGpu, mapPaletteGpu } from './backends/webgpu/reduce.ts';
 import { BOUNDARY_VERSION } from './bench/boundaries.ts';
-import { timerResolutionMs } from './bench/clock.ts';
+import { absNow, timerResolutionMs } from './bench/clock.ts';
 import {
   conservationViolations,
   countersMeta,
@@ -43,10 +43,11 @@ import {
   measuredRow,
   serialiseReport,
   skippedRow,
+  type BenchReport,
   type BenchRow,
   type EnvironmentIdentity,
 } from './bench/report.ts';
-import { palette64, sourceBuffer, workloadById } from './bench/workloads.ts';
+import { configFor, palette64, sourceBuffer, workloadById } from './bench/workloads.ts';
 import type { BenchSourceMessage } from './bench-source.ts';
 import { DirtyGate, frameSignature, hashPixels, sampleVideo } from './capture/dirty.ts';
 import { DraftGovernor } from './capture/draft.ts';
@@ -55,15 +56,15 @@ import { captureErrorMessage, startCapture, type CaptureSession } from './captur
 import { buildLut, LUT_SIZE } from './core/color/lut.ts';
 import type { ColorMetric } from './core/color/metrics.ts';
 import { loadDmcPalette } from './core/palette.ts';
-import type { PipelineConfig } from './core/pipeline/config.ts';
+import { fullRgbVariant, type PipelineConfig } from './core/pipeline/config.ts';
 import { reduceStage } from './core/pipeline/reduce.ts';
 import { computeStats } from './core/stats.ts';
-import type { Palette, PixelBuffer } from './core/types.ts';
+import type { Backend, Palette, PixelBuffer } from './core/types.ts';
 import { chartLayout, encodeChartPng } from './export/chart.ts';
 import { buildChartPdf, type KeyEntry } from './export/pdf.ts';
 import { encodePngBlob, scaleNearest } from './export/png.ts';
 import { PipelineClient } from './worker/client.ts';
-import type { FrameMarks } from './worker/protocol.ts';
+import type { FrameMarks, StageTiming } from './worker/protocol.ts';
 import { DEFAULT_GRID_STYLE } from './worker/grid.ts';
 
 /** Still-input workloads the harness measures (bv2 matrix IDs). */
@@ -150,6 +151,18 @@ client.setObserver({
   },
 });
 
+/**
+ * The executor's per-stage timings for the most recent result. The
+ * client delivers them synchronously after `jobSettled` fires, so a
+ * caller that awaited {@link submitAndWait} reads this job's timings —
+ * the still legs are strictly sequential, so the slot cannot be
+ * overwritten by a concurrent job.
+ */
+let lastTimings: StageTiming[] = [];
+client.setOnResult((frame) => {
+  lastTimings = frame.timings;
+});
+
 /** Submit one frame and await its settlement (still-input rows). */
 function submitAndWait(buffer: PixelBuffer, config: PipelineConfig): Promise<SettledJob> {
   return new Promise((resolve) => {
@@ -227,6 +240,112 @@ async function runStillPreview(workloadId: string): Promise<void> {
       meta: lastJob === null ? {} : phaseMeta(lastJob),
     }),
   );
+}
+
+// ------------------------------- worker stage matrix (M13-PROF-01)
+
+/**
+ * The workloads the browser stage profile covers (M13-PROF-01 browser
+ * half): the bv2 core block at the profiling grids, the M8 method
+ * block, and the two resize-isolation expansions. Node↔browser ratios
+ * pair rows by workload ID + stage label, so these IDs must be matrix
+ * IDs the node bench also runs — `workloadById` throws on a typo.
+ */
+const STAGE_MATRIX: readonly string[] = [
+  'noise.w1280.opaque.g300.p64.lab.nodither.resize-first.stretch.still',
+  'noise.w1280.opaque.g300.p64.lab.fs-s100-serp.resize-first.stretch.still',
+  'noise.w1280.opaque.g300.p489.lab.nodither.resize-first.stretch.still',
+  'noise.w1280.opaque.g300.p489.lab.fs-s100-serp.resize-first.stretch.still',
+  'noise.w1280.opaque.g1024.p64.lab.nodither.resize-first.stretch.still',
+  'noise.w1280.opaque.g1024.p64.lab.fs-s100-serp.resize-first.stretch.still',
+  'noise.w1280.opaque.g1024.p489.lab.nodither.resize-first.stretch.still',
+  'noise.w1280.opaque.g1024.p489.lab.fs-s100-serp.resize-first.stretch.still',
+  'noise.w1280.opaque.g300.p64.lab.atkinson-s100-serp.resize-first.stretch.still',
+  'noise.w1280.opaque.g300.p64.lab.jarvis-s100-serp.resize-first.stretch.still',
+  'noise.w1280.opaque.g300.p64.lab.ordered-s100.resize-first.stretch.still',
+  'noise.w1280.opaque.g300.p64.lab.bluenoise-s100.resize-first.stretch.still',
+  'noise.w1280.opaque.g1024.p64.lab.atkinson-s100-serp.resize-first.stretch.still',
+  'noise.w1280.opaque.g1024.p64.lab.jarvis-s100-serp.resize-first.stretch.still',
+  'noise.w1280.opaque.g1024.p64.lab.ordered-s100.resize-first.stretch.still',
+  'noise.w1280.opaque.g1024.p64.lab.bluenoise-s100.resize-first.stretch.still',
+  'noise.grid.opaque.g1024.p64.lab.fs-s100-serp.resize-first.stretch.still',
+  'noise.crop.opaque.g300.p64.lab.fs-s100-serp.resize-first.stretch.still',
+];
+
+/**
+ * Per-stage profile over the real worker route: still submits of the
+ * matrix above, aggregating the executor's own `StageTiming[]` into
+ * bv2 `stage` rows and the worker phase marks into `pipeline-compute`
+ * rows. Labels mirror the node matrix (`resize`/`reduce`/`dither`/
+ * `pipeline`) so ratios pair mechanically; the report's environment
+ * block names the runtime. Needs no capture gesture.
+ */
+async function runStageMatrix(): Promise<void> {
+  for (const id of STAGE_MATRIX) {
+    const workload = workloadById(id);
+    const source = sourceBuffer(workload);
+    const config = configFor(workload);
+    // Fewer timed runs at the ceiling grid — a 1024² dither run is
+    // ~0.3–0.5 s, and 5 samples already expose the spread.
+    const plan = workload.grid >= 1024 ? { warmup: 2, runs: 5 } : { warmup: 2, runs: 8 };
+    const perStage = new Map<string, { samples: number[]; backends: Set<Backend> }>();
+    const computeSamples: number[] = [];
+    let failed = false;
+    for (let i = 0; i < plan.warmup + plan.runs; i++) {
+      const copy: PixelBuffer = {
+        width: source.width,
+        height: source.height,
+        data: new Uint8ClampedArray(source.data),
+      };
+      const job = await submitAndWait(copy, config);
+      if (job.outcome === 'error') {
+        findings.push(`${id}: worker error during the stage matrix`);
+        failed = true;
+        break;
+      }
+      if (i < plan.warmup) continue;
+      for (const timing of lastTimings) {
+        const entry = perStage.get(timing.stage) ?? { samples: [], backends: new Set<Backend>() };
+        entry.samples.push(timing.ms);
+        entry.backends.add(timing.backend);
+        perStage.set(timing.stage, entry);
+      }
+      if (job.marks !== undefined) {
+        computeSamples.push(job.marks.computeDoneAt - job.marks.receivedAt);
+      }
+    }
+    if (failed) continue;
+    for (const [stage, entry] of perStage) {
+      const backends = [...entry.backends];
+      rows.push(
+        measuredRow({
+          workloadId: id,
+          boundary: 'stage',
+          label: stage,
+          backend: backends.length === 1 ? backends[0] ?? 'n/a' : 'n/a',
+          cache: 'warm',
+          warmupRuns: plan.warmup,
+          samples: entry.samples,
+          ...(backends.length === 1 ? {} : { meta: { 'mixed backends': backends.join(',') } }),
+        }),
+      );
+    }
+    if (computeSamples.length > 0) {
+      rows.push(
+        measuredRow({
+          workloadId: id,
+          boundary: 'pipeline-compute',
+          label: 'pipeline',
+          cache: 'warm',
+          warmupRuns: plan.warmup,
+          samples: computeSamples,
+        }),
+      );
+    }
+    say(`Stage matrix: ${id} done.`);
+    show();
+  }
+  say('Stage matrix rows done.');
 }
 
 // ------------------------------------------------------- live capture
@@ -896,6 +1015,228 @@ async function gpuChecks(): Promise<void> {
   );
 }
 
+// --------------------------------- LUT build timing (M13-PROF-02)
+
+/** The p489 core workload the DMC prepare rows are identified under. */
+const STILL_300_P489 = 'noise.w1280.opaque.g300.p489.lab.fs-s100-serp.resize-first.stretch.still';
+
+/**
+ * GPU-vs-TS LUT build, timed end-to-end (M13-PROF-02 browser half).
+ * `buildLutGpu` contains the full end-to-end cost the ticket asks
+ * about — palette flatten/upload, dispatch, readback — and the module
+ * caches device and pipeline, so the first call is its own cold row
+ * (device request + shader compile) and later calls are the steady
+ * per-build price. Labels match the node bench's prepare rows so the
+ * TS halves pair by ID + label. Agreement is asserted on every timed
+ * palette — a fast GPU number without bin agreement is a defect signal
+ * (D46), never a result.
+ */
+async function lutBuildTiming(): Promise<void> {
+  const cases: readonly (readonly [Palette, string, string])[] = [
+    [palette64(), 'dmc-64-bench', STILL_300],
+    [loadDmcPalette(), 'DMC', STILL_300_P489],
+  ];
+  const plan = { warmup: 1, runs: 5 };
+  for (const [palette, name, id] of cases) {
+    const samples = measure(() => buildLut(palette, 'lab'), plan);
+    rows.push(
+      measuredRow({
+        workloadId: id,
+        boundary: 'prepare',
+        label: `lut-build (${name}:lab)`,
+        backend: 'ts',
+        cache: 'cold',
+        warmupRuns: plan.warmup,
+        samples,
+      }),
+    );
+  }
+  if (!isWebGpuAvailable()) {
+    rows.push(
+      skippedRow({
+        workloadId: STILL_300,
+        boundary: 'prepare',
+        label: 'lut-build timing (webgpu)',
+        status: 'unsupported',
+        reason: 'WebGPU unavailable in this browser',
+      }),
+    );
+    return;
+  }
+  const firstStart = performance.now();
+  const first = await buildLutGpu(palette64(), 'lab');
+  const firstMs = performance.now() - firstStart;
+  if (first === null) {
+    findings.push('lut timing: buildLutGpu returned null — kernel unavailable');
+    return;
+  }
+  rows.push(
+    measuredRow({
+      workloadId: STILL_300,
+      boundary: 'prepare',
+      label: 'lut-build (webgpu first call: device+pipeline+build)',
+      backend: 'webgpu',
+      cache: 'cold',
+      warmupRuns: 0,
+      samples: [firstMs],
+    }),
+  );
+  for (const [palette, name, id] of cases) {
+    const samples = await measureAsync(async () => buildLutGpu(palette, 'lab'), plan);
+    const gpu = await buildLutGpu(palette, 'lab');
+    if (gpu === null) {
+      findings.push(`lut timing (${name}): buildLutGpu returned null mid-run`);
+      continue;
+    }
+    const ts = buildLut(palette, 'lab');
+    let mismatches = 0;
+    for (let i = 0; i < LUT_SIZE; i++) if (gpu[i] !== ts[i]) mismatches++;
+    const distinct = new Set(gpu).size;
+    rows.push(
+      measuredRow({
+        workloadId: id,
+        boundary: 'prepare',
+        label: `lut-build (webgpu steady, ${name}:lab)`,
+        backend: 'webgpu',
+        cache: 'cold',
+        warmupRuns: plan.warmup,
+        samples,
+        meta: {
+          mismatches,
+          verdict: mismatches === 0 ? 'EXACT' : 'DISAGREES',
+          'all-zeros trap': distinct <= 1 && palette.entries.length > 1 ? 'TRIPPED' : 'clear',
+        },
+      }),
+    );
+  }
+  say('LUT build timing done.');
+}
+
+// --------------------- selection-source contention (M13-PROF-02)
+
+/**
+ * Does the palette-selection full-RGB export block live preview?
+ * (M13-PROF-02.) The worker is single-threaded and FIFO, so an export
+ * job serialises with frame jobs regardless of where frames originate
+ * — which makes the contention measurable without a capture gesture: a
+ * still-submit pump at the product-promise cadence (250 ms) stands in
+ * for the live path, and `exportFrame` with the app's own
+ * `fullRgbVariant` config is exactly the `ensureSelectionSource` call
+ * (`src/main.ts`). Each export is chased by an immediate probe submit,
+ * so at least one frame per export records the worst-case FIFO
+ * displacement. Caveat carried in the labels: pump cadence is
+ * synthetic — the capture-path confirmation is M13-PROF-04's live leg.
+ */
+async function runContentionProbe(): Promise<void> {
+  const workload = workloadById(STILL_300);
+  const source = sourceBuffer(workload);
+  const config = configFor(workload);
+  const selectionConfig = fullRgbVariant(config);
+  const copy = (): PixelBuffer => ({
+    width: source.width,
+    height: source.height,
+    data: new Uint8ClampedArray(source.data),
+  });
+  const sleep = (ms: number): Promise<void> =>
+    new Promise((resolve) => setTimeout(resolve, ms));
+
+  const spanRecords: { startAt: number; endAt: number }[] = [];
+  let workerErrors = 0;
+  onSettled = (job) => {
+    if (job.outcome !== 'result') {
+      workerErrors++;
+      return;
+    }
+    if (job.marks === undefined) return;
+    spanRecords.push({ startAt: job.startAt, endAt: job.marks.drawDoneAt });
+  };
+  const dropsBefore = client.droppedFrames;
+  let submits = 0;
+  const pump = setInterval(() => {
+    submits++;
+    client.submit(copy(), config);
+  }, 250);
+
+  say('Contention probe: 4 s baseline, then 5 exports…');
+  await sleep(4000);
+  const exportWindows: { start: number; end: number }[] = [];
+  const exportSamples: number[] = [];
+  for (let i = 0; i < 5; i++) {
+    const startAbs = absNow();
+    const start = performance.now();
+    const pending = client.exportFrame(copy(), selectionConfig);
+    // Probe frame posted straight behind the export: the worker is
+    // FIFO, so its span records the worst-case displacement.
+    submits++;
+    client.submit(copy(), config);
+    await pending;
+    exportSamples.push(performance.now() - start);
+    exportWindows.push({ start: startAbs, end: absNow() });
+    await sleep(1200);
+  }
+  await sleep(800);
+  clearInterval(pump);
+  // Let the last in-flight frame settle before detaching the sink.
+  await sleep(600);
+  onSettled = null;
+
+  const overlapped: number[] = [];
+  const baseline: number[] = [];
+  for (const record of spanRecords) {
+    const hits = exportWindows.some((w) => record.startAt < w.end && record.endAt > w.start);
+    (hits ? overlapped : baseline).push(record.endAt - record.startAt);
+  }
+  const meta: Record<string, string | number | boolean> = {
+    'pump cadence ms': 250,
+    submits,
+    'client drops': client.droppedFrames - dropsBefore,
+    'worker errors': workerErrors,
+    exports: exportWindows.length,
+  };
+  if (baseline.length === 0) {
+    findings.push('contention probe: no baseline preview span settled — worker path broken');
+  } else {
+    rows.push(
+      measuredRow({
+        workloadId: STILL_300,
+        boundary: 'preview-update',
+        label: 'preview-update (still pump, no export)',
+        cache: 'warm',
+        warmupRuns: 0,
+        samples: baseline,
+        meta,
+      }),
+    );
+  }
+  if (overlapped.length === 0) {
+    findings.push('contention probe: no preview span overlapped an export window');
+  } else {
+    rows.push(
+      measuredRow({
+        workloadId: STILL_300,
+        boundary: 'preview-update',
+        label: 'preview-update (still pump, overlapping selection-source export)',
+        cache: 'warm',
+        warmupRuns: 0,
+        samples: overlapped,
+        meta,
+      }),
+    );
+  }
+  rows.push(
+    measuredRow({
+      workloadId: STILL_300,
+      boundary: 'export',
+      label: 'export (selection-source full-rgb, w1280→300²)',
+      cache: 'warm',
+      warmupRuns: 0,
+      samples: exportSamples,
+      meta: { context: 'concurrent 250 ms still pump' },
+    }),
+  );
+  say('Contention probe done.');
+}
+
 // -------------------------------------------------------------- report
 
 function browserEnvironment(): EnvironmentIdentity {
@@ -913,7 +1254,7 @@ function browserEnvironment(): EnvironmentIdentity {
   };
 }
 
-function finishReport(): Promise<void> {
+function assembleReport(): BenchReport {
   const validity = assessValidity(rows, {
     wallStartMs: runStart.wall,
     wallEndMs: Date.now(),
@@ -922,7 +1263,7 @@ function finishReport(): Promise<void> {
   });
   for (const finding of findings) validity.findings.push(finding);
   validity.tainted = validity.tainted || findings.length > 0;
-  const report = buildReport(
+  return buildReport(
     {
       boundaryVersion: BOUNDARY_VERSION,
       startedAt: new Date(runStart.wall).toISOString(),
@@ -954,6 +1295,9 @@ function finishReport(): Promise<void> {
       ...rows,
     ],
   );
+}
+
+function publishReport(report: BenchReport): void {
   (window as unknown as { __BENCH__: unknown }).__BENCH__ = report;
   output.textContent = formatReport(report);
   const blob = new Blob([serialiseReport(report)], { type: 'application/json' });
@@ -963,8 +1307,58 @@ function finishReport(): Promise<void> {
   link.textContent = 'Download bv2 JSON report';
   link.style.cssText = 'display:block;margin:8px 4px;min-height:44px;';
   document.body.append(link);
-  say(validity.tainted ? 'Report ready — TAINTED, see findings.' : 'Report ready.');
+  say(report.validity.tainted ? 'Report ready — TAINTED, see findings.' : 'Report ready.');
+}
+
+function finishReport(): Promise<void> {
+  publishReport(assembleReport());
   return Promise.resolve();
+}
+
+// ----------------------------------------------------------- auto mode
+
+/**
+ * Unattended no-capture legs (M13-PROF-01/02 browser halves):
+ * `?auto=still,stage,gpu,lut,contention` runs the listed legs on load
+ * and, with `post=<url>`, POSTs the serialised bv2 report to a local
+ * collector — so an agent can run the gestureless half of the
+ * procedure in a real, foreground browser window it cannot script.
+ * (A hidden page is CPU-throttled to the point of 10–20× inflated
+ * samples — the in-app preview pane can never be a measurement
+ * surface.) The capture legs are excluded by construction: they need
+ * the owner's picker gesture. Visibility still rides in the env row,
+ * so a background auto run is self-incriminating, not silently wrong.
+ */
+async function runAuto(): Promise<void> {
+  const params = new URL(location.href).searchParams;
+  const auto = params.get('auto');
+  if (auto === null) return;
+  const legs = new Set(auto.split(','));
+  say('Auto run: measuring…');
+  if (legs.has('still')) {
+    await runStillPreview(STILL_200);
+    await runStillPreview(STILL_300);
+  }
+  if (legs.has('stage')) await runStageMatrix();
+  if (legs.has('gpu')) await gpuChecks();
+  if (legs.has('lut')) await lutBuildTiming();
+  if (legs.has('contention')) await runContentionProbe();
+  show();
+  const report = assembleReport();
+  publishReport(report);
+  const post = params.get('post');
+  if (post !== null) {
+    try {
+      await fetch(post, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: serialiseReport(report),
+      });
+      say('Auto run complete — report posted.');
+    } catch {
+      say('Auto run complete — POST failed; report is on window.__BENCH__.');
+    }
+  }
 }
 
 // ---------------------------------------------------------------- main
@@ -982,8 +1376,11 @@ function main(): void {
       await runStillPreview(STILL_300);
       say('Still preview rows done.');
     }),
+    button('1b · Stage matrix (worker route)', runStageMatrix),
     button('2 · GPU checks (M5 gates)', gpuChecks),
+    button('2b · LUT build timing (ts vs webgpu)', lutBuildTiming),
     button('3 · Export rows', runExports),
+    button('3b · Selection-source contention (still pump)', runContentionProbe),
     button('4 · Open controlled source window', openSource),
     button('5 · Start capture (choose a surface)', startCaptureSession),
     button('6 · Measure live preview (30 s)', async () => runLiveWindow(30)),
@@ -992,9 +1389,10 @@ function main(): void {
   );
   document.body.append(controls, output);
   say(
-    'Production harness ready. Run 1–3 without capture; 4–7 need a user-chosen ' +
+    'Production harness ready. Run 1–3b without capture; 4–7 need a user-chosen ' +
       'capture surface; 8 assembles the bv2 report.',
   );
+  void runAuto();
 }
 
 main();

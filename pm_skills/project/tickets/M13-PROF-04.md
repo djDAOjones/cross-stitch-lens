@@ -112,3 +112,13 @@ callback rate or stage time as a visible-update proxy.
   post-selection constraints, frame decimation and track settings.
 - [Long Tasks API](https://www.w3.org/TR/longtasks-1/) provides a main-thread
   blocking signal; feature-detect it and keep the trace authoritative.
+
+## Carried in from M13-PROF-02 (2026-07-23, D68)
+
+Confirm selection-source contention on the real capture path: the
+worker-side answer is published (still-pump probe — an overlapping
+full-RGB export delays a frame by ≤ one export, ~51 ms, zero drops),
+but the pump-side half (grab/dirty-sample cost racing the export on the
+main thread during live capture) needs this ticket's live leg. One
+targeted window with `ensureSelectionSource` triggered mid-stream is
+enough.

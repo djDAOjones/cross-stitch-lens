@@ -583,3 +583,72 @@ guesses.
   (0.006–0.42 ms and 0.2–40 KB per call by palette size) — real but
   small; a reuse candidate for the synthesis list, not a proven
   bottleneck.
+
+## M13 profiling, browser halves (M13-PROF-01/02, 2026-07-23, D68)
+
+Artefact: `bench-reports/browser-bench-v0.5.0_20260723.170dcba-auto.json`
+(regenerable: `bench.html?auto=still,stage,gpu,lut,contention` on a
+production build — procedure in `docs/browser-measurement.md`). Chrome
+150, M1 Max, foreground and visible, untainted, 70 rows, timer
+resolution 0.1 ms. Same dirty-tree caveat as D67: the report is stamped
+`170dcba` and the close commit lands the harness code it measured.
+Node comparison base: `bench-v0.5.0_20260722.33d021b.json` (D64), same
+machine. Still `preview-update` anchors reproduce run-3 within ~6%
+(22.2/40.0 ms vs 21.2/37.4 ms at 200²/300²), so the two browser runs
+are comparable.
+
+**A hidden page is not a measurement surface.** The first attempt ran
+in the in-app preview pane, which always reports
+`visibilityState: 'hidden'`: the whole renderer — worker included — was
+CPU-throttled to 10–20× inflated samples (resize 442.8 ms vs 11.7 ms
+visible, still preview 200² 465.7 ms vs 22.2 ms). That run was
+discarded; the harness's unattended auto mode exists so the gestureless
+legs can run in a real foreground window, and the env row records
+visibility so a background run is self-incriminating.
+
+### Stage ratios (PROF-01) — there is still no single browser multiplier
+
+Browser÷node median ratios over the shared bv2 workload IDs
+(18 workloads: core grids × palettes, all five methods, both resize
+isolations):
+
+- **dither: browser ≈ node** — 1.00–1.11 across every method, grid and
+  palette (e.g. FS 300²/p64: 27.1 vs 26.6 ms; FS 1024²/p64: 300.2 vs
+  293.5 ms). The M5-era "dither ~1.1×" holds post-M8.
+- **resize: 1.12–1.28×** — far below the M5-era 3.5×. On today's
+  production build the browser resize gap has collapsed (1024² from
+  1280²: 29.8 vs 24.3 ms). The 3.5× figure is superseded as a current
+  planning number; it remains true that the ratio is stage-specific.
+- **reduce (LUT map): browser ~2.2–2.5× FASTER than node** (0.40–0.46
+  ratio; 1024²/p64: 5.4 vs 13.5 ms). Chrome's V8 wins this loop
+  outright — a node reduce median must never be read as a browser cost.
+- `pipeline-compute` lands 0.92–1.18 accordingly. Method spread stays
+  within ±14% in the browser (300²/p64: blue-noise/ordered ~25.5,
+  FS 27.1, Jarvis 30.1, Atkinson 30.5 ms) — the shared exact match, not
+  any method, remains the only optimisation target (consistent with the
+  node half, D66).
+
+### Preparation and contention (PROF-02)
+
+- **GPU LUT build is a clear end-to-end win, already wired**
+  (`ensureLut` is GPU-first): webgpu steady 3.6 ms (p64) / 2.4 ms
+  (p489) vs TS 8.3 / 39.7 ms — 2.3× at p64, ~16× at p489, and the GPU
+  cost is dispatch/readback-bound (p489 no dearer than p64) so the win
+  grows with palette size. Agreement EXACT on all five GPU rows,
+  all-zeros traps clear. First call in this page context measured
+  2.4 ms — read as shader-cache-warm (Chrome caches compiled shaders on
+  disk), not as a cold-device figure.
+- **`mapPaletteGpu` stays unwired**: end-to-end 8.0 ms vs TS 5.5 ms
+  (page) / 5.4 ms (worker) at 1024²/p64 — the GPU map loses here where
+  run-3 saw near-parity (5.3 vs 5.0 ms). The M5-PERF-23 verdict stands
+  on production data.
+- **The selection-source export blocks briefly, and never races or
+  starves** (worker-side answer; the worker is FIFO so frame origin
+  cannot change it): under a 250 ms still pump at 300²/p64/FS, baseline
+  preview-update is 40.7 ms median (n=39); frames overlapping one of
+  five interleaved full-RGB selection exports rise to 48.1 ms median /
+  72.1 ms p95 (n=10) — bounded by roughly one export duration
+  (51.3 ms median). 49/49 submits settled, zero drops, zero worker
+  errors, no wedge. At the 4 updates/sec promise cadence a one-off
+  ≤ ~50 ms displacement is invisible. The capture-path confirmation
+  (pump-side grab contention) rides with M13-PROF-04's live leg.

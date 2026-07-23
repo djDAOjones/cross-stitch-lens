@@ -94,7 +94,7 @@
 - `src/backends/webgpu/device.ts` — WebGPU feature detect + one lazy shared device (null on failure)
 - `src/backends/webgpu/reduce.ts` — async GPU kernels: LUT build + palette map; null → ts fallback
 - `src/backends/webgpu/wgsl.ts` — WGSL sources + binding indices: lut-build (metric-baked) + integer palette-map
-- `src/bench-browser.ts` — the bv2 browser harness: preview-update/interaction/export rows through the shipped Worker route, live-capture counters, the M5 GPU gates, downloadable bv2 report. Not imported by the app
+- `src/bench-browser.ts` — the bv2 browser harness: preview-update/interaction/export rows through the shipped Worker route, the M13 worker-route stage matrix, LUT-build timing and selection-source contention legs (`?auto=` unattended mode), live-capture counters, the M5 GPU gates, downloadable bv2 report. Not imported by the app
 - `src/bench-source.ts` — controlled interaction source: repaints on BroadcastChannel command, replies with its own paint timestamp
 - `src/bench/boundaries.ts` — the six measurement boundaries + BOUNDARY_VERSION (code copy of the contract; moved from tests/bench so production entries never import test modules)
 - `src/bench/clock.ts` — absolute cross-context timestamps (timeOrigin + now) + timer-resolution probe

@@ -25,16 +25,6 @@ dither methods are uncovered by the frozen bench matrix (D62).
 
 Each task files defects for performance-sensitive bugs it uncovers.
 
-- [~] **M13-PROF-01 Stage profile: resize, reduce, every dither family** [detail] (2026-07-22)
-  Intent: per-stage costs at 300² and 1024², node and browser, per dither family and palette size — replacing M5-era attributions.
-  Done when: an audit artefact ranks per-stage costs (workload IDs, runtime named) and records node↔browser ratios.
-  Status 2026-07-23: node half published (D66, `m13-stage` audit); browser half unblocked — MEAS-02 evidence at `bench-reports/browser-bench-v0.5.0_20260723.8adb5d2-run3.json` (D67).
-
-- [~] **M13-PROF-02 Preparation & cache profile: palette resolution, LUT, candidate table** [detail] (2026-07-22)
-  Intent: measure the palette-change path — policy/selection, LUT and candidate-table builds, cache hit/miss/invalidation churn, cold vs warm.
-  Done when: preparation costs published per palette size; cache behaviour characterised on realistic switching patterns.
-  Status 2026-07-23: node half published (D66, `m13-prep` audit + `lutCacheStats` counters); GPU end-to-end and selection-source contention unblocked by MEAS-02 (D67).
-
 - [ ] **M13-PROF-03 Backend end-to-end comparison: TS / WASM / WebGPU** [detail] (2026-07-22)
   Intent: complete costs (setup, dispatch, copy, upload, transfer, readback) across workload sizes on a production build; post-M8 validity of categorical routing (lab→ts, rgb→wasm, FS-only wasm); whether wiring `mapPaletteGpu` is justified.
   Done when: crossovers published with end-to-end numbers on both sides; each routing rule confirmed or contradicted.
@@ -49,7 +39,7 @@ Each task files defects for performance-sensitive bugs it uncovers.
 
 #### Phase 3 — Synthesis
 
-- [ ] **M13-SYNTH-01 Performance synthesis: targets, roles, go/no-go** [detail] [sign-off] [blocked: M13-PROF-01, M13-PROF-02, M13-PROF-03, M13-PROF-04, M13-PROF-05] (2026-07-22)
+- [ ] **M13-SYNTH-01 Performance synthesis: targets, roles, go/no-go** [detail] [sign-off] [blocked: M13-PROF-03, M13-PROF-04, M13-PROF-05] (2026-07-22)
   Intent: decide — proven bottlenecks vs measurement artefacts; binding targets (budget rows, 300² promise, 1024² export, the 1024 cap); which quality-neutral changes proceed; whether an appearance-changing trade-off merits exploring; backend roles and crossovers; which Phase-4 tasks are activated, merged or cut.
   Done when: a maintainer-approved synthesis recorded (decision-log + one shared evidence doc later tickets cite); activated tasks cite their evidence; no speculative speedup encoded as acceptance.
 

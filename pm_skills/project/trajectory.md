@@ -35,6 +35,15 @@
   six export rows. Zero-frame verdict, wrong-surface warning, source
   drive and the settle-waiter token fix landed en route. See
   decision-log D67.
+- M13-PROF-01/02 browser halves (2026-07-23) — harness gained three
+  gestureless legs (worker-route stage matrix, timed GPU-vs-TS LUT
+  builds, selection-source contention probe) plus an unattended
+  `?auto=` mode; a clean foreground Chrome run published the ratios:
+  dither browser ≈ node (1.00–1.11), resize 1.12–1.28× (M5's 3.5×
+  superseded), reduce ~2.3× faster in browser; GPU LUT build 2.3×/16×
+  win at p64/p489, EXACT; selection-source export delays overlapping
+  frames by ≤ one export (~51 ms), zero drops. Both PROF items closed.
+  See decision-log D68.
 
 ## M8 — Dithering expansion (engine + controls shipped 2026-07-22; maintainer acceptance open)
 

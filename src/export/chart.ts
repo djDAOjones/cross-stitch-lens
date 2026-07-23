@@ -13,7 +13,7 @@
 
 import type { PixelBuffer } from '../core/types.ts';
 import { gridLines, snapSpan, tickLabels, type GridStyle } from '../worker/grid.ts';
-import { flattenBackground, MAX_OUTPUT_SIDE, scaleNearest } from './png.ts';
+import { flattenBackground, MAX_OUTPUT_SIDE, oversizeMessage, scaleNearest } from './png.ts';
 
 /** Chart paper colour (print target — never themed). */
 export const CHART_BACKGROUND = '#ffffff';
@@ -87,6 +87,16 @@ export async function encodeChartPng(
   cellPx: number,
 ): Promise<Blob> {
   const layout = chartLayout(frame.width, frame.height, style, cellPx);
+  // Module-boundary guard (M13-DEF-02): the UI clamps via maxCellPx,
+  // but a direct caller past the limit would otherwise get a silently
+  // zeroed canvas and an unactionable browser error.
+  const refusal = oversizeMessage(layout.width, layout.height);
+  if (refusal !== null) {
+    throw new Error(
+      `${refusal} The largest cell for this grid is ` +
+        `${String(maxCellPx(frame.width, frame.height, style))} px.`,
+    );
+  }
   const canvas = new OffscreenCanvas(layout.width, layout.height);
   const ctx = canvas.getContext('2d');
   if (ctx === null) throw new Error('2d canvas context unavailable');

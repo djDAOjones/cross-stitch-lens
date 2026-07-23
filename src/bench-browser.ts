@@ -2399,12 +2399,11 @@ async function runFallbackProbes(): Promise<void> {
     }),
   );
 
-  // Probe B: forced wasm with a non-FS method — the adapter guards by
-  // delegating to the TS reference internally (M8-ALG-01), so the
-  // output must be byte-identical to the routed ts run. Note the
-  // timing-label consequence: StageTiming.backend reports 'wasm'
-  // while TS reference code actually executed — recorded here as a
-  // defect candidate for the synthesis, reachable only via forcing.
+  // Probe B: forced wasm with a non-FS method — the executor's
+  // capability clamp (M13-DEF-01) must send it to ts AND label it ts;
+  // the adapter's internal delegation (M8-ALG-01) is the unreachable
+  // second line. Output must be byte-identical to the routed ts run,
+  // and a 'wasm' label here is the D69 defect regressing.
   const atkinsonId =
     'noise.w1280.opaque.g300.p64.lab.atkinson-s100-serp.resize-first.stretch.still';
   const atkinson = workloadById(atkinsonId);
@@ -2422,11 +2421,14 @@ async function runFallbackProbes(): Promise<void> {
       `fallback probe: forced-wasm atkinson output differs from ts — the delegation guard failed`,
     );
   }
+  if (labelB === 'wasm') {
+    findings.push('fallback probe: non-FS force labelled wasm — M13-DEF-01 regressed');
+  }
   rows.push(
     measuredRow({
       workloadId: atkinsonId,
       boundary: 'stage',
-      label: 'dither (forced wasm, non-FS method → delegation guard)',
+      label: 'dither (forced wasm, non-FS method → capability clamp)',
       backend: 'ts',
       cache: 'n/a',
       warmupRuns: 0,
@@ -2434,8 +2436,7 @@ async function runFallbackProbes(): Promise<void> {
       meta: {
         'output vs routed ts': equalityB === null ? 'not captured' : equalityB.verdict,
         'timing label reports': labelB,
-        'actually executed': 'ts reference via adapter delegation (M8-ALG-01)',
-        'label defect candidate': labelB === 'wasm',
+        verdict: labelB === 'ts' ? 'PASS' : 'FAIL',
       },
     }),
   );

@@ -69,8 +69,20 @@ export interface DitherWorkload {
  * enforces the same guard defensively for manual overrides.
  */
 export function routeDither(workload: DitherWorkload): Backend {
-  if (workload.algorithm !== 'floyd-steinberg' || workload.strength !== 1) return 'ts';
+  if (!wasmDitherImplements(workload.algorithm, workload.strength)) return 'ts';
   return workload.metric === 'rgb' ? 'wasm' : 'ts';
+}
+
+/**
+ * The dither configs the Rust crate actually implements: exactly
+ * Floyd–Steinberg at strength 1 (M8-ALG-01). The single source of
+ * this capability fact — routing consults it, and the executor clamps
+ * a forced/recorded 'wasm' through it so `StageTiming.backend` can
+ * only ever name code that ran (M13-DEF-01); the adapter's internal
+ * delegation remains as unreachable defence in depth.
+ */
+export function wasmDitherImplements(algorithm: DitherAlgorithm, strength: number): boolean {
+  return algorithm === 'floyd-steinberg' && strength === 1;
 }
 
 /** A recorded manual override for a stage, if one is set. */

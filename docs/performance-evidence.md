@@ -756,8 +756,9 @@ CPU wall time settles the wiring question regardless.
 - **Defect found (M13-DEF-01):** in the delegation case above,
   `StageTiming.backend` reports `wasm` while TS reference code
   actually executed — the diagnostics label lies. Reachable only via
-  a recorded override or the harness force, never via routing; filed
-  for M13-SYNTH-01 to weigh.
+  a recorded override or the harness force, never via routing.
+  *Closed by D72*: the executor now clamps an unimplementable wasm
+  request to ts before the label is stamped.
 
 ## M13 live-path gestureless rows (M13-PROF-04 partial, 2026-07-23, D70)
 
@@ -878,7 +879,10 @@ JS-heap number — see the row caveat).
 - **Defect (M13-DEF-02)**: chart at cell 16 on a 1024² grid exceeds
   the canvas edge; Chrome silently zeroes the `OffscreenCanvas` and
   the export dies with "The size of OffscreenCanvas is zero" — no
-  clamp, no user-facing sentence. Reproduced twice.
+  clamp, no user-facing sentence. Reproduced twice. *Closed by D72*:
+  both encoders now refuse with a user-facing sentence before the
+  canvas exists (the UI's `maxCellPx`/`maxScaleFor` clamps already
+  prevented it from the app itself).
 - Not measurable from the harness: export after *worker-side* GPU
   loss (the worker owns its device; the D46 suites cover `ensureLut`
   rejection answering once), and GC pauses (the owner session's

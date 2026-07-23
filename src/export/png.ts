@@ -87,8 +87,26 @@ export function pngFilename(width: number, height: number, scale: number): strin
   return `design-${width}x${height}${suffix}.png`;
 }
 
+/**
+ * The user-facing refusal for an output beyond the canvas limit, or
+ * null when the size is fine. The UI clamps its own inputs
+ * (`maxCellPx`, the scale picker), but the module boundary must hold
+ * on its own: past the limit the browser silently zeroes the canvas
+ * and the encode dies with "size of OffscreenCanvas is zero"
+ * (M13-DEF-02) — an answer no user can act on.
+ */
+export function oversizeMessage(width: number, height: number): string | null {
+  if (width <= MAX_OUTPUT_SIDE && height <= MAX_OUTPUT_SIDE) return null;
+  return (
+    `Export too large: ${String(width)} × ${String(height)} px is beyond the ` +
+    `${String(MAX_OUTPUT_SIDE)} px canvas limit — reduce the enlargement scale or cell size.`
+  );
+}
+
 /** Encode a buffer as a PNG blob via OffscreenCanvas (browser-only). */
 export async function encodePngBlob(buffer: PixelBuffer): Promise<Blob> {
+  const refusal = oversizeMessage(buffer.width, buffer.height);
+  if (refusal !== null) throw new Error(refusal);
   const canvas = new OffscreenCanvas(buffer.width, buffer.height);
   const ctx = canvas.getContext('2d');
   if (ctx === null) throw new Error('2d canvas context unavailable');

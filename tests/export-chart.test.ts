@@ -8,9 +8,10 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { chartFilename, chartLayout, maxCellPx } from '../src/export/chart.ts';
+import { chartFilename, chartLayout, encodeChartPng, maxCellPx } from '../src/export/chart.ts';
 import { MAX_OUTPUT_SIDE } from '../src/export/png.ts';
 import { DEFAULT_GRID_STYLE, type GridStyle } from '../src/worker/grid.ts';
+import type { PixelBuffer } from '../src/core/types.ts';
 
 const STYLE: GridStyle = { ...DEFAULT_GRID_STYLE }; // majors every 10, ticks on
 
@@ -51,5 +52,26 @@ describe('maxCellPx', () => {
 describe('chartFilename', () => {
   it('names by stitch size', () => {
     expect(chartFilename(200, 150)).toBe('chart-200x150.png');
+  });
+});
+
+describe('oversize refusal (M13-DEF-02 regression)', () => {
+  it('refuses an over-limit chart with the largest workable cell named', async () => {
+    // Reproduces the M13-PROF-05 finding: 1024² at cell 16 passes the
+    // 16,384 px canvas edge; the browser then silently zeroes the
+    // canvas and convertToBlob fails with "size is zero". The guard
+    // must refuse first, before the canvas exists (node-safe), and
+    // tell the user the cell size that would fit.
+    const frame: PixelBuffer = {
+      width: 1024,
+      height: 1024,
+      data: new Uint8ClampedArray(0),
+    };
+    const tooBig = maxCellPx(1024, 1024, STYLE) + 1;
+    const attempt = encodeChartPng(frame, STYLE, tooBig);
+    await expect(attempt).rejects.toThrow(/canvas limit/);
+    await attempt.catch((error: unknown) => {
+      expect(String(error)).toContain(String(maxCellPx(1024, 1024, STYLE)));
+    });
   });
 });

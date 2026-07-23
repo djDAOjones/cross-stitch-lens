@@ -7,7 +7,7 @@
 
 import { buildStages, type PipelineConfig } from '../core/pipeline/config.ts';
 import type { Backend, PixelBuffer } from '../core/types.ts';
-import { routeDither, selectedBackend } from './backend-select.ts';
+import { routeDither, selectedBackend, wasmDitherImplements } from './backend-select.ts';
 import { getCandidates, getLut } from './lut-cache.ts';
 import type { ProcessRequest, StageTiming, WorkerResponse } from './protocol.ts';
 
@@ -71,12 +71,27 @@ export function executeRequest(
       // sides of a routing rule requires overruling the rule
       // (M13-PROF-03), and it arrives only from the measurement
       // harness — never from app traffic or a project file.
-      const requested: Backend =
+      const chosen: Backend =
         request.force?.[instance.stage.name] ??
         instance.backend ??
         routeFor(instance.stage.name, request.config) ??
         selectedBackend(instance.stage.name) ??
         'ts';
+      // Capability clamp (M13-DEF-01): a forced or recorded 'wasm' for
+      // a dither the crate does not implement would execute the
+      // adapter's internal TS delegation while the timing row said
+      // 'wasm'. Clamping here keeps the label truthful — it can only
+      // name code that ran.
+      const requested: Backend =
+        chosen === 'wasm' &&
+        instance.stage.name === 'dither' &&
+        request.config.dither.algorithm !== 'none' &&
+        !wasmDitherImplements(
+          request.config.dither.algorithm,
+          request.config.dither.strength,
+        )
+          ? 'ts'
+          : chosen;
       const fn = instance.stage.backends[requested] ?? instance.stage.backends.ts;
       const used: Backend =
         instance.stage.backends[requested] === undefined ? 'ts' : requested;

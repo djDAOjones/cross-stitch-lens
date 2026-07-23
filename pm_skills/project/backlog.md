@@ -25,14 +25,6 @@ dither methods are uncovered by the frozen bench matrix (D62).
 
 Each task files defects for performance-sensitive bugs it uncovers.
 
-- [ ] **M13-DEF-01 StageTiming backend label lies under non-FS wasm delegation** (2026-07-23)
-  Intent: a manual override or harness force sending a non-FS dither to the wasm adapter runs the TS reference via the M8-ALG-01 delegation guard, yet `StageTiming.backend` reports `wasm` — diagnostics lie in that corner (found by M13-PROF-03, D69). Unreachable via routing.
-  Done when: the reported backend matches the code that ran (or the corner is unrepresentable), with a regression test.
-
-- [ ] **M13-DEF-02 Oversized chart export fails with a browser-internal error** (2026-07-23)
-  Intent: at 1024² with chart cell 16 the chart canvas passes the 16,384 px canvas edge; Chrome silently zeroes the `OffscreenCanvas` and `convertToBlob` fails with "size is zero" — no clamp, no user-facing sentence (found by M13-PROF-05, D71). Clean PNG at exactly 16,384² succeeds.
-  Done when: oversized exports are preflight-refused (or clamped) with a user-facing message before the canvas exists, with a regression test.
-
 - [~] **M13-PROF-04 Live-path profile: capture, scheduling, preview** [detail] (2026-07-22)
   Intent: the live capture→preview path — pump cadence, dirty-detection cost and small-edit misses, coalescing drops, draft governor, split-compare overhead, preview/UI latency, failure recovery.
   Done when: an end-to-end latency decomposition at 200²/300² live capture, with dropped/stale-frame behaviour quantified against the ≥ 4 updates/sec promise.

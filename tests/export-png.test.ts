@@ -11,9 +11,12 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  encodePngBlob,
   flattenBackground,
   hexToRgb,
+  MAX_OUTPUT_SIDE,
   maxScaleFor,
+  oversizeMessage,
   pngFilename,
   scaleNearest,
 } from '../src/export/png.ts';
@@ -120,5 +123,28 @@ describe('pngFilename', () => {
   it('names by stitch size and marks enlargement only above 1×', () => {
     expect(pngFilename(200, 150, 1)).toBe('design-200x150.png');
     expect(pngFilename(200, 150, 4)).toBe('design-200x150@4x.png');
+  });
+});
+
+describe('oversize refusal (M13-DEF-02 regression)', () => {
+  it('describes the limit and a remedy, and passes sizes inside it', () => {
+    expect(oversizeMessage(MAX_OUTPUT_SIDE, MAX_OUTPUT_SIDE)).toBeNull();
+    const message = oversizeMessage(MAX_OUTPUT_SIDE + 1, 10);
+    expect(message).toMatch(/canvas limit/);
+    expect(message).toContain(String(MAX_OUTPUT_SIDE + 1));
+    expect(message).toMatch(/reduce/);
+  });
+
+  it('encodePngBlob refuses before any canvas exists (node-safe)', async () => {
+    // Past the limit the browser silently zeroes the canvas and the
+    // encode dies with an unactionable error; the guard must throw the
+    // user-facing sentence first — which is also why this rejects in
+    // node, where OffscreenCanvas does not exist at all.
+    const oversized: PixelBuffer = {
+      width: MAX_OUTPUT_SIDE + 1,
+      height: 10,
+      data: new Uint8ClampedArray(0),
+    };
+    await expect(encodePngBlob(oversized)).rejects.toThrow(/canvas limit/);
   });
 });

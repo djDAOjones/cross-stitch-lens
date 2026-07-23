@@ -61,6 +61,12 @@
   the worker; M13-DEF-02 filed (chart past the canvas edge). Both
   items `[~]` — one owner capture session remains (rehearsal sheet in
   `docs/browser-measurement.md`). See decision-log D70/D71.
+- M13-DEF-01/02 (2026-07-23) — both profiling-filed defects fixed:
+  the executor clamps unimplementable wasm dither requests so
+  `StageTiming.backend` only names code that ran, and both export
+  encoders refuse oversized outputs with a user-facing sentence
+  before the canvas exists; regression tests on every reachable
+  route. See decision-log D72.
 
 ## M8 — Dithering expansion (engine + controls shipped 2026-07-22; maintainer acceptance open)
 

@@ -1261,3 +1261,27 @@ end); worker-side GPU-loss export unreachable from the page (D46
 suites own it); no pooling or scheduling changes (ticket forbids).
 Dirty-tree caveat as D67–D70: report stamped `5494a8d`, this commit
 lands the leg.
+
+## D72 — M13-DEF-01/02: labels only name code that ran; exports refuse before the canvas can lie (2026-07-23)
+
+**Decision:** fix both profiling-filed defects as quick tasks.
+**DEF-01** — the crate's capability fact now lives once, in
+`wasmDitherImplements` (`backend-select.ts`); routing consults it and
+the executor clamps a forced or recorded `wasm` through it before the
+timing label is stamped, so `StageTiming.backend` can only name code
+that actually ran. The adapter's internal delegation (M8-ALG-01)
+stays as unreachable defence in depth. Regression tests cover both
+reachable routes (harness force, recorded selection); the harness
+probe now treats a `wasm` label there as a regression finding.
+**DEF-02** — the app UI already clamped (`maxCellPx`, `maxScaleFor`),
+so the fix is the module boundary: `oversizeMessage` (`png.ts`) gives
+both encoders a user-facing refusal thrown **before** any canvas
+exists — which is also what makes the guard node-testable (the
+browser's own failure mode is a silently zeroed canvas and "size of
+OffscreenCanvas is zero"). The chart refusal names the largest cell
+that fits. Regression tests reproduce the 1024²/cell-16 case.
+
+**Auto-jazz assumptions:** both items were unblocked one-line defects
+(quick-task path, not evidence-gated by SYNTH); no behaviour change
+reachable from today's UI — the clamp corner was force/override-only
+and the refusal corner was module-direct-call-only.

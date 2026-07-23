@@ -12,6 +12,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Coalescer } from '../src/worker/coalesce.ts';
+import { clearSelectedBackends, setSelectedBackend } from '../src/worker/backend-select.ts';
 import { executeRequest } from '../src/worker/execute.ts';
 import { clearLutCache, getLut, lutCacheSize } from '../src/worker/lut-cache.ts';
 import { ditherStage } from '../src/core/pipeline/dither.ts';
@@ -142,6 +143,43 @@ describe('executeRequest backend force (M13-PROF-03)', () => {
     if (response.type !== 'result') return;
     const dither = response.timings.find((t) => t.stage === 'dither');
     expect(dither?.backend).toBe('ts');
+  });
+
+  it('clamps a forced wasm for a method the crate lacks — the label stays truthful (M13-DEF-01)', () => {
+    const fake = vi.fn(ditherStage.backends.ts);
+    ditherStage.backends.wasm = fake;
+    const atkinson: Partial<PipelineConfig> = {
+      metric: 'lab',
+      dither: { algorithm: 'atkinson', serpentine: true, strength: 1 },
+    };
+    const response = executeRequest({ ...request(atkinson), force: { dither: 'wasm' } });
+    expect(response.type).toBe('result');
+    if (response.type !== 'result') return;
+    const dither = response.timings.find((t) => t.stage === 'dither');
+    // Before the clamp this reported 'wasm' while the adapter's
+    // delegation guard ran TS reference code.
+    expect(dither?.backend).toBe('ts');
+    expect(fake).not.toHaveBeenCalled();
+  });
+
+  it('clamps a recorded wasm selection the same way', () => {
+    const fake = vi.fn(ditherStage.backends.ts);
+    ditherStage.backends.wasm = fake;
+    setSelectedBackend('dither', 'wasm');
+    try {
+      const response = executeRequest(
+        request({
+          metric: 'lab',
+          dither: { algorithm: 'ordered', strength: 1.5 },
+        }),
+      );
+      expect(response.type).toBe('result');
+      if (response.type !== 'result') return;
+      expect(response.timings.find((t) => t.stage === 'dither')?.backend).toBe('ts');
+      expect(fake).not.toHaveBeenCalled();
+    } finally {
+      clearSelectedBackends();
+    }
   });
 });
 

@@ -52,6 +52,15 @@
   cells byte-exact including indices; fallback probes all PASS;
   M13-DEF-01 filed (StageTiming label lies under non-FS delegation).
   See decision-log D69.
+- M13-PROF-04/05 gestureless halves (2026-07-23) — dirty gate proven
+  size-blind (≤ 2 px invisible at any contrast, knee 16–32 px; the 2 s
+  forced refresh is the small-stroke latency); allocation census puts
+  ~93% of 300² per-frame churn in two crop-sized main-thread buffers;
+  export isolation re-proven EXACT under pump/draft/rapid exports;
+  artefact exports starve the main thread (~0.5 s PDF freeze), never
+  the worker; M13-DEF-02 filed (chart past the canvas edge). Both
+  items `[~]` — one owner capture session remains (rehearsal sheet in
+  `docs/browser-measurement.md`). See decision-log D70/D71.
 
 ## M8 — Dithering expansion (engine + controls shipped 2026-07-22; maintainer acceptance open)
 

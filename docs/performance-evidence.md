@@ -795,3 +795,91 @@ script; the rows below are what needed no gesture.
   200² window variant (6b), and one mid-stream selection-source
   export with overlap analysis — the pump-side half of the D68
   contention carry-in.
+
+## M13 memory, GC and export contention (M13-PROF-05, 2026-07-23, D71)
+
+### Allocation census (deterministic dimension arithmetic, code-traced)
+
+One accepted live frame at a 1512×982 Retina crop, 300² grid, dither
+on (`resize-first`):
+
+| Phase | Bytes | Lifetime |
+| --- | --- | --- |
+| dirty sample, per *presented* frame | 16 KB readback | canvas+context module-reused |
+| `grabFrame` OffscreenCanvas | ~5.9 MB (graphics estimate) | fresh per accepted frame |
+| `grabFrame` `getImageData` | 5,941,344 B | becomes the retained `masterImage` |
+| `main.ts` pre-submit copy | 5,941,344 B | transferred/detached to the worker |
+| worker resize output | 360,000 B | consumed by dither, then GC |
+| worker dither output | 360,000 B + 180,000 B indices | transferred back to main |
+| dither error rows | 3 × width × 4 B | grows once, worker-reused |
+| preview `ImageBitmap` | ~360 KB (graphics) | closed on replacement |
+| palette flatten per colour-stage call | ≤ 7.3 KB at p489 | transient (cost counter-proven, D69) |
+
+Retained set: `masterImage` (5.9 MB), the newest output for stats/UI
+(0.54 MB at 300²), LUTs (64 KB per palette+metric, LRU-bounded),
+candidate tables (LRU cap 2 — D66).
+
+**The headline: ≥ 11.9 MB of fresh main-thread allocation per accepted
+frame — two crop-sized buffers — is ~93% of per-frame churn at 300².**
+At 15 updates/sec that is ~180 MB/s of allocation traffic. Ranked
+reuse candidates (sizing only — pooling and ownership changes are
+M13-SYNTH-01 decisions):
+
+1. `grabFrame`'s fresh canvas + `ImageData` every accepted frame
+   (5.9 MB + graphics) — a persistent grab surface.
+2. The pre-submit copy (5.9 MB) — transfer the grab buffer directly
+   and re-copy only when `masterImage` is actually consumed
+   (re-render without a new frame, selection source).
+3. Worker stage outputs at the 1024² ceiling (10.5 MB/frame across
+   resize + dither + indices) — engine-purity rules make this a
+   pooling question for the synthesis, not a local fix.
+
+Export peak model at 1024² (census; measured confirmations below):
+clean ×4 allocates 67.1 MB scaled RGBA + a canvas backing + an
+`ImageData` copy inside the encode (~200 MB transient); chart at cell
+10 backs a ~10.3k px canvas (~430 MB + copies); clean ×16 is 1.07 GB
+raw + the same again in canvas backing — at the legal 16,384 px edge,
+"within the side limit" is not a safe peak-memory guarantee.
+
+### Measured (browser, `bench.html?auto=mem`)
+
+Artefact: `bench-reports/browser-bench-v0.5.0_20260723.5494a8d-mem.json`
+(Chrome, M1 Max, foreground, untainted; heap readings are Chrome's
+JS-heap number — see the row caveat).
+
+- **Export full-quality isolation: EXACT everywhere, re-proven.** The
+  300²/p64/FS export is byte-identical — pixels *and* indices —
+  whether the worker is idle, mid-pump, serving draft-quality preview
+  configs, or answering two rapid exports fired together.
+- **Retained-heap sequence: frames plateau, the export step does
+  not.** 150 worker-route frames + 10 compare cycles moved the heap
+  only 15.7 → 34.9 MiB, but the one clean-PNG + chart export step
+  jumped it to 109.7 MiB and **5 s of idle reclaimed nothing**. The
+  buffers are unreachable by construction (block-scoped), so this is
+  either lazy major GC or genuine retention — classified per the
+  ticket as *needs a DevTools snapshot pair*, added to the owner
+  session. A first (discarded) probe without the idle tail read the
+  same sequence as +94 MiB "growth" — an end-of-churn reading alone
+  cannot tell GC lag from a leak.
+- **Artefact exports do not displace the worker; they starve the main
+  thread.** Against a 250 ms still pump (baseline 54.8 ms, n=36,
+  zero drops): clean ×4 and chart cell 10 each overlapped one span
+  with no measurable delta (53.8/37.5 ms), and the 527 ms PDF export
+  overlapped **zero** spans — its encode/pdf-lib assembly blocks the
+  main thread, so the pump simply stops submitting for ~0.5 s. The
+  user-visible symptom is a brief preview freeze during PDF export,
+  not dropped frames or a worker queue. A cold-LUT export
+  (p489 nodither, `ensureLut` miss mid-pump) cost 21.7 ms; two rapid
+  exports both resolved, byte-identical (84.4 ms for the pair).
+- **Peak probes at 1024²**: clean ×4 162 ms (4.0 MB PNG); chart
+  cell 10 1.70 s (11.4 MB PNG, heap 99.7 → 835.8 MiB — the ~430 MB
+  backing plus copies, twice over); clean ×16 at the exact 16,384 px
+  edge **succeeds** — 2.18 s, 9.6 MB PNG, ~2.1 GB transient.
+- **Defect (M13-DEF-02)**: chart at cell 16 on a 1024² grid exceeds
+  the canvas edge; Chrome silently zeroes the `OffscreenCanvas` and
+  the export dies with "The size of OffscreenCanvas is zero" — no
+  clamp, no user-facing sentence. Reproduced twice.
+- Not measurable from the harness: export after *worker-side* GPU
+  loss (the worker owns its device; the D46 suites cover `ensureLut`
+  rejection answering once), and GC pauses (the owner session's
+  Performance trace).

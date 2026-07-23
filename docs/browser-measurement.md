@@ -384,8 +384,16 @@ grid. Then the adversarial checks: crop move/resize mid-capture,
 pause/resume, end capture from the browser bar, a declined re-prompt,
 the narrow companion layout, one export mid-edit. Expected: no wedge,
 truthful status, clean recovery, export unaffected by draft mode.
-Traces and owner notes stay out of committed reports if they show
-artwork; acceptance itself stays with M13-ACCEPT-02.
+Read GC pauses off the same trace (M13-PROF-05). Traces and owner
+notes stay out of committed reports if they show artwork; acceptance
+itself stays with M13-ACCEPT-02.
+
+**Part D — memory snapshot pair (M13-PROF-05).** On `/bench.html`:
+DevTools Memory → heap snapshot, run button **3d**, snapshot again
+after it finishes, and compare — the D71 open question is whether the
+~75 MiB the export step leaves after 5 s idle is lazy major GC or a
+real retained path. Optionally run allocation sampling across one
+button-6 live window for the churn profile.
 
 ### Interpretation limits
 

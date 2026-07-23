@@ -1492,6 +1492,392 @@ async function runStatsCost(): Promise<void> {
   );
 }
 
+// ------------------ memory, GC and export contention (M13-PROF-05)
+
+/**
+ * Chrome's non-standard JS-heap reading, in MiB, or null where
+ * unsupported. Typed-array *backing stores* may sit outside this
+ * number (browser-internal), so it is a leak/plateau signal for object
+ * graphs and retained references — never a byte-accurate census; the
+ * census is the deterministic dimension arithmetic in the evidence
+ * doc.
+ */
+function heapMb(): number | null {
+  const perf = performance as Performance & { memory?: { usedJSHeapSize: number } };
+  return perf.memory === undefined
+    ? null
+    : Number((perf.memory.usedJSHeapSize / (1024 * 1024)).toFixed(1));
+}
+
+/**
+ * Retained-memory plateau over a fixed repeatable sequence
+ * (M13-PROF-05 method step 3): 150 sequential still frames at
+ * 300²/p64/FS through the real worker route, ten compare on/off
+ * cycles, then one of each export — heap sampled along the way. A
+ * retained graph that keeps growing across thirds is the leak signal;
+ * natural GC noise is not.
+ */
+async function runMemPlateau(): Promise<void> {
+  if (heapMb() === null) {
+    rows.push(
+      skippedRow({
+        workloadId: STILL_300,
+        boundary: 'prepare',
+        label: 'retained-heap plateau (fixed sequence)',
+        status: 'unsupported',
+        reason: 'performance.memory unavailable in this browser',
+      }),
+    );
+    return;
+  }
+  const workload = workloadById(STILL_300);
+  const source = sourceBuffer(workload);
+  const config = configFor(workload);
+  const heapSamples: number[] = [];
+  const startHeap = heapMb() ?? 0;
+  for (let i = 0; i < 150; i++) {
+    await submitAndWait(copyOf(source), config);
+    if (i % 10 === 0) heapSamples.push(heapMb() ?? 0);
+  }
+  for (let i = 0; i < 10; i++) {
+    client.setCompare(true, 0.5);
+    await submitAndWait(copyOf(source), config);
+    client.setCompare(false, 0.5);
+    await submitAndWait(copyOf(source), config);
+  }
+  const afterFrames = heapMb() ?? 0;
+  // Exports inside a block so the harness's own locals cannot pin the
+  // buffers when the tail samples are taken.
+  {
+    const out = await client.exportFrame(copyOf(source), config);
+    await encodePngBlob(scaleNearest(out, 4));
+    await encodeChartPng(out, DEFAULT_GRID_STYLE, 10);
+  }
+  const afterExports = heapMb() ?? 0;
+  // Natural-GC tail: churn accumulates until Chrome feels pressure, so
+  // an end-of-sequence reading alone cannot tell GC lag from a leak
+  // (the first run of this probe read +94 MiB that a snapshot would
+  // have called retention). 5 s idle gives natural GC its chance; the
+  // idle reading is the retention signal, the peak is the churn one.
+  await new Promise((resolve) => setTimeout(resolve, 5000));
+  const afterIdle = heapMb() ?? 0;
+  const third = Math.floor(heapSamples.length / 3);
+  const drift =
+    medianOf(heapSamples.slice(-third)) - medianOf(heapSamples.slice(0, third));
+  rows.push(
+    measuredRow({
+      workloadId: STILL_300,
+      boundary: 'prepare',
+      label: 'retained-heap plateau (fixed sequence)',
+      cache: 'n/a',
+      warmupRuns: 0,
+      samples: [0],
+      meta: {
+        'sequence': '150 still frames + 10 compare cycles + clean png + chart + 5 s idle',
+        'heap start MiB': startHeap,
+        'heap after frames MiB': afterFrames,
+        'heap after exports MiB': afterExports,
+        'heap after 5 s idle MiB': afterIdle,
+        'heap peak MiB': Math.max(...heapSamples, afterExports),
+        'frame-phase drift first→last third MiB': Number(drift.toFixed(1)),
+        verdict:
+          afterIdle - startHeap < 25
+            ? 'plateau after natural GC'
+            : 'RETAINED after idle — investigate with a snapshot pair',
+        caveat: 'JS heap only; typed-array backing stores may be external',
+      },
+    }),
+  );
+  say('Heap plateau row done.');
+}
+
+/**
+ * Export full-quality isolation, re-proven (the AGENTS invariant):
+ * the export result must be byte-identical — pixels and indices —
+ * whether the worker is idle, mid-pump, or was just serving a
+ * draft-quality preview config, and two rapid exports must both
+ * resolve identical. Peak-memory relief never permits preview state
+ * to leak into an export.
+ */
+async function runExportIsolation(): Promise<void> {
+  const workload = workloadById(STILL_300);
+  const source = sourceBuffer(workload);
+  const config = configFor(workload);
+  const reference = await client.exportFrame(copyOf(source), config);
+
+  // (i) During a pump: submits every 100 ms while the export runs.
+  const pump = setInterval(() => {
+    client.submit(copyOf(source), config);
+  }, 100);
+  await new Promise((resolve) => setTimeout(resolve, 250));
+  const duringPump = await client.exportFrame(copyOf(source), config);
+  clearInterval(pump);
+  await new Promise((resolve) => setTimeout(resolve, 400));
+
+  // (ii) After draft-quality previews (the governor's real degradation
+  // is dithering off): the export's own config must still win.
+  const draftConfig: PipelineConfig = { ...config, dither: { algorithm: 'none' } };
+  for (let i = 0; i < 3; i++) await submitAndWait(copyOf(source), draftConfig);
+  const afterDraft = await client.exportFrame(copyOf(source), config);
+
+  // (iii) Two rapid exports, both answered, both identical.
+  const [rapidA, rapidB] = await Promise.all([
+    client.exportFrame(copyOf(source), config),
+    client.exportFrame(copyOf(source), config),
+  ]);
+
+  const cases: readonly (readonly [string, PixelBuffer])[] = [
+    ['during pump', duringPump],
+    ['after draft previews', afterDraft],
+    ['rapid A', rapidA],
+    ['rapid B', rapidB],
+  ];
+  const meta: Record<string, string | number | boolean> = {};
+  let allExact = true;
+  for (const [name, buffer] of cases) {
+    const equality = compareOutputs(reference, buffer);
+    meta[`vs reference (${name})`] = equality.verdict;
+    if (equality.verdict !== 'EXACT') {
+      allExact = false;
+      findings.push(
+        `export isolation: ${name} differs from the idle reference — ` +
+          `${String(equality.pixelMismatches)} pixel bytes, indices ${equality.indices}`,
+      );
+    }
+  }
+  rows.push(
+    measuredRow({
+      workloadId: STILL_300,
+      boundary: 'export',
+      label: 'export isolation re-proof (idle / pump / draft / rapid ×2)',
+      cache: 'n/a',
+      warmupRuns: 0,
+      samples: [0],
+      meta: { ...meta, verdict: allExact ? 'EXACT everywhere' : 'VIOLATED' },
+    }),
+  );
+  say('Export isolation rows done.');
+}
+
+/**
+ * Preview contention while real artefact exports run (M13-PROF-05):
+ * a 250 ms still pump stands in for the live path (worker-side FIFO
+ * displacement is origin-independent — D68; the pump-side grab half
+ * is the owner session's), while clean-PNG, chart and PDF exports,
+ * a cold-LUT export (p489 nodither, ensureLut miss) and a two-rapid
+ * burst run against it. Main-thread encode work also lands inside
+ * these windows — that is the point.
+ */
+async function runExportContention(): Promise<void> {
+  const workload = workloadById(STILL_300);
+  const source = sourceBuffer(workload);
+  const config = configFor(workload);
+  const spanRecords: { startAt: number; endAt: number }[] = [];
+  onSettled = (job) => {
+    if (job.outcome !== 'result' || job.marks === undefined) return;
+    spanRecords.push({ startAt: job.startAt, endAt: job.marks.drawDoneAt });
+  };
+  const dropsBefore = client.droppedFrames;
+  const pump = setInterval(() => {
+    client.submit(copyOf(source), config);
+  }, 250);
+  await new Promise((resolve) => setTimeout(resolve, 3000));
+
+  const windows: { name: string; start: number; end: number; ms: number }[] = [];
+  const timed = async (name: string, work: () => Promise<unknown>): Promise<void> => {
+    const start = absNow();
+    const t = performance.now();
+    try {
+      await work();
+      windows.push({ name, start, end: absNow(), ms: performance.now() - t });
+    } catch (error) {
+      findings.push(
+        `export contention (${name}): ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  };
+
+  await timed('clean png ×4', async () => {
+    const out = await client.exportFrame(copyOf(source), config);
+    await encodePngBlob(scaleNearest(out, 4));
+  });
+  await timed('chart png cell 10', async () => {
+    const out = await client.exportFrame(copyOf(source), config);
+    await encodeChartPng(out, DEFAULT_GRID_STYLE, 10);
+  });
+  await timed('single-page pdf', async () => {
+    const out = await client.exportFrame(copyOf(source), config);
+    const cell = 8;
+    const layout = chartLayout(out.width, out.height, DEFAULT_GRID_STYLE, cell);
+    const chartBlob = await encodeChartPng(out, DEFAULT_GRID_STYLE, cell);
+    const chartPng = new Uint8Array(await chartBlob.arrayBuffer());
+    const entries: KeyEntry[] = computeStats(out, palette64()).perColor.map((c) => ({
+      hex: c.hex,
+      rgb: c.rgb,
+    }));
+    await buildChartPdf(chartPng, layout.width, layout.height, entries, {
+      pageSize: 'a4',
+      orientation: 'portrait',
+      marginMm: 12,
+      title: 'bench',
+    });
+  });
+  // Cold-LUT export: p489 nodither forces an ensureLut miss inside the
+  // worker mid-pump ("export during a cache miss").
+  const coldSpec = {
+    source: 'noise' as const,
+    sourceSize: 'w1280' as const,
+    alpha: 'opaque' as const,
+    grid: 300,
+    palette: 'p489' as const,
+    metric: 'lab' as const,
+    dither: NO_DITHER,
+    order: 'resize-first' as const,
+    resizeMode: 'stretch' as const,
+    path: 'still' as const,
+  };
+  const coldConfig = configFor({ id: workloadId(coldSpec), ...coldSpec });
+  await timed('cold-LUT export (p489 nodither)', async () =>
+    client.exportFrame(copyOf(source), coldConfig),
+  );
+  await timed('two rapid exports', async () => {
+    const [a, b] = await Promise.all([
+      client.exportFrame(copyOf(source), config),
+      client.exportFrame(copyOf(source), config),
+    ]);
+    const equality = compareOutputs(a, b);
+    if (equality.verdict !== 'EXACT') {
+      findings.push('export contention: two rapid exports disagree');
+    }
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 800));
+  clearInterval(pump);
+  await new Promise((resolve) => setTimeout(resolve, 600));
+  onSettled = null;
+
+  const baseline: number[] = [];
+  const perWindow: Record<string, string | number | boolean> = {};
+  for (const record of spanRecords) {
+    const hit = windows.find((w) => record.startAt < w.end && record.endAt > w.start);
+    if (hit === undefined) baseline.push(record.endAt - record.startAt);
+  }
+  for (const w of windows) {
+    const overlapped = spanRecords
+      .filter((r) => r.startAt < w.end && r.endAt > w.start)
+      .map((r) => r.endAt - r.startAt);
+    perWindow[`${w.name}: export ms`] = Number(w.ms.toFixed(1));
+    perWindow[`${w.name}: overlapped spans`] = overlapped.length;
+    if (overlapped.length > 0) {
+      perWindow[`${w.name}: overlapped median ms`] = Number(medianOf(overlapped).toFixed(1));
+    }
+  }
+  rows.push(
+    measuredRow({
+      workloadId: STILL_300,
+      boundary: 'preview-update',
+      label: 'preview-update (still pump, artefact exports interleaved)',
+      cache: 'warm',
+      warmupRuns: 0,
+      samples: baseline,
+      meta: {
+        'pump cadence ms': 250,
+        'client drops': client.droppedFrames - dropsBefore,
+        ...perWindow,
+      },
+    }),
+  );
+  say('Export contention rows done.');
+}
+
+/**
+ * Practical peak-memory probe for exports, heaviest case last: real
+ * clamped configurations, with a failed allocation recorded as a
+ * failure — never as missing data. Heap readings are the JS-heap
+ * caveat above; blob sizes and durations are exact.
+ */
+async function runExportPeak(): Promise<void> {
+  const grid1024 = {
+    source: 'noise' as const,
+    sourceSize: 'grid' as const,
+    alpha: 'opaque' as const,
+    grid: 1024,
+    palette: 'p64' as const,
+    metric: 'lab' as const,
+    dither: NO_DITHER,
+    order: 'resize-first' as const,
+    resizeMode: 'stretch' as const,
+    path: 'still' as const,
+  };
+  const id1024 = workloadId(grid1024);
+  const source1024 = sourceBuffer({ id: id1024, ...grid1024 });
+  const config1024 = configFor({ id: id1024, ...grid1024 });
+  const out1024 = await client.exportFrame(copyOf(source1024), config1024);
+
+  const probe = async (
+    name: string,
+    workloadIdFor: string,
+    work: () => Promise<Blob | Uint8Array>,
+  ): Promise<void> => {
+    const before = heapMb();
+    const t = performance.now();
+    try {
+      const artefact = await work();
+      const bytes = artefact instanceof Blob ? artefact.size : artefact.byteLength;
+      rows.push(
+        measuredRow({
+          workloadId: workloadIdFor,
+          boundary: 'export',
+          label: `export peak (${name})`,
+          cache: 'warm',
+          warmupRuns: 0,
+          samples: [performance.now() - t],
+          meta: {
+            'artefact bytes': bytes,
+            ...(before === null
+              ? {}
+              : { 'heap before MiB': before, 'heap after MiB': heapMb() ?? -1 }),
+          },
+        }),
+      );
+    } catch (error) {
+      rows.push(
+        skippedRow({
+          workloadId: workloadIdFor,
+          boundary: 'export',
+          label: `export peak (${name})`,
+          status: 'not-measured',
+          reason: `failed: ${error instanceof Error ? error.message : String(error)}`,
+        }),
+      );
+    }
+    say(`Export peak: ${name} done.`);
+  };
+
+  await probe('clean png ×4 at 1024² — 4096², 67 MB raw', id1024, async () =>
+    encodePngBlob(scaleNearest(out1024, 4)),
+  );
+  await probe('chart png cell 10 at 1024² — ~10.3k px edge', id1024, async () =>
+    encodeChartPng(out1024, DEFAULT_GRID_STYLE, 10),
+  );
+  await probe('chart png cell 16 at 1024² — past the 16,384 canvas edge', id1024, async () =>
+    encodeChartPng(out1024, DEFAULT_GRID_STYLE, 16),
+  );
+  await probe('clean png ×16 at 1024² — 16,384², 1.07 GB raw', id1024, async () =>
+    encodePngBlob(scaleNearest(out1024, 16)),
+  );
+}
+
+/** The gestureless M13-PROF-05 leg, heaviest probe last. */
+async function runMemLeg(): Promise<void> {
+  await runMemPlateau();
+  await runExportIsolation();
+  await runExportContention();
+  await runExportPeak();
+  say('Memory/export rows done.');
+}
+
 // ------------------- backend end-to-end comparison (M13-PROF-03)
 
 /** Fresh copy of a source buffer (submits transfer their pixels). */
@@ -2216,6 +2602,7 @@ async function runAuto(): Promise<void> {
     await runDirtyReplay();
     await runStatsCost();
   }
+  if (legs.has('mem')) await runMemLeg();
   if (legs.has('gpu')) await gpuChecks();
   if (legs.has('lut')) await lutBuildTiming();
   if (legs.has('contention')) await runContentionProbe();
@@ -2262,6 +2649,7 @@ function main(): void {
       await runDirtyReplay();
       await runStatsCost();
     }),
+    button('3d · Memory & export contention rows', runMemLeg),
     button('4 · Open controlled source window', openSource),
     button('5 · Start capture (choose a surface)', startCaptureSession),
     button('6 · Measure live preview (30 s, 300²)', async () => runLiveWindow(30)),

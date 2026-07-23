@@ -1227,3 +1227,37 @@ caveat on every row; no `main.ts` instrumentation (the DevTools trace
 owns the app-side DOM half); no policy tuning (the ticket forbids it).
 Dirty-tree caveat as D67–D69: report stamped `c68e2c3`, this commit
 lands the leg that produced it.
+
+## D71 — M13-PROF-05 gestureless half: the capture copies dominate, exports starve the main thread, not the worker (2026-07-23)
+
+**Decision:** publish the census, isolation re-proof, contention and
+peak rows; hold the snapshot-pair and GC-pause reads for the same
+owner session PROF-04 already needs (rehearsal sheet Parts C/D).
+PROF-05 stays `[~]`. Evidence: `docs/performance-evidence.md` → "M13
+memory, GC and export contention";
+`bench-reports/browser-bench-v0.5.0_20260723.5494a8d-mem.json`.
+
+**Findings:** the census puts **~93% of per-frame churn at 300² in two
+crop-sized main-thread buffers** (grab `ImageData` + pre-submit copy,
+≥ 11.9 MB per accepted frame, ~180 MB/s at 15 updates/sec) — the top
+reuse candidates, ranked; worker outputs matter only at the 1024²
+ceiling. Export isolation is EXACT everywhere (idle / pump / draft /
+rapid ×2). Artefact exports never displaced the worker measurably and
+never dropped a frame; the 527 ms PDF export instead **blocks the
+main thread** (~0.5 s preview freeze, zero worker queue) — encode and
+assembly, not pipeline, are the contention. Peaks: chart cell 10 at
+1024² backs ~430 MB twice over; clean ×16 at the exact 16,384 px edge
+succeeds (2.18 s, ~2.1 GB transient). Two defects/questions:
+**M13-DEF-02** (chart past the canvas edge dies on a silently zeroed
+`OffscreenCanvas` with no clamp or user-facing message, reproduced
+twice) and the **post-export ~75 MiB that 5 s of idle does not
+reclaim** (lazy GC vs retention — the snapshot pair decides; a first
+probe without the idle tail was discarded for conflating the two).
+
+**Auto-jazz assumptions:** heap readings are Chrome's JS-heap number,
+labelled as such; node `arrayBuffers` corroboration skipped (the
+census is dimension arithmetic, the browser run corroborates end to
+end); worker-side GPU-loss export unreachable from the page (D46
+suites own it); no pooling or scheduling changes (ticket forbids).
+Dirty-tree caveat as D67–D70: report stamped `5494a8d`, this commit
+lands the leg.

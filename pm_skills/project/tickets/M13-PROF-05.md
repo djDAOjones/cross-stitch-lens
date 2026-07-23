@@ -116,3 +116,21 @@ missing graphics resources.
   explains that unconsumed graphics resources should be explicitly closed.
 - [Node `process.memoryUsage`](https://nodejs.org/api/process.html#processmemoryusage)
   defines `arrayBuffers` and its process/thread interpretation.
+
+## Status 2026-07-23 (D71) — gestureless half done, owner session next
+
+Published: the allocation census (two crop-sized main-thread buffers
+are ~93% of 300² per-frame churn — ranked reuse candidates), export
+isolation EXACT under idle/pump/draft/rapid-×2, contention (exports
+starve the main thread — 527 ms PDF assembly freezes the pump — never
+the worker; zero drops), peak probes (chart cell 10 at 1024² ≈ 430 MB
+backing twice over; clean ×16 at the 16,384 px edge succeeds, ~2.1 GB
+transient), and M13-DEF-02 (chart past the canvas edge dies on a
+silently zeroed canvas). Report
+`browser-bench-v0.5.0_20260723.5494a8d-mem.json`; evidence in
+`docs/performance-evidence.md`.
+
+Remaining — rides the PROF-04 owner session (rehearsal sheet, Parts
+C/D): the DevTools snapshot pair for the post-export ~75 MiB idle
+residue (lazy GC vs retention), allocation sampling over a live
+window, GC pauses off the Part C trace.

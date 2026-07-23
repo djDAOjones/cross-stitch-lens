@@ -11,6 +11,7 @@ import {
   countersMeta,
   CounterTracker,
   zeroCounters,
+  zeroFrameReason,
   type CaptureCounters,
 } from '../src/bench/counters.ts';
 
@@ -75,6 +76,27 @@ describe('conservation checks', () => {
   it('flags forced refreshes exceeding submissions', () => {
     const c = counters({ callbacks: 2, grabs: 2, submitted: 2, forcedRefreshes: 3, results: 2 });
     expect(conservationViolations(c, 0).join(' ')).toMatch(/forced refreshes/);
+  });
+});
+
+describe('zero-frame verdict', () => {
+  it('is null when any frame was presented — the window is measurable', () => {
+    expect(zeroFrameReason(1, 0)).toBeNull();
+    expect(zeroFrameReason(120, 8)).toBeNull();
+  });
+
+  it('names the wrong surface when paints were confirmed without frames', () => {
+    // The 2026-07-23 signature: the source window painted on command,
+    // the pump never ticked — the shared surface was not the source.
+    const reason = zeroFrameReason(0, 8);
+    expect(reason).toMatch(/8 paint\(s\)/);
+    expect(reason).toMatch(/not the source window/);
+  });
+
+  it('names a static or wrong surface when nothing painted and nothing flowed', () => {
+    const reason = zeroFrameReason(0, 0);
+    expect(reason).toMatch(/no frames/);
+    expect(reason).toMatch(/button 4/);
   });
 });
 

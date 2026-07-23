@@ -1080,3 +1080,43 @@ cycle**.
 **Scope note:** engine untouched beyond the additive cache counters
 (explicitly in the ticket's surface). Both items stay `[~]` until the
 browser halves land.
+
+## D67 — M13-MEAS-02 shipped: the harness earns its evidence over three runs (2026-07-23)
+
+**Decision:** accept the run-3 report
+(`bench-reports/browser-bench-v0.5.0_20260723.8adb5d2-run3.json`) as
+the MEAS-02 evidence, with its first live row discarded. The report is
+formally tainted by a "page hidden during the live window" finding,
+but the taint is fully attributed to that discarded row
+(`page visible: false`, three zero intervals) and the same report
+carries a clean retake (119 samples, counters conserving). The taint
+system flagging exactly the window that went wrong is the contract
+working. A pristine re-run stays cheap if the maintainer wants an
+artefact with no caveat.
+
+**What three runs taught:** Run 1 shared the harness's own window
+(capture width = viewport × DPR) because the run doc said "any
+surface" — and the harness published 30 s of zeros as a clean measured
+row. Fixes: the `zeroFrameReason` verdict (zero-callback window →
+`not-measured` + tainting finding, never 0 updates/sec), a
+wrong-surface width warning at capture start, button 6 driving the
+source at 4 changes/sec (it repaints only on command), and the doc
+naming the button-4 source window. Run 2 landed the live leg but froze
+at interaction change 3: the span timeout nulled the shared settle
+waiter on a null check, so a stale 5 s timer from a fast change stole
+the active change's waiter, which could then never resolve — fixed
+with an identity-guarded waiter token, reachable only once spans
+settle fast (why run 1 never hit it). Run 3 completed all three
+boundaries.
+
+**Headline numbers (M1 Max, production build, worker route):** still
+preview-update 21.1/37.3 ms at 200²/300²; live capture 30.3 ms median
+at a driven 4 changes/sec (pipeline keeps pace, zero drops/skips);
+interaction 53.7 ms median source-paint → preview-draw (7/8, one
+counted miss); GPU LUT agreement EXACT ×3; reduce 1024²/p64 ts 5.0 ms
+vs webgpu map 5.3 ms end-to-end — near parity, so PROF-03's question
+now has production data. Caveat: runs 2–3 measured the fixed harness
+from a dirty tree still stamped 8adb5d2; the close commit lands the
+code the reports measured.
+
+**Unblocks:** M13-PROF-03/04/05; the browser halves of PROF-01/02.

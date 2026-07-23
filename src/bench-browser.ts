@@ -32,6 +32,7 @@ import {
   countersMeta,
   CounterTracker,
   zeroCounters,
+  zeroFrameReason,
   type CaptureCounters,
 } from './bench/counters.ts';
 import { measure, measureAsync } from './bench/harness.ts';
@@ -237,6 +238,17 @@ let inFlight = 0;
 let lastRvfc: VideoFrameCallbackMetadata | null = null;
 let firstRvfc: VideoFrameCallbackMetadata | null = null;
 
+/**
+ * Reset the cadence marks for a fresh window. A helper rather than
+ * inline `= null` assignments: inline nulls would flow-narrow these
+ * captured lets to `null` for the whole window body (TS control-flow
+ * analysis ignores the pump closure's re-assignments).
+ */
+function resetRvfc(): void {
+  firstRvfc = null;
+  lastRvfc = null;
+}
+
 async function startCaptureSession(): Promise<void> {
   if (capture !== null) {
     say('Capture already running.');
@@ -266,7 +278,22 @@ async function startCaptureSession(): Promise<void> {
     capture = null;
     say('Capture ended by the browser.');
   });
-  say('Capture running. Use "Measure live preview" or the interaction run.');
+  // Early wrong-surface tell (2026-07-23 first run): sharing this
+  // harness's own window records a near-static surface — zero frames
+  // for both capture legs. Width equality against our own window in
+  // device pixels is a heuristic, so it warns; the zero-frame verdict
+  // after a window is the definitive check.
+  const capturedWidth = capture.video.videoWidth;
+  const looksLikeSelf =
+    Math.abs(capturedWidth - Math.round(innerWidth * devicePixelRatio)) <= 2 ||
+    Math.abs(capturedWidth - Math.round(outerWidth * devicePixelRatio)) <= 2;
+  say(
+    looksLikeSelf
+      ? 'Capture running — but the shared surface matches this harness window’s ' +
+          'width. The capture legs need the controlled source window (button 4): ' +
+          'stop sharing via the browser UI, then Start capture again and pick it.'
+      : 'Capture running. Use "Measure live preview" or the interaction run.',
+  );
 }
 
 /**
@@ -298,6 +325,10 @@ async function runLiveWindow(seconds: number): Promise<void> {
   let lastJob: SettledJob | null = null;
   const pumpDropsBefore = pumpGate.droppedCount;
   const clientDropsBefore = client.droppedFrames;
+  const callbacksBefore = counters.callbacks;
+  // Fresh cadence readings per window — module state would otherwise
+  // leak a previous window's marks into this row.
+  resetRvfc();
 
   onSettled = (job) => {
     inFlight = Math.max(0, inFlight - 1);
@@ -349,6 +380,31 @@ async function runLiveWindow(seconds: number): Promise<void> {
     else counters.gateSuppressed++;
   });
 
+  // Drive the controlled source while the window runs: the source
+  // repaints only on command (bench-source.ts), so an undriven window
+  // over it is static and records zeros — the 2026-07-23 first-run
+  // failure. 250 ms matches the ≥ 4 updates/sec product promise. Seqs
+  // sit far above the interaction run's 1..8 so the two flows can
+  // never claim each other's paint replies.
+  const LIVE_SEQ_BASE = 1_000_000;
+  let changesCommanded = 0;
+  let paintsConfirmed = 0;
+  const onPaint = (event: MessageEvent): void => {
+    const message = event.data as BenchSourceMessage;
+    if (message.type === 'painted' && message.seq >= LIVE_SEQ_BASE) paintsConfirmed++;
+  };
+  sourceChannel.addEventListener('message', onPaint);
+  const driver =
+    sourceWindow !== null && !sourceWindow.closed
+      ? setInterval(() => {
+          changesCommanded++;
+          sourceChannel.postMessage({
+            type: 'change',
+            seq: LIVE_SEQ_BASE + changesCommanded,
+          } satisfies BenchSourceMessage);
+        }, 250)
+      : null;
+
   const tracker = new CounterTracker({ ...counters }, performance.now());
   say(`Measuring live capture for ${String(seconds)} s…`);
   const intervalMeta: Record<string, string | number | boolean> = {};
@@ -362,43 +418,77 @@ async function runLiveWindow(seconds: number): Promise<void> {
   stopPump?.();
   stopPump = null;
   onSettled = null;
+  if (driver !== null) clearInterval(driver);
+  sourceChannel.removeEventListener('message', onPaint);
 
   counters.pumpDrops = pumpGate.droppedCount - pumpDropsBefore;
   counters.clientDrops = client.droppedFrames - clientDropsBefore;
   const violations = conservationViolations(counters, inFlight);
   for (const violation of violations) findings.push(`counter conservation: ${violation}`);
 
-  const cadence: Record<string, string | number | boolean> = {};
-  if (firstRvfc !== null && lastRvfc !== null && lastRvfc !== firstRvfc) {
-    // presentedFrames counts frames the browser presented; the gap to
-    // our callback count is the missed-callback figure.
-    const presented = lastRvfc.presentedFrames - firstRvfc.presentedFrames;
-    cadence['rvfc presentedFrames delta'] = presented;
-    cadence['rvfc missed callbacks'] = Math.max(0, presented - counters.callbacks);
-  } else {
-    cadence['rvfc metadata'] = 'unsupported';
-  }
+  const windowCallbacks = counters.callbacks - callbacksBefore;
+  const sourceMeta: Record<string, string | number | boolean> = {
+    'source window open': driver !== null,
+    'source changes commanded': changesCommanded,
+    'source paints confirmed': paintsConfirmed,
+  };
 
-  rows.push(
-    measuredRow({
-      workloadId: captureId(300),
-      boundary: 'preview-update',
-      label: 'preview-update (live capture)',
-      cache: 'warm',
-      warmupRuns: 0,
-      samples,
-      meta: {
-        'capture width': session.video.videoWidth,
-        'capture height': session.video.videoHeight,
-        'updates/sec over window': samples.length / seconds,
-        'page visible': document.visibilityState === 'visible',
-        ...countersMeta(counters, 'counter '),
-        ...cadence,
-        ...intervalMeta,
-        ...(lastJob === null ? {} : phaseMeta(lastJob)),
-      },
-    }),
-  );
+  // A window in which no frame was ever presented is not a measured
+  // zero — it is a not-measured row plus a tainting finding (the bv2
+  // rule: no result is encoded as zero).
+  const zeroReason = zeroFrameReason(windowCallbacks, paintsConfirmed);
+  if (zeroReason !== null) {
+    findings.push(`live window: ${zeroReason}`);
+    rows.push(
+      skippedRow({
+        workloadId: captureId(300),
+        boundary: 'preview-update',
+        label: 'preview-update (live capture)',
+        status: 'not-measured',
+        reason: zeroReason,
+        meta: {
+          'capture width': session.video.videoWidth,
+          'capture height': session.video.videoHeight,
+          'page visible': document.visibilityState === 'visible',
+          ...sourceMeta,
+        },
+      }),
+    );
+  } else {
+    const cadence: Record<string, string | number | boolean> = {};
+    if (firstRvfc !== null && lastRvfc !== null && lastRvfc !== firstRvfc) {
+      // presentedFrames counts frames the browser presented; the gap to
+      // our callback count is the missed-callback figure.
+      const presented = lastRvfc.presentedFrames - firstRvfc.presentedFrames;
+      cadence['rvfc presentedFrames delta'] = presented;
+      cadence['rvfc missed callbacks'] = Math.max(0, presented - counters.callbacks);
+    } else {
+      cadence['rvfc metadata'] = 'unsupported';
+    }
+
+    rows.push(
+      measuredRow({
+        workloadId: captureId(300),
+        boundary: 'preview-update',
+        label: 'preview-update (live capture)',
+        cache: 'warm',
+        warmupRuns: 0,
+        samples,
+        meta: {
+          'capture width': session.video.videoWidth,
+          'capture height': session.video.videoHeight,
+          'updates/sec over window': samples.length / seconds,
+          'window callbacks': windowCallbacks,
+          'page visible': document.visibilityState === 'visible',
+          ...sourceMeta,
+          ...countersMeta(counters, 'counter '),
+          ...cadence,
+          ...intervalMeta,
+          ...(lastJob === null ? {} : phaseMeta(lastJob)),
+        },
+      }),
+    );
+  }
   if (document.visibilityState !== 'visible') {
     findings.push('page was hidden during the live window — throttled, not evidence');
   }
@@ -445,6 +535,8 @@ async function runInteraction(changes: number): Promise<void> {
   const dirtyGate = new DirtyGate();
   const samples: number[] = [];
   let misses = 0;
+  let pumpCallbacks = 0;
+  let paintsConfirmed = 0;
   let paintedAt: number | null = null;
   let settleWaiter: ((span: number | null) => void) | null = null;
 
@@ -473,21 +565,27 @@ async function runInteraction(changes: number): Promise<void> {
     }
   };
   const stop = startFramePump(session.video, () => {
+    pumpCallbacks++;
     if (pumpGate.frameArrived()) void pumpGrab();
   });
 
   say(`Running ${String(changes)} controlled changes…`);
   for (let seq = 1; seq <= changes; seq++) {
     const painted = new Promise<number | null>((resolve) => {
-      const timeout = setTimeout(() => resolve(null), 3000);
-      const handler = (event: MessageEvent): void => {
+      // The timeout also detaches the handler — a missed paint must
+      // not leave a stale listener on the channel.
+      const timeout = setTimeout(() => {
+        sourceChannel.removeEventListener('message', handler);
+        resolve(null);
+      }, 3000);
+      function handler(event: MessageEvent): void {
         const message = event.data as BenchSourceMessage;
         if (message.type === 'painted' && message.seq === seq) {
           clearTimeout(timeout);
           sourceChannel.removeEventListener('message', handler);
           resolve(message.at);
         }
-      };
+      }
       sourceChannel.addEventListener('message', handler);
     });
     sourceChannel.postMessage({ type: 'change', seq } satisfies BenchSourceMessage);
@@ -497,11 +595,20 @@ async function runInteraction(changes: number): Promise<void> {
       misses++;
       continue;
     }
+    paintsConfirmed++;
     paintedAt = at;
     const span = await new Promise<number | null>((resolve) => {
-      settleWaiter = resolve;
+      const waiter = (value: number | null): void => {
+        resolve(value);
+      };
+      settleWaiter = waiter;
+      // Identity guard, not a null check: this timer outlives a fast
+      // settle, and a stale firing must be a no-op. A null check here
+      // let a leftover timer from a fast change steal a later change's
+      // waiter — that waiter could then never resolve, freezing the
+      // whole run (the 2026-07-23 run-2 hang at change 3).
       setTimeout(() => {
-        if (settleWaiter !== null) {
+        if (settleWaiter === waiter) {
           settleWaiter = null;
           resolve(null);
         }
@@ -516,6 +623,39 @@ async function runInteraction(changes: number): Promise<void> {
   stop();
   onSettled = null;
 
+  // Zero presented frames means the shared surface never showed the
+  // source window's paints — publish the cause, never eight silent
+  // misses (the 2026-07-23 first-run signature).
+  const zeroReason = zeroFrameReason(pumpCallbacks, paintsConfirmed);
+  if (zeroReason !== null) {
+    findings.push(`interaction: ${zeroReason}`);
+    rows.push(
+      skippedRow({
+        workloadId: captureId(300),
+        boundary: 'interaction',
+        label: 'interaction (controlled source)',
+        status: 'not-measured',
+        reason: zeroReason,
+        meta: {
+          'changes commanded': changes,
+          'changes missed': misses,
+          'source paints confirmed': paintsConfirmed,
+          source: 'bench-source window (same origin, paint-timestamped)',
+        },
+      }),
+    );
+    say('Interaction run collected no spans — see findings.');
+    return;
+  }
+  if (samples.length === 0) {
+    // Frames flowed yet nothing settled after any paint — a different
+    // defect (dirty gate, worker path); name it rather than let an
+    // empty row pass without a cause.
+    findings.push(
+      `interaction: all ${String(changes)} changes missed despite ` +
+        `${String(pumpCallbacks)} presented frames — investigate dirty gate or worker path`,
+    );
+  }
   rows.push(
     measuredRow({
       workloadId: captureId(300),
@@ -527,6 +667,8 @@ async function runInteraction(changes: number): Promise<void> {
       meta: {
         'changes commanded': changes,
         'changes missed': misses,
+        'source paints confirmed': paintsConfirmed,
+        'pump callbacks': pumpCallbacks,
         source: 'bench-source window (same origin, paint-timestamped)',
       },
     }),

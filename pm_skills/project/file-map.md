@@ -98,7 +98,7 @@
 - `src/bench-source.ts` — controlled interaction source: repaints on BroadcastChannel command, replies with its own paint timestamp
 - `src/bench/boundaries.ts` — the six measurement boundaries + BOUNDARY_VERSION (code copy of the contract; moved from tests/bench so production entries never import test modules)
 - `src/bench/clock.ts` — absolute cross-context timestamps (timeOrigin + now) + timer-resolution probe
-- `src/bench/counters.ts` — capture-path counter ledger: interval snapshots + conservation checks (pure)
+- `src/bench/counters.ts` — capture-path counter ledger: interval snapshots, conservation checks, zero-frame verdict (pure)
 - `src/bench/harness.ts` — warm-up policy, sync/async sample collection, interleaved candidate timing
 - `src/bench/report.ts` — report schema, percentiles, unmeasured-never-zero rows, run-validity assessment (pure)
 - `src/bench/workloads.ts` — the frozen bv2 workload matrix (DitherConfig axis) + seeded source generators

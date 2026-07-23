@@ -274,15 +274,27 @@ using the worker's absolute-clock phase marks (`FrameMarks` in
    timestamp over a same-origin `BroadcastChannel`, giving
    `interaction` a genuine start mark. Real Photoshop interaction
    remains the manual M13-ACCEPT-02 leg — never reconstructed here.
+   Keep this window at least partially visible for the whole run: a
+   fully occluded window has its `requestAnimationFrame` throttled, so
+   its paint confirmations arrive seconds late or not at all.
 5. **Button 5 starts capture** — the browser's picker requires the
-   owner to choose the shared surface each run (choose the source
-   window for interaction rows; any surface for live-preview rows).
-   A declined prompt is recorded as a `not-measured` row, never a zero.
+   owner to choose the shared surface each run. **Share the controlled
+   source window from button 4 for both capture legs**: capture frame
+   delivery is damage-driven, so a surface that never repaints presents
+   no frames at all — the first run (2026-07-23) shared the harness's
+   own window and recorded 30 s of zeros. The harness warns at capture
+   start if the shared surface matches this window's own width. A
+   declined prompt is recorded as a `not-measured` row, never a zero.
 6. **Button 6 measures a 30 s live window** — the shipped
    pump → dirty-gate → latest-wins → worker loop at a 300² grid, with
    counters snapshotted every 5 s, rvfc cadence metadata
    (`presentedFrames`) where the browser supports it, and
-   counter-conservation violations reported as findings.
+   counter-conservation violations reported as findings. While it
+   runs, the harness drives the source window at 4 changes/sec (the
+   product-promise cadence); commanded and confirmed paint counts ride
+   in the row's `meta`. A window in which no frame ever arrives is
+   published as `not-measured` with a tainting finding — never as
+   0 updates/sec.
 7. **Button 7 runs the controlled interaction sequence** (8 changes,
    each span: source paint mark → preview draw return of the first job
    started after it; misses are counted, not invented).
@@ -298,6 +310,19 @@ surface use the `capture.g<grid>.<palette>.<metric>.<dither>` pseudo-ID
 (the source is not a generated matrix class, and an ID must not lie
 about its input — see `docs/measurement-contract.md`); actual capture
 dimensions ride in the row's `meta`.
+
+### Failure signature: zero-sample capture rows (2026-07-23)
+
+The first owner run produced valid still/GPU/export rows but zero
+samples on both capture legs: `callbacks: 0` across the whole 30 s
+window, all 8 interaction changes missed **with** their source paints
+confirmed, and a captured width equal to the harness viewport × DPR —
+the shared surface was the harness's own (static) window, and the
+then-current step 5 said "any surface" was fine. Two consequences are
+now encoded above: the run document names the source window as the
+surface to share, and the harness itself both warns at capture start
+and refuses to publish a zero-frame window as a measured row
+(`zeroFrameReason`, `src/bench/counters.ts`).
 
 ### Interpretation limits
 

@@ -59,3 +59,4 @@ refer to `docs/requirements.md`.
 - Tick-numbering margin: FIT_MARGIN (24 CSS px) clips 3-digit row labels at fit-width on a narrow window — the labels are drawn centred on the row so they overhang the reserved margin (seen at 420 px, M6-NARROW-01 rehearsal; M11 territory)
 - Companion-window rehearsal in stable Safari / Chrome / Firefox on the maintainer's macOS setup — the leg D53 could not measure from an embedded Chromium; only worth doing if browser placement is reconsidered
 - tests/audits carry stale post-M8 assertions (a Boolean-dither draft-isolation check in runtime.audit; "533" labels for the 489-thread DMC palette) — sweep next time the audits run under AUDIT=1 (from: 2026-07-22 M13-MEAS-01)
+- bv2 per-row taint attribution: one bad window currently taints the whole report even when the same report carries a clean retake of that leg — row-level validity would let a report separate its own good and bad rows (from: 2026-07-23 M13-MEAS-02 run 3)

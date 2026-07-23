@@ -27,6 +27,14 @@
   samples, stalls), and a ten-row re-baseline — the FS 1024² +28 % drift
   since pre-M8 recorded as evidence for M13-PROF-01. See decision-log
   D64.
+- M13-MEAS-02 (2026-07-23) — bv2 browser harness evidence complete over
+  three owner runs: still preview-update 21.1/37.3 ms (200²/300²), live
+  capture 30.3 ms median at a driven 4 changes/sec (119 samples,
+  counters conserve, zero drops), interaction 53.7 ms median
+  source-paint → preview-draw (7/8), GPU LUT agreement EXACT ×3 runs,
+  six export rows. Zero-frame verdict, wrong-surface warning, source
+  drive and the settle-waiter token fix landed en route. See
+  decision-log D67.
 
 ## M8 — Dithering expansion (engine + controls shipped 2026-07-22; maintainer acceptance open)
 

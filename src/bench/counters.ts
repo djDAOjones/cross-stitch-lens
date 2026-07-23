@@ -159,6 +159,38 @@ export function conservationViolations(
   return violations;
 }
 
+/**
+ * Why a capture measurement window yielded no evidence, or null when
+ * frames flowed. `requestVideoFrameCallback` is damage-driven for
+ * captured surfaces, so a zero-callback window means the shared surface
+ * never presented a frame — it was static, or it was not the surface
+ * the run needed. The first owner run (2026-07-23) shared the harness's
+ * own window and recorded 30 s of structurally valid zeros with a clean
+ * validity verdict; this verdict exists so a silent zero is published
+ * as `not-measured` plus a tainting finding, never as 0 updates/sec.
+ *
+ * `paintsConfirmed` is how many controlled-source paints were
+ * acknowledged over the BroadcastChannel during the window: paints
+ * without frames prove the shared surface is not the source window.
+ */
+export function zeroFrameReason(
+  callbacks: number,
+  paintsConfirmed: number,
+): string | null {
+  if (callbacks > 0) return null;
+  if (paintsConfirmed > 0) {
+    return (
+      `the source window confirmed ${String(paintsConfirmed)} paint(s) but the ` +
+      `shared surface presented no frames — the shared surface is not the ` +
+      `source window; share the controlled source window (button 4)`
+    );
+  }
+  return (
+    'the shared surface presented no frames during the window — a static or ' +
+    'wrong surface; share the controlled source window (button 4)'
+  );
+}
+
 /** Flatten counters for a report row's `meta` field. */
 export function countersMeta(
   c: CaptureCounters,

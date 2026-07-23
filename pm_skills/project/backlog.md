@@ -21,13 +21,6 @@ Re-measure before optimising: M5 evidence is historical input; M8's
 dither methods are uncovered by the frozen bench matrix (D62).
 `AGENTS.md` hard rules hold — rationale in D63.
 
-#### Phase 1 — Measurement refresh & instrumentation
-
-- [~] **M13-MEAS-02 Browser/Worker measurement harness** [detail] [maintainer]
-  Intent: production-build, in-Worker measurement of `preview-update`, `interaction` and `export`, extending `bench.html`/`src/bench-browser.ts`, plus live-capture cadence, staleness and dropped-frame counters.
-  Done when: a repeatable documented run yields boundary-tagged browser rows (workload ID + build identity) for all three; new dev deps proposed, never assumed.
-  Status 2026-07-22: code complete (D65) — harness, controlled source window, frame marks, counters, docs. Remaining: the owner's browser run (`npm run bench:browser` → docs/browser-measurement.md → "The bv2 harness run"); `getDisplayMedia` needs a human gesture.
-
 #### Phase 2 — Component profiling & defect discovery
 
 Each task files defects for performance-sensitive bugs it uncovers.
@@ -35,22 +28,22 @@ Each task files defects for performance-sensitive bugs it uncovers.
 - [~] **M13-PROF-01 Stage profile: resize, reduce, every dither family** [detail] (2026-07-22)
   Intent: per-stage costs at 300² and 1024², node and browser, per dither family and palette size — replacing M5-era attributions.
   Done when: an audit artefact ranks per-stage costs (workload IDs, runtime named) and records node↔browser ratios.
-  Status 2026-07-22: node half published (D66, `m13-stage` audit); browser ratios await the MEAS-02 owner run.
+  Status 2026-07-23: node half published (D66, `m13-stage` audit); browser half unblocked — MEAS-02 evidence at `bench-reports/browser-bench-v0.5.0_20260723.8adb5d2-run3.json` (D67).
 
 - [~] **M13-PROF-02 Preparation & cache profile: palette resolution, LUT, candidate table** [detail] (2026-07-22)
   Intent: measure the palette-change path — policy/selection, LUT and candidate-table builds, cache hit/miss/invalidation churn, cold vs warm.
   Done when: preparation costs published per palette size; cache behaviour characterised on realistic switching patterns.
-  Status 2026-07-22: node half published (D66, `m13-prep` audit + `lutCacheStats` counters); GPU end-to-end and selection-source contention await the MEAS-02 owner run.
+  Status 2026-07-23: node half published (D66, `m13-prep` audit + `lutCacheStats` counters); GPU end-to-end and selection-source contention unblocked by MEAS-02 (D67).
 
-- [ ] **M13-PROF-03 Backend end-to-end comparison: TS / WASM / WebGPU** [detail] [blocked: M13-MEAS-02] (2026-07-22)
+- [ ] **M13-PROF-03 Backend end-to-end comparison: TS / WASM / WebGPU** [detail] (2026-07-22)
   Intent: complete costs (setup, dispatch, copy, upload, transfer, readback) across workload sizes on a production build; post-M8 validity of categorical routing (lab→ts, rgb→wasm, FS-only wasm); whether wiring `mapPaletteGpu` is justified.
   Done when: crossovers published with end-to-end numbers on both sides; each routing rule confirmed or contradicted.
 
-- [ ] **M13-PROF-04 Live-path profile: capture, scheduling, preview** [detail] [blocked: M13-MEAS-02] (2026-07-22)
+- [ ] **M13-PROF-04 Live-path profile: capture, scheduling, preview** [detail] (2026-07-22)
   Intent: the live capture→preview path — pump cadence, dirty-detection cost and small-edit misses, coalescing drops, draft governor, split-compare overhead, preview/UI latency, failure recovery.
   Done when: an end-to-end latency decomposition at 200²/300² live capture, with dropped/stale-frame behaviour quantified against the ≥ 4 updates/sec promise.
 
-- [ ] **M13-PROF-05 Memory, GC and export contention** [detail] [blocked: M13-MEAS-02] (2026-07-22)
+- [ ] **M13-PROF-05 Memory, GC and export contention** [detail] (2026-07-22)
   Intent: per-frame allocation census, typed-array reuse candidates, live GC pressure, peak export memory, worker blocking during export.
   Done when: allocation/peak/contention figures published, top candidates ranked; export full-quality isolation re-verified.
 

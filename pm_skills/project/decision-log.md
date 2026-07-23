@@ -1285,3 +1285,52 @@ that fits. Regression tests reproduce the 1024²/cell-16 case.
 (quick-task path, not evidence-gated by SYNTH); no behaviour change
 reachable from today's UI — the clamp corner was force/override-only
 and the refusal corner was module-direct-call-only.
+
+## D73 — M14 UI/UX excellence: novice-first milestone, gates deferred to one end review (2026-07-23)
+
+**Decision:** created milestone M14 — and, on the owner's direction
+later the same session, made it **Current**, moving M13's remainder
+to Next — a UI/UX excellence pass optimising the default surface for
+first-time users while keeping full control depth deliberately
+placed. Twelve tasks in
+four phases (audit → spec → implementation → verification), every one
+agent-executable without maintainer sign-off, per the owner's
+directive (2026-07-23 session). Design judgement is deferred, not
+removed: each substantive decision is recorded (decision log +
+`docs/ui-evidence.md`) and judged once at M14-ACCEPT-01, the only
+[maintainer] item.
+
+**Constraints encoded in the milestone preamble:** UI-only — engine,
+worker and export outputs stay byte-identical (reference exports
+captured at audit, hash-matched at verify); no new runtime
+dependencies (Carbon implemented in project code, per UI-STANDARDS);
+presentation/disclosure state in the preferences store, never the
+project file; no project-file schema change. `UI-STANDARDS.md` binds
+throughout (Carbon productive, WCAG 2.2 AAA, Nielsen as hard rules,
+the 14-item design review gate).
+
+**Why now:** the shell still wears its M1 dev styling by design
+(`index.html` says so itself); `src/ui/styles/tokens.css` — promised
+by both UI-STANDARDS and DEV-INFRASTRUCTURE — does not exist; controls
+are Carbon-informed but not Carbon-complete; there is no first-run
+guidance. The accessibility bones (44 px targets, 7:1 contrast, focus
+rings, reduced motion) are already in place, so this is a completion
+pass, not a rescue.
+
+**Alternatives rejected:** folding UX work item-by-item into the
+feature milestones (M9–M12) — the novice-first restructure is
+cross-cutting and would be relitigated per milestone. **Sequencing:**
+M14 was first slotted as Next, then promoted to Current at the
+owner's direction: M13's remaining halves are owner-session-gated
+(PROF-04/05 rehearsals → the [sign-off] synthesis) while M14 is
+machine-executable, so agent capacity goes to M14 meanwhile; M13's
+banked evidence (D64–D72) stands. The don't-disturb concern is
+carried by the UI-only invariant plus a re-capture rule — if M13
+implementation ships mid-M14, M14's reference exports are
+re-captured.
+
+**Link:** backlog → "Current — M14"; tickets `M14-*.md`; wish-list UX
+overlaps deliberately left parked (rename, adjustments panel, preview
+modes, processing-order editor — feature work, not this milestone);
+the FIT_MARGIN tick-label clip stays wish-listed but is folded into
+the audit's known findings.

@@ -32,13 +32,24 @@ export function captureErrorMessage(error: unknown): string {
 }
 
 /**
- * Human-friendly name for the shared surface. Track labels are
- * sometimes internal identifiers (e.g. `web-contents-media-stream://5`)
- * rather than names — fall back to a generic phrase for those.
+ * Human-friendly name for the shared surface. Track labels are often
+ * internal identifiers — `web-contents-media-stream://5`, base64-ish
+ * tokens, `screen:1:0` — rather than names. The filter is allow-list
+ * shaped (M14-IMPL-04, audit A7): a label is shown only when it looks
+ * like something a human named; anything else falls back to the
+ * generic phrase, because status copy must never print a machine
+ * token as if it meant something.
  */
 export function displayLabel(trackLabel: string): string {
   const label = trackLabel.trim();
-  if (label === '' || label.includes('://')) return 'the shared screen';
+  if (label === '' || label.length > 60) return 'the shared screen';
+  // Deny the known machine shapes outright.
+  if (label.includes('://') || label.includes('=')) return 'the shared screen';
+  // Human names have word structure: a space, or a short single word
+  // without long unbroken alphanumeric runs (tokens read as one run).
+  if (!label.includes(' ') && /[A-Za-z0-9+/_-]{16,}/.test(label)) {
+    return 'the shared screen';
+  }
   return label;
 }
 

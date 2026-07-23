@@ -59,7 +59,7 @@ const FRESHNESS_TEXT: Record<SourceFreshness, string> = {
 export function statusLine(snapshot: StatusSnapshot): string {
   const parts: string[] = [
     patternSummary(snapshot.pattern),
-    snapshot.paletteName ?? 'Full RGB',
+    snapshot.paletteName ?? 'Unlimited colours',
   ];
   if (snapshot.colorCount !== null) {
     parts.push(

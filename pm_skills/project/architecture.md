@@ -212,8 +212,8 @@ written (D43) and was replaced by measured reality at M5C/M5D
 
 `{ schemaVersion, pipeline, palette, gridStyle, preview, export }` —
 see requirements §20 for the full field inventory. Loading an older
-`schemaVersion` must migrate, never fail (currently v3, with forward
-steps from v1 and v2).
+`schemaVersion` must migrate, never fail (currently v4, with forward
+steps from v1–v3).
 
 The `palette` block holds **both** halves, and needs both (D55):
 

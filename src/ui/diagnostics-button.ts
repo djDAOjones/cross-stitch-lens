@@ -33,7 +33,9 @@ export type CopyOutcome =
  */
 export function diagnosticsStatusMessage(outcome: CopyOutcome): string {
   if (!outcome.ok) {
-    return `Could not copy diagnostics: ${outcome.reason}. The bundle is unchanged — try again, or copy it from the console.`;
+    // Raw error strings often end in a full stop of their own (A19).
+    const reason = outcome.reason.replace(/\.\s*$/, '');
+    return `Could not copy diagnostics: ${reason}. The bundle is unchanged — try again, or copy it from the console.`;
   }
   const records = outcome.records;
   const plural = records === 1 ? 'record' : 'records';

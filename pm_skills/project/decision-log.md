@@ -1334,3 +1334,379 @@ overlaps deliberately left parked (rename, adjustments panel, preview
 modes, processing-order editor — feature work, not this milestone);
 the FIT_MARGIN tick-label clip stays wish-listed but is folded into
 the audit's known findings.
+
+## D74 — M14-AUDIT-01: a completion pass confirmed — 22 findings, none blocking; byte-identity gets a tripwire (2026-07-23)
+
+**Decision:** the standards audit (`docs/ui-audit.md`) records 22
+ranked findings — 8 major, 11 minor, 3 polish, no blockers — from a
+full surface × state walk (a11y-tree reads, programmatic target-size
+and contrast sweeps, real-control state driving, synthetic
+`canvas.captureStream` route for capture states). D73's "completion
+pass, not a rescue" framing held: contrast is uniformly 18.1:1/16.45:1,
+focus and live-region bones are in place. The majors cluster where the
+milestone already aims: 68 sub-target checkboxes and 60 identical
+"Own" accessible names in the thread list, two selector gaps in the
+44 px rule, the 16-screen default surface at 320 px, an
+opens-to-nothing disclosure, native prompt/confirm dialogs, a
+machine-token capture label, and silent keyboard crop moves.
+
+**Baseline design (the byte-identity spine):** a vitest tripwire
+(`tests/ui-baseline/baseline.test.ts`, runs inside `check`) pins
+SHA-256 of the seeded fixture PNG, the reference-pipeline output
+(pixels + indices, TS forced), and the serialized default project
+file; browser-side export captures are committed under
+`tests/ui-baseline/exports/` with hashes in the audit doc. The browser
+clean PNG's decoded pixels hash-match the Node pin exactly, welding
+the UI route to the reference. Rules recorded: PDFs compare after
+normalising pdf-lib's creation dates; the saved project compares
+field-wise (`preview.cssPxPerStitch` is viewport-derived); a pin
+mismatch during M14 is a defect, never a fixture refresh.
+
+**Assumptions at skipped gates:** scope = ticket as written, read-only
+plus sanctioned baseline artefacts; before/after pack = the audit
+doc's state recipes + hashes (no committed screenshot binaries).
+Incidental: `architecture.md`'s "currently v3" corrected to v4
+(observed `schemaVersion: 4` in the saved project).
+
+**Link:** `docs/ui-audit.md`; `tests/ui-baseline/`; backlog M14 →
+SPEC-01/02 unblocked.
+
+## D75 — M14-AUDIT-02: the depth numbers name the redesign — 1-drop conversion, 13-screen exports, silent loss on close (2026-07-23)
+
+**Decision:** the journey walk (`docs/ui-journeys.md`) records the
+five as-is journeys with step counts and a complete control-tier
+inventory. The mechanics are strong where they exist: 1 drop → 1.3 s →
+converted preview with honest statuses; live capture reaches a
+pre-drawn aspect-locked region in one in-app click; palette
+refinement's summary/conflict honesty holds under every degenerate
+state driven. The failures are placement and guidance, quantified:
+Dither/Export/Project sit at ~10.1k/10.7k/11.6k px on an 11.8k px
+default page (the 60-row thread list inflates the panel ~8k px; ~130
+tab stops for a keyboard user); the four resolutions span three
+surfaces at three depths; capture starts with an unexplained OS prompt;
+the first preview is thread-mapped to DMC without the user choosing
+threads.
+
+**Confirmed dead end:** no autosave exists in src/ (the architecture
+stack line is aspiration) — close/reload silently discards everything;
+a novice who never found Save (13+ screens deep) loses the session.
+M14-scope remedy is placement + honest copy (SPEC-01/IMPL-04);
+building autosave is new behaviour, outside the UI-only milestone —
+left to a future backlog decision.
+
+**Method:** cleared origin (localStorage + IndexedDB) before the first
+walk; journey 2 crossed the un-scriptable OS picker via a
+`canvas.captureStream` substitute at the `getDisplayMedia` boundary,
+disclosed inline; real-route step counts include the picker decisions.
+
+**Assumptions at skipped gates:** scope = ticket as written; tier
+judgements are first-pass (E/C/D/dev), explicitly SPEC-01's to decide.
+
+**Link:** `docs/ui-journeys.md`; audit findings cross-refs `A#` →
+`docs/ui-audit.md` (D74). Phase 1 complete — SPEC-01/02 unblocked.
+
+## D76 — M14 tier scheme: three tiers with a measurable reach contract (2026-07-23)
+
+**Decision:** every control gets a tier with a hard reach ceiling from
+the default populated state — E visible/≤1 interaction, C ≤2 (one
+section open), D ≤3 (section + one inline disclosure), dev unchanged —
+with disclosure state in the preferences store only (`ui-spec.md` §1).
+Collapsed regions leave the tab order, which is what converts J3's
+~130 tab stops and 10–12k px depths (D75) into bounded numbers
+VERIFY-02 re-measures. One recorded exception: the three export
+buttons are E-tier actions at reach 2 (exporting is never a session's
+first act; the section summary keeps them findable). **Alternative
+rejected:** a modal "advanced settings" surface — hides depth behind a
+context switch and breaks the live-preview editing loop (§5.4
+immediate application).
+
+## D77 — M14 regrouping: seven flat groups become five stateful sections (2026-07-23)
+
+**Decision:** Pattern+Colour essentials → **Design** (open by
+default); Grid+Dither → **Appearance**; Export and Project keep their
+names as sections; Pipeline → **Advanced** (renamed control, D79);
+the thread list, rules, inventory and library actions move behind one
+"Thread library & rules" disclosure inside Design (`ui-spec.md` §2/§5).
+Rationale per change: Pattern and Colour are the two decisions that
+define a design (J1's "what next"); Grid and Dither are both
+appearance of the same preview; the thread list is the measured cause
+of the depth pathology (D75) and only renders when opened; Export
+buttons lead their section (A22). Collapsed headers carry derived
+state summaries (recognition over recall; status-line precedent —
+derived from owned state, never scraped). Version/build line moves to
+the Project foot (A13). **Alternatives rejected:** Save duplicated in
+the shell bar (two homes for one action breaks consistency); a
+single-open accordion (punishes cross-section work during live
+editing).
+
+## D78 — M14 first-run: two equal entries, a generated sample, and unsaved-work honesty (2026-07-23)
+
+**Decision:** the empty state becomes a Carbon-pattern entry point —
+"Choose an image" and "Capture your screen" as equal primary buttons,
+"Try a sample" secondary (deterministic in-code buffer through the
+normal import path; no asset, no dependency, not the test fixture),
+drop/paste named in one line, and a capture-expectation sentence
+("Your browser will ask which window or screen to share") answering
+J2's unexplained prompt. After first conversion the source section
+compacts to one row. The no-autosave dead end (D75) is answered in
+scope by honesty, not feature: "Nothing is kept unless you save your
+project." in the Project section; autosave itself stays a future
+backlog decision. Crop readout gains position and becomes a polite
+status at drag-end/key-release (A8).
+
+## D79 — M14 terminology: user words on default surfaces, craft terms kept, truth preserved (2026-07-23)
+
+**Decision:** the map in `ui-spec.md` §4 binds IMPL-05: implementation
+words leave default surfaces ("Order preset" → "Processing order" with
+an honest trade-off helper; "Full RGB" → "Unlimited colours (no
+threads)"; "Every permitted thread" → "No limit"); craft terms of art
+stay (dither method names — evidence-bearing per D62; "Serpentine"
+with a plain helper); D72's truthful-label rule is untouched (backend
+names surface only in dev). Copy fixes ride the map: "shown" →
+"matching" (A10), the transient count sentence names the rebuild not a
+missing image (A11), capture labels pass an allow-list human-shape
+test (A7), placeholders that duplicate labels are dropped (A20).
+UK English; sentence case; visible label = accessible name throughout.
+
+## D80 — M14-SPEC-02 token architecture: one CSS file is the truth, and the gate reads it (2026-07-23)
+
+**Decision:** `src/ui/styles/tokens.css` lands as the single source of
+truth — no JSON/generator indirection — with the two token systems
+(project capture-region set; carbon-convention spacing/type/layer/
+state/focus/motion under `--csl-`) in documented sections, both
+schemes, unconsumed until IMPL-01 (zero visual change verified: no
+import exists and the built bundle carries no `csl-`). The contrast
+contract is machine-readable in the file itself: `@pair fg on bg
+[large|nontext]` lines checked by `scripts/check-contrast.mjs`
+(new gate step `check:contrast`, dependency-free, exits 1 on failure)
+at 7:1 / 4.5:1 / 3:1 in both schemes — 17 pairs × 2 schemes all pass;
+`@exempt token reason` lines are printed decisions (disabled opacity,
+decorative border, the content-adjacent capture double-ring).
+
+**AAA adaptations recorded** (Carbon = baseline, not ceiling): helper
+text shares the secondary colour (Carbon helper greys ~5:1); control
+borders bind to border-strong (≥3:1; Carbon subtle is decorative
+here); focus stays 3 px `currentColor` (18.1/16.45:1) over Carbon's
+focus blue. Status colour tokens: deliberately none — status is words
+in live regions; the file says where one would start.
+
+**Alternative rejected:** a JS/JSON token source generating the CSS —
+a build step and a second artefact for zero current consumers; the
+annotation contract keeps one file honest instead.
+
+**Link:** `ui-spec.md` §9 (pair table, inventory mapping, scales);
+`DEV-INFRASTRUCTURE.md` gate table row.
+
+## D81 — M14-IMPL-01 stylesheet structure: tokens → base → shell, and an 8-line critical block (2026-07-23)
+
+**Decision:** the dev shell extracts into three Vite-imported sheets —
+`tokens.css` (SPEC-02), `base.css` (element layer), `shell.css`
+(layout/chrome) — imported from `main.ts` in cascade order; deeper
+splits (per-panel files) wait until a panel owns enough CSS to earn
+one. `index.html` keeps an 8-line critical block whose only job is
+pre-bundle dark-scheme paint (the DOM is bundle-built, so nothing
+else can flash); reason recorded in the block itself. Carbon
+productive adoption in the same move: body-01 base, heading-04 h1
+(A16), settings column as a layer-01 surface with field-02-style
+inputs, decorative rules on border-subtle, hover/active state fills,
+spacing tokens throughout. M6 why-comments ported verbatim with their
+rules; reduced-motion handling moved wholly to the token layer.
+Structural invariants restated as greps in `tests/ui-styles.test.ts`
+([hidden]!important, no CSS order, dev-shell absence, import order).
+Evidence + matrix in `docs/ui-evidence.md`; engine surfaces untouched
+(ui-baseline tripwire green).
+
+**Alternative rejected:** CSS modules / per-component sheets now —
+premature while IMPL-02/03 will still move rules between surfaces.
+
+## D82 — M14-IMPL-02: anatomy in the builders, dialogs in project code, prevention announced (2026-07-23)
+
+**Decision:** control anatomy landed at the builder layer so one
+implementation serves every consumer: helper/error linkage via
+`aria-describedby` in `controls.ts`; the snap-back number field now
+announces its correction in a linked `role="status"` message rather
+than silently rewriting input (prevention stays, silence goes).
+Checkboxes are Carbon-drawn with the pseudo-element hit extension to
+44 px (the toggle's house pattern, A1) and per-thread accessible
+names (A2); a generic `summary` target rule closes A3b.
+`window.prompt`/`confirm` are replaced by `src/ui/modal.ts` — Carbon
+modal anatomy with focus trap, Escape/backdrop cancel, focus
+restoration, danger default on Cancel (A6) — tested in jsdom
+(`tests/modal.test.ts` — pure halves). Dither carries its disabled reason locally
+(A9); preview host and crop overlay take operable roles with linked
+instructions (A15); info rows carry hex visibly (A14 — two test
+assertions updated to the intended labels, stated).
+
+**Adaptations recorded:** the error red (`--csl-support-error`,
+paired non-text ≥ 3:1 both schemes) marks edges only; error/correction
+message text stays `text-primary` because Carbon's error-text red
+misses the 7:1 AAA bar. `aria-invalid` flags the correction moment
+only — the field never persists invalid by design. Also fixed in
+passing: inverse-filled buttons (pressed/modal-primary) keep their
+fill under hover/active — IMPL-01's generic hover would have put
+inverse text on a light ground.
+
+**Link:** evidence in `docs/ui-evidence.md`; spec rows `ui-spec.md`
+§5 anatomy baseline.
+
+## D83 — M14-IMPL-03: five sections, one reveal per depth, and the numbers that motivated them (2026-07-23)
+
+**Decision:** the spec architecture (D76/D77) is implemented as a
+project-coded Carbon accordion (`src/ui/accordion.ts`) whose headers
+are the page's h2 structure — real `<h2>` wrapping the toggle button,
+panels leaving layout and the tab order via `hidden`, closed headers
+carrying state summaries derived from owned state. Native `<details>`
+was rejected for sections only because `summary` cannot be a heading;
+it *is* the mechanism for every inline depth reveal (thread library,
+grid/dither details, per-exporter options — the debug-panel
+precedent). Disclosure state persists per id in the preferences store
+with spec defaults for unknown ids. Legends dropped where a fieldset
+is its section's only child (Export/Project/Advanced) — the header
+already names it.
+
+**Measured effect:** default page 14,495 → 3,877 px; settings tab
+stops ~130 → 11; Export reach 2, thread depth 2, grid depth 3 — all
+inside the D76 contract. Verification instrument note recorded:
+Chromium hides closed `<details>` via `content-visibility`, so rect/
+offsetParent sweeps false-positive — focus-probing is the honest
+measure (bound into VERIFY-01's method).
+
+**Also decided:** coarse Project save-state summary ("not saved this
+session" / "saved …") over live dirty-diffing — a real dirty tracker
+means serialising the 489-thread snapshot per refresh or new state
+machinery; rejected as outside the milestone's UI-only remit. One
+boot defect found and fixed in-task (construction-order TDZ:
+applyPolicy → refreshSections before assembly; guarded, boots clean).
+
+**Link:** evidence table in `docs/ui-evidence.md`; spec `ui-spec.md`
+§1/§2/§5.
+
+## D84 — M14-IMPL-04: inline first-run, a drawn sample, and no tour (2026-07-23)
+
+**Decision:** the first-run layer is inline affordances only — an
+entry state (title, Choose an image / Capture your screen as filled
+primaries, Try a sample, capture-expectation line, routes line) that
+compacts to a one-line source row after the first conversion. A
+modal tour/overlay walkthrough is **rejected on record**: it traps
+(user control & freedom), it ages with every UI change, and it
+violates minimalist design — the surfaces must explain themselves.
+
+**Sample design:** `src/ui/sample.ts` draws a deterministic 256²
+test-card (hue sweep × lightness ramp / greyscale band / eight flat
+swatches) chosen so reduction, dithering, neutral mapping and stats
+each have something visible to do; no asset, no dependency, no
+randomness; it feeds the normal source path and is labelled a sample
+in status and the source row.
+
+**Also closed here:** A8 — the crop readout is a polite status with
+size *and position*, updated at end-events (never per pointer-move,
+so no SR flooding); A7 — `displayLabel` is allow-list shaped (word
+structure required; token-shaped labels fall back to "the shared
+screen"); thread-list filtered-out state distinguishes an empty
+search from an empty brand set; processing order carries its
+consequence helper (wording from the D79 map).
+
+**Link:** evidence + empty-state matrix in `docs/ui-evidence.md`;
+spec `ui-spec.md` §3.
+
+## D85 — M14-IMPL-05: the map applied; derived strings follow; one core sentence deferred on record (2026-07-23)
+
+**Decision:** the D79 terminology map is applied verbatim (inventory
+in `docs/ui-evidence.md`), with one extension the map implied but did
+not list: strings *derived from* the renamed concepts follow them —
+the count summary's "Full RGB — no thread palette." and the compact
+status's "Full RGB" fallback both read "Unlimited colours" now, so
+one concept keeps one name across surfaces (Nielsen consistency).
+Select *values* and the project-file schema are untouched
+(`resize-first`, `rgb` et al. remain the stored identifiers).
+
+**Deferred on record:** the conflict sentence "…or switch to full-RGB
+mode" is produced in `src/core/palette-policy.ts`. It stays honest,
+and editing core strings inside the UI-only milestone trades churn
+for consistency — ACCEPT-01 rules on it; if approved it is a
+one-line follow-up.
+
+**Test policy:** three assertions updated with the copy they assert
+(count summary ×2, status fallback) — stated, intended, behaviour
+identical.
+
+**Link:** inventory table `docs/ui-evidence.md`; map D79.
+
+## D86 — M14-VERIFY-01: conformance re-proven; three waivers stand as the review's input (2026-07-23)
+
+**Decision:** the audit protocol re-run on final code closes 19 of 22
+findings with evidence and waives three on record (`ui-evidence.md`
+ledger): A16 partially — the spec's Fit-options menu is deferred
+(five passing text buttons vs one menu is taste, ACCEPT-01's call;
+spec §5 amended); A17 FIT_MARGIN (canvas furniture, wish-listed);
+A18 status staleness bound (M13 remainder). Machine sweeps on final
+code: zero dangling ARIA references cold and fully-open; 176
+focusables with zero sub-44 targets under the focus-probe method;
+rendered contrast probes 8.86–16.45:1; matrix cells green (320/
+collapsed/focus). Fixed in-pass per the ticket's remit: the last two
+unnamed landmarks (Preview/Source sections). The 14 gate items are
+answered consolidated — every surface changed, so per-surface
+repetition would say the same things eight times.
+
+**Method bound forward:** focus-probing is the target/tab instrument
+of record (Chromium's content-visibility keeps layout boxes in closed
+details); reduced motion is verified at the token layer. Proposed,
+not added: an automated a11y checker dev-dependency (axe-core class)
+for the maintainer to approve or decline.
+
+**Link:** conformance section + ledger in `docs/ui-evidence.md`.
+
+## D87 — M14-VERIFY-02: the journeys hold, the bytes hold, the milestone's agent half is done (2026-07-23)
+
+**Decision:** the five journeys re-walked on final code close the
+loop the audits opened: 1 interaction to a converted preview with
+every route named (sample 988 ms); capture met with expectations and
+a position-bearing crop status; both conflict severities followed
+out; exports and save at reach 2 with the honesty line in place. The
+D76 reach contract measures within bounds tier-wide; no inventory
+control was lost. Byte-identity attested: three PNGs sha-identical to
+the audit baselines; the PDF's content streams identical including
+the 17.7 MB print raster (residual = date strings + their
+deflate/xref ripple, per the audit rule); the saved project clean
+field-wise with two explained fields (exempt viewport scale; an inert
+`count.n` behind `mode:'all'` — walk-order history, pixels identical);
+node tripwire green in every close; bench green; engine dirs
+diff-clean across the milestone.
+
+**Open for ACCEPT-01, on record:** the owner OS-picker rehearsal;
+the Fit-menu waiver (D86); the core conflict-sentence wording (D85);
+autosave as a future backlog decision (D75); the axe-core dev-dep
+proposal (D86).
+
+**Link:** journey tables + attestation in `docs/ui-evidence.md`;
+M14 backlog now holds only M14-ACCEPT-01 [maintainer].
+
+## D88 — M14 extension: the owner's UI feedback triaged — four new tasks, six already delivered, three calls settled (2026-07-23)
+
+**Decision:** the owner's UI feedback (written against the pre-M14
+build, confirmed) triages into four agreed extension tasks now gating
+ACCEPT-01 — M14-EXT-01 top-bar consolidation (title, quiet build id,
+dev-only diagnostics cluster with a new log-download affordance,
+Source, both shell controls), M14-EXT-02 source chooser modal
+(returning-user switcher; cold-start entry state preserved),
+M14-EXT-03 view-controls disclosure (open first-run, persisted;
+retires the A16 waiver), M14-EXT-04 "Design width/height" rename.
+
+**Already delivered by M14, listed for re-check at the end review:**
+preview-first placement; colour mode ordered above the in-use counts;
+collapsible colour settings (Design section + thread reveal);
+collapsible palette contents (disclosure, library-source-only, A5);
+collapsible dimensions (Design section); the suggested hierarchy
+(five sections with summaries ≈ the requested four plus Project).
+
+**Owner calls recorded:** Hide settings and Preview focus stay two
+controls, both in the bar (distinct functions — persisted layout
+preference vs session mode; a merged control would cycle three
+states); "Design width/height" over "Canvas…" (fabric/M12 and
+preview-surface collisions) and over "Pattern canvas…" (label length);
+capture surfaces stay below the preview — the modal is a chooser,
+never the session home. Build-id-in-chrome reverses A13's placement
+on the owner's authority, recorded here.
+
+**Link:** backlog → M14 "Extension — owner feedback triage"; tickets
+`M14-EXT-01/02.md`; ACCEPT-01 now [blocked: EXT-01..04].

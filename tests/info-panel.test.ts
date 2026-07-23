@@ -46,7 +46,9 @@ describe('buildRows', () => {
       ],
       { brandNames: BRANDS },
     );
-    expect(rows[0]?.label).toBe('DMC 310 Black');
+    // Hex rides in the visible label from M14-IMPL-02 (audit A14):
+    // tooltips are hover-only, so the value must be in row text.
+    expect(rows[0]?.label).toBe('DMC 310 Black · #000000');
     expect(rows[1]?.label).toBe('#123456');
   });
 
@@ -54,7 +56,7 @@ describe('buildRows', () => {
     const { rows } = buildRows([
       usage({ thread: thread('310', 'Black', [0, 0, 0], { brandId: 'dmc' }) }),
     ]);
-    expect(rows[0]?.label).toBe('dmc 310 Black');
+    expect(rows[0]?.label).toBe('dmc 310 Black · #000000');
   });
 
   it('flags a mapped colour in the tooltip', () => {

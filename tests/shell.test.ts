@@ -122,13 +122,26 @@ describe('control labels', () => {
 
 describe('shell preferences', () => {
   it('defaults to an open panel', () => {
-    expect(defaultPreferences()).toEqual({ version: PREFERENCES_VERSION, panelCollapsed: false });
+    expect(defaultPreferences()).toEqual({
+      version: PREFERENCES_VERSION,
+      panelCollapsed: false,
+      disclosures: {},
+    });
   });
 
   it('round-trips through storage', () => {
     const store = fakeStore();
-    savePreferences(store, { version: PREFERENCES_VERSION, panelCollapsed: true });
+    savePreferences(store, {
+      version: PREFERENCES_VERSION,
+      panelCollapsed: true,
+      disclosures: { 'section-export': true, 'grid-details': false },
+    });
     expect(loadPreferences(store).panelCollapsed).toBe(true);
+    // Disclosure state (M14-IMPL-03) rides the same record.
+    expect(loadPreferences(store).disclosures).toEqual({
+      'section-export': true,
+      'grid-details': false,
+    });
   });
 
   it('falls back to defaults for anything unreadable', () => {
@@ -152,7 +165,11 @@ describe('shell preferences', () => {
     expect(() => loadPreferences(store)).not.toThrow();
     expect(loadPreferences(store)).toEqual(defaultPreferences());
     expect(() => {
-      savePreferences(store, { version: PREFERENCES_VERSION, panelCollapsed: true });
+      savePreferences(store, {
+        version: PREFERENCES_VERSION,
+        panelCollapsed: true,
+        disclosures: {},
+      });
     }).not.toThrow();
   });
 
@@ -164,8 +181,12 @@ describe('shell preferences', () => {
   });
 
   it('stamps the current version on write', () => {
-    const text = serializePreferences({ version: 0, panelCollapsed: true });
-    expect(JSON.parse(text)).toEqual({ version: PREFERENCES_VERSION, panelCollapsed: true });
+    const text = serializePreferences({ version: 0, panelCollapsed: true, disclosures: {} });
+    expect(JSON.parse(text)).toEqual({
+      version: PREFERENCES_VERSION,
+      panelCollapsed: true,
+      disclosures: {},
+    });
   });
 
   it('does not persist preview focus', () => {

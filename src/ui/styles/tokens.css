@@ -1,0 +1,226 @@
+/**
+ * Design tokens — Cross Stitch Lens (M14-SPEC-02, D80).
+ *
+ * TWO SYSTEMS, one file, never collapsed (UI-STANDARDS → "Token
+ * systems"):
+ *
+ *   1. PROJECT TOKENS — app-chrome semantic colours and the
+ *      capture-region state set. Sections marked "project".
+ *   2. CARBON-CONVENTION TOKENS — spacing, type, layer, border, field,
+ *      interaction-state, focus and motion tokens implemented to
+ *      Carbon's productive spec in project code (Carbon packages stay
+ *      uninstalled). Sections marked "carbon-convention"; names follow
+ *      Carbon's semantic names under the `--csl-` prefix.
+ *
+ * Thread palette colours and preview pixels are CONTENT, not UI: they
+ * must never route through this file (UI-STANDARDS → "Colour
+ * fidelity").
+ *
+ * Schemes: `:root` declares light; the `prefers-color-scheme: dark`
+ * block overrides what differs. A token not overridden there is
+ * scheme-invariant by declaration.
+ *
+ * Contrast contract: every text/background pairing this file intends
+ * is declared as a machine-readable annotation line —
+ *   @pair <fg-token> on <bg-token> [large|nontext]
+ * checked by `scripts/check-contrast.mjs` in the quality gate at
+ * WCAG 2.2 AAA bars (7:1 text, 4.5:1 large text, 3:1 non-text).
+ * Tokens exempt from a ratio carry an
+ *   @exempt <token> <reason>
+ * line; the script prints these so exemption stays a decision, not an
+ * omission.
+ *
+ * AAA adaptations from Carbon's reference palette (Carbon meets AA,
+ * not AAA, in several pairings — AGENTS.md: Carbon is the baseline,
+ * not the ceiling):
+ *   - helper text uses the secondary text colour in both schemes
+ *     (Carbon's #6f6f6f / #8d8d8d helper colours read ~5:1).
+ *   - control borders use the strong border token (≥ 3:1); Carbon's
+ *     subtle border is declared but decorative-only here.
+ *   - the focus ring stays `currentColor` at 3 px (the app's existing
+ *     AAA-visible convention) rather than Carbon's focus blue, so it
+ *     passes in both schemes on every surface without a special case.
+ *
+ * Consumption: NOTHING may consume this file until M14-IMPL-01; it is
+ * deliberately unreferenced this task (zero visual change).
+ *
+ * @pair text-primary on background
+ * @pair text-primary on layer-01
+ * @pair text-primary on background-hover
+ * @pair text-primary on background-active
+ * @pair text-primary on background-selected
+ * @pair text-primary on field-01
+ * @pair text-secondary on background
+ * @pair text-secondary on layer-01
+ * @pair text-helper on background
+ * @pair text-helper on layer-01
+ * @pair text-inverse on background-inverse
+ * @pair heading on background large
+ * @pair border-strong on background nontext
+ * @pair border-strong on layer-01 nontext
+ * @pair field-border on field-01 nontext
+ * @pair interactive on background nontext
+ * @pair focus on background nontext
+ * @pair support-error on background nontext
+ * @pair support-error on layer-01 nontext
+ * @exempt disabled-opacity WCAG 1.4.3 exempts inactive controls; 0.4 is the app-wide convention
+ * @exempt border-subtle decorative separators only, never a control boundary or meaning carrier
+ * @exempt capture-border content-adjacent by design: the white/black double ring sits on arbitrary
+ *   captured video, so contrast is engineered structurally (two rings), not provable as one ratio
+ * @exempt capture-outline see capture-border
+ * @exempt capture-dim thumbnail affordance over content; the readout carries the numbers
+ */
+
+:root {
+  /* ---------------------------------------------------------------
+   * carbon-convention · colour (light scheme)
+   * --------------------------------------------------------------- */
+  --csl-background: #ffffff;
+  --csl-background-hover: #e8e8e8;
+  --csl-background-active: #c6c6c6;
+  --csl-background-selected: #e0e0e0;
+  --csl-background-inverse: #161616;
+  --csl-layer-01: #f4f4f4;
+  --csl-field-01: #f4f4f4;
+  --csl-field-border: #8d8d8d;
+  --csl-text-primary: #161616;
+  --csl-text-secondary: #525252;
+  /* AAA adaptation: Carbon helper #6f6f6f reads ~5:1 — helper text
+    shares the secondary colour instead. */
+  --csl-text-helper: #525252;
+  --csl-text-inverse: #ffffff;
+  --csl-heading: #161616;
+  --csl-border-strong: #8d8d8d;
+  --csl-border-subtle: #c6c6c6;
+  --csl-interactive: #0f62fe;
+  /* Invalid-state border/edge marker. Error MESSAGE text stays
+    text-primary (Carbon's error red reads ~4.5:1 — under the AAA text
+    bar); the state is never colour-only (linked message text). */
+  --csl-support-error: #da1e28;
+
+  /* ---------------------------------------------------------------
+   * carbon-convention · focus (scheme-invariant by design)
+   * --------------------------------------------------------------- */
+  --csl-focus: currentColor;
+  --csl-focus-width: 3px;
+  --csl-focus-offset: 2px;
+
+  /* ---------------------------------------------------------------
+   * carbon-convention · state
+   * --------------------------------------------------------------- */
+  --csl-disabled-opacity: 0.4;
+
+  /* ---------------------------------------------------------------
+   * carbon-convention · spacing (Carbon spacing-01..09, rem)
+   * --------------------------------------------------------------- */
+  --csl-spacing-01: 0.125rem;
+  --csl-spacing-02: 0.25rem;
+  --csl-spacing-03: 0.5rem;
+  --csl-spacing-04: 0.75rem;
+  --csl-spacing-05: 1rem;
+  --csl-spacing-06: 1.5rem;
+  --csl-spacing-07: 2rem;
+  --csl-spacing-08: 2.5rem;
+  --csl-spacing-09: 3rem;
+
+  /* ---------------------------------------------------------------
+   * carbon-convention · type (productive scale, the styles this app
+   * uses; size/line-height/weight triplets)
+   * --------------------------------------------------------------- */
+  --csl-font-family: system-ui, sans-serif;
+  --csl-code-01-size: 0.75rem;
+  --csl-code-01-line: 1rem;
+  --csl-code-01-weight: 400;
+  --csl-label-01-size: 0.75rem;
+  --csl-label-01-line: 1rem;
+  --csl-label-01-weight: 400;
+  --csl-helper-text-01-size: 0.75rem;
+  --csl-helper-text-01-line: 1rem;
+  --csl-helper-text-01-weight: 400;
+  --csl-body-compact-01-size: 0.875rem;
+  --csl-body-compact-01-line: 1.125rem;
+  --csl-body-compact-01-weight: 400;
+  --csl-body-01-size: 0.875rem;
+  --csl-body-01-line: 1.25rem;
+  --csl-body-01-weight: 400;
+  --csl-heading-01-size: 0.875rem;
+  --csl-heading-01-line: 1.125rem;
+  --csl-heading-01-weight: 600;
+  --csl-heading-02-size: 1rem;
+  --csl-heading-02-line: 1.375rem;
+  --csl-heading-02-weight: 600;
+  --csl-heading-03-size: 1.25rem;
+  --csl-heading-03-line: 1.625rem;
+  --csl-heading-03-weight: 400;
+  --csl-heading-04-size: 1.75rem;
+  --csl-heading-04-line: 2.25rem;
+  --csl-heading-04-weight: 400;
+
+  /* ---------------------------------------------------------------
+   * carbon-convention · targets & fields
+   * AAA pointer-target floor (44 CSS px) and Carbon's large field.
+   * --------------------------------------------------------------- */
+  --csl-target-min: 2.75rem;
+  --csl-field-height-lg: 3rem;
+
+  /* ---------------------------------------------------------------
+   * carbon-convention · motion (productive)
+   * Consumers must use these tokens, never literal durations; the
+   * reduced-motion block below zeroes them globally.
+   * --------------------------------------------------------------- */
+  --csl-duration-fast-01: 70ms;
+  --csl-duration-fast-02: 110ms;
+  --csl-duration-moderate-01: 150ms;
+  --csl-easing-productive: cubic-bezier(0.2, 0, 0.38, 0.9);
+
+  /* ---------------------------------------------------------------
+   * project · capture-region state set
+   * Content-adjacent by design (see @exempt above): a double ring —
+   * white dashed over black outline — engineered to stay visible on
+   * any captured content; locked state is carried structurally
+   * (solid vs dashed), never by colour alone.
+   * --------------------------------------------------------------- */
+  --csl-capture-border: #ffffff;
+  --csl-capture-outline: #161616;
+  --csl-capture-dim: rgb(0 0 0 / 0.35);
+  --csl-capture-handle-bg: #ffffff;
+  --csl-capture-handle-border: #161616;
+
+  /* project · status indicators: none exist — status is carried by
+    words in live regions (UI-STANDARDS), so no status colour tokens
+    are declared. Adding one later starts at this comment. */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* carbon-convention · colour (dark scheme, Carbon g100-derived) */
+    --csl-background: #161616;
+    --csl-background-hover: #292929;
+    --csl-background-active: #393939;
+    --csl-background-selected: #333333;
+    --csl-background-inverse: #f4f4f4;
+    --csl-layer-01: #262626;
+    --csl-field-01: #262626;
+    --csl-field-border: #6f6f6f;
+    --csl-text-primary: #f4f4f4;
+    --csl-text-secondary: #c6c6c6;
+    /* AAA adaptation: Carbon dark helper #8d8d8d reads ~5.5:1. */
+    --csl-text-helper: #c6c6c6;
+    --csl-text-inverse: #161616;
+    --csl-heading: #f4f4f4;
+    --csl-border-strong: #6f6f6f;
+    --csl-border-subtle: #393939;
+    --csl-interactive: #4589ff;
+    --csl-support-error: #fa4d56;
+  }
+}
+
+/* Motion honours prefers-reduced-motion at the token layer: every
+  consumer inherits the zeroing with no per-rule overrides. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --csl-duration-fast-01: 0ms;
+    --csl-duration-fast-02: 0ms;
+    --csl-duration-moderate-01: 0ms;
+  }
+}

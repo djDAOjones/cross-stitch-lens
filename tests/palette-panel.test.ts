@@ -207,7 +207,7 @@ describe('matchesSearch', () => {
 
 describe('countSummary', () => {
   it('says so plainly in full-RGB mode', () => {
-    expect(countSummary(state({ paletteMode: false }))).toBe('Full RGB — no thread palette.');
+    expect(countSummary(state({ paletteMode: false }))).toBe('Unlimited colours — no thread palette.');
   });
 
   it('reports permitted and palette size with no limit', () => {
@@ -242,7 +242,7 @@ describe('countSummary', () => {
         awaitingSource: true,
       }),
     );
-    expect(summary).toBe('82 permitted · 20 requested — chosen once an image is loaded.');
+    expect(summary).toBe('82 permitted · 20 requested — chosen when the design updates.');
   });
 
   it('adds the used count once a frame has run', () => {

@@ -135,8 +135,9 @@ native DevTools console.
 
 | Script | Command | Purpose |
 | --- | --- | --- |
-| `check` | `check:types && check:lint && check:wasm && check:test && check:build && check:docs && check:secrets` | The quality gate — run before calling a task done |
+| `check` | `check:types && check:lint && check:wasm && check:test && check:build && check:docs && check:contrast && check:secrets` | The quality gate — run before calling a task done |
 | `check:wasm` | `node scripts/check-wasm.mjs` | Rust crate tests + wasm-pack build; skips (warns) without the toolchain locally, hard-fails in CI |
+| `check:contrast` | `node scripts/check-contrast.mjs` | WCAG AAA proof of every `@pair` in `src/ui/styles/tokens.css`, both schemes; fails under 7:1 (4.5:1 large, 3:1 non-text) |
 | `lint:fix` | `eslint . --fix` | Auto-fix (separate from the gate; never the CI pass/fail) |
 
 - **Runs, in order:** type check (`tsc --noEmit`), ESLint (incl. the

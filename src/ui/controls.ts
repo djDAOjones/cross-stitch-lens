@@ -71,7 +71,64 @@ export interface NumberFieldOptions {
   helper?: string;
 }
 
-/** Labelled whole-number input; invalid entries snap back in-range. */
+/**
+ * Attach a helper line to a field and link it for assistive tech.
+ * The `aria-describedby` id list is the Carbon anatomy's error/helper
+ * linkage; every message a field shows must be in that list or it is
+ * visual-only.
+ */
+function attachHelper(
+  doc: Document,
+  element: HTMLElement,
+  input: HTMLElement,
+  id: string,
+  helper: string | undefined,
+): void {
+  if (helper === undefined) return;
+  const p = doc.createElement('p');
+  p.className = 'helper';
+  p.id = `${id}-helper`;
+  p.textContent = helper;
+  element.append(p);
+  addDescribedBy(input, p.id);
+}
+
+/**
+ * `aria-describedby` list arithmetic, pure (tested in node — the
+ * house convention keeps DOM halves for the running app). Returns the
+ * new attribute value; null means the attribute should be removed.
+ */
+export function withDescribedBy(current: string | null, id: string): string {
+  const ids = current === null ? [] : current.split(/\s+/).filter((x) => x !== '');
+  return ids.includes(id) ? ids.join(' ') : [...ids, id].join(' ');
+}
+
+/** Remove an id from a describedby list; null = drop the attribute. */
+export function withoutDescribedBy(current: string | null, id: string): string | null {
+  if (current === null) return null;
+  const ids = current.split(/\s+/).filter((x) => x !== id && x !== '');
+  return ids.length === 0 ? null : ids.join(' ');
+}
+
+function addDescribedBy(el: Element, id: string): void {
+  el.setAttribute('aria-describedby', withDescribedBy(el.getAttribute('aria-describedby'), id));
+}
+
+function removeDescribedBy(el: Element, id: string): void {
+  const next = withoutDescribedBy(el.getAttribute('aria-describedby'), id);
+  if (next === null) el.removeAttribute('aria-describedby');
+  else el.setAttribute('aria-describedby', next);
+}
+
+/**
+ * Labelled whole-number input; invalid entries snap back in-range.
+ *
+ * The snap-back is error *prevention* (UI-STANDARDS), but silent
+ * correction is its own confusion — so a correction is announced in a
+ * linked `role="status"` message ("Adjusted to N…") that clears on
+ * the next in-range entry. The field is never left invalid, so
+ * `aria-invalid` flags only the moment of correction.
+ */
 export function numberField(
   doc: Document,
   id: string,
@@ -91,19 +148,32 @@ export function numberField(
   input.max = String(options.max);
   input.step = '1';
   input.value = String(options.value);
+  const message = doc.createElement('p');
+  message.className = 'field-message';
+  message.id = `${id}-message`;
+  message.setAttribute('role', 'status');
+  message.hidden = true;
   let lastValid = options.value;
   input.addEventListener('change', () => {
-    lastValid = clampInt(input.value, options.min, options.max, lastValid);
+    const raw = input.value;
+    lastValid = clampInt(raw, options.min, options.max, lastValid);
+    const corrected = raw.trim() === '' || Number(raw) !== lastValid;
     input.value = String(lastValid);
+    if (corrected) {
+      message.textContent = `Adjusted to ${String(lastValid)} — allowed range ${String(options.min)}–${String(options.max)}.`;
+      message.hidden = false;
+      input.setAttribute('aria-invalid', 'true');
+      addDescribedBy(input, message.id);
+    } else {
+      message.hidden = true;
+      input.removeAttribute('aria-invalid');
+      removeDescribedBy(input, message.id);
+    }
     onChange(lastValid);
   });
   element.append(lab, input);
-  if (options.helper !== undefined) {
-    const helper = doc.createElement('p');
-    helper.className = 'helper';
-    helper.textContent = options.helper;
-    element.append(helper);
-  }
+  attachHelper(doc, element, input, id, options.helper);
+  element.append(message);
   return element;
 }
 
@@ -114,6 +184,7 @@ export function textField(
   label: string,
   value: string,
   onChange: (value: string) => void,
+  helper?: string,
 ): HTMLElement {
   const element = doc.createElement('div');
   element.className = 'field';
@@ -128,6 +199,7 @@ export function textField(
     onChange(input.value);
   });
   element.append(lab, input);
+  attachHelper(doc, element, input, id, helper);
   return element;
 }
 
@@ -163,6 +235,7 @@ export function selectField(
   options: readonly (readonly [string, string])[],
   value: string,
   onChange: (value: string) => void,
+  helper?: string,
 ): HTMLElement {
   const element = doc.createElement('div');
   element.className = 'field';
@@ -182,5 +255,6 @@ export function selectField(
     onChange(select.value);
   });
   element.append(lab, select);
+  attachHelper(doc, element, select, id, helper);
   return element;
 }

@@ -37,11 +37,18 @@ export interface DitherControls {
   update(config: DitherConfig, disabled: boolean): void;
 }
 
+/** Disclosure wiring for the method-depth reveal (M14-IMPL-03). */
+export interface DitherDepthOptions {
+  open: boolean;
+  onToggle(open: boolean): void;
+}
+
 /** Mount the Dither group. `onChange` receives each new configuration. */
 export function createDitherControls(
   doc: Document,
   initial: DitherConfig,
   onChange: (next: DitherConfig) => void,
+  depth?: DitherDepthOptions,
 ): DitherControls {
   let current: DitherConfig = initial;
   let memory: DitherMemory = remember({}, initial);
@@ -51,6 +58,14 @@ export function createDitherControls(
   const legend = doc.createElement('legend');
   legend.textContent = 'Dither';
   element.append(legend);
+
+  // Disabled state carries its local reason (audit A9): without this
+  // line the greyed group's explanation lives a panel away, in the
+  // Colour summary. Wording finalised in the M14-IMPL-05 sweep.
+  const disabledReason = doc.createElement('p');
+  disabledReason.className = 'helper';
+  disabledReason.textContent = 'Dithering applies to thread palettes.';
+  disabledReason.hidden = true;
 
   const apply = (next: DitherConfig): void => {
     current = next;
@@ -62,7 +77,7 @@ export function createDitherControls(
   const presetSelect = selectField(
     doc,
     'dither-preset',
-    'Preset',
+    'Dither style',
     [
       ...DITHER_PRESETS.map((p) => [p.id, p.label] as const),
       [CUSTOM_PRESET, 'Custom'] as const,
@@ -84,7 +99,7 @@ export function createDitherControls(
   const algorithmSelect = selectField(
     doc,
     'dither-algorithm',
-    'Algorithm',
+    'Method',
     ALGORITHM_OPTIONS,
     initial.algorithm,
     (value) => {
@@ -123,12 +138,24 @@ export function createDitherControls(
       ),
     );
     if ('serpentine' in current) {
-      methodGroup.append(
-        toggleField(doc, 'dither-serpentine', 'Serpentine scan', current.serpentine, (on) => {
+      const serpentine = toggleField(
+        doc,
+        'dither-serpentine',
+        'Serpentine scan',
+        current.serpentine,
+        (on) => {
           if (current.algorithm === 'none' || !('serpentine' in current)) return;
           apply({ ...current, serpentine: on });
-        }).element,
+        },
       );
+      // Term of art kept (D79); the helper says what it does in plain
+      // words and rides aria-describedby like every field helper.
+      const serpentineHelper = doc.createElement('p');
+      serpentineHelper.className = 'helper';
+      serpentineHelper.id = 'dither-serpentine-helper';
+      serpentineHelper.textContent = 'Alternate row direction to reduce streaks.';
+      serpentine.input.setAttribute('aria-describedby', serpentineHelper.id);
+      methodGroup.append(serpentine.element, serpentineHelper);
     }
   }
 
@@ -160,7 +187,21 @@ export function createDitherControls(
   }
 
   rebuildMethodGroup();
-  element.append(presetSelect, algorithmSelect, methodGroup);
+  // Depth split (ui-spec §5): the style preset is the common surface;
+  // method choice and its tuning live behind one reveal.
+  const methodDetails = doc.createElement('details');
+  methodDetails.className = 'depth-reveal';
+  const methodSummary = doc.createElement('summary');
+  methodSummary.textContent = 'Dither details';
+  const methodBody = doc.createElement('div');
+  methodBody.className = 'depth-reveal-body';
+  methodBody.append(algorithmSelect, methodGroup);
+  methodDetails.append(methodSummary, methodBody);
+  methodDetails.open = depth?.open ?? false;
+  methodDetails.addEventListener('toggle', () => {
+    depth?.onToggle(methodDetails.open);
+  });
+  element.append(disabledReason, presetSelect, methodDetails);
   sync();
 
   return {
@@ -169,6 +210,7 @@ export function createDitherControls(
       current = config;
       memory = remember(memory, config);
       disabled = nowDisabled;
+      disabledReason.hidden = !nowDisabled;
       sync();
     },
   };

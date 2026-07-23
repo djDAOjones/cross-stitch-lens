@@ -38,7 +38,7 @@ describe('statusLine', () => {
   });
 
   it('names full-RGB mode rather than leaving a gap', () => {
-    expect(statusLine(snapshot({ paletteName: null }))).toContain('Full RGB');
+    expect(statusLine(snapshot({ paletteName: null }))).toContain('Unlimited colours');
   });
 
   it('omits the colour count before anything has processed', () => {

@@ -17,6 +17,64 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
+## M14 — UI/UX excellence (in progress — agent half complete, ACCEPT-01 open)
+
+- M14-VERIFY-02 (2026-07-23) — journeys re-walked on final code (1
+  interaction to converted preview; both conflict severities followed
+  out; reach contract measured within bounds); byte-identity attested
+  (3 PNGs sha-identical; PDF content streams identical incl. the
+  17.7 MB raster; project field-wise clean); bench green; engine dirs
+  diff-clean across the milestone. See D87.
+- M14-VERIFY-01 (2026-07-23) — conformance re-proven on final code:
+  19/22 findings closed with evidence, 3 waived on record (Fit menu
+  taste call, FIT_MARGIN, staleness bound); zero dangling ARIA refs;
+  zero sub-44 targets over 176 focusables; gate items answered. See
+  D86; ledger in `docs/ui-evidence.md`.
+- M14-IMPL-05 (2026-07-23) — D79 map applied end-to-end with derived
+  strings following ("Unlimited colours" everywhere one concept
+  surfaces); one core conflict sentence deferred to ACCEPT-01 on
+  record; before/after inventory in the evidence doc. See D85.
+- M14-IMPL-04 (2026-07-23) — first-run layer: entry state with three
+  visible actions + capture expectations, drawn deterministic sample
+  through the real pipeline, source-row compaction, crop status with
+  position at end-events (A8), allow-list capture labels (A7),
+  filtered-out thread state; no tour, on record. See D84.
+- M14-IMPL-03 (2026-07-23) — the five-section architecture is live:
+  default page 14,495 → 3,877 px, settings tab stops ~130 → 11,
+  every reach inside the D76 contract; disclosure state persisted in
+  preferences; summaries derived from owned state. See D83.
+- M14-IMPL-02 (2026-07-23) — full Carbon anatomy in place: linked
+  helpers + announced snap-back corrections, drawn 44 px checkboxes
+  with per-thread names, project-coded Carbon modals replacing
+  prompt/confirm, local disabled reasons, operable canvas/crop roles,
+  hex in info rows. Live-verified; pure halves node-tested. See D82.
+- M14-IMPL-01 (2026-07-23) — dev shell shed: styling moved to
+  tokens/base/shell sheets under `src/ui/styles`, index.html down to
+  an 8-line critical block; Carbon productive ramp + layer panel
+  live; all shell invariants held (matrix in `docs/ui-evidence.md`);
+  engine surfaces diff-clean. See D81.
+- M14-SPEC-02 (2026-07-23) — tokens.css landed (two systems, both
+  schemes, unconsumed — zero visual change proven) with the
+  `check:contrast` gate step: 17 @pair rows × 2 schemes all ≥ AAA
+  bars; AAA adaptations from Carbon recorded. See D80; pair table in
+  `docs/ui-spec.md` §9.
+- M14-SPEC-01 (2026-07-23) — interaction architecture decided: 3-tier
+  reach contract, 7 groups → 5 stateful accordion sections with derived
+  summaries, thread depth behind one lazy disclosure, first-run entry
+  state + generated sample, terminology map. Every audit major answered
+  or deferred with a reason. See D76–D79; spec in `docs/ui-spec.md`.
+
+- M14-AUDIT-02 (2026-07-23) — five journeys walked from a cleared
+  origin with step counts and a full control-tier inventory: 1-drop
+  conversion is strong; Dither/Export/Project buried at 10–12k px
+  (~130 tab stops); no autosave — silent loss on close confirmed. See
+  decision-log D75; record in `docs/ui-journeys.md`.
+- M14-AUDIT-01 (2026-07-23) — standards & heuristics audit: 22 ranked
+  findings (8 major, no blockers) across every surface × state;
+  byte-identity tripwire landed (`tests/ui-baseline/` — fixture,
+  Node-pinned hashes in `check`, browser export captures welded to the
+  reference pin). See decision-log D74; findings in `docs/ui-audit.md`.
+
 ## M13 — Visual processing performance (in progress)
 
 - M13-MEAS-01 (2026-07-22) — bv2 node bench contract: the dither axis

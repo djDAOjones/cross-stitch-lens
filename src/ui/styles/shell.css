@@ -1,0 +1,439 @@
+/**
+ * Shell chrome & layout (M14-IMPL-01, D81) — header, columns, preview
+ * host, focus mode, capture surfaces and panel containers, ported
+ * from the `index.html` dev-shell block onto the token system. The
+ * why-comments encode M6 lessons; keep them with their rules.
+ *
+ * Layout literals that stay literal (recorded in `ui-spec.md` §9):
+ * the 60 rem breakpoint (media queries cannot read custom
+ * properties), the 16 rem panel column, and the preview host's `dvh`
+ * height. Everything colour/space/type-shaped comes from tokens.
+ */
+
+main {
+  max-width: 72rem;
+  margin: 0 auto;
+}
+
+/* Carbon productive header: the app name as a slim landmark bar with
+  a decorative rule; actions (the shell bar) sit directly under it on
+  a permanent surface. */
+.app-header {
+  margin-bottom: var(--csl-spacing-03);
+  padding-bottom: var(--csl-spacing-03);
+  border-bottom: 1px solid var(--csl-border-subtle);
+}
+
+/* Shell bar: collapse and preview-focus live on a permanent surface,
+  so the way out of a mode is always in one place. */
+.shell-bar {
+  margin-top: var(--csl-spacing-03);
+}
+
+/* Layout model (UI-STANDARDS): preview column and settings panel.
+  Preview-first in the DOM at every width, with the panel to its
+  right when there is room — so reading order, visual order, and tab
+  order agree instead of being reordered into conflict. Below the
+  breakpoint it is a single preview-first column, which is the
+  companion-window case (M6-NARROW-01). */
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--csl-spacing-06);
+  align-items: stretch;
+}
+
+/* Settings column: a Carbon layer, not an outlined box — the panel
+  reads as a surface (layer-01) with a decorative edge, per the spec's
+  layer model. */
+.controls {
+  background: var(--csl-layer-01);
+  border: 1px solid var(--csl-border-subtle);
+  padding: var(--csl-spacing-05);
+  /* A zero minimum: an intrinsic min-content floor here is what
+    pushes a flex row wider than its container. */
+  min-width: 0;
+}
+
+.content {
+  min-width: 0;
+}
+
+@media (min-width: 60rem) {
+  .app-layout {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .content {
+    flex: 1 1 auto;
+  }
+
+  .controls {
+    flex: 0 0 16rem;
+  }
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--csl-spacing-03);
+  margin: var(--csl-spacing-06) 0 var(--csl-spacing-03);
+}
+
+.split-control {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--csl-spacing-03);
+}
+
+.split-control label {
+  display: inline;
+  margin-bottom: 0;
+}
+
+.split-control input[type='range'] {
+  width: 8rem;
+  min-height: var(--csl-target-min);
+  accent-color: var(--csl-text-primary);
+}
+
+/* Live capture thumbnail + crop region. Dimming outside the region is
+  a thumbnail affordance only — the preview canvas itself is never
+  filtered. State is never colour-only: the dashed border is a shape
+  cue and the readout carries the numbers. */
+.capture-thumb {
+  position: relative;
+  max-width: min(30rem, 100%);
+  margin-top: var(--csl-spacing-04);
+}
+
+.capture-thumb video {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--csl-border-strong);
+}
+
+.crop-overlay {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.crop-overlay.locked {
+  cursor: default;
+}
+
+.crop-rect {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px dashed var(--csl-capture-border);
+  outline: 2px dashed var(--csl-capture-outline);
+  outline-offset: -4px;
+  box-shadow: 0 0 0 100vmax var(--csl-capture-dim);
+}
+
+.crop-overlay.locked .crop-rect {
+  border-style: solid;
+  outline-style: solid;
+}
+
+.crop-handle {
+  position: absolute;
+  width: 0.75rem;
+  height: 0.75rem;
+  background: var(--csl-capture-handle-bg);
+  border: 1px solid var(--csl-capture-handle-border);
+}
+
+.crop-overlay.locked .crop-handle {
+  display: none;
+}
+
+.crop-nw { top: -0.375rem; left: -0.375rem; }
+.crop-n { top: -0.375rem; left: calc(50% - 0.375rem); }
+.crop-ne { top: -0.375rem; right: -0.375rem; }
+.crop-e { top: calc(50% - 0.375rem); right: -0.375rem; }
+.crop-se { bottom: -0.375rem; right: -0.375rem; }
+.crop-s { bottom: -0.375rem; left: calc(50% - 0.375rem); }
+.crop-sw { bottom: -0.375rem; left: -0.375rem; }
+.crop-w { top: calc(50% - 0.375rem); left: -0.375rem; }
+
+/* The worker-rendered preview surface. Pixels are content: no
+  filters, no smoothing (crispness comes from the worker). */
+.preview-host {
+  position: relative;
+  width: 100%;
+  /* Dynamic viewport units: `vh` on mobile Safari measures the
+    chrome-less viewport and pushes controls off-screen. */
+  height: 60dvh;
+  min-height: 16rem;
+  overflow: hidden;
+  border: 1px solid var(--csl-border-strong);
+  cursor: grab;
+  touch-action: none;
+}
+
+.preview-host.grabbing {
+  cursor: grabbing;
+}
+
+.preview-host canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Preview focus: the preview takes the window. Built as a flex chain
+  down to the host rather than `100vh minus a guess`, so the height
+  stays correct when the toolbar wraps to two rows at a narrow width
+  or the text size changes. */
+body.preview-focus {
+  height: 100dvh;
+  /* Without border-box the page padding is added *outside* the
+    100dvh, making the body taller than the viewport and pushing the
+    compact status under the fold — where `overflow: hidden` then
+    clips the mode's only status line. */
+  box-sizing: border-box;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+body.preview-focus main,
+body.preview-focus .app-layout,
+body.preview-focus .content,
+body.preview-focus .content > section {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  /* Restated, not inherited: the wide-layout media query sets
+    `align-items: flex-start` for the side-by-side row, and left in
+    place here it becomes a *cross-axis* rule that shrinks every child
+    to its content width. */
+  align-items: stretch;
+}
+
+/* `main` keeps `margin: 0 auto` for centring, and auto margins on the
+  cross axis suppress `align-items: stretch` — without an explicit
+  width it collapses to its content and the preview gets *smaller* in
+  the mode meant to enlarge it. */
+body.preview-focus main {
+  width: 100%;
+}
+
+/* Trade the title block for preview height: the app name stays as the
+  landmark, the build line is still in diagnostics. */
+body.preview-focus .app-header {
+  flex: 0 0 auto;
+  margin-bottom: 0;
+}
+
+body.preview-focus .app-header h1 {
+  font-size: var(--csl-heading-02-size);
+  line-height: var(--csl-heading-02-line);
+  margin: 0;
+}
+
+body.preview-focus .app-header .meta {
+  display: none;
+}
+
+body.preview-focus .preview-host {
+  flex: 1 1 auto;
+  height: auto;
+}
+
+/* The compact status is the only status in focus mode, so it keeps
+  full-size text rather than the .meta reduction. */
+.compact-status {
+  margin: var(--csl-spacing-03) 0 0;
+  font-size: var(--csl-body-01-size);
+  color: var(--csl-text-primary);
+}
+
+/* Info panel: summary + colours-by-usage table. Swatch colours are
+  content (thread colours), never UI tokens. Wide tables scroll inside
+  their own panel rather than pushing the page sideways — page-level
+  horizontal scrolling is the thing a companion window must never do
+  (WCAG 2.2 Reflow). */
+.info-panel,
+.debug-panel {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.info-panel table,
+.debug-panel table {
+  margin-top: var(--csl-spacing-03);
+}
+
+/* Profiling debug panel (dev-only): a native disclosure so the
+  timings table is keyboard operable for free. */
+.debug-panel {
+  margin-top: var(--csl-spacing-05);
+}
+
+.debug-panel summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--csl-target-min);
+  cursor: pointer;
+  font-size: var(--csl-body-compact-01-size);
+}
+
+.debug-panel summary::before {
+  content: '\25B8';
+  margin-right: var(--csl-spacing-03);
+}
+
+.debug-panel[open] summary::before {
+  content: '\25BE';
+}
+
+.debug-panel summary::-webkit-details-marker,
+.debug-panel summary::marker {
+  display: none;
+  content: '';
+}
+
+/* Carbon modal (M14-IMPL-02): backdrop + centred layer. The dialog is
+  a layer-01 surface; actions right-aligned per Carbon's productive
+  modal anatomy. Danger keeps its meaning in the label text — the red
+  edge is a supplement, never the only signal. */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: var(--csl-capture-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--csl-spacing-05);
+  z-index: 10;
+}
+
+.modal {
+  background: var(--csl-layer-01);
+  color: var(--csl-text-primary);
+  border: 1px solid var(--csl-border-strong);
+  padding: var(--csl-spacing-05);
+  width: min(24rem, 100%);
+}
+
+.modal-title {
+  font-size: var(--csl-heading-02-size);
+  line-height: var(--csl-heading-02-line);
+  font-weight: var(--csl-heading-02-weight);
+  margin: 0 0 var(--csl-spacing-04);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--csl-spacing-03);
+  margin-top: var(--csl-spacing-05);
+}
+
+/* .modal-primary's fill is the shared .button-primary rule (base.css). */
+
+.modal-danger {
+  border: 2px solid var(--csl-support-error);
+}
+
+/* Carbon accordion (M14-IMPL-03): section headers are real h2s
+  wrapping full-width toggle buttons; the closed state carries a
+  derived summary line. Panels leave layout (and the tab order) via
+  [hidden]. */
+.accordion-section {
+  border-bottom: 1px solid var(--csl-border-subtle);
+}
+
+.accordion-section:last-child {
+  border-bottom: 0;
+}
+
+.accordion-heading {
+  margin: 0;
+  font-size: inherit;
+  line-height: inherit;
+  font-weight: inherit;
+}
+
+.accordion-toggle {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--csl-spacing-01);
+  width: 100%;
+  min-height: var(--csl-target-min);
+  padding: var(--csl-spacing-03) var(--csl-spacing-02);
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.accordion-toggle::before {
+  content: '\25B8';
+  position: absolute;
+  right: var(--csl-spacing-03);
+}
+
+.accordion-toggle[aria-expanded='true']::before {
+  content: '\25BE';
+}
+
+.accordion-toggle {
+  position: relative;
+}
+
+.accordion-title {
+  font-size: var(--csl-heading-01-size);
+  line-height: var(--csl-heading-01-line);
+  font-weight: var(--csl-heading-01-weight);
+}
+
+.accordion-summary {
+  /* One line, ellipsised: a précis, never a second control surface. */
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accordion-panel {
+  padding: var(--csl-spacing-03) var(--csl-spacing-02) var(--csl-spacing-05);
+}
+
+/* Inline depth reveals (native details): the summary row reads as a
+  quiet control; content indents under it like the dither method
+  group. */
+.depth-reveal > summary {
+  font-size: var(--csl-body-compact-01-size);
+  gap: var(--csl-spacing-03);
+}
+
+.depth-reveal > summary::before {
+  content: '\25B8';
+}
+
+.depth-reveal[open] > summary::before {
+  content: '\25BE';
+}
+
+.depth-reveal > summary::-webkit-details-marker,
+.depth-reveal > summary::marker {
+  display: none;
+  content: '';
+}
+
+.depth-reveal-body {
+  padding-left: var(--csl-spacing-04);
+  border-left: 2px solid var(--csl-border-subtle);
+  margin-top: var(--csl-spacing-02);
+}

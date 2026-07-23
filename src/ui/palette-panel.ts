@@ -17,6 +17,7 @@ import type { Brand, ThreadCatalogue } from '../core/thread-catalogue.ts';
 import type { Thread } from '../core/types.ts';
 import type { LibraryPalette } from '../library/records.ts';
 import { numberField, selectField, toggleField } from './controls.ts';
+import { confirmDangerModal } from './modal.ts';
 
 /** Longest thread list rendered at once; search narrows past this. */
 export const THREAD_ROW_CAP = 60;
@@ -258,7 +259,7 @@ export function buildPaletteEntryRows(
  * only *not* a fault if the app says so (M7-COUNT-01).
  */
 export function countSummary(state: PalettePanelState): string {
-  if (!state.paletteMode) return 'Full RGB — no thread palette.';
+  if (!state.paletteMode) return 'Unlimited colours — no thread palette.';
   const limited = state.policy.count.mode !== 'all';
   const parts = [`${String(state.eligibleCount)} permitted`];
   if (limited && state.awaitingSource) {
@@ -266,7 +267,7 @@ export function countSummary(state: PalettePanelState): string {
     // frame there is nothing to choose against. Saying "N selected of
     // 20 requested" here would read as a violated limit rather than a
     // step that has not happened yet.
-    parts.push(`${String(state.policy.count.n)} requested — chosen once an image is loaded`);
+    parts.push(`${String(state.policy.count.n)} requested — chosen when the design updates`);
   } else if (limited) {
     parts.push(
       `${String(state.selectedCount)} selected of ${String(state.policy.count.n)} requested`,
@@ -311,6 +312,14 @@ export interface PalettePanel {
   update(state: PalettePanelState): void;
 }
 
+/** Disclosure wiring for the thread-depth reveal (M14-IMPL-03). */
+export interface PaletteDepthOptions {
+  /** Initial open state (preference or spec default: closed). */
+  open: boolean;
+  /** User toggles, for preference persistence. */
+  onToggle(open: boolean): void;
+}
+
 /** Build a labelled checkbox row (brands are a multi-select group). */
 function brandCheckbox(
   doc: Document,
@@ -347,6 +356,7 @@ export function createPalettePanel(
   catalogue: ThreadCatalogue,
   initial: PalettePanelState,
   actions: PalettePanelActions,
+  depth?: PaletteDepthOptions,
 ): PalettePanel {
   let state = initial;
   let query = '';
@@ -361,7 +371,7 @@ export function createPalettePanel(
     'Colour mode',
     [
       ['threads', 'Thread palette'],
-      ['rgb', 'Full RGB'],
+      ['rgb', 'Unlimited colours (no threads)'],
     ],
     'threads',
     (value) => {
@@ -413,9 +423,9 @@ export function createPalettePanel(
   const countMode = selectField(
     doc,
     'count-mode',
-    'Colour count',
+    'Colour limit',
     [
-      ['all', 'Every permitted thread'],
+      ['all', 'No limit'],
       ['max', 'At most…'],
       ['exact', 'Exactly…'],
     ],
@@ -451,7 +461,6 @@ export function createPalettePanel(
   const search = doc.createElement('input');
   search.type = 'search';
   search.id = 'thread-search';
-  search.placeholder = 'Search threads';
   const searchLabel = doc.createElement('label');
   searchLabel.htmlFor = search.id;
   searchLabel.textContent = 'Find a thread';
@@ -487,18 +496,23 @@ export function createPalettePanel(
   // user built by hand.
   const bulkRow = doc.createElement('div');
   bulkRow.className = 'toolbar';
-  const bulkOwn = button('Mark shown as owned', () => {
+  const bulkOwn = button('Mark matching as owned', () => {
     const ids = bulkOwnershipTargets(catalogue, state, query, true);
     if (ids.length > 0) actions.setOwnedBulk(ids, true);
   });
   bulkOwn.id = 'bulk-own';
-  const bulkDisown = button('Mark shown as not owned', () => {
+  const bulkDisown = button('Mark matching as not owned', () => {
     const ids = bulkOwnershipTargets(catalogue, state, query, false);
     if (ids.length === 0) return;
-    const ok = doc.defaultView?.confirm(
-      `Remove ${String(ids.length)} thread(s) from your inventory? This is your own record of what you own, not a design change.`,
-    );
-    if (ok === true) actions.setOwnedBulk(ids, false);
+    // Carbon danger modal instead of window.confirm (audit A6): same
+    // guarded consequence, real anatomy, focus handled by the modal.
+    void confirmDangerModal(doc, {
+      title: 'Remove from inventory',
+      body: `Remove ${String(ids.length)} thread(s) from your inventory? This is your own record of what you own, not a design change.`,
+      confirmLabel: 'Remove threads',
+    }).then((ok) => {
+      if (ok) actions.setOwnedBulk(ids, false);
+    });
   });
   bulkDisown.id = 'bulk-disown';
   bulkRow.append(bulkOwn, bulkDisown);
@@ -569,12 +583,18 @@ export function createPalettePanel(
       ownedBox.type = 'checkbox';
       ownedBox.checked = row.owned;
       ownedBox.id = `own-${row.thread.id}`;
+      // Sixty rows of checkboxes all named "Own" are indistinguishable
+      // to assistive tech (audit A2) — the accessible name carries the
+      // thread, the visible label stays terse (same pattern as the
+      // rule select below).
+      ownedBox.setAttribute('aria-label', `Own ${row.label}`);
       ownedBox.addEventListener('change', () => {
         actions.setOwned(row.thread.id, ownedBox.checked);
       });
       const ownedLabel = doc.createElement('label');
       ownedLabel.htmlFor = ownedBox.id;
       ownedLabel.textContent = 'Own';
+      ownedLabel.setAttribute('aria-hidden', 'true');
 
       const roleSelect = doc.createElement('select');
       roleSelect.id = `role-${row.thread.id}`;
@@ -598,10 +618,21 @@ export function createPalettePanel(
       item.append(swatch, name, ownedBox, ownedLabel, roleSelect);
       threadList.append(item);
     }
-    threadCount.textContent =
-      total > rows.length
-        ? `Showing ${String(rows.length)} of ${String(total)} threads — search to narrow.`
-        : `${String(total)} thread${total === 1 ? '' : 's'}.`;
+    // Empty states distinguish "filtered out" from "nothing here"
+    // (UI-STANDARDS; M14-IMPL-04): a search that matched nothing names
+    // itself and the way back; an empty brand set is the brand
+    // conflict's job and gets a pointer, not a duplicate explanation.
+    if (total === 0) {
+      threadCount.textContent =
+        query.trim() !== ''
+          ? `No threads match "${query.trim()}" — clear the search to see every thread.`
+          : 'No threads here — enable a thread brand above.';
+    } else {
+      threadCount.textContent =
+        total > rows.length
+          ? `Showing ${String(rows.length)} of ${String(total)} threads — search to narrow.`
+          : `${String(total)} thread${total === 1 ? '' : 's'}.`;
+    }
   }
 
   /** The saved palette the policy currently points at, if any. */
@@ -688,7 +719,7 @@ export function createPalettePanel(
       selectField(
         doc,
         'palette-source',
-        'Palette source',
+        'Threads to choose from',
         sourceOptions(state.library),
         sourceValue(state.policy),
         (value) => {
@@ -729,15 +760,19 @@ export function createPalettePanel(
   function update(next: PalettePanelState): void {
     state = next;
     const paletteMode = next.paletteMode;
-    for (const el of [brandGroup, sourceWrap, presetModeWrap, searchField, threadList]) {
+    // Full-RGB collapses the palette surface to the mode select; the
+    // depth reveal hides wholesale (its internals need no per-element
+    // toggling once they share one container — M14-IMPL-03).
+    for (const el of [sourceWrap, presetModeWrap]) {
       el.hidden = !paletteMode;
     }
-    ownedToggle.element.hidden = !paletteMode;
+    threadDetails.hidden = !paletteMode;
     countMode.hidden = !paletteMode;
     countN.hidden = !paletteMode || next.policy.count.mode === 'all';
-    actionRow.hidden = !paletteMode;
-    bulkRow.hidden = !paletteMode;
-    editorWrap.hidden = !paletteMode;
+    // The saved-palette editor exists only for a library source
+    // (audit A5): for brands/preset sources the disclosure would open
+    // onto nothing.
+    editorWrap.hidden = next.policy.source.kind !== 'library';
 
     // Counts go in the labels so the size of a bulk change is visible
     // before it is made, and a no-op button disables itself rather than
@@ -746,10 +781,10 @@ export function createPalettePanel(
     const toOwn = bulkOwnershipTargets(catalogue, next, query, true).length;
     const toDisown = bulkOwnershipTargets(catalogue, next, query, false).length;
     bulkOwn.textContent =
-      toOwn === 0 ? 'All shown already owned' : `Mark ${String(toOwn)} shown as owned`;
+      toOwn === 0 ? 'All matching already owned' : `Mark ${String(toOwn)} matching as owned`;
     bulkOwn.disabled = toOwn === 0;
     bulkDisown.textContent =
-      toDisown === 0 ? 'None shown are owned' : `Mark ${String(toDisown)} shown as not owned`;
+      toDisown === 0 ? 'None matching are owned' : `Mark ${String(toDisown)} matching as not owned`;
     bulkDisown.disabled = toDisown === 0;
 
     deleteButton.hidden = next.policy.source.kind !== 'library';
@@ -777,24 +812,43 @@ export function createPalettePanel(
     renderThreads();
   }
 
-  element.append(
-    legend,
-    modeField,
+  // Depth split (M14-IMPL-03, ui-spec §5): the essentials stay on the
+  // Design surface; the 60-row list and its machinery live behind one
+  // reveal, out of layout and the tab order while closed — the
+  // measured cause of the panel's 8k px inflation (D75).
+  const threadDetails = doc.createElement('details');
+  threadDetails.className = 'depth-reveal';
+  const threadSummary = doc.createElement('summary');
+  threadSummary.textContent = 'Thread library & rules';
+  const threadBody = doc.createElement('div');
+  threadBody.className = 'depth-reveal-body';
+  threadBody.append(
     brandGroup,
-    sourceWrap,
-    presetModeWrap,
-    editorWrap,
     ownedToggle.element,
-    countMode,
-    countN,
-    summary,
-    conflictList,
     searchField,
     threadCount,
     bulkRow,
     threadList,
+    editorWrap,
     actionRow,
     libraryNote,
+  );
+  threadDetails.append(threadSummary, threadBody);
+  threadDetails.open = depth?.open ?? false;
+  threadDetails.addEventListener('toggle', () => {
+    depth?.onToggle(threadDetails.open);
+  });
+
+  element.append(
+    legend,
+    modeField,
+    sourceWrap,
+    presetModeWrap,
+    countMode,
+    countN,
+    summary,
+    conflictList,
+    threadDetails,
   );
   update(initial);
 

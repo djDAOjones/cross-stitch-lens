@@ -1,0 +1,7398 @@
+{
+  "schemaVersion": 4,
+  "pipeline": {
+    "preset": "resize-first",
+    "grid": {
+      "width": 200,
+      "height": 200
+    },
+    "resizeMode": "contain",
+    "metric": "lab",
+    "dither": {
+      "algorithm": "floyd-steinberg",
+      "serpentine": true,
+      "strength": 1
+    }
+  },
+  "palette": {
+    "policy": {
+      "brands": [
+        "dmc"
+      ],
+      "source": {
+        "kind": "brands"
+      },
+      "ownedOnly": false,
+      "count": {
+        "mode": "all",
+        "n": 512
+      },
+      "locked": [],
+      "preferred": [],
+      "excluded": []
+    },
+    "snapshot": [
+      {
+        "id": "dmc:3808",
+        "brandId": "dmc",
+        "reference": "3808",
+        "name": "Turquoise ultra very dark",
+        "hex": "#004757",
+        "rgb": [
+          0,
+          71,
+          87
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3818",
+        "brandId": "dmc",
+        "reference": "3818",
+        "name": "Emerald Green ultra very dark",
+        "hex": "#004f36",
+        "rgb": [
+          0,
+          79,
+          54
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3847",
+        "brandId": "dmc",
+        "reference": "3847",
+        "name": "Teal Green dark",
+        "hex": "#00504d",
+        "rgb": [
+          0,
+          80,
+          77
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3765",
+        "brandId": "dmc",
+        "reference": "3765",
+        "name": "Very Dark Peacock Blue",
+        "hex": "#005879",
+        "rgb": [
+          0,
+          88,
+          121
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:699",
+        "brandId": "dmc",
+        "reference": "699",
+        "name": "Christmas Green",
+        "hex": "#005f3d",
+        "rgb": [
+          0,
+          95,
+          61
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:909",
+        "brandId": "dmc",
+        "reference": "909",
+        "name": "Emerald Green very dark",
+        "hex": "#006540",
+        "rgb": [
+          0,
+          101,
+          64
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:995",
+        "brandId": "dmc",
+        "reference": "995",
+        "name": "Electric Blue dark",
+        "hex": "#006fbc",
+        "rgb": [
+          0,
+          111,
+          188
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:700",
+        "brandId": "dmc",
+        "reference": "700",
+        "name": "Christmas Green bright",
+        "hex": "#00703e",
+        "rgb": [
+          0,
+          112,
+          62
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:910",
+        "brandId": "dmc",
+        "reference": "910",
+        "name": "Emerald Green dark",
+        "hex": "#007a4b",
+        "rgb": [
+          0,
+          122,
+          75
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3843",
+        "brandId": "dmc",
+        "reference": "3843",
+        "name": "Electric Blue",
+        "hex": "#0081c7",
+        "rgb": [
+          0,
+          129,
+          199
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3850",
+        "brandId": "dmc",
+        "reference": "3850",
+        "name": "Bright Green dark",
+        "hex": "#00856b",
+        "rgb": [
+          0,
+          133,
+          107
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:911",
+        "brandId": "dmc",
+        "reference": "911",
+        "name": "Emerald Green medium",
+        "hex": "#008853",
+        "rgb": [
+          0,
+          136,
+          83
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3812",
+        "brandId": "dmc",
+        "reference": "3812",
+        "name": "Sea Green very dark",
+        "hex": "#00887c",
+        "rgb": [
+          0,
+          136,
+          124
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3844",
+        "brandId": "dmc",
+        "reference": "3844",
+        "name": "Bright Turquoise dark",
+        "hex": "#0089b2",
+        "rgb": [
+          0,
+          137,
+          178
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:943",
+        "brandId": "dmc",
+        "reference": "943",
+        "name": "Aquamarine medium",
+        "hex": "#008f79",
+        "rgb": [
+          0,
+          143,
+          121
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:996",
+        "brandId": "dmc",
+        "reference": "996",
+        "name": "Electric Blue medium",
+        "hex": "#0097e1",
+        "rgb": [
+          0,
+          151,
+          225
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:958",
+        "brandId": "dmc",
+        "reference": "958",
+        "name": "Sea Green dark",
+        "hex": "#009887",
+        "rgb": [
+          0,
+          152,
+          135
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3845",
+        "brandId": "dmc",
+        "reference": "3845",
+        "name": "Bright Turquoise medium",
+        "hex": "#009bbe",
+        "rgb": [
+          0,
+          155,
+          190
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3851",
+        "brandId": "dmc",
+        "reference": "3851",
+        "name": "Bright Green light",
+        "hex": "#009f82",
+        "rgb": [
+          0,
+          159,
+          130
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3846",
+        "brandId": "dmc",
+        "reference": "3846",
+        "name": "Bright Turquoise light",
+        "hex": "#00afd1",
+        "rgb": [
+          0,
+          175,
+          209
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:310",
+        "brandId": "dmc",
+        "reference": "310",
+        "name": "Black",
+        "hex": "#0c0c0c",
+        "rgb": [
+          12,
+          12,
+          12
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3842",
+        "brandId": "dmc",
+        "reference": "3842",
+        "name": "Wedgewood dark",
+        "hex": "#0d3e6b",
+        "rgb": [
+          13,
+          62,
+          107
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:991",
+        "brandId": "dmc",
+        "reference": "991",
+        "name": "Aquamarine dark",
+        "hex": "#0d5850",
+        "rgb": [
+          13,
+          88,
+          80
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3814",
+        "brandId": "dmc",
+        "reference": "3814",
+        "name": "Aquamarine",
+        "hex": "#0d7163",
+        "rgb": [
+          13,
+          113,
+          99
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:701",
+        "brandId": "dmc",
+        "reference": "701",
+        "name": "Christmas Green light",
+        "hex": "#0d7338",
+        "rgb": [
+          13,
+          115,
+          56
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3809",
+        "brandId": "dmc",
+        "reference": "3809",
+        "name": "Turquoise very dark",
+        "hex": "#135c6d",
+        "rgb": [
+          19,
+          92,
+          109
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3848",
+        "brandId": "dmc",
+        "reference": "3848",
+        "name": "Teal Green medium",
+        "hex": "#186d6a",
+        "rgb": [
+          24,
+          109,
+          106
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:939",
+        "brandId": "dmc",
+        "reference": "939",
+        "name": "Navy Blue very dark",
+        "hex": "#1b1b2c",
+        "rgb": [
+          27,
+          27,
+          44
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:890",
+        "brandId": "dmc",
+        "reference": "890",
+        "name": "Pistachio Green ultra dark",
+        "hex": "#1b3623",
+        "rgb": [
+          27,
+          54,
+          35
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:824",
+        "brandId": "dmc",
+        "reference": "824",
+        "name": "Blue very dark",
+        "hex": "#1b3e71",
+        "rgb": [
+          27,
+          62,
+          113
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:825",
+        "brandId": "dmc",
+        "reference": "825",
+        "name": "Blue dark",
+        "hex": "#1b4f86",
+        "rgb": [
+          27,
+          79,
+          134
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:806",
+        "brandId": "dmc",
+        "reference": "806",
+        "name": "Peacock Blue Dark",
+        "hex": "#1d6c87",
+        "rgb": [
+          29,
+          108,
+          135
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:820",
+        "brandId": "dmc",
+        "reference": "820",
+        "name": "Royal Blue very dark",
+        "hex": "#202063",
+        "rgb": [
+          32,
+          32,
+          99
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:823",
+        "brandId": "dmc",
+        "reference": "823",
+        "name": "Navy Blue dark",
+        "hex": "#20233a",
+        "rgb": [
+          32,
+          35,
+          58
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:336",
+        "brandId": "dmc",
+        "reference": "336",
+        "name": "Navy Blue",
+        "hex": "#202c4f",
+        "rgb": [
+          32,
+          44,
+          79
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:311",
+        "brandId": "dmc",
+        "reference": "311",
+        "name": "Navy Blue medium",
+        "hex": "#203050",
+        "rgb": [
+          32,
+          48,
+          80
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:803",
+        "brandId": "dmc",
+        "reference": "803",
+        "name": "Baby Blue ultra very dark",
+        "hex": "#203660",
+        "rgb": [
+          32,
+          54,
+          96
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3750",
+        "brandId": "dmc",
+        "reference": "3750",
+        "name": "Antique Blue very dark",
+        "hex": "#23384f",
+        "rgb": [
+          35,
+          56,
+          79
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:312",
+        "brandId": "dmc",
+        "reference": "312",
+        "name": "Navy Blue light",
+        "hex": "#23426f",
+        "rgb": [
+          35,
+          66,
+          111
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:517",
+        "brandId": "dmc",
+        "reference": "517",
+        "name": "Wedgewood dark",
+        "hex": "#236391",
+        "rgb": [
+          35,
+          99,
+          145
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:796",
+        "brandId": "dmc",
+        "reference": "796",
+        "name": "Royal Blue dark",
+        "hex": "#242b70",
+        "rgb": [
+          36,
+          43,
+          112
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:895",
+        "brandId": "dmc",
+        "reference": "895",
+        "name": "Hunter Green very dark",
+        "hex": "#253d25",
+        "rgb": [
+          37,
+          61,
+          37
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:500",
+        "brandId": "dmc",
+        "reference": "500",
+        "name": "Blue Green very dark",
+        "hex": "#253d36",
+        "rgb": [
+          37,
+          61,
+          54
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:319",
+        "brandId": "dmc",
+        "reference": "319",
+        "name": "Pistachio Green very dark",
+        "hex": "#25402c",
+        "rgb": [
+          37,
+          64,
+          44
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:986",
+        "brandId": "dmc",
+        "reference": "986",
+        "name": "Forest Green very dark",
+        "hex": "#25502c",
+        "rgb": [
+          37,
+          80,
+          44
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:797",
+        "brandId": "dmc",
+        "reference": "797",
+        "name": "Royal Blue",
+        "hex": "#293a7c",
+        "rgb": [
+          41,
+          58,
+          124
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:924",
+        "brandId": "dmc",
+        "reference": "924",
+        "name": "Grey Green very dark",
+        "hex": "#294247",
+        "rgb": [
+          41,
+          66,
+          71
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:561",
+        "brandId": "dmc",
+        "reference": "561",
+        "name": "Jade very dark",
+        "hex": "#295544",
+        "rgb": [
+          41,
+          85,
+          68
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3371",
+        "brandId": "dmc",
+        "reference": "3371",
+        "name": "Black Brown",
+        "hex": "#2b2421",
+        "rgb": [
+          43,
+          36,
+          33
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:505",
+        "brandId": "dmc",
+        "reference": "505",
+        "name": "Jade Green",
+        "hex": "#2c6142",
+        "rgb": [
+          44,
+          97,
+          66
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3760",
+        "brandId": "dmc",
+        "reference": "3760",
+        "name": "Wedgewood (806)",
+        "hex": "#2c6f99",
+        "rgb": [
+          44,
+          111,
+          153
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:791",
+        "brandId": "dmc",
+        "reference": "791",
+        "name": "Cornflower Blue very dark",
+        "hex": "#2e2960",
+        "rgb": [
+          46,
+          41,
+          96
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:934",
+        "brandId": "dmc",
+        "reference": "934",
+        "name": "Black Avocado Green",
+        "hex": "#2e3425",
+        "rgb": [
+          46,
+          52,
+          37
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:158",
+        "brandId": "dmc",
+        "reference": "158",
+        "name": "Cornflower Blue medium",
+        "hex": "#303065",
+        "rgb": [
+          48,
+          48,
+          101
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3799",
+        "brandId": "dmc",
+        "reference": "3799",
+        "name": "Pewter Grey very dark",
+        "hex": "#303438",
+        "rgb": [
+          48,
+          52,
+          56
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:930",
+        "brandId": "dmc",
+        "reference": "930",
+        "name": "Antique Blue dark",
+        "hex": "#30465a",
+        "rgb": [
+          48,
+          70,
+          90
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:826",
+        "brandId": "dmc",
+        "reference": "826",
+        "name": "Blue medium",
+        "hex": "#306ba1",
+        "rgb": [
+          48,
+          107,
+          161
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:912",
+        "brandId": "dmc",
+        "reference": "912",
+        "name": "Emerald Green light",
+        "hex": "#309c66",
+        "rgb": [
+          48,
+          156,
+          102
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:959",
+        "brandId": "dmc",
+        "reference": "959",
+        "name": "Sea Green medium",
+        "hex": "#30ad9d",
+        "rgb": [
+          48,
+          173,
+          157
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3345",
+        "brandId": "dmc",
+        "reference": "3345",
+        "name": "Hunter Green dark",
+        "hex": "#344a25",
+        "rgb": [
+          52,
+          74,
+          37
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:904",
+        "brandId": "dmc",
+        "reference": "904",
+        "name": "Parrot Green very dark",
+        "hex": "#345f25",
+        "rgb": [
+          52,
+          95,
+          37
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3810",
+        "brandId": "dmc",
+        "reference": "3810",
+        "name": "Turquoise dark",
+        "hex": "#347b8c",
+        "rgb": [
+          52,
+          123,
+          140
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:702",
+        "brandId": "dmc",
+        "reference": "702",
+        "name": "Kelly Green",
+        "hex": "#34853e",
+        "rgb": [
+          52,
+          133,
+          62
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:935",
+        "brandId": "dmc",
+        "reference": "935",
+        "name": "Avocado Green dark",
+        "hex": "#363d2c",
+        "rgb": [
+          54,
+          61,
+          44
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:501",
+        "brandId": "dmc",
+        "reference": "501",
+        "name": "Blue Green dark",
+        "hex": "#36544a",
+        "rgb": [
+          54,
+          84,
+          74
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:992",
+        "brandId": "dmc",
+        "reference": "992",
+        "name": "Aquamarine medium",
+        "hex": "#369380",
+        "rgb": [
+          54,
+          147,
+          128
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:154",
+        "brandId": "dmc",
+        "reference": "154",
+        "name": "Grape very dark",
+        "hex": "#38172b",
+        "rgb": [
+          56,
+          23,
+          43
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3815",
+        "brandId": "dmc",
+        "reference": "3815",
+        "name": "Celadon Green dark",
+        "hex": "#386a57",
+        "rgb": [
+          56,
+          106,
+          87
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:792",
+        "brandId": "dmc",
+        "reference": "792",
+        "name": "Cornflower Blue dark",
+        "hex": "#3a3e82",
+        "rgb": [
+          58,
+          62,
+          130
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:520",
+        "brandId": "dmc",
+        "reference": "520",
+        "name": "Fern Green dark",
+        "hex": "#3a4734",
+        "rgb": [
+          58,
+          71,
+          52
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:562",
+        "brandId": "dmc",
+        "reference": "562",
+        "name": "Jade medium",
+        "hex": "#3a7c5a",
+        "rgb": [
+          58,
+          124,
+          90
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:938",
+        "brandId": "dmc",
+        "reference": "938",
+        "name": "Coffee Brown ultra dark",
+        "hex": "#3d2923",
+        "rgb": [
+          61,
+          41,
+          35
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:844",
+        "brandId": "dmc",
+        "reference": "844",
+        "name": "Beaver Grey ultra dark",
+        "hex": "#3d3d36",
+        "rgb": [
+          61,
+          61,
+          54
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:413",
+        "brandId": "dmc",
+        "reference": "413",
+        "name": "Pewter Grey dark",
+        "hex": "#3d4247",
+        "rgb": [
+          61,
+          66,
+          71
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:798",
+        "brandId": "dmc",
+        "reference": "798",
+        "name": "Delft Blue dark",
+        "hex": "#3d5fa3",
+        "rgb": [
+          61,
+          95,
+          163
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:905",
+        "brandId": "dmc",
+        "reference": "905",
+        "name": "Parrot Green dark",
+        "hex": "#3d7123",
+        "rgb": [
+          61,
+          113,
+          35
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:518",
+        "brandId": "dmc",
+        "reference": "518",
+        "name": "Wedgewood light",
+        "hex": "#3d84a4",
+        "rgb": [
+          61,
+          132,
+          164
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:367",
+        "brandId": "dmc",
+        "reference": "367",
+        "name": "Pistachio Green dark",
+        "hex": "#406647",
+        "rgb": [
+          64,
+          102,
+          71
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:322",
+        "brandId": "dmc",
+        "reference": "322",
+        "name": "Baby Blue dark",
+        "hex": "#40669b",
+        "rgb": [
+          64,
+          102,
+          155
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3031",
+        "brandId": "dmc",
+        "reference": "3031",
+        "name": "Mocha Brown very dark",
+        "hex": "#422e25",
+        "rgb": [
+          66,
+          46,
+          37
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:936",
+        "brandId": "dmc",
+        "reference": "936",
+        "name": "Avocado Green very dark",
+        "hex": "#424423",
+        "rgb": [
+          66,
+          68,
+          35
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3362",
+        "brandId": "dmc",
+        "reference": "3362",
+        "name": "Pine Green dark",
+        "hex": "#424a33",
+        "rgb": [
+          66,
+          74,
+          51
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3768",
+        "brandId": "dmc",
+        "reference": "3768",
+        "name": "Grey Green dark",
+        "hex": "#425b61",
+        "rgb": [
+          66,
+          91,
+          97
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:987",
+        "brandId": "dmc",
+        "reference": "987",
+        "name": "Forest Green dark",
+        "hex": "#42663a",
+        "rgb": [
+          66,
+          102,
+          58
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:163",
+        "brandId": "dmc",
+        "reference": "163",
+        "name": "Celadon Green medium",
+        "hex": "#44715b",
+        "rgb": [
+          68,
+          113,
+          91
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3849",
+        "brandId": "dmc",
+        "reference": "3849",
+        "name": "Teal Green light",
+        "hex": "#44918d",
+        "rgb": [
+          68,
+          145,
+          141
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:838",
+        "brandId": "dmc",
+        "reference": "838",
+        "name": "Beige Brown very dark",
+        "hex": "#453029",
+        "rgb": [
+          69,
+          48,
+          41
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3021",
+        "brandId": "dmc",
+        "reference": "3021",
+        "name": "Brown Grey very dark",
+        "hex": "#46382e",
+        "rgb": [
+          70,
+          56,
+          46
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3051",
+        "brandId": "dmc",
+        "reference": "3051",
+        "name": "Green Grey dark",
+        "hex": "#464d2e",
+        "rgb": [
+          70,
+          77,
+          46
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:937",
+        "brandId": "dmc",
+        "reference": "937",
+        "name": "Avocado Green medium",
+        "hex": "#465429",
+        "rgb": [
+          70,
+          84,
+          41
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:550",
+        "brandId": "dmc",
+        "reference": "550",
+        "name": "Violet very dark",
+        "hex": "#47184b",
+        "rgb": [
+          71,
+          24,
+          75
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3807",
+        "brandId": "dmc",
+        "reference": "3807",
+        "name": "Cornflower Blue",
+        "hex": "#47548f",
+        "rgb": [
+          71,
+          84,
+          143
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:9",
+        "brandId": "dmc",
+        "reference": "9",
+        "name": "Very Dark Cocoa",
+        "hex": "#483837",
+        "rgb": [
+          72,
+          56,
+          55
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:29",
+        "brandId": "dmc",
+        "reference": "29",
+        "name": "Eggplant",
+        "hex": "#493c5e",
+        "rgb": [
+          73,
+          60,
+          94
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:898",
+        "brandId": "dmc",
+        "reference": "898",
+        "name": "Coffee Brown very dark",
+        "hex": "#4a2e23",
+        "rgb": [
+          74,
+          46,
+          35
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3838",
+        "brandId": "dmc",
+        "reference": "3838",
+        "name": "Lavender Blue dark",
+        "hex": "#4a5ca6",
+        "rgb": [
+          74,
+          92,
+          166
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:334",
+        "brandId": "dmc",
+        "reference": "334",
+        "name": "Baby Blue medium",
+        "hex": "#4a75a6",
+        "rgb": [
+          74,
+          117,
+          166
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:535",
+        "brandId": "dmc",
+        "reference": "535",
+        "name": "Ash Grey very light",
+        "hex": "#4b4b46",
+        "rgb": [
+          75,
+          75,
+          70
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3346",
+        "brandId": "dmc",
+        "reference": "3346",
+        "name": "Hunter Green",
+        "hex": "#4d6130",
+        "rgb": [
+          77,
+          97,
+          48
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:597",
+        "brandId": "dmc",
+        "reference": "597",
+        "name": "Turquoise",
+        "hex": "#4d929f",
+        "rgb": [
+          77,
+          146,
+          159
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:913",
+        "brandId": "dmc",
+        "reference": "913",
+        "name": "Nile Green medium",
+        "hex": "#4daf78",
+        "rgb": [
+          77,
+          175,
+          120
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:645",
+        "brandId": "dmc",
+        "reference": "645",
+        "name": "Beaver Grey very dark",
+        "hex": "#4e5847",
+        "rgb": [
+          78,
+          88,
+          71
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:333",
+        "brandId": "dmc",
+        "reference": "333",
+        "name": "Blue Violet very dark",
+        "hex": "#4f3687",
+        "rgb": [
+          79,
+          54,
+          135
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:317",
+        "brandId": "dmc",
+        "reference": "317",
+        "name": "Pewter Grey",
+        "hex": "#4f5460",
+        "rgb": [
+          79,
+          84,
+          96
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:161",
+        "brandId": "dmc",
+        "reference": "161",
+        "name": "Grey Blue",
+        "hex": "#4f5c85",
+        "rgb": [
+          79,
+          92,
+          133
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3781",
+        "brandId": "dmc",
+        "reference": "3781",
+        "name": "Mocha Brown dark",
+        "hex": "#503d2e",
+        "rgb": [
+          80,
+          61,
+          46
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3787",
+        "brandId": "dmc",
+        "reference": "3787",
+        "name": "Brown Grey dark",
+        "hex": "#50473d",
+        "rgb": [
+          80,
+          71,
+          61
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:931",
+        "brandId": "dmc",
+        "reference": "931",
+        "name": "Antique Blue medium",
+        "hex": "#536a82",
+        "rgb": [
+          83,
+          106,
+          130
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:799",
+        "brandId": "dmc",
+        "reference": "799",
+        "name": "Delft Blue medium",
+        "hex": "#537bb5",
+        "rgb": [
+          83,
+          123,
+          181
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3816",
+        "brandId": "dmc",
+        "reference": "3816",
+        "name": "Celadon Green",
+        "hex": "#53836f",
+        "rgb": [
+          83,
+          131,
+          111
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:779",
+        "brandId": "dmc",
+        "reference": "779",
+        "name": "Cocoa dark",
+        "hex": "#543836",
+        "rgb": [
+          84,
+          56,
+          54
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:793",
+        "brandId": "dmc",
+        "reference": "793",
+        "name": "Cornflower Blue medium",
+        "hex": "#546497",
+        "rgb": [
+          84,
+          100,
+          151
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:502",
+        "brandId": "dmc",
+        "reference": "502",
+        "name": "Blue Green",
+        "hex": "#547565",
+        "rgb": [
+          84,
+          117,
+          101
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:839",
+        "brandId": "dmc",
+        "reference": "839",
+        "name": "Beige Brown dark",
+        "hex": "#553d34",
+        "rgb": [
+          85,
+          61,
+          52
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:993",
+        "brandId": "dmc",
+        "reference": "993",
+        "name": "Aquamarine light",
+        "hex": "#55ab90",
+        "rgb": [
+          85,
+          171,
+          144
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:32",
+        "brandId": "dmc",
+        "reference": "32",
+        "name": "Dark Blueberry",
+        "hex": "#565385",
+        "rgb": [
+          86,
+          83,
+          133
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3857",
+        "brandId": "dmc",
+        "reference": "3857",
+        "name": "Rosewood dark",
+        "hex": "#572523",
+        "rgb": [
+          87,
+          37,
+          35
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:801",
+        "brandId": "dmc",
+        "reference": "801",
+        "name": "Coffee Brown dark",
+        "hex": "#573324",
+        "rgb": [
+          87,
+          51,
+          36
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:730",
+        "brandId": "dmc",
+        "reference": "730",
+        "name": "Olive Green very dark",
+        "hex": "#574d20",
+        "rgb": [
+          87,
+          77,
+          32
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:469",
+        "brandId": "dmc",
+        "reference": "469",
+        "name": "Avocado Green",
+        "hex": "#575f23",
+        "rgb": [
+          87,
+          95,
+          35
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:35",
+        "brandId": "dmc",
+        "reference": "35",
+        "name": "Very Dark Fuchsia",
+        "hex": "#58274b",
+        "rgb": [
+          88,
+          39,
+          75
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3766",
+        "brandId": "dmc",
+        "reference": "3766",
+        "name": "Peacock Blue light",
+        "hex": "#58a2b9",
+        "rgb": [
+          88,
+          162,
+          185
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:320",
+        "brandId": "dmc",
+        "reference": "320",
+        "name": "Pistachio Green medium",
+        "hex": "#5a7f5a",
+        "rgb": [
+          90,
+          127,
+          90
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:988",
+        "brandId": "dmc",
+        "reference": "988",
+        "name": "Forest Green medium",
+        "hex": "#5a8044",
+        "rgb": [
+          90,
+          128,
+          68
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:906",
+        "brandId": "dmc",
+        "reference": "906",
+        "name": "Parrot Green medium",
+        "hex": "#5a8b23",
+        "rgb": [
+          90,
+          139,
+          35
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:814",
+        "brandId": "dmc",
+        "reference": "814",
+        "name": "Garnet dark",
+        "hex": "#5b1325",
+        "rgb": [
+          91,
+          19,
+          37
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:902",
+        "brandId": "dmc",
+        "reference": "902",
+        "name": "Garnet very dark",
+        "hex": "#5b202e",
+        "rgb": [
+          91,
+          32,
+          46
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3834",
+        "brandId": "dmc",
+        "reference": "3834",
+        "name": "Grape dark",
+        "hex": "#5b294a",
+        "rgb": [
+          91,
+          41,
+          74
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3363",
+        "brandId": "dmc",
+        "reference": "3363",
+        "name": "Pine Green medium",
+        "hex": "#5b6b4a",
+        "rgb": [
+          91,
+          107,
+          74
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3839",
+        "brandId": "dmc",
+        "reference": "3839",
+        "name": "Lavender Blue medium",
+        "hex": "#5b70ae",
+        "rgb": [
+          91,
+          112,
+          174
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3740",
+        "brandId": "dmc",
+        "reference": "3740",
+        "name": "Antique Violet dark",
+        "hex": "#5c3e4d",
+        "rgb": [
+          92,
+          62,
+          77
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3011",
+        "brandId": "dmc",
+        "reference": "3011",
+        "name": "Khaki Green dark",
+        "hex": "#5c5830",
+        "rgb": [
+          92,
+          88,
+          48
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:580",
+        "brandId": "dmc",
+        "reference": "580",
+        "name": "Moss Green dark",
+        "hex": "#5c5f20",
+        "rgb": [
+          92,
+          95,
+          32
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:809",
+        "brandId": "dmc",
+        "reference": "809",
+        "name": "Delft Blue",
+        "hex": "#5c92bb",
+        "rgb": [
+          92,
+          146,
+          187
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:327",
+        "brandId": "dmc",
+        "reference": "327",
+        "name": "Violet",
+        "hex": "#5e2e5e",
+        "rgb": [
+          94,
+          46,
+          94
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:829",
+        "brandId": "dmc",
+        "reference": "829",
+        "name": "Golden Olive very dark",
+        "hex": "#5f4220",
+        "rgb": [
+          95,
+          66,
+          32
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3802",
+        "brandId": "dmc",
+        "reference": "3802",
+        "name": "Antique Mauve very dark",
+        "hex": "#602c36",
+        "rgb": [
+          96,
+          44,
+          54
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:610",
+        "brandId": "dmc",
+        "reference": "610",
+        "name": "Drab Brown dark",
+        "hex": "#604a30",
+        "rgb": [
+          96,
+          74,
+          48
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3746",
+        "brandId": "dmc",
+        "reference": "3746",
+        "name": "Blue Violet dark",
+        "hex": "#604f9f",
+        "rgb": [
+          96,
+          79,
+          159
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:703",
+        "brandId": "dmc",
+        "reference": "703",
+        "name": "Chartreuse",
+        "hex": "#60a746",
+        "rgb": [
+          96,
+          167,
+          70
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3790",
+        "brandId": "dmc",
+        "reference": "3790",
+        "name": "Beige Grey ultra dark",
+        "hex": "#614d3d",
+        "rgb": [
+          97,
+          77,
+          61
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:926",
+        "brandId": "dmc",
+        "reference": "926",
+        "name": "Grey Green medium",
+        "hex": "#617878",
+        "rgb": [
+          97,
+          120,
+          120
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:300",
+        "brandId": "dmc",
+        "reference": "300",
+        "name": "Mahogany very dark",
+        "hex": "#632e20",
+        "rgb": [
+          99,
+          46,
+          32
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:433",
+        "brandId": "dmc",
+        "reference": "433",
+        "name": "Brown medium",
+        "hex": "#643823",
+        "rgb": [
+          100,
+          56,
+          35
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:414",
+        "brandId": "dmc",
+        "reference": "414",
+        "name": "Steel Grey dark",
+        "hex": "#646b78",
+        "rgb": [
+          100,
+          107,
+          120
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:31",
+        "brandId": "dmc",
+        "reference": "31",
+        "name": "Blueberry",
+        "hex": "#65629d",
+        "rgb": [
+          101,
+          98,
+          157
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:160",
+        "brandId": "dmc",
+        "reference": "160",
+        "name": "Grey Blue medium",
+        "hex": "#66759c",
+        "rgb": [
+          102,
+          117,
+          156
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:4",
+        "brandId": "dmc",
+        "reference": "4",
+        "name": "Dark Tin",
+        "hex": "#676464",
+        "rgb": [
+          103,
+          100,
+          100
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:830",
+        "brandId": "dmc",
+        "reference": "830",
+        "name": "Golden Olive dark",
+        "hex": "#694b23",
+        "rgb": [
+          105,
+          75,
+          35
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:8",
+        "brandId": "dmc",
+        "reference": "8",
+        "name": "Dark Driftwood",
+        "hex": "#695b50",
+        "rgb": [
+          105,
+          91,
+          80
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:732",
+        "brandId": "dmc",
+        "reference": "732",
+        "name": "Olive Green (731)",
+        "hex": "#695c20",
+        "rgb": [
+          105,
+          92,
+          32
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:646",
+        "brandId": "dmc",
+        "reference": "646",
+        "name": "Beaver Grey dark",
+        "hex": "#696359",
+        "rgb": [
+          105,
+          99,
+          89
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3755",
+        "brandId": "dmc",
+        "reference": "3755",
+        "name": "Baby Blue",
+        "hex": "#6998c4",
+        "rgb": [
+          105,
+          152,
+          196
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3685",
+        "brandId": "dmc",
+        "reference": "3685",
+        "name": "Mauve dark",
+        "hex": "#6a1836",
+        "rgb": [
+          106,
+          24,
+          54
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:470",
+        "brandId": "dmc",
+        "reference": "470",
+        "name": "Avocado Green light",
+        "hex": "#6a7830",
+        "rgb": [
+          106,
+          120,
+          48
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:731",
+        "brandId": "dmc",
+        "reference": "731",
+        "name": "Olive Green Dark",
+        "hex": "#6b580b",
+        "rgb": [
+          107,
+          88,
+          11
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3347",
+        "brandId": "dmc",
+        "reference": "3347",
+        "name": "Yellow Green medium",
+        "hex": "#6b834a",
+        "rgb": [
+          107,
+          131,
+          74
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3837",
+        "brandId": "dmc",
+        "reference": "3837",
+        "name": "Lavender ultra dark",
+        "hex": "#6c3681",
+        "rgb": [
+          108,
+          54,
+          129
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:989",
+        "brandId": "dmc",
+        "reference": "989",
+        "name": "Forest Green",
+        "hex": "#6c9254",
+        "rgb": [
+          108,
+          146,
+          84
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:954",
+        "brandId": "dmc",
+        "reference": "954",
+        "name": "Nile Green",
+        "hex": "#6cbe87",
+        "rgb": [
+          108,
+          190,
+          135
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:221",
+        "brandId": "dmc",
+        "reference": "221",
+        "name": "Shell Pink very dark",
+        "hex": "#6d2329",
+        "rgb": [
+          109,
+          35,
+          41
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:807",
+        "brandId": "dmc",
+        "reference": "807",
+        "name": "Peacock Blue dark",
+        "hex": "#6d9dc7",
+        "rgb": [
+          109,
+          157,
+          199
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:563",
+        "brandId": "dmc",
+        "reference": "563",
+        "name": "Jade light",
+        "hex": "#6db18c",
+        "rgb": [
+          109,
+          177,
+          140
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:315",
+        "brandId": "dmc",
+        "reference": "315",
+        "name": "Antique Mauve dark",
+        "hex": "#6f3842",
+        "rgb": [
+          111,
+          56,
+          66
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3860",
+        "brandId": "dmc",
+        "reference": "3860",
+        "name": "Cocoa",
+        "hex": "#6f4f4b",
+        "rgb": [
+          111,
+          79,
+          75
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:815",
+        "brandId": "dmc",
+        "reference": "815",
+        "name": "Garnet medium",
+        "hex": "#700d23",
+        "rgb": [
+          112,
+          13,
+          35
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:869",
+        "brandId": "dmc",
+        "reference": "869",
+        "name": "Hazelnut Brown very dark",
+        "hex": "#704725",
+        "rgb": [
+          112,
+          71,
+          37
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:611",
+        "brandId": "dmc",
+        "reference": "611",
+        "name": "Drab Brown",
+        "hex": "#705a3d",
+        "rgb": [
+          112,
+          90,
+          61
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:169",
+        "brandId": "dmc",
+        "reference": "169",
+        "name": "Pewter light",
+        "hex": "#707a7a",
+        "rgb": [
+          112,
+          122,
+          122
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:794",
+        "brandId": "dmc",
+        "reference": "794",
+        "name": "Cornflower Blue light",
+        "hex": "#708ab8",
+        "rgb": [
+          112,
+          138,
+          184
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3835",
+        "brandId": "dmc",
+        "reference": "3835",
+        "name": "Grape medium",
+        "hex": "#714061",
+        "rgb": [
+          113,
+          64,
+          97
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3052",
+        "brandId": "dmc",
+        "reference": "3052",
+        "name": "Green Grey medium",
+        "hex": "#717c54",
+        "rgb": [
+          113,
+          124,
+          84
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:632",
+        "brandId": "dmc",
+        "reference": "632",
+        "name": "Desert Sand ultra very dark",
+        "hex": "#723d34",
+        "rgb": [
+          114,
+          61,
+          52
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3041",
+        "brandId": "dmc",
+        "reference": "3041",
+        "name": "Antique Violet medium",
+        "hex": "#725465",
+        "rgb": [
+          114,
+          84,
+          101
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:640",
+        "brandId": "dmc",
+        "reference": "640",
+        "name": "Beige Grey very dark",
+        "hex": "#72644f",
+        "rgb": [
+          114,
+          100,
+          79
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:522",
+        "brandId": "dmc",
+        "reference": "522",
+        "name": "Fern Green",
+        "hex": "#727d5f",
+        "rgb": [
+          114,
+          125,
+          95
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3022",
+        "brandId": "dmc",
+        "reference": "3022",
+        "name": "Brown Grey medium",
+        "hex": "#73725f",
+        "rgb": [
+          115,
+          114,
+          95
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:156",
+        "brandId": "dmc",
+        "reference": "156",
+        "name": "Blue Violet medium light",
+        "hex": "#737db3",
+        "rgb": [
+          115,
+          125,
+          179
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:7",
+        "brandId": "dmc",
+        "reference": "7",
+        "name": "Driftwood",
+        "hex": "#746256",
+        "rgb": [
+          116,
+          98,
+          86
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:400",
+        "brandId": "dmc",
+        "reference": "400",
+        "name": "Mahogany dark",
+        "hex": "#753321",
+        "rgb": [
+          117,
+          51,
+          33
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3858",
+        "brandId": "dmc",
+        "reference": "3858",
+        "name": "Rosewood medium",
+        "hex": "#753d36",
+        "rgb": [
+          117,
+          61,
+          54
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:932",
+        "brandId": "dmc",
+        "reference": "932",
+        "name": "Antique Blue light",
+        "hex": "#758fa6",
+        "rgb": [
+          117,
+          143,
+          166
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:964",
+        "brandId": "dmc",
+        "reference": "964",
+        "name": "Sea Green light",
+        "hex": "#75cdc1",
+        "rgb": [
+          117,
+          205,
+          193
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:915",
+        "brandId": "dmc",
+        "reference": "915",
+        "name": "Plum dark",
+        "hex": "#76003d",
+        "rgb": [
+          118,
+          0,
+          61
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:155",
+        "brandId": "dmc",
+        "reference": "155",
+        "name": "Blue Violet medium dark",
+        "hex": "#7665ab",
+        "rgb": [
+          118,
+          101,
+          171
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:777",
+        "brandId": "dmc",
+        "reference": "777",
+        "name": "Raspberry very dark",
+        "hex": "#780d2c",
+        "rgb": [
+          120,
+          13,
+          44
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:831",
+        "brandId": "dmc",
+        "reference": "831",
+        "name": "Golden Olive medium",
+        "hex": "#785c25",
+        "rgb": [
+          120,
+          92,
+          37
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:704",
+        "brandId": "dmc",
+        "reference": "704",
+        "name": "Chartreuse bright",
+        "hex": "#78ad44",
+        "rgb": [
+          120,
+          173,
+          68
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:519",
+        "brandId": "dmc",
+        "reference": "519",
+        "name": "Sky Blue",
+        "hex": "#78b1c8",
+        "rgb": [
+          120,
+          177,
+          200
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:975",
+        "brandId": "dmc",
+        "reference": "975",
+        "name": "Golden Brown dark",
+        "hex": "#793a20",
+        "rgb": [
+          121,
+          58,
+          32
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:581",
+        "brandId": "dmc",
+        "reference": "581",
+        "name": "Moss Green",
+        "hex": "#797b29",
+        "rgb": [
+          121,
+          123,
+          41
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:34",
+        "brandId": "dmc",
+        "reference": "34",
+        "name": "Dark Fuchsia",
+        "hex": "#7a3070",
+        "rgb": [
+          122,
+          48,
+          112
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:451",
+        "brandId": "dmc",
+        "reference": "451",
+        "name": "Shell Grey dark",
+        "hex": "#7a6c6c",
+        "rgb": [
+          122,
+          108,
+          108
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:598",
+        "brandId": "dmc",
+        "reference": "598",
+        "name": "Turquoise light",
+        "hex": "#7ab2b5",
+        "rgb": [
+          122,
+          178,
+          181
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3803",
+        "brandId": "dmc",
+        "reference": "3803",
+        "name": "Mauve medium",
+        "hex": "#7b2544",
+        "rgb": [
+          123,
+          37,
+          68
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:918",
+        "brandId": "dmc",
+        "reference": "918",
+        "name": "Red Copper dark",
+        "hex": "#7b2e23",
+        "rgb": [
+          123,
+          46,
+          35
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:552",
+        "brandId": "dmc",
+        "reference": "552",
+        "name": "Violet medium",
+        "hex": "#7b3881",
+        "rgb": [
+          123,
+          56,
+          129
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:368",
+        "brandId": "dmc",
+        "reference": "368",
+        "name": "Pistachio Green light",
+        "hex": "#7ba476",
+        "rgb": [
+          123,
+          164,
+          118
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3862",
+        "brandId": "dmc",
+        "reference": "3862",
+        "name": "Mocha Beige dark",
+        "hex": "#7c553e",
+        "rgb": [
+          124,
+          85,
+          62
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:340",
+        "brandId": "dmc",
+        "reference": "340",
+        "name": "Blue Violet medium",
+        "hex": "#7c76be",
+        "rgb": [
+          124,
+          118,
+          190
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3012",
+        "brandId": "dmc",
+        "reference": "3012",
+        "name": "Khaki Green medium",
+        "hex": "#7d7340",
+        "rgb": [
+          125,
+          115,
+          64
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:647",
+        "brandId": "dmc",
+        "reference": "647",
+        "name": "Beaver Grey medium",
+        "hex": "#7d7b70",
+        "rgb": [
+          125,
+          123,
+          112
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:840",
+        "brandId": "dmc",
+        "reference": "840",
+        "name": "Beige Brown medium",
+        "hex": "#7f5c4a",
+        "rgb": [
+          127,
+          92,
+          74
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:434",
+        "brandId": "dmc",
+        "reference": "434",
+        "name": "Brown light",
+        "hex": "#804625",
+        "rgb": [
+          128,
+          70,
+          37
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3726",
+        "brandId": "dmc",
+        "reference": "3726",
+        "name": "Antique Mauve dark",
+        "hex": "#804653",
+        "rgb": [
+          128,
+          70,
+          83
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:318",
+        "brandId": "dmc",
+        "reference": "318",
+        "name": "Steel Grey light",
+        "hex": "#808796",
+        "rgb": [
+          128,
+          135,
+          150
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:28",
+        "brandId": "dmc",
+        "reference": "28",
+        "name": "Medium Light Eggplant",
+        "hex": "#8178a0",
+        "rgb": [
+          129,
+          120,
+          160
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3777",
+        "brandId": "dmc",
+        "reference": "3777",
+        "name": "Terra Cotta very dark",
+        "hex": "#822529",
+        "rgb": [
+          130,
+          37,
+          41
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:208",
+        "brandId": "dmc",
+        "reference": "208",
+        "name": "Lavender very dark",
+        "hex": "#824596",
+        "rgb": [
+          130,
+          69,
+          150
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:370",
+        "brandId": "dmc",
+        "reference": "370",
+        "name": "Mustard medium",
+        "hex": "#826e3d",
+        "rgb": [
+          130,
+          110,
+          61
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3817",
+        "brandId": "dmc",
+        "reference": "3817",
+        "name": "Celadon Green light",
+        "hex": "#82ab96",
+        "rgb": [
+          130,
+          171,
+          150
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:503",
+        "brandId": "dmc",
+        "reference": "503",
+        "name": "Blue Green medium",
+        "hex": "#839c8b",
+        "rgb": [
+          131,
+          156,
+          139
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3721",
+        "brandId": "dmc",
+        "reference": "3721",
+        "name": "Shell Pink dark",
+        "hex": "#85303a",
+        "rgb": [
+          133,
+          48,
+          58
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3840",
+        "brandId": "dmc",
+        "reference": "3840",
+        "name": "Lavender Blue light",
+        "hex": "#85a3ce",
+        "rgb": [
+          133,
+          163,
+          206
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:907",
+        "brandId": "dmc",
+        "reference": "907",
+        "name": "Parrot Green light",
+        "hex": "#87a623",
+        "rgb": [
+          135,
+          166,
+          35
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:827",
+        "brandId": "dmc",
+        "reference": "827",
+        "name": "Blue very light",
+        "hex": "#87b4d0",
+        "rgb": [
+          135,
+          180,
+          208
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:164",
+        "brandId": "dmc",
+        "reference": "164",
+        "name": "Forest Green light",
+        "hex": "#87bf78",
+        "rgb": [
+          135,
+          191,
+          120
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:498",
+        "brandId": "dmc",
+        "reference": "498",
+        "name": "Christmas Red dark",
+        "hex": "#880025",
+        "rgb": [
+          136,
+          0,
+          37
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:355",
+        "brandId": "dmc",
+        "reference": "355",
+        "name": "Terra Cotta dark",
+        "hex": "#882e2c",
+        "rgb": [
+          136,
+          46,
+          44
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:33",
+        "brandId": "dmc",
+        "reference": "33",
+        "name": "Fuchsia",
+        "hex": "#884b8e",
+        "rgb": [
+          136,
+          75,
+          142
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:927",
+        "brandId": "dmc",
+        "reference": "927",
+        "name": "Grey Green light",
+        "hex": "#889a97",
+        "rgb": [
+          136,
+          154,
+          151
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:816",
+        "brandId": "dmc",
+        "reference": "816",
+        "name": "Garnet",
+        "hex": "#89132c",
+        "rgb": [
+          137,
+          19,
+          44
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3364",
+        "brandId": "dmc",
+        "reference": "3364",
+        "name": "Pine Green",
+        "hex": "#89965f",
+        "rgb": [
+          137,
+          150,
+          95
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:30",
+        "brandId": "dmc",
+        "reference": "30",
+        "name": "Medium Light Blueberry",
+        "hex": "#8a89b0",
+        "rgb": [
+          138,
+          137,
+          176
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3053",
+        "brandId": "dmc",
+        "reference": "3053",
+        "name": "Green Grey",
+        "hex": "#8b9669",
+        "rgb": [
+          139,
+          150,
+          105
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:564",
+        "brandId": "dmc",
+        "reference": "564",
+        "name": "Jade very light",
+        "hex": "#8bc9a3",
+        "rgb": [
+          139,
+          201,
+          163
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:780",
+        "brandId": "dmc",
+        "reference": "780",
+        "name": "Topaz ultra very dark",
+        "hex": "#8c4a23",
+        "rgb": [
+          140,
+          74,
+          35
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:642",
+        "brandId": "dmc",
+        "reference": "642",
+        "name": "Beige Grey dark",
+        "hex": "#8c7d63",
+        "rgb": [
+          140,
+          125,
+          99
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3813",
+        "brandId": "dmc",
+        "reference": "3813",
+        "name": "Blue Green light",
+        "hex": "#8cac9d",
+        "rgb": [
+          140,
+          172,
+          157
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:167",
+        "brandId": "dmc",
+        "reference": "167",
+        "name": "Yellow Beige very dark",
+        "hex": "#8d643a",
+        "rgb": [
+          141,
+          100,
+          58
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3861",
+        "brandId": "dmc",
+        "reference": "3861",
+        "name": "Cocoa light",
+        "hex": "#8d6c6a",
+        "rgb": [
+          141,
+          108,
+          106
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:471",
+        "brandId": "dmc",
+        "reference": "471",
+        "name": "Avocado Green very light",
+        "hex": "#8d9d54",
+        "rgb": [
+          141,
+          157,
+          84
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:966",
+        "brandId": "dmc",
+        "reference": "966",
+        "name": "Baby Green medium",
+        "hex": "#8dbf8e",
+        "rgb": [
+          141,
+          191,
+          142
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:420",
+        "brandId": "dmc",
+        "reference": "420",
+        "name": "Hazelnut Brown dark",
+        "hex": "#8e6034",
+        "rgb": [
+          142,
+          96,
+          52
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:523",
+        "brandId": "dmc",
+        "reference": "523",
+        "name": "Fern Green light",
+        "hex": "#8e9773",
+        "rgb": [
+          142,
+          151,
+          115
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:800",
+        "brandId": "dmc",
+        "reference": "800",
+        "name": "Delft Blue pale",
+        "hex": "#8eb2d4",
+        "rgb": [
+          142,
+          178,
+          212
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3325",
+        "brandId": "dmc",
+        "reference": "3325",
+        "name": "Baby Blue light",
+        "hex": "#8eb8d8",
+        "rgb": [
+          142,
+          184,
+          216
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3761",
+        "brandId": "dmc",
+        "reference": "3761",
+        "name": "Sky Blue light",
+        "hex": "#8ec4d8",
+        "rgb": [
+          142,
+          196,
+          216
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:371",
+        "brandId": "dmc",
+        "reference": "371",
+        "name": "Mustard",
+        "hex": "#8f7a47",
+        "rgb": [
+          143,
+          122,
+          71
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3",
+        "brandId": "dmc",
+        "reference": "3",
+        "name": "Medium Tin",
+        "hex": "#908f90",
+        "rgb": [
+          144,
+          143,
+          144
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:150",
+        "brandId": "dmc",
+        "reference": "150",
+        "name": "Dusty Rose ultra very dark",
+        "hex": "#911238",
+        "rgb": [
+          145,
+          18,
+          56
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:917",
+        "brandId": "dmc",
+        "reference": "917",
+        "name": "Plum medium",
+        "hex": "#911b5b",
+        "rgb": [
+          145,
+          27,
+          91
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:919",
+        "brandId": "dmc",
+        "reference": "919",
+        "name": "Red Copper",
+        "hex": "#912920",
+        "rgb": [
+          145,
+          41,
+          32
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:22",
+        "brandId": "dmc",
+        "reference": "22",
+        "name": "Alizarin",
+        "hex": "#922a29",
+        "rgb": [
+          146,
+          42,
+          41
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:553",
+        "brandId": "dmc",
+        "reference": "553",
+        "name": "Violet",
+        "hex": "#924f92",
+        "rgb": [
+          146,
+          79,
+          146
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3863",
+        "brandId": "dmc",
+        "reference": "3863",
+        "name": "Mocha Beige medium",
+        "hex": "#92694f",
+        "rgb": [
+          146,
+          105,
+          79
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:341",
+        "brandId": "dmc",
+        "reference": "341",
+        "name": "Blue Violet light",
+        "hex": "#929ecb",
+        "rgb": [
+          146,
+          158,
+          203
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3772",
+        "brandId": "dmc",
+        "reference": "3772",
+        "name": "Desert Sand very dark",
+        "hex": "#935a4b",
+        "rgb": [
+          147,
+          90,
+          75
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3023",
+        "brandId": "dmc",
+        "reference": "3023",
+        "name": "Brown Grey light",
+        "hex": "#938d76",
+        "rgb": [
+          147,
+          141,
+          118
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:157",
+        "brandId": "dmc",
+        "reference": "157",
+        "name": "Cornflower Blue very light",
+        "hex": "#95abca",
+        "rgb": [
+          149,
+          171,
+          202
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:813",
+        "brandId": "dmc",
+        "reference": "813",
+        "name": "Blue light",
+        "hex": "#95b2c9",
+        "rgb": [
+          149,
+          178,
+          201
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3811",
+        "brandId": "dmc",
+        "reference": "3811",
+        "name": "Turquoise very light",
+        "hex": "#95c5c6",
+        "rgb": [
+          149,
+          197,
+          198
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3042",
+        "brandId": "dmc",
+        "reference": "3042",
+        "name": "Antique Violet light",
+        "hex": "#967c8d",
+        "rgb": [
+          150,
+          124,
+          141
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3032",
+        "brandId": "dmc",
+        "reference": "3032",
+        "name": "Mocha Brown medium",
+        "hex": "#968669",
+        "rgb": [
+          150,
+          134,
+          105
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:159",
+        "brandId": "dmc",
+        "reference": "159",
+        "name": "Grey Blue light",
+        "hex": "#97a6c5",
+        "rgb": [
+          151,
+          166,
+          197
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:955",
+        "brandId": "dmc",
+        "reference": "955",
+        "name": "Nile Green light",
+        "hex": "#97dca8",
+        "rgb": [
+          151,
+          220,
+          168
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:733",
+        "brandId": "dmc",
+        "reference": "733",
+        "name": "Olive Green medium",
+        "hex": "#988630",
+        "rgb": [
+          152,
+          134,
+          48
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:648",
+        "brandId": "dmc",
+        "reference": "648",
+        "name": "Beaver Grey light",
+        "hex": "#98988b",
+        "rgb": [
+          152,
+          152,
+          139
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:13",
+        "brandId": "dmc",
+        "reference": "13",
+        "name": "Medium Light Nile Green",
+        "hex": "#98c29c",
+        "rgb": [
+          152,
+          194,
+          156
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3722",
+        "brandId": "dmc",
+        "reference": "3722",
+        "name": "Shell Pink medium",
+        "hex": "#99444d",
+        "rgb": [
+          153,
+          68,
+          77
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:301",
+        "brandId": "dmc",
+        "reference": "301",
+        "name": "Mahogany medium",
+        "hex": "#994725",
+        "rgb": [
+          153,
+          71,
+          37
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:612",
+        "brandId": "dmc",
+        "reference": "612",
+        "name": "Drab Brown light",
+        "hex": "#99815a",
+        "rgb": [
+          153,
+          129,
+          90
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:304",
+        "brandId": "dmc",
+        "reference": "304",
+        "name": "Christmas Red medium",
+        "hex": "#9a0029",
+        "rgb": [
+          154,
+          0,
+          41
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:832",
+        "brandId": "dmc",
+        "reference": "832",
+        "name": "Golden Olive",
+        "hex": "#9a762c",
+        "rgb": [
+          154,
+          118,
+          44
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:524",
+        "brandId": "dmc",
+        "reference": "524",
+        "name": "Fern Green very light",
+        "hex": "#9aa284",
+        "rgb": [
+          154,
+          162,
+          132
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:841",
+        "brandId": "dmc",
+        "reference": "841",
+        "name": "Beige Brown light",
+        "hex": "#9b7863",
+        "rgb": [
+          155,
+          120,
+          99
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3830",
+        "brandId": "dmc",
+        "reference": "3830",
+        "name": "Terra Cotta",
+        "hex": "#9c3a36",
+        "rgb": [
+          156,
+          58,
+          54
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3826",
+        "brandId": "dmc",
+        "reference": "3826",
+        "name": "Golden Brown",
+        "hex": "#9c4d25",
+        "rgb": [
+          156,
+          77,
+          37
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3752",
+        "brandId": "dmc",
+        "reference": "3752",
+        "name": "Antique Blue very light",
+        "hex": "#9db1bd",
+        "rgb": [
+          157,
+          177,
+          189
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3350",
+        "brandId": "dmc",
+        "reference": "3350",
+        "name": "Dusty Rose ultra dark",
+        "hex": "#9e2946",
+        "rgb": [
+          158,
+          41,
+          70
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3045",
+        "brandId": "dmc",
+        "reference": "3045",
+        "name": "Yellow Beige dark",
+        "hex": "#9f7646",
+        "rgb": [
+          159,
+          118,
+          70
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:452",
+        "brandId": "dmc",
+        "reference": "452",
+        "name": "Shell Grey medium",
+        "hex": "#9f8b8b",
+        "rgb": [
+          159,
+          139,
+          139
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:415",
+        "brandId": "dmc",
+        "reference": "415",
+        "name": "Pearl Grey",
+        "hex": "#9fa6b1",
+        "rgb": [
+          159,
+          166,
+          177
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3841",
+        "brandId": "dmc",
+        "reference": "3841",
+        "name": "Baby Blue pale",
+        "hex": "#9fbcce",
+        "rgb": [
+          159,
+          188,
+          206
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:166",
+        "brandId": "dmc",
+        "reference": "166",
+        "name": "Moss Green medium light",
+        "hex": "#a19f20",
+        "rgb": [
+          161,
+          159,
+          32
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:781",
+        "brandId": "dmc",
+        "reference": "781",
+        "name": "Topaz Very Dark",
+        "hex": "#a25f1f",
+        "rgb": [
+          162,
+          95,
+          31
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3836",
+        "brandId": "dmc",
+        "reference": "3836",
+        "name": "Grape light",
+        "hex": "#a26c90",
+        "rgb": [
+          162,
+          108,
+          144
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:162",
+        "brandId": "dmc",
+        "reference": "162",
+        "name": "Blue ultra very light",
+        "hex": "#a2c1d0",
+        "rgb": [
+          162,
+          193,
+          208
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:435",
+        "brandId": "dmc",
+        "reference": "435",
+        "name": "Brown very light",
+        "hex": "#a36134",
+        "rgb": [
+          163,
+          97,
+          52
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:372",
+        "brandId": "dmc",
+        "reference": "372",
+        "name": "Mustard light",
+        "hex": "#a39361",
+        "rgb": [
+          163,
+          147,
+          97
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3013",
+        "brandId": "dmc",
+        "reference": "3013",
+        "name": "Khaki Green light",
+        "hex": "#a39f6a",
+        "rgb": [
+          163,
+          159,
+          106
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3348",
+        "brandId": "dmc",
+        "reference": "3348",
+        "name": "Yellow Green light",
+        "hex": "#a3b86a",
+        "rgb": [
+          163,
+          184,
+          106
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:920",
+        "brandId": "dmc",
+        "reference": "920",
+        "name": "Copper medium",
+        "hex": "#a43d25",
+        "rgb": [
+          164,
+          61,
+          37
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3829",
+        "brandId": "dmc",
+        "reference": "3829",
+        "name": "Old Gold very dark",
+        "hex": "#a46c2e",
+        "rgb": [
+          164,
+          108,
+          46
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:817",
+        "brandId": "dmc",
+        "reference": "817",
+        "name": "Coral Red very dark",
+        "hex": "#a60d1b",
+        "rgb": [
+          166,
+          13,
+          27
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:326",
+        "brandId": "dmc",
+        "reference": "326",
+        "name": "Rose very deep",
+        "hex": "#a61238",
+        "rgb": [
+          166,
+          18,
+          56
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:347",
+        "brandId": "dmc",
+        "reference": "347",
+        "name": "Salmon very dark",
+        "hex": "#a62030",
+        "rgb": [
+          166,
+          32,
+          48
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:209",
+        "brandId": "dmc",
+        "reference": "209",
+        "name": "Lavender dark",
+        "hex": "#a66cb3",
+        "rgb": [
+          166,
+          108,
+          179
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:680",
+        "brandId": "dmc",
+        "reference": "680",
+        "name": "Old Gold dark",
+        "hex": "#a67334",
+        "rgb": [
+          166,
+          115,
+          52
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3828",
+        "brandId": "dmc",
+        "reference": "3828",
+        "name": "Hazelnut Brown",
+        "hex": "#a67946",
+        "rgb": [
+          166,
+          121,
+          70
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:828",
+        "brandId": "dmc",
+        "reference": "828",
+        "name": "Blue ultra very light",
+        "hex": "#a6c9d4",
+        "rgb": [
+          166,
+          201,
+          212
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:718",
+        "brandId": "dmc",
+        "reference": "718",
+        "name": "Plum",
+        "hex": "#a7206f",
+        "rgb": [
+          167,
+          32,
+          111
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3831",
+        "brandId": "dmc",
+        "reference": "3831",
+        "name": "Raspberry dark",
+        "hex": "#a8203a",
+        "rgb": [
+          168,
+          32,
+          58
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:2",
+        "brandId": "dmc",
+        "reference": "2",
+        "name": "Tin",
+        "hex": "#ababab",
+        "rgb": [
+          171,
+          171,
+          171
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:168",
+        "brandId": "dmc",
+        "reference": "168",
+        "name": "Pewter very light",
+        "hex": "#abb3b7",
+        "rgb": [
+          171,
+          179,
+          183
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:928",
+        "brandId": "dmc",
+        "reference": "928",
+        "name": "Grey Green very light",
+        "hex": "#abb5b1",
+        "rgb": [
+          171,
+          181,
+          177
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:321",
+        "brandId": "dmc",
+        "reference": "321",
+        "name": "Christmas Red",
+        "hex": "#ac0025",
+        "rgb": [
+          172,
+          0,
+          37
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:782",
+        "brandId": "dmc",
+        "reference": "782",
+        "name": "Topaz dark (781)",
+        "hex": "#ac6520",
+        "rgb": [
+          172,
+          101,
+          32
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3782",
+        "brandId": "dmc",
+        "reference": "3782",
+        "name": "Mocha Brown light",
+        "hex": "#ac9278",
+        "rgb": [
+          172,
+          146,
+          120
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:613",
+        "brandId": "dmc",
+        "reference": "613",
+        "name": "Drab Brown very light",
+        "hex": "#ac966d",
+        "rgb": [
+          172,
+          150,
+          109
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:504",
+        "brandId": "dmc",
+        "reference": "504",
+        "name": "Blue Green Very Light",
+        "hex": "#acdac1",
+        "rgb": [
+          172,
+          218,
+          193
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:309",
+        "brandId": "dmc",
+        "reference": "309",
+        "name": "Rose deep",
+        "hex": "#ad203e",
+        "rgb": [
+          173,
+          32,
+          62
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:356",
+        "brandId": "dmc",
+        "reference": "356",
+        "name": "Terra Cotta medium",
+        "hex": "#ad4f45",
+        "rgb": [
+          173,
+          79,
+          69
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3747",
+        "brandId": "dmc",
+        "reference": "3747",
+        "name": "Blue Violet very light",
+        "hex": "#adbadf",
+        "rgb": [
+          173,
+          186,
+          223
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:747",
+        "brandId": "dmc",
+        "reference": "747",
+        "name": "Sky Blue very light",
+        "hex": "#addbe1",
+        "rgb": [
+          173,
+          219,
+          225
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:600",
+        "brandId": "dmc",
+        "reference": "600",
+        "name": "Cranberry very dark",
+        "hex": "#af0047",
+        "rgb": [
+          175,
+          0,
+          71
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:316",
+        "brandId": "dmc",
+        "reference": "316",
+        "name": "Antique Mauve medium",
+        "hex": "#af6a7f",
+        "rgb": [
+          175,
+          106,
+          127
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:833",
+        "brandId": "dmc",
+        "reference": "833",
+        "name": "Golden Olive light",
+        "hex": "#b08d3e",
+        "rgb": [
+          176,
+          141,
+          62
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:734",
+        "brandId": "dmc",
+        "reference": "734",
+        "name": "Olive Green light",
+        "hex": "#b09d47",
+        "rgb": [
+          176,
+          157,
+          71
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:16",
+        "brandId": "dmc",
+        "reference": "16",
+        "name": "Light Chartreuse",
+        "hex": "#b0b56a",
+        "rgb": [
+          176,
+          181,
+          106
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3687",
+        "brandId": "dmc",
+        "reference": "3687",
+        "name": "Mauve",
+        "hex": "#b13d64",
+        "rgb": [
+          177,
+          61,
+          100
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:407",
+        "brandId": "dmc",
+        "reference": "407",
+        "name": "Clay Brown (3773)",
+        "hex": "#b17260",
+        "rgb": [
+          177,
+          114,
+          96
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3864",
+        "brandId": "dmc",
+        "reference": "3864",
+        "name": "Mocha Beige light",
+        "hex": "#b1896f",
+        "rgb": [
+          177,
+          137,
+          111
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3753",
+        "brandId": "dmc",
+        "reference": "3753",
+        "name": "Antique Blue ultra very light",
+        "hex": "#b1c6d7",
+        "rgb": [
+          177,
+          198,
+          215
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3859",
+        "brandId": "dmc",
+        "reference": "3859",
+        "name": "Rosewood light",
+        "hex": "#b26d5c",
+        "rgb": [
+          178,
+          109,
+          92
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:223",
+        "brandId": "dmc",
+        "reference": "223",
+        "name": "Shell Pink light",
+        "hex": "#b35c65",
+        "rgb": [
+          179,
+          92,
+          101
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:6",
+        "brandId": "dmc",
+        "reference": "6",
+        "name": "Medium Light Driftwood",
+        "hex": "#b4a293",
+        "rgb": [
+          180,
+          162,
+          147
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:775",
+        "brandId": "dmc",
+        "reference": "775",
+        "name": "Baby Blue very light",
+        "hex": "#b4cfdb",
+        "rgb": [
+          180,
+          207,
+          219
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3064",
+        "brandId": "dmc",
+        "reference": "3064",
+        "name": "Desert Sand",
+        "hex": "#b87359",
+        "rgb": [
+          184,
+          115,
+          89
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3819",
+        "brandId": "dmc",
+        "reference": "3819",
+        "name": "Moss Green light",
+        "hex": "#b8b738",
+        "rgb": [
+          184,
+          183,
+          56
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:436",
+        "brandId": "dmc",
+        "reference": "436",
+        "name": "Tan",
+        "hex": "#b97c4a",
+        "rgb": [
+          185,
+          124,
+          74
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3024",
+        "brandId": "dmc",
+        "reference": "3024",
+        "name": "Brown Grey very light",
+        "hex": "#b9b09f",
+        "rgb": [
+          185,
+          176,
+          159
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3804",
+        "brandId": "dmc",
+        "reference": "3804",
+        "name": "Cyclamen Pink dark",
+        "hex": "#ba1861",
+        "rgb": [
+          186,
+          24,
+          97
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:644",
+        "brandId": "dmc",
+        "reference": "644",
+        "name": "Beige Grey medium",
+        "hex": "#bab094",
+        "rgb": [
+          186,
+          176,
+          148
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3743",
+        "brandId": "dmc",
+        "reference": "3743",
+        "name": "Antique Violet very light",
+        "hex": "#bba9b8",
+        "rgb": [
+          187,
+          169,
+          184
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:5",
+        "brandId": "dmc",
+        "reference": "5",
+        "name": "Light Driftwood",
+        "hex": "#bbafa5",
+        "rgb": [
+          187,
+          175,
+          165
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:26",
+        "brandId": "dmc",
+        "reference": "26",
+        "name": "Pale Lavender",
+        "hex": "#bbb0d1",
+        "rgb": [
+          187,
+          176,
+          209
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:472",
+        "brandId": "dmc",
+        "reference": "472",
+        "name": "Avocado Green ultra light",
+        "hex": "#bbbb60",
+        "rgb": [
+          187,
+          187,
+          96
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:921",
+        "brandId": "dmc",
+        "reference": "921",
+        "name": "Copper",
+        "hex": "#bc4d2e",
+        "rgb": [
+          188,
+          77,
+          46
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:422",
+        "brandId": "dmc",
+        "reference": "422",
+        "name": "Hazelnut Brown light",
+        "hex": "#bc935b",
+        "rgb": [
+          188,
+          147,
+          91
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:349",
+        "brandId": "dmc",
+        "reference": "349",
+        "name": "Coral dark",
+        "hex": "#bd1c29",
+        "rgb": [
+          189,
+          28,
+          41
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3776",
+        "brandId": "dmc",
+        "reference": "3776",
+        "name": "Mahogany light",
+        "hex": "#bd5f36",
+        "rgb": [
+          189,
+          95,
+          54
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:210",
+        "brandId": "dmc",
+        "reference": "210",
+        "name": "Lavender medium",
+        "hex": "#be91cd",
+        "rgb": [
+          190,
+          145,
+          205
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3607",
+        "brandId": "dmc",
+        "reference": "3607",
+        "name": "Plum light",
+        "hex": "#bf3d8f",
+        "rgb": [
+          191,
+          61,
+          143
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:842",
+        "brandId": "dmc",
+        "reference": "842",
+        "name": "Beige Brown very light",
+        "hex": "#bf9f87",
+        "rgb": [
+          191,
+          159,
+          135
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:453",
+        "brandId": "dmc",
+        "reference": "453",
+        "name": "Shell Grey light",
+        "hex": "#bfada6",
+        "rgb": [
+          191,
+          173,
+          166
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:21",
+        "brandId": "dmc",
+        "reference": "21",
+        "name": "Light Alizarin",
+        "hex": "#c0614d",
+        "rgb": [
+          192,
+          97,
+          77
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3731",
+        "brandId": "dmc",
+        "reference": "3731",
+        "name": "Dusty Rose very dark",
+        "hex": "#c1405f",
+        "rgb": [
+          193,
+          64,
+          95
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3328",
+        "brandId": "dmc",
+        "reference": "3328",
+        "name": "Salmon dark",
+        "hex": "#c1424b",
+        "rgb": [
+          193,
+          66,
+          75
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3778",
+        "brandId": "dmc",
+        "reference": "3778",
+        "name": "Terra Cotta light",
+        "hex": "#c1695a",
+        "rgb": [
+          193,
+          105,
+          90
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:369",
+        "brandId": "dmc",
+        "reference": "369",
+        "name": "Pistachio Green very light",
+        "hex": "#c1d49d",
+        "rgb": [
+          193,
+          212,
+          157
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:729",
+        "brandId": "dmc",
+        "reference": "729",
+        "name": "Old Gold medium",
+        "hex": "#c28940",
+        "rgb": [
+          194,
+          137,
+          64
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3072",
+        "brandId": "dmc",
+        "reference": "3072",
+        "name": "Beaver Grey very light",
+        "hex": "#c2c6be",
+        "rgb": [
+          194,
+          198,
+          190
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:772",
+        "brandId": "dmc",
+        "reference": "772",
+        "name": "Yellow Green very light",
+        "hex": "#c2da97",
+        "rgb": [
+          194,
+          218,
+          151
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3852",
+        "brandId": "dmc",
+        "reference": "3852",
+        "name": "Straw very dark",
+        "hex": "#c3801b",
+        "rgb": [
+          195,
+          128,
+          27
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:976",
+        "brandId": "dmc",
+        "reference": "976",
+        "name": "Golden Brown medium",
+        "hex": "#c46a2c",
+        "rgb": [
+          196,
+          106,
+          44
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:554",
+        "brandId": "dmc",
+        "reference": "554",
+        "name": "Violet light",
+        "hex": "#c48bc3",
+        "rgb": [
+          196,
+          139,
+          195
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:762",
+        "brandId": "dmc",
+        "reference": "762",
+        "name": "Pearl Grey very light",
+        "hex": "#c4c5ce",
+        "rgb": [
+          196,
+          197,
+          206
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3046",
+        "brandId": "dmc",
+        "reference": "3046",
+        "name": "Yellow Beige medium",
+        "hex": "#c5a966",
+        "rgb": [
+          197,
+          169,
+          102
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:1",
+        "brandId": "dmc",
+        "reference": "1",
+        "name": "White Tin",
+        "hex": "#c5c5c5",
+        "rgb": [
+          197,
+          197,
+          197
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:601",
+        "brandId": "dmc",
+        "reference": "601",
+        "name": "Cranberry dark",
+        "hex": "#c61b57",
+        "rgb": [
+          198,
+          27,
+          87
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:900",
+        "brandId": "dmc",
+        "reference": "900",
+        "name": "Burnt Orange dark",
+        "hex": "#c63423",
+        "rgb": [
+          198,
+          52,
+          35
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3832",
+        "brandId": "dmc",
+        "reference": "3832",
+        "name": "Raspberry medium",
+        "hex": "#c63850",
+        "rgb": [
+          198,
+          56,
+          80
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:834",
+        "brandId": "dmc",
+        "reference": "834",
+        "name": "Golden Olive very light",
+        "hex": "#c7a550",
+        "rgb": [
+          199,
+          165,
+          80
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:666",
+        "brandId": "dmc",
+        "reference": "666",
+        "name": "Christmas Red bright",
+        "hex": "#c90023",
+        "rgb": [
+          201,
+          0,
+          35
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3727",
+        "brandId": "dmc",
+        "reference": "3727",
+        "name": "Antique Mauve light",
+        "hex": "#c9899c",
+        "rgb": [
+          201,
+          137,
+          156
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:778",
+        "brandId": "dmc",
+        "reference": "778",
+        "name": "Antique Mauve very light",
+        "hex": "#c9949e",
+        "rgb": [
+          201,
+          148,
+          158
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3805",
+        "brandId": "dmc",
+        "reference": "3805",
+        "name": "Cyclamen Pink",
+        "hex": "#cc2b73",
+        "rgb": [
+          204,
+          43,
+          115
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:152",
+        "brandId": "dmc",
+        "reference": "152",
+        "name": "Shell Pink medium light",
+        "hex": "#cc8285",
+        "rgb": [
+          204,
+          130,
+          133
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:19",
+        "brandId": "dmc",
+        "reference": "19",
+        "name": "Medium Light Autumn Gold",
+        "hex": "#cc9c52",
+        "rgb": [
+          204,
+          156,
+          82
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:165",
+        "brandId": "dmc",
+        "reference": "165",
+        "name": "Moss Green very light",
+        "hex": "#cdc965",
+        "rgb": [
+          205,
+          201,
+          101
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:15",
+        "brandId": "dmc",
+        "reference": "15",
+        "name": "Apple Green",
+        "hex": "#cdd684",
+        "rgb": [
+          205,
+          214,
+          132
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:10",
+        "brandId": "dmc",
+        "reference": "10",
+        "name": "Very Light Tender Green",
+        "hex": "#ceceb8",
+        "rgb": [
+          206,
+          206,
+          184
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:14",
+        "brandId": "dmc",
+        "reference": "14",
+        "name": "Pale Apple Green",
+        "hex": "#ced194",
+        "rgb": [
+          206,
+          209,
+          148
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3833",
+        "brandId": "dmc",
+        "reference": "3833",
+        "name": "Raspberry light",
+        "hex": "#cf556a",
+        "rgb": [
+          207,
+          85,
+          106
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3712",
+        "brandId": "dmc",
+        "reference": "3712",
+        "name": "Salmon medium",
+        "hex": "#cf575c",
+        "rgb": [
+          207,
+          87,
+          92
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3773",
+        "brandId": "dmc",
+        "reference": "3773",
+        "name": "Desert Sand Medium",
+        "hex": "#cf866d",
+        "rgb": [
+          207,
+          134,
+          109
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:12",
+        "brandId": "dmc",
+        "reference": "12",
+        "name": "Tender Green",
+        "hex": "#cfc662",
+        "rgb": [
+          207,
+          198,
+          98
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:783",
+        "brandId": "dmc",
+        "reference": "783",
+        "name": "Topaz medium",
+        "hex": "#d0842c",
+        "rgb": [
+          208,
+          132,
+          44
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:25",
+        "brandId": "dmc",
+        "reference": "25",
+        "name": "Ultra Light Lavender",
+        "hex": "#d0cadb",
+        "rgb": [
+          208,
+          202,
+          219
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3853",
+        "brandId": "dmc",
+        "reference": "3853",
+        "name": "Autumn Gold dark",
+        "hex": "#d1642c",
+        "rgb": [
+          209,
+          100,
+          44
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3688",
+        "brandId": "dmc",
+        "reference": "3688",
+        "name": "Mauve medium",
+        "hex": "#d16987",
+        "rgb": [
+          209,
+          105,
+          135
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:437",
+        "brandId": "dmc",
+        "reference": "437",
+        "name": "Tan light",
+        "hex": "#d19c6a",
+        "rgb": [
+          209,
+          156,
+          106
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:153",
+        "brandId": "dmc",
+        "reference": "153",
+        "name": "Violet very light",
+        "hex": "#d19ec4",
+        "rgb": [
+          209,
+          158,
+          196
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:720",
+        "brandId": "dmc",
+        "reference": "720",
+        "name": "Orange Spice dark",
+        "hex": "#d2421b",
+        "rgb": [
+          210,
+          66,
+          27
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3033",
+        "brandId": "dmc",
+        "reference": "3033",
+        "name": "Mocha Brown very light",
+        "hex": "#d2bda6",
+        "rgb": [
+          210,
+          189,
+          166
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:350",
+        "brandId": "dmc",
+        "reference": "350",
+        "name": "Coral medium",
+        "hex": "#d43434",
+        "rgb": [
+          212,
+          52,
+          52
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:335",
+        "brandId": "dmc",
+        "reference": "335",
+        "name": "Rose",
+        "hex": "#d44464",
+        "rgb": [
+          212,
+          68,
+          100
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:224",
+        "brandId": "dmc",
+        "reference": "224",
+        "name": "Shell Pink very light",
+        "hex": "#d48f8b",
+        "rgb": [
+          212,
+          143,
+          139
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:738",
+        "brandId": "dmc",
+        "reference": "738",
+        "name": "Tan very light",
+        "hex": "#d5a978",
+        "rgb": [
+          213,
+          169,
+          120
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:17",
+        "brandId": "dmc",
+        "reference": "17",
+        "name": "Light Yellow Plum",
+        "hex": "#d5c551",
+        "rgb": [
+          213,
+          197,
+          81
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3820",
+        "brandId": "dmc",
+        "reference": "3820",
+        "name": "Straw dark",
+        "hex": "#d6962b",
+        "rgb": [
+          214,
+          150,
+          43
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:211",
+        "brandId": "dmc",
+        "reference": "211",
+        "name": "Lavender light",
+        "hex": "#d6b5e3",
+        "rgb": [
+          214,
+          181,
+          227
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:602",
+        "brandId": "dmc",
+        "reference": "602",
+        "name": "Cranberry medium",
+        "hex": "#d7306d",
+        "rgb": [
+          215,
+          48,
+          109
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:922",
+        "brandId": "dmc",
+        "reference": "922",
+        "name": "Copper light",
+        "hex": "#d7633a",
+        "rgb": [
+          215,
+          99,
+          58
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3608",
+        "brandId": "dmc",
+        "reference": "3608",
+        "name": "Plum very light",
+        "hex": "#d770ad",
+        "rgb": [
+          215,
+          112,
+          173
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:961",
+        "brandId": "dmc",
+        "reference": "961",
+        "name": "Dusty Rose dark",
+        "hex": "#d94b6f",
+        "rgb": [
+          217,
+          75,
+          111
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:18",
+        "brandId": "dmc",
+        "reference": "18",
+        "name": "Yellow Plum",
+        "hex": "#d9bf4a",
+        "rgb": [
+          217,
+          191,
+          74
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:27",
+        "brandId": "dmc",
+        "reference": "27",
+        "name": "White Violet",
+        "hex": "#d9d4d8",
+        "rgb": [
+          217,
+          212,
+          216
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:758",
+        "brandId": "dmc",
+        "reference": "758",
+        "name": "Terra Cotta very light",
+        "hex": "#db917a",
+        "rgb": [
+          219,
+          145,
+          122
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3047",
+        "brandId": "dmc",
+        "reference": "3047",
+        "name": "Yellow Beige light",
+        "hex": "#dbc991",
+        "rgb": [
+          219,
+          201,
+          145
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3866",
+        "brandId": "dmc",
+        "reference": "3866",
+        "name": "Mocha Brown ultra very light",
+        "hex": "#ddd1be",
+        "rgb": [
+          221,
+          209,
+          190
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3756",
+        "brandId": "dmc",
+        "reference": "3756",
+        "name": "Baby Blue ultra very light",
+        "hex": "#ddedf3",
+        "rgb": [
+          221,
+          237,
+          243
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3771",
+        "brandId": "dmc",
+        "reference": "3771",
+        "name": "Terra Cotta ultra very light",
+        "hex": "#df9b7b",
+        "rgb": [
+          223,
+          155,
+          123
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:950",
+        "brandId": "dmc",
+        "reference": "950",
+        "name": "Desert Sand light",
+        "hex": "#dfac93",
+        "rgb": [
+          223,
+          172,
+          147
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3801",
+        "brandId": "dmc",
+        "reference": "3801",
+        "name": "Christmas Red light",
+        "hex": "#e02338",
+        "rgb": [
+          224,
+          35,
+          56
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:351",
+        "brandId": "dmc",
+        "reference": "351",
+        "name": "Coral",
+        "hex": "#e04d46",
+        "rgb": [
+          224,
+          77,
+          70
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3733",
+        "brandId": "dmc",
+        "reference": "3733",
+        "name": "Dusty Rose",
+        "hex": "#e06c85",
+        "rgb": [
+          224,
+          108,
+          133
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:822",
+        "brandId": "dmc",
+        "reference": "822",
+        "name": "Beige Grey light",
+        "hex": "#e0d6ba",
+        "rgb": [
+          224,
+          214,
+          186
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:24",
+        "brandId": "dmc",
+        "reference": "24",
+        "name": "White Lavender",
+        "hex": "#e0d9e4",
+        "rgb": [
+          224,
+          217,
+          228
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:11",
+        "brandId": "dmc",
+        "reference": "11",
+        "name": "Light Tender Green",
+        "hex": "#e0dc84",
+        "rgb": [
+          224,
+          220,
+          132
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3827",
+        "brandId": "dmc",
+        "reference": "3827",
+        "name": "Golden Brown pale",
+        "hex": "#e19858",
+        "rgb": [
+          225,
+          152,
+          88
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3821",
+        "brandId": "dmc",
+        "reference": "3821",
+        "name": "Straw",
+        "hex": "#e3b044",
+        "rgb": [
+          227,
+          176,
+          68
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3806",
+        "brandId": "dmc",
+        "reference": "3806",
+        "name": "Cyclamen Pink light",
+        "hex": "#e45592",
+        "rgb": [
+          228,
+          85,
+          146
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:962",
+        "brandId": "dmc",
+        "reference": "962",
+        "name": "Dusty Rose medium",
+        "hex": "#e46486",
+        "rgb": [
+          228,
+          100,
+          134
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:760",
+        "brandId": "dmc",
+        "reference": "760",
+        "name": "Salmon",
+        "hex": "#e5787f",
+        "rgb": [
+          229,
+          120,
+          127
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3609",
+        "brandId": "dmc",
+        "reference": "3609",
+        "name": "Plum ultra light",
+        "hex": "#e591ce",
+        "rgb": [
+          229,
+          145,
+          206
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3856",
+        "brandId": "dmc",
+        "reference": "3856",
+        "name": "Mahogany ultra very light",
+        "hex": "#e5a472",
+        "rgb": [
+          229,
+          164,
+          114
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:543",
+        "brandId": "dmc",
+        "reference": "543",
+        "name": "Beige Brown ultra very light",
+        "hex": "#e5c7ad",
+        "rgb": [
+          229,
+          199,
+          173
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:977",
+        "brandId": "dmc",
+        "reference": "977",
+        "name": "Golden Brown light",
+        "hex": "#e6833d",
+        "rgb": [
+          230,
+          131,
+          61
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:676",
+        "brandId": "dmc",
+        "reference": "676",
+        "name": "Old Gold light",
+        "hex": "#e6b469",
+        "rgb": [
+          230,
+          180,
+          105
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3354",
+        "brandId": "dmc",
+        "reference": "3354",
+        "name": "Dusty Rose light",
+        "hex": "#e7899e",
+        "rgb": [
+          231,
+          137,
+          158
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:606",
+        "brandId": "dmc",
+        "reference": "606",
+        "name": "Burnt Orange-Red",
+        "hex": "#e81820",
+        "rgb": [
+          232,
+          24,
+          32
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:402",
+        "brandId": "dmc",
+        "reference": "402",
+        "name": "Mahogany very light",
+        "hex": "#e8895b",
+        "rgb": [
+          232,
+          137,
+          91
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3779",
+        "brandId": "dmc",
+        "reference": "3779",
+        "name": "Terra Cotta ultra very light",
+        "hex": "#e8a492",
+        "rgb": [
+          232,
+          164,
+          146
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:23",
+        "brandId": "dmc",
+        "reference": "23",
+        "name": "Apple Blossom",
+        "hex": "#e8dadf",
+        "rgb": [
+          232,
+          218,
+          223
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:603",
+        "brandId": "dmc",
+        "reference": "603",
+        "name": "Cranberry",
+        "hex": "#e94f8c",
+        "rgb": [
+          233,
+          79,
+          140
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3774",
+        "brandId": "dmc",
+        "reference": "3774",
+        "name": "Desert Sand very light",
+        "hex": "#e9bea6",
+        "rgb": [
+          233,
+          190,
+          166
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:677",
+        "brandId": "dmc",
+        "reference": "677",
+        "name": "Old Gold very light",
+        "hex": "#eacf8e",
+        "rgb": [
+          234,
+          207,
+          142
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:899",
+        "brandId": "dmc",
+        "reference": "899",
+        "name": "Rose medium",
+        "hex": "#eb6682",
+        "rgb": [
+          235,
+          102,
+          130
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:739",
+        "brandId": "dmc",
+        "reference": "739",
+        "name": "Tan ultra very light",
+        "hex": "#edcda6",
+        "rgb": [
+          237,
+          205,
+          166
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:ECRU",
+        "brandId": "dmc",
+        "reference": "ECRU",
+        "name": "Ecru",
+        "hex": "#eddec4",
+        "rgb": [
+          237,
+          222,
+          196
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3705",
+        "brandId": "dmc",
+        "reference": "3705",
+        "name": "Melon dark",
+        "hex": "#ee3a4d",
+        "rgb": [
+          238,
+          58,
+          77
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:945",
+        "brandId": "dmc",
+        "reference": "945",
+        "name": "Tawny medium",
+        "hex": "#eeb28f",
+        "rgb": [
+          238,
+          178,
+          143
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:891",
+        "brandId": "dmc",
+        "reference": "891",
+        "name": "Carnation dark",
+        "hex": "#ef2c46",
+        "rgb": [
+          239,
+          44,
+          70
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:728",
+        "brandId": "dmc",
+        "reference": "728",
+        "name": "Golden Yellow",
+        "hex": "#efad3d",
+        "rgb": [
+          239,
+          173,
+          61
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:444",
+        "brandId": "dmc",
+        "reference": "444",
+        "name": "Lemon dark",
+        "hex": "#f0b900",
+        "rgb": [
+          240,
+          185,
+          0
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3822",
+        "brandId": "dmc",
+        "reference": "3822",
+        "name": "Straw light",
+        "hex": "#f0c65f",
+        "rgb": [
+          240,
+          198,
+          95
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:721",
+        "brandId": "dmc",
+        "reference": "721",
+        "name": "Orange Spice medium",
+        "hex": "#f25c2c",
+        "rgb": [
+          242,
+          92,
+          44
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:352",
+        "brandId": "dmc",
+        "reference": "352",
+        "name": "Coral light",
+        "hex": "#f27365",
+        "rgb": [
+          242,
+          115,
+          101
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3854",
+        "brandId": "dmc",
+        "reference": "3854",
+        "name": "Autumn Gold medium",
+        "hex": "#f29347",
+        "rgb": [
+          242,
+          147,
+          71
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:151",
+        "brandId": "dmc",
+        "reference": "151",
+        "name": "Dusty Rose very light",
+        "hex": "#f2a8ba",
+        "rgb": [
+          242,
+          168,
+          186
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:712",
+        "brandId": "dmc",
+        "reference": "712",
+        "name": "Cream",
+        "hex": "#f3e8d2",
+        "rgb": [
+          243,
+          232,
+          210
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:892",
+        "brandId": "dmc",
+        "reference": "892",
+        "name": "Carnation medium",
+        "hex": "#f43853",
+        "rgb": [
+          244,
+          56,
+          83
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:754",
+        "brandId": "dmc",
+        "reference": "754",
+        "name": "Peach light",
+        "hex": "#f4b096",
+        "rgb": [
+          244,
+          176,
+          150
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:946",
+        "brandId": "dmc",
+        "reference": "946",
+        "name": "Burnt Orange medium",
+        "hex": "#f53d1c",
+        "rgb": [
+          245,
+          61,
+          28
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:761",
+        "brandId": "dmc",
+        "reference": "761",
+        "name": "Salmon light",
+        "hex": "#f5a3a8",
+        "rgb": [
+          245,
+          163,
+          168
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3689",
+        "brandId": "dmc",
+        "reference": "3689",
+        "name": "Mauve light",
+        "hex": "#f5acc2",
+        "rgb": [
+          245,
+          172,
+          194
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:225",
+        "brandId": "dmc",
+        "reference": "225",
+        "name": "Shell Pink ultra very light",
+        "hex": "#f5c4bd",
+        "rgb": [
+          245,
+          196,
+          189
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:604",
+        "brandId": "dmc",
+        "reference": "604",
+        "name": "Cranberry light",
+        "hex": "#f67aad",
+        "rgb": [
+          246,
+          122,
+          173
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3326",
+        "brandId": "dmc",
+        "reference": "3326",
+        "name": "Rose light (776)",
+        "hex": "#f793a6",
+        "rgb": [
+          247,
+          147,
+          166
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:951",
+        "brandId": "dmc",
+        "reference": "951",
+        "name": "Tawny light",
+        "hex": "#f7cea9",
+        "rgb": [
+          247,
+          206,
+          169
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:20",
+        "brandId": "dmc",
+        "reference": "20",
+        "name": "Shrimp",
+        "hex": "#f7d1b3",
+        "rgb": [
+          247,
+          209,
+          179
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:445",
+        "brandId": "dmc",
+        "reference": "445",
+        "name": "Lemon light",
+        "hex": "#f7f57a",
+        "rgb": [
+          247,
+          245,
+          122
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3865",
+        "brandId": "dmc",
+        "reference": "3865",
+        "name": "Winter White",
+        "hex": "#f7f7f0",
+        "rgb": [
+          247,
+          247,
+          240
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:956",
+        "brandId": "dmc",
+        "reference": "956",
+        "name": "Geranium",
+        "hex": "#f94472",
+        "rgb": [
+          249,
+          68,
+          114
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3855",
+        "brandId": "dmc",
+        "reference": "3855",
+        "name": "Autumn Gold light",
+        "hex": "#f9c170",
+        "rgb": [
+          249,
+          193,
+          112
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3078",
+        "brandId": "dmc",
+        "reference": "3078",
+        "name": "Golden Yellow very light",
+        "hex": "#faeb97",
+        "rgb": [
+          250,
+          235,
+          151
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:746",
+        "brandId": "dmc",
+        "reference": "746",
+        "name": "Off White",
+        "hex": "#faf1c7",
+        "rgb": [
+          250,
+          241,
+          199
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:B5200",
+        "brandId": "dmc",
+        "reference": "B5200",
+        "name": "Snow White",
+        "hex": "#fafaff",
+        "rgb": [
+          250,
+          250,
+          255
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:893",
+        "brandId": "dmc",
+        "reference": "893",
+        "name": "Carnation light",
+        "hex": "#fb4d6d",
+        "rgb": [
+          251,
+          77,
+          109
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:307",
+        "brandId": "dmc",
+        "reference": "307",
+        "name": "Lemon",
+        "hex": "#fbde18",
+        "rgb": [
+          251,
+          222,
+          24
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:971",
+        "brandId": "dmc",
+        "reference": "971",
+        "name": "Pumpkin",
+        "hex": "#fc670d",
+        "rgb": [
+          252,
+          103,
+          13
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:776",
+        "brandId": "dmc",
+        "reference": "776",
+        "name": "Pink Medium",
+        "hex": "#fca8ad",
+        "rgb": [
+          252,
+          168,
+          173
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:725",
+        "brandId": "dmc",
+        "reference": "725",
+        "name": "Topaz",
+        "hex": "#fcba40",
+        "rgb": [
+          252,
+          186,
+          64
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:BLANC",
+        "brandId": "dmc",
+        "reference": "BLANC",
+        "name": "White",
+        "hex": "#fcfcfc",
+        "rgb": [
+          252,
+          252,
+          252
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:948",
+        "brandId": "dmc",
+        "reference": "948",
+        "name": "Peach very light",
+        "hex": "#fdd5c1",
+        "rgb": [
+          253,
+          213,
+          193
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3716",
+        "brandId": "dmc",
+        "reference": "3716",
+        "name": "Dusty Rose very light",
+        "hex": "#fe97af",
+        "rgb": [
+          254,
+          151,
+          175
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:605",
+        "brandId": "dmc",
+        "reference": "605",
+        "name": "Cranberry very light",
+        "hex": "#fe98c1",
+        "rgb": [
+          254,
+          152,
+          193
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:353",
+        "brandId": "dmc",
+        "reference": "353",
+        "name": "Peach",
+        "hex": "#fea693",
+        "rgb": [
+          254,
+          166,
+          147
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3823",
+        "brandId": "dmc",
+        "reference": "3823",
+        "name": "Yellow ultra pale",
+        "hex": "#feedb4",
+        "rgb": [
+          254,
+          237,
+          180
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:608",
+        "brandId": "dmc",
+        "reference": "608",
+        "name": "Burnt Orange",
+        "hex": "#ff4225",
+        "rgb": [
+          255,
+          66,
+          37
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:947",
+        "brandId": "dmc",
+        "reference": "947",
+        "name": "Burnt Orange",
+        "hex": "#ff4a1b",
+        "rgb": [
+          255,
+          74,
+          27
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3706",
+        "brandId": "dmc",
+        "reference": "3706",
+        "name": "Melon medium",
+        "hex": "#ff6175",
+        "rgb": [
+          255,
+          97,
+          117
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:970",
+        "brandId": "dmc",
+        "reference": "970",
+        "name": "Pumpkin light",
+        "hex": "#ff6624",
+        "rgb": [
+          255,
+          102,
+          36
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3340",
+        "brandId": "dmc",
+        "reference": "3340",
+        "name": "Apricot medium",
+        "hex": "#ff6647",
+        "rgb": [
+          255,
+          102,
+          71
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:740",
+        "brandId": "dmc",
+        "reference": "740",
+        "name": "Tangerine (971)",
+        "hex": "#ff6c1b",
+        "rgb": [
+          255,
+          108,
+          27
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:894",
+        "brandId": "dmc",
+        "reference": "894",
+        "name": "Carnation very light",
+        "hex": "#ff7c9a",
+        "rgb": [
+          255,
+          124,
+          154
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:957",
+        "brandId": "dmc",
+        "reference": "957",
+        "name": "Geranium pale",
+        "hex": "#ff7ca2",
+        "rgb": [
+          255,
+          124,
+          162
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3341",
+        "brandId": "dmc",
+        "reference": "3341",
+        "name": "Apricot",
+        "hex": "#ff8166",
+        "rgb": [
+          255,
+          129,
+          102
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:722",
+        "brandId": "dmc",
+        "reference": "722",
+        "name": "Orange Spice light",
+        "hex": "#ff824a",
+        "rgb": [
+          255,
+          130,
+          74
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:741",
+        "brandId": "dmc",
+        "reference": "741",
+        "name": "Tangerine medium",
+        "hex": "#ff8820",
+        "rgb": [
+          255,
+          136,
+          32
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3708",
+        "brandId": "dmc",
+        "reference": "3708",
+        "name": "Melon light",
+        "hex": "#ff889e",
+        "rgb": [
+          255,
+          136,
+          158
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3825",
+        "brandId": "dmc",
+        "reference": "3825",
+        "name": "Pumpkin pale",
+        "hex": "#ff9a63",
+        "rgb": [
+          255,
+          154,
+          99
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:972",
+        "brandId": "dmc",
+        "reference": "972",
+        "name": "Canary deep",
+        "hex": "#ffa400",
+        "rgb": [
+          255,
+          164,
+          0
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:742",
+        "brandId": "dmc",
+        "reference": "742",
+        "name": "Tangerine light",
+        "hex": "#ffa523",
+        "rgb": [
+          255,
+          165,
+          35
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3824",
+        "brandId": "dmc",
+        "reference": "3824",
+        "name": "Apricot light",
+        "hex": "#ffa58d",
+        "rgb": [
+          255,
+          165,
+          141
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:963",
+        "brandId": "dmc",
+        "reference": "963",
+        "name": "Dusty Rose ultra very light",
+        "hex": "#ffbac4",
+        "rgb": [
+          255,
+          186,
+          196
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:967",
+        "brandId": "dmc",
+        "reference": "967",
+        "name": "Apricot very light",
+        "hex": "#ffbea9",
+        "rgb": [
+          255,
+          190,
+          169
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3713",
+        "brandId": "dmc",
+        "reference": "3713",
+        "name": "Salmon very light",
+        "hex": "#ffc7c7",
+        "rgb": [
+          255,
+          199,
+          199
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:743",
+        "brandId": "dmc",
+        "reference": "743",
+        "name": "Yellow medium",
+        "hex": "#ffc847",
+        "rgb": [
+          255,
+          200,
+          71
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:973",
+        "brandId": "dmc",
+        "reference": "973",
+        "name": "Canary bright",
+        "hex": "#ffcf00",
+        "rgb": [
+          255,
+          207,
+          0
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:818",
+        "brandId": "dmc",
+        "reference": "818",
+        "name": "Baby Pink",
+        "hex": "#ffd0d2",
+        "rgb": [
+          255,
+          208,
+          210
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:726",
+        "brandId": "dmc",
+        "reference": "726",
+        "name": "Topaz light",
+        "hex": "#ffd447",
+        "rgb": [
+          255,
+          212,
+          71
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:744",
+        "brandId": "dmc",
+        "reference": "744",
+        "name": "Yellow pale",
+        "hex": "#ffde7a",
+        "rgb": [
+          255,
+          222,
+          122
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:819",
+        "brandId": "dmc",
+        "reference": "819",
+        "name": "Baby Pink light",
+        "hex": "#ffdeda",
+        "rgb": [
+          255,
+          222,
+          218
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:745",
+        "brandId": "dmc",
+        "reference": "745",
+        "name": "Yellow light pale",
+        "hex": "#ffdf89",
+        "rgb": [
+          255,
+          223,
+          137
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:727",
+        "brandId": "dmc",
+        "reference": "727",
+        "name": "Topaz very light",
+        "hex": "#ffe471",
+        "rgb": [
+          255,
+          228,
+          113
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      },
+      {
+        "id": "dmc:3770",
+        "brandId": "dmc",
+        "reference": "3770",
+        "name": "Tawny very light",
+        "hex": "#ffe6c9",
+        "rgb": [
+          255,
+          230,
+          201
+        ],
+        "provenance": "measured",
+        "status": "current",
+        "mappedFrom": null
+      }
+    ]
+  },
+  "gridStyle": {
+    "show": true,
+    "minorInterval": 1,
+    "majorInterval": 10,
+    "color": "#666666",
+    "minorThickness": 1,
+    "majorThickness": 2,
+    "ticks": true,
+    "tickFontPx": 11
+  },
+  "preview": {
+    "mode": "space",
+    "cssPxPerStitch": 1.92
+  },
+  "export": {
+    "scale": 1,
+    "background": "transparent",
+    "color": "#ffffff",
+    "chartCell": 10,
+    "pdf": {
+      "pageSize": "a4",
+      "orientation": "portrait",
+      "marginMm": 15,
+      "title": ""
+    }
+  }
+}

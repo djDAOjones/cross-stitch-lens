@@ -7,6 +7,12 @@
  * "Layout model").
  */
 
+// Stylesheets (M14-IMPL-01): tokens first, then the element layer,
+// then shell chrome — import order is the cascade order.
+import './ui/styles/tokens.css';
+import './ui/styles/base.css';
+import './ui/styles/shell.css';
+
 import {
   buildDiagnosticsBundle,
   formatDiagnosticsBundle,
@@ -94,10 +100,12 @@ import { createDiagnosticsControl } from './ui/diagnostics-button.ts';
 import { createDitherControls } from './ui/dither-panel.ts';
 import { decodeImageBlob, imageFiles } from './ui/import.ts';
 import { createInfoPanel } from './ui/info-panel.ts';
+import { createSection, type AccordionSection } from './ui/accordion.ts';
+import { textPromptModal } from './ui/modal.ts';
+import { SAMPLE_NAME, sampleBuffer } from './ui/sample.ts';
 import { loadPreferences, savePreferences, type ShellPreferences } from './ui/preferences.ts';
 import { PreviewController } from './ui/preview.ts';
 import {
-  captureSummary,
   defaultScales,
   MAX_PATTERN_SIDE,
   MIN_PATTERN_SIDE,
@@ -167,6 +175,28 @@ function build(app: HTMLElement): void {
   })();
   let preferences: ShellPreferences = loadPreferences(preferenceStore);
   shell = { ...shell, panelCollapsed: preferences.panelCollapsed };
+
+  /** Stored disclosure state, falling back to the spec default. */
+  function disclosureOpen(id: string, specDefault: boolean): boolean {
+    return preferences.disclosures[id] ?? specDefault;
+  }
+
+  /** Persist one disclosure's state (accordion section or reveal). */
+  function setDisclosure(id: string, open: boolean): void {
+    preferences = {
+      ...preferences,
+      disclosures: { ...preferences.disclosures, [id]: open },
+    };
+    savePreferences(preferenceStore, preferences);
+  }
+
+  /**
+   * True once the section list exists. Construction-time calls into
+   * `refreshSections` (applyPolicy runs during assembly) must be
+   * no-ops: the summaries they would compute are rendered by the
+   * assembly's own first refresh.
+   */
+  let sectionsReady = false;
 
   // Current pipeline config: controls mutate it and reprocess the
   // retained master image. Grid-style changes bypass this — they are
@@ -342,6 +372,7 @@ function build(app: HTMLElement): void {
   // Import controls: labelled native file input; drop and paste are
   // alternatives to it, never the only route (UI-STANDARDS).
   const importSection = document.createElement('section');
+  importSection.setAttribute('aria-label', 'Source');
   const label = document.createElement('label');
   label.textContent = 'Source image';
   label.htmlFor = 'source-file';
@@ -352,7 +383,68 @@ function build(app: HTMLElement): void {
   const hint = document.createElement('p');
   hint.className = 'meta';
   hint.textContent =
-    'Choose a file, drag and drop one anywhere on the page, or paste an image.';
+    'You can also drop an image anywhere on the page, or paste one.';
+
+  // First-run entry state (M14-IMPL-04, D78/D84): the two entry
+  // actions and the sample, visible before any source exists. Inline
+  // affordances, never a tour overlay (D84). Compacts to a one-line
+  // source note once a conversion exists.
+  const entryState = document.createElement('div');
+  entryState.className = 'entry-state';
+  const entryTitle = document.createElement('p');
+  entryTitle.className = 'entry-title';
+  entryTitle.textContent = 'Turn a picture into a cross-stitch pattern';
+  const entryActions = document.createElement('div');
+  entryActions.className = 'toolbar';
+  const chooseButton = document.createElement('button');
+  chooseButton.type = 'button';
+  chooseButton.className = 'button-primary';
+  chooseButton.textContent = 'Choose an image';
+  chooseButton.addEventListener('click', () => {
+    input.click();
+  });
+  const sampleButton = document.createElement('button');
+  sampleButton.type = 'button';
+  sampleButton.textContent = 'Try a sample';
+  sampleButton.addEventListener('click', () => {
+    loadSample();
+  });
+  const sourceNote = document.createElement('p');
+  sourceNote.className = 'meta';
+  sourceNote.id = 'source-note';
+  sourceNote.hidden = true;
+  /** What feeds the pipeline right now, for the source row. */
+  let sourceName: string | null = null;
+
+  /** Entry state before any source; a compact note after. */
+  function updateSourceEntry(): void {
+    const hasSource = masterImage !== null || capture !== null;
+    entryState.hidden = hasSource;
+    sourceNote.hidden = !hasSource;
+    if (sourceName !== null) sourceNote.textContent = `Source: ${sourceName}`;
+    // Cold start: the entry CTA is the capture affordance. With a
+    // source: the plain button returns so capture stays restartable.
+    // During a session: the session buttons own the row.
+    captureButton.hidden = !hasSource || capture !== null;
+    // The labelled file input is the "replace" route once a source
+    // exists; cold start reaches the same input through the entry CTA
+    // (a hidden input still opens its picker on click()).
+    label.hidden = !hasSource;
+    input.hidden = !hasSource;
+  }
+
+  /** Load the deterministic sample through the normal source path. */
+  function loadSample(): void {
+    const buffer = sampleBuffer();
+    log.info('import', 'sample generated', { width: buffer.width, height: buffer.height });
+    masterImage = buffer;
+    sourceName = SAMPLE_NAME;
+    invalidateSelectionSource();
+    ensureSelectionSource();
+    updateSourceEntry();
+    reprocess();
+    status.textContent = 'Sample image loaded — this is a generated test card, not your artwork.';
+  }
 
   // Screen capture (§3, M4): a live getDisplayMedia session as an
   // alternative source. The permission prompt is user-initiated —
@@ -401,10 +493,15 @@ function build(app: HTMLElement): void {
   cropOverlay.className = 'crop-overlay';
   cropOverlay.tabIndex = 0;
   cropOverlay.setAttribute('role', 'application');
-  cropOverlay.setAttribute(
-    'aria-label',
-    'Capture region. Drag to draw or move it. Move with arrow keys, resize with shift and arrow keys.',
-  );
+  // Concise name; the how-to lives in a linked description (A15
+  // pattern, same as the preview host).
+  cropOverlay.setAttribute('aria-label', 'Capture region');
+  const cropHelp = document.createElement('p');
+  cropHelp.id = 'crop-help';
+  cropHelp.className = 'visually-hidden';
+  cropHelp.textContent =
+    'Drag to draw or move the region. Move with the arrow keys; resize with shift and the arrow keys.';
+  cropOverlay.setAttribute('aria-describedby', cropHelp.id);
   const cropRectEl = document.createElement('div');
   cropRectEl.className = 'crop-rect';
   for (const h of ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w']) {
@@ -412,16 +509,33 @@ function build(app: HTMLElement): void {
     handleEl.className = `crop-handle crop-${h}`;
     cropRectEl.append(handleEl);
   }
-  cropOverlay.append(cropRectEl);
+  cropOverlay.append(cropRectEl, cropHelp);
   thumbWrap.append(cropOverlay);
   const cropReadout = document.createElement('p');
   cropReadout.className = 'meta';
+  cropReadout.setAttribute('role', 'status');
   cropReadout.hidden = true;
+  // What the permission prompt will do, said before it is triggered
+  // (UI-STANDARDS: user-initiated, never on load; D78 expectation
+  // copy). Shown only while no session runs.
+  const captureExpectation = document.createElement('p');
+  captureExpectation.className = 'meta';
+  captureExpectation.textContent = 'Your browser will ask which window or screen to share.';
+  const captureCta = document.createElement('button');
+  captureCta.type = 'button';
+  captureCta.className = 'button-primary';
+  captureCta.textContent = 'Capture your screen';
+  captureCta.addEventListener('click', () => {
+    void startScreenCapture();
+  });
+  entryActions.append(chooseButton, captureCta, sampleButton);
+  entryState.append(entryTitle, entryActions, captureExpectation, hint);
   captureRow.append(captureButton, captureFrameButton, pauseButton, lockButton, stopCaptureButton);
   importSection.append(
+    entryState,
+    sourceNote,
     label,
     input,
-    hint,
     captureRow,
     captureMeta,
     thumbWrap,
@@ -440,6 +554,9 @@ function build(app: HTMLElement): void {
   // canvas host. The canvas itself is worker-owned.
   const previewSection = document.createElement('section');
   previewSection.hidden = true;
+  // Named landmark (ui-spec §2, audit A12): regions a screen reader
+  // can navigate to by name, not anonymous <section>s.
+  previewSection.setAttribute('aria-label', 'Preview');
   const toolbar = document.createElement('div');
   toolbar.className = 'toolbar';
   const zoomLabel = document.createElement('span');
@@ -458,16 +575,23 @@ function build(app: HTMLElement): void {
   compactStatus.className = 'meta compact-status';
   compactStatus.setAttribute('role', 'status');
   compactStatus.hidden = true;
+  // The host is an operable widget, not an image (audit A15): it takes
+  // focus and keyboard commands, so it carries an interactive role
+  // with a concise name; the usage instructions live in a linked
+  // description rather than the name.
   const host = document.createElement('div');
   host.className = 'preview-host';
   host.tabIndex = 0;
-  host.setAttribute('role', 'img');
-  host.setAttribute(
-    'aria-label',
-    'Cross-stitch preview. Zoom with plus and minus, fit with zero, pan with arrow keys.',
-  );
+  host.setAttribute('role', 'application');
+  host.setAttribute('aria-label', 'Stitch preview');
+  const hostHelp = document.createElement('p');
+  hostHelp.id = 'preview-help';
+  hostHelp.className = 'visually-hidden';
+  hostHelp.textContent =
+    'Zoom with plus and minus, fit with zero, pan with the arrow keys.';
+  host.setAttribute('aria-describedby', hostHelp.id);
   const canvas = document.createElement('canvas');
-  host.append(canvas);
+  host.append(canvas, hostHelp);
 
   const info = createInfoPanel(document, BRAND_NAMES);
 
@@ -557,6 +681,7 @@ function build(app: HTMLElement): void {
     dimensionsLabel.textContent = patternSummary(pattern);
     reframeCrop();
     updateCompactStatus();
+    refreshSections();
     // A new grid is a new geometry, so the buffer the colour-count
     // selection chooses against has to be rebuilt at that size.
     ensureSelectionSource();
@@ -574,6 +699,7 @@ function build(app: HTMLElement): void {
     if (bounds === null || cropRect === null) return;
     cropRect = constrainRect(cropRect, bounds, config.grid, 'center');
     renderCrop();
+    announceCrop();
   }
 
   // Grid overlay: style state lives here (CSS px); thicknesses and
@@ -650,6 +776,7 @@ function build(app: HTMLElement): void {
   const gridShow = toggleField(document, 'grid-show', 'Show grid', gridStyle.show, (on) => {
     gridStyle.show = on;
     sendGridStyle();
+    refreshSections();
   });
   const gridTicks = toggleField(
     document,
@@ -661,10 +788,15 @@ function build(app: HTMLElement): void {
       sendGridStyle();
     },
   );
-  gridGroup.append(
-    gridLegend,
-    gridShow.element,
-    gridTicks.element,
+  // Grid depth (ui-spec §5): line geometry and colour behind one
+  // reveal; the two everyday toggles stay on the surface.
+  const gridDetails = document.createElement('details');
+  gridDetails.className = 'depth-reveal';
+  const gridDetailsSummary = document.createElement('summary');
+  gridDetailsSummary.textContent = 'Grid details';
+  const gridDetailsBody = document.createElement('div');
+  gridDetailsBody.className = 'depth-reveal-body';
+  gridDetailsBody.append(
     numberField(
       document,
       'grid-minor',
@@ -710,16 +842,33 @@ function build(app: HTMLElement): void {
       },
     ),
   );
+  gridDetails.append(gridDetailsSummary, gridDetailsBody);
+  gridDetails.open = disclosureOpen('grid-details', false);
+  gridDetails.addEventListener('toggle', () => {
+    setDisclosure('grid-details', gridDetails.open);
+  });
+  gridGroup.append(gridLegend, gridShow.element, gridTicks.element, gridDetails);
 
   // The Dither group (M8-CTRL-01): preset + algorithm selectors and
   // the method-specific controls, all decided by the pure model in
   // src/ui/dither-model.ts. Session memory of each method's last
   // settings lives inside the controls; the project file stores only
   // the one canonical active configuration.
-  const ditherControls = createDitherControls(document, config.dither, (next) => {
-    config.dither = next;
-    reprocess();
-  });
+  const ditherControls = createDitherControls(
+    document,
+    config.dither,
+    (next) => {
+      config.dither = next;
+      refreshSections();
+      reprocess();
+    },
+    {
+      open: disclosureOpen('dither-details', false),
+      onToggle: (open) => {
+        setDisclosure('dither-details', open);
+      },
+    },
+  );
 
   /** The panel's view of the current policy, library, and resolution. */
   function panelState(): PalettePanelState {
@@ -746,6 +895,7 @@ function build(app: HTMLElement): void {
     // Dithering only applies when reducing to a palette.
     ditherControls.update(config.dither, config.palette === null);
     palettePanel.update(panelState());
+    refreshSections();
     reprocess();
   }
 
@@ -814,6 +964,11 @@ function build(app: HTMLElement): void {
         'thread-palettes.json',
       );
       status.textContent = `Exported ${String(libraryPalettes.length)} saved palettes.`;
+    },
+  }, {
+    open: disclosureOpen('thread-library', false),
+    onToggle: (open) => {
+      setDisclosure('thread-library', open);
     },
   });
   const colourGroup = palettePanel.element;
@@ -961,7 +1116,12 @@ function build(app: HTMLElement): void {
       status.textContent = 'There is no resolved palette to save yet.';
       return;
     }
-    const name = window.prompt('Name for this palette', paletteName());
+    const name = await textPromptModal(document, {
+      title: 'Save as palette',
+      label: 'Palette name',
+      initial: paletteName(),
+      confirmLabel: 'Save palette',
+    });
     if (name === null || name.trim() === '') return;
     const palette: LibraryPalette = {
       id: `pal-${String(Date.now())}`,
@@ -996,23 +1156,22 @@ function build(app: HTMLElement): void {
   const ditherGroup = ditherControls.element;
 
   const pipelineGroup = document.createElement('fieldset');
-  const pipelineLegend = document.createElement('legend');
-  pipelineLegend.textContent = 'Pipeline';
   pipelineGroup.append(
-    pipelineLegend,
     selectField(
       document,
       'order-preset',
-      'Order preset',
+      'Processing order',
       [
-        ['resize-first', 'Resize first'],
-        ['reduce-first', 'Reduce first'],
+        ['resize-first', 'Resize, then match colours (recommended)'],
+        ['reduce-first', 'Match colours, then resize'],
       ],
       config.preset,
       (preset) => {
         config.preset = preset as PipelineConfig['preset'];
+        refreshSections();
         reprocess();
       },
+      'Resizing first is faster and usually cleaner.',
     ),
   );
 
@@ -1026,9 +1185,10 @@ function build(app: HTMLElement): void {
     background: 'transparent',
     color: '#ffffff',
   };
+  // The Export/Project/Advanced fieldsets carry no legend: each is
+  // its section's only group, so the accordion header is the name
+  // (a legend would say it twice — D83).
   const exportGroup = document.createElement('fieldset');
-  const exportLegend = document.createElement('legend');
-  exportLegend.textContent = 'Export';
   const exportButton = document.createElement('button');
   exportButton.type = 'button';
   exportButton.textContent = 'Export PNG';
@@ -1056,93 +1216,134 @@ function build(app: HTMLElement): void {
   pdfButton.addEventListener('click', () => {
     void exportPdf();
   });
+  // Export section structure (ui-spec §5, A22): a derived size
+  // readout and the three actions lead; per-exporter options sit
+  // behind one reveal each. The readout answers "how big will it be"
+  // where exports happen without adding a fifth resolution control.
+  const exportSize = document.createElement('p');
+  exportSize.className = 'meta';
+  exportSize.id = 'export-size';
+
+  function makeReveal(id: string, label: string, ...children: HTMLElement[]): HTMLDetailsElement {
+    const details = document.createElement('details');
+    details.className = 'depth-reveal';
+    const summaryEl = document.createElement('summary');
+    summaryEl.textContent = label;
+    const body = document.createElement('div');
+    body.className = 'depth-reveal-body';
+    body.append(...children);
+    details.append(summaryEl, body);
+    details.open = disclosureOpen(id, false);
+    details.addEventListener('toggle', () => {
+      setDisclosure(id, details.open);
+    });
+    return details;
+  }
+
+  const exportActions = document.createElement('div');
+  exportActions.className = 'toolbar';
+  exportActions.append(exportButton, chartButton, pdfButton);
+
   exportGroup.append(
-    exportLegend,
-    numberField(
-      document,
-      'export-scale',
-      SCALE_LABELS.exportScale,
-      {
-        min: 1,
-        max: 64,
-        value: scales.export.cleanPxPerStitch,
-        helper: SCALE_LABELS.exportHelper,
-      },
-      (value) => {
-        scales = withExport(scales, { ...scales.export, cleanPxPerStitch: value });
-      },
+    exportSize,
+    exportActions,
+    makeReveal(
+      'png-options',
+      'PNG options',
+      numberField(
+        document,
+        'export-scale',
+        SCALE_LABELS.exportScale,
+        {
+          min: 1,
+          max: 64,
+          value: scales.export.cleanPxPerStitch,
+          helper: SCALE_LABELS.exportHelper,
+        },
+        (value) => {
+          scales = withExport(scales, { ...scales.export, cleanPxPerStitch: value });
+          refreshSections();
+        },
+      ),
+      selectField(
+        document,
+        'export-background',
+        'Background',
+        [
+          ['transparent', 'Transparent'],
+          ['solid', 'Solid colour'],
+        ],
+        exportState.background,
+        (value) => {
+          exportState.background = value;
+        },
+      ),
+      colorField(document, 'export-bg-color', 'Background colour', exportState.color, (value) => {
+        exportState.color = value;
+      }),
     ),
-    selectField(
-      document,
-      'export-background',
-      'Background',
-      [
-        ['transparent', 'Transparent'],
-        ['solid', 'Solid colour'],
-      ],
-      exportState.background,
-      (value) => {
-        exportState.background = value;
-      },
+    makeReveal(
+      'chart-options',
+      'Chart options',
+      numberField(
+        document,
+        'chart-cell',
+        SCALE_LABELS.chartCell,
+        {
+          min: 4,
+          max: 40,
+          value: scales.export.chartCellPx,
+          helper: SCALE_LABELS.chartHelper,
+        },
+        (value) => {
+          scales = withExport(scales, { ...scales.export, chartCellPx: value });
+          refreshSections();
+        },
+      ),
     ),
-    colorField(document, 'export-bg-color', 'Background colour', exportState.color, (value) => {
-      exportState.color = value;
-    }),
-    exportButton,
-    numberField(
-      document,
-      'chart-cell',
-      SCALE_LABELS.chartCell,
-      {
-        min: 4,
-        max: 40,
-        value: scales.export.chartCellPx,
-        helper: SCALE_LABELS.chartHelper,
-      },
-      (value) => {
-        scales = withExport(scales, { ...scales.export, chartCellPx: value });
-      },
+    makeReveal(
+      'pdf-options',
+      'PDF options',
+      selectField(
+        document,
+        'pdf-page',
+        'Page size',
+        [
+          ['a4', 'A4'],
+          ['letter', 'Letter'],
+        ],
+        pdfOptions.pageSize,
+        (value) => {
+          pdfOptions.pageSize = value as PdfOptions['pageSize'];
+          refreshSections();
+        },
+      ),
+      selectField(
+        document,
+        'pdf-orientation',
+        'Orientation',
+        [
+          ['portrait', 'Portrait'],
+          ['landscape', 'Landscape'],
+        ],
+        pdfOptions.orientation,
+        (value) => {
+          pdfOptions.orientation = value as PdfOptions['orientation'];
+        },
+      ),
+      numberField(
+        document,
+        'pdf-margin',
+        'Page margin',
+        { min: 5, max: 40, value: pdfOptions.marginMm, helper: 'Millimetres' },
+        (value) => {
+          pdfOptions.marginMm = value;
+        },
+      ),
+      textField(document, 'pdf-title', 'Design title', pdfOptions.title, (value) => {
+        pdfOptions.title = value;
+      }),
     ),
-    chartButton,
-    selectField(
-      document,
-      'pdf-page',
-      'Page size',
-      [
-        ['a4', 'A4'],
-        ['letter', 'Letter'],
-      ],
-      pdfOptions.pageSize,
-      (value) => {
-        pdfOptions.pageSize = value as PdfOptions['pageSize'];
-      },
-    ),
-    selectField(
-      document,
-      'pdf-orientation',
-      'Orientation',
-      [
-        ['portrait', 'Portrait'],
-        ['landscape', 'Landscape'],
-      ],
-      pdfOptions.orientation,
-      (value) => {
-        pdfOptions.orientation = value as PdfOptions['orientation'];
-      },
-    ),
-    numberField(
-      document,
-      'pdf-margin',
-      'Page margin',
-      { min: 5, max: 40, value: pdfOptions.marginMm, helper: 'Millimetres' },
-      (value) => {
-        pdfOptions.marginMm = value;
-      },
-    ),
-    textField(document, 'pdf-title', 'Design title', pdfOptions.title, (value) => {
-      pdfOptions.title = value;
-    }),
-    pdfButton,
   );
 
   async function exportPng(): Promise<void> {
@@ -1292,8 +1493,6 @@ function build(app: HTMLElement): void {
   // reprocesses. The source image is not part of the file — loading
   // into an empty session applies on the next import.
   const projectGroup = document.createElement('fieldset');
-  const projectLegend = document.createElement('legend');
-  projectLegend.textContent = 'Project';
   const saveButton = document.createElement('button');
   saveButton.type = 'button';
   saveButton.textContent = 'Save project';
@@ -1310,7 +1509,16 @@ function build(app: HTMLElement): void {
     projectInput.value = '';
     if (file !== undefined) void loadProject(file);
   });
-  projectGroup.append(projectLegend, saveButton, projectLabel, projectInput);
+  // Unsaved-work honesty (D78/D75): the app has no autosave, and the
+  // one place that says so is here, with the save action. Final
+  // wording lands in the M14-IMPL-05 sweep.
+  const keepNote = document.createElement('p');
+  keepNote.className = 'meta';
+  keepNote.textContent = 'Nothing is kept unless you save your project.';
+  // Build identity moves off the primary surface to the Project foot
+  // (audit A13): still user-reachable, no longer the page's second
+  // line. `version` is created with the header block above.
+  projectGroup.append(keepNote, saveButton, projectLabel, projectInput, version);
 
   /** Snapshot the live UI state as a schema-v2 project file. */
   function currentProject(): ProjectFile {
@@ -1365,6 +1573,8 @@ function build(app: HTMLElement): void {
       new Blob([serializeProject(currentProject())], { type: 'application/json' }),
       filename,
     );
+    projectFileNote = `saved ${filename}`;
+    refreshSections();
     status.textContent = `Saved ${filename}.`;
     log.info('project', 'saved', { filename });
   }
@@ -1492,6 +1702,8 @@ function build(app: HTMLElement): void {
       reframeCrop();
       preview.setScale(file.preview);
       updateCompactStatus();
+      projectFileNote = `loaded ${fileBlob.name}`;
+      refreshSections();
       reprocess();
       status.textContent =
         masterImage === null
@@ -1506,16 +1718,103 @@ function build(app: HTMLElement): void {
   }
 
   controls.id = 'controls-panel';
-  controls.append(
+
+  // The five-section architecture (ui-spec §2, D77): Design open by
+  // default, everything else summarised until opened. Summaries are
+  // derived from owned state at refresh — never scraped from the DOM
+  // (the status-line rule). Wording is refined in M14-IMPL-05.
+  const sections: AccordionSection[] = [];
+
+  function section(
+    id: string,
+    title: string,
+    specDefaultOpen: boolean,
+    summaryFn: () => string,
+    ...content: HTMLElement[]
+  ): AccordionSection {
+    const built = createSection(document, {
+      id,
+      title,
+      summary: summaryFn,
+      open: disclosureOpen(id, specDefaultOpen),
+      onToggle: (open) => {
+        setDisclosure(id, open);
+      },
+    });
+    built.panel.append(...content);
+    sections.push(built);
+    return built;
+  }
+
+  /** Recompute every closed section's summary line. */
+  function refreshSections(): void {
+    if (!sectionsReady) return;
+    for (const s of sections) s.refreshSummary();
+    exportSize.textContent = exportSizeLine();
+  }
+
+  /** "PNG 800 × 800 px · chart 2,000 px wide" — the derived output
+   *  size, from the four-resolutions model (a readout, never a fifth
+   *  control). */
+  function exportSizeLine(): string {
+    const w = config.grid.width;
+    const h = config.grid.height;
+    const s = scales.export.cleanPxPerStitch;
+    const cell = scales.export.chartCellPx;
+    return `PNG ${String(w * s)} × ${String(h * s)} px · chart ${String(w * cell)} × ${String(h * cell)} px`;
+  }
+
+  /** Last saved/loaded project filename; null = nothing this session. */
+  let projectFileNote: string | null = null;
+
+  section(
+    'section-design',
+    'Design',
+    true,
+    () =>
+      `${patternSummary(scales.pattern)} · ${
+        paletteMode ? (config.palette?.name ?? 'threads') : 'unlimited colours'
+      }`,
     patternGroup,
-    gridGroup,
     colourGroup,
     inventoryInput,
+  );
+  section(
+    'section-appearance',
+    'Appearance',
+    false,
+    () =>
+      `grid ${gridStyle.show ? 'on' : 'off'} · ${
+        config.dither.algorithm === 'none' ? 'no dither' : 'dithered'
+      }`,
+    gridGroup,
     ditherGroup,
-    pipelineGroup,
+  );
+  section(
+    'section-export',
+    'Export',
+    false,
+    () =>
+      `PNG ×${String(scales.export.cleanPxPerStitch)} · chart ${String(scales.export.chartCellPx)} px · ${pdfOptions.pageSize === 'a4' ? 'A4' : 'Letter'}`,
     exportGroup,
+  );
+  section(
+    'section-project',
+    'Project',
+    false,
+    () => projectFileNote ?? 'not saved this session',
     projectGroup,
   );
+  section(
+    'section-advanced',
+    'Advanced',
+    false,
+    () => (config.preset === 'resize-first' ? 'resize first' : 'reduce first'),
+    pipelineGroup,
+  );
+  controls.append(...sections.map((s) => s.element));
+  sectionsReady = true;
+  refreshSections();
 
   // Open the cross-project library (inventory + saved palettes). It is
   // async, so the app starts on an empty in-memory store and adopts
@@ -1678,7 +1977,7 @@ function build(app: HTMLElement): void {
   layout.append(content, controls);
   const header = document.createElement('header');
   header.className = 'app-header';
-  header.append(heading, version, shellBar);
+  header.append(heading, shellBar);
   app.replaceChildren(header, layout);
   applyShell();
   preview.initSurface();
@@ -1712,7 +2011,7 @@ function build(app: HTMLElement): void {
     });
   });
 
-  async function importBlob(blob: Blob, source: string): Promise<void> {
+  async function importBlob(blob: Blob, source: string, name?: string): Promise<void> {
     status.textContent = 'Processing…';
     try {
       const buffer = await decodeImageBlob(blob);
@@ -1721,8 +2020,10 @@ function build(app: HTMLElement): void {
         height: buffer.height,
       });
       masterImage = buffer;
+      sourceName = name ?? source;
       invalidateSelectionSource();
       ensureSelectionSource();
+      updateSourceEntry();
       reprocess();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -1743,6 +2044,11 @@ function build(app: HTMLElement): void {
   let capturePaused = false;
   const draftGovernor = new DraftGovernor();
   let draftMode = false;
+
+  // First paint of the source area: cold start shows the entry state
+  // and leaves capture to its CTA (placed here, after the capture
+  // state exists, because updateSourceEntry reads it).
+  updateSourceEntry();
 
   // Compact-status inputs, owned here rather than read back out of
   // rendered DOM strings — a status line assembled from several
@@ -1811,10 +2117,21 @@ function build(app: HTMLElement): void {
     cropRectEl.style.width = `${String(cropRect.width / scale)}px`;
     cropRectEl.style.height = `${String(cropRect.height / scale)}px`;
     // `capture` is a projection of the crop, not a second owner of it.
-    // The readout can name the pattern directly rather than deriving a
-    // stitch span, because the aspect lock guarantees they agree.
     scales = withCapture(scales, { widthPx: cropRect.width, heightPx: cropRect.height });
-    cropReadout.textContent = captureSummary(scales);
+  }
+
+  /**
+   * Announce the crop's size and position (audit A8: keyboard moves
+   * were silent — the readout reported size only, and position lives
+   * nowhere else in text). Called at end-events — key press, drag
+   * end, session start, reframe — never per pointer-move, so the
+   * status region does not flood a screen reader mid-drag.
+   */
+  function announceCrop(): void {
+    if (cropRect === null) return;
+    cropReadout.textContent =
+      `${SCALE_LABELS.captureRegion} ${String(cropRect.width)} × ${String(cropRect.height)} px ` +
+      `at (${String(cropRect.x)}, ${String(cropRect.y)}) → ${patternSummary(scales.pattern)}`;
   }
 
   function stopPumpNow(): void {
@@ -1856,6 +2173,8 @@ function build(app: HTMLElement): void {
     thumbWrap.hidden = true;
     cropReadout.hidden = true;
     sessionEnded = true;
+    captureExpectation.hidden = false;
+    updateSourceEntry();
     updateCompactStatus();
     status.textContent = message;
   }
@@ -1961,6 +2280,9 @@ function build(app: HTMLElement): void {
       thumbWrap.hidden = false;
       cropReadout.hidden = false;
       sessionEnded = false;
+      sourceName = `Screen capture (${session.label})`;
+      captureExpectation.hidden = true;
+      updateSourceEntry();
       // Largest region with the pattern's aspect, centred — the source
       // rarely shares the design's proportions, so a full-frame default
       // would start the session outside the lock.
@@ -1969,6 +2291,7 @@ function build(app: HTMLElement): void {
         config.grid,
       );
       renderCrop();
+      announceCrop();
       // Source dimensions can change mid-session (e.g. the shared
       // window is resized): re-fit the region rather than let it point
       // off-frame, keeping the aspect on the way.
@@ -2112,6 +2435,7 @@ function build(app: HTMLElement): void {
     if (cropDrag === null) return;
     cropDrag = null;
     cropOverlay.releasePointerCapture(event.pointerId);
+    announceCrop();
     log.debug('capture', 'crop region set', { ...(cropRect ?? {}) });
   });
 
@@ -2139,6 +2463,7 @@ function build(app: HTMLElement): void {
         )
       : moveRect(cropRect, move[0], move[1], bounds);
     renderCrop();
+    announceCrop();
     event.preventDefault();
   });
 
@@ -2146,7 +2471,7 @@ function build(app: HTMLElement): void {
 
   input.addEventListener('change', () => {
     const file = imageFiles(input.files ?? []).at(0);
-    if (file) void importBlob(file, 'file picker');
+    if (file) void importBlob(file, 'file picker', file.name);
   });
 
   window.addEventListener('dragover', (event) => {
@@ -2155,12 +2480,12 @@ function build(app: HTMLElement): void {
   window.addEventListener('drop', (event) => {
     event.preventDefault();
     const file = imageFiles(event.dataTransfer?.files ?? []).at(0);
-    if (file) void importBlob(file, 'drop');
+    if (file) void importBlob(file, 'drop', file.name);
     else status.textContent = 'That drop had no image file.';
   });
   window.addEventListener('paste', (event) => {
     const file = imageFiles(event.clipboardData?.files ?? []).at(0);
-    if (file) void importBlob(file, 'paste');
+    if (file) void importBlob(file, 'paste', file.name);
   });
 }
 

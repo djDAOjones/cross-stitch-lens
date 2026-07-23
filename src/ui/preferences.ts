@@ -24,11 +24,20 @@ export const PREFERENCES_VERSION = 1;
 export interface ShellPreferences {
   version: number;
   panelCollapsed: boolean;
+  /**
+   * Open/closed state per disclosure (accordion sections and inline
+   * depth reveals), keyed by disclosure id (M14-IMPL-03). Ids absent
+   * here take the spec's first-run default — so new disclosures added
+   * later start at their intended state rather than "whatever an old
+   * record says".
+   */
+  disclosures: Record<string, boolean>;
 }
 
-/** First-run preferences: settings panel open. */
+/** First-run preferences: settings panel open, spec-default sections
+ *  (only Design open — the ids live with the sections in main.ts). */
 export function defaultPreferences(): ShellPreferences {
-  return { version: PREFERENCES_VERSION, panelCollapsed: false };
+  return { version: PREFERENCES_VERSION, panelCollapsed: false, disclosures: {} };
 }
 
 /**
@@ -49,10 +58,18 @@ export function parsePreferences(raw: string | null): ShellPreferences {
   }
   const record = parsed as Record<string, unknown>;
   if (record['version'] !== PREFERENCES_VERSION) return defaultPreferences();
+  const disclosures: Record<string, boolean> = {};
+  const rawDisclosures = record['disclosures'];
+  if (typeof rawDisclosures === 'object' && rawDisclosures !== null && !Array.isArray(rawDisclosures)) {
+    for (const [key, value] of Object.entries(rawDisclosures)) {
+      if (typeof value === 'boolean') disclosures[key] = value;
+    }
+  }
   return {
     version: PREFERENCES_VERSION,
     panelCollapsed:
       typeof record['panelCollapsed'] === 'boolean' ? record['panelCollapsed'] : false,
+    disclosures,
   };
 }
 
@@ -61,6 +78,7 @@ export function serializePreferences(preferences: ShellPreferences): string {
   return JSON.stringify({
     version: PREFERENCES_VERSION,
     panelCollapsed: preferences.panelCollapsed,
+    disclosures: preferences.disclosures,
   });
 }
 

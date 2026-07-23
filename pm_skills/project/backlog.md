@@ -27,59 +27,31 @@ byte-identical; no new runtime dependencies; no project-file schema
 change. Milestone docs land under `docs/` as they are produced:
 `ui-audit.md`, `ui-journeys.md`, `ui-spec.md`, `ui-evidence.md`.
 
-#### Phase 1 — Audit & analysis (read-only)
+#### Extension — owner feedback triage (2026-07-23, D88)
 
-- [ ] **M14-AUDIT-01 Standards & heuristics audit** [detail] (2026-07-23)
-  Intent: audit every UI surface × state against `UI-STANDARDS.md` — Carbon anatomy, Nielsen hard rules, WCAG 2.2 AAA, the design-review gate — plus a hard-coded-style inventory and captured reference exports for the byte-identity proof.
-  Done when: `ui-audit.md` holds a ranked findings table (severity, criterion, evidence) covering every surface and state, and the reference exports exist.
+Agreed items from the owner's UI feedback (pre-M14 notes; the
+already-delivered majority is listed in D88 for re-check at the end
+review). ACCEPT-01 now gates on these.
 
-- [ ] **M14-AUDIT-02 Novice journeys & control-depth map** [detail] (2026-07-23)
-  Intent: walk the five core journeys (first still conversion, first live capture, palette refinement, chart export, save/reopen) as a first-time user; map every control to an audience tier and its current findability.
-  Done when: `ui-journeys.md` holds per-journey step tables with friction points and a complete control-tier inventory.
+- [ ] **M14-EXT-01 Top bar consolidation** [detail] (2026-07-23)
+  Intent: one app bar — title, quiet build id (A13 placement reversed on owner call), dev-only diagnostics cluster (Copy diagnostics + Debug log with download), Source button, Hide settings, Preview focus (kept distinct — owner pick).
+  Done when: the six affordances sit in the bar (diagnostics dev-gated per UI-STANDARDS), shell invariants and tests hold at 320 px/wide/focus in both schemes, ui-baseline tripwire green.
 
-#### Phase 2 — Specification (decisions recorded, no visual change)
+- [ ] **M14-EXT-02 Source chooser modal** [detail] (2026-07-23)
+  Intent: the top-bar Source button opens a Carbon modal offering image / screen capture / sample and naming the current source; the cold-start entry state stays the first-run path; live-capture thumbnail, crop and session controls stay below the preview (owner pick).
+  Done when: source switching works wholly through the modal after first conversion, journey-1 cold start still converts through visible affordances alone, and the capture session loop is unchanged.
 
-- [ ] **M14-SPEC-01 Interaction architecture & disclosure spec** [detail] [blocked: M14-AUDIT-01, M14-AUDIT-02] (2026-07-23)
-  Intent: decide the novice-first default surface and where depth lives — panel grouping and order, Carbon disclosure pattern per tier, first-run entry emphasis, keyboard model, terminology map to user language.
-  Done when: `ui-spec.md` assigns every inventoried control a tier, location and named Carbon pattern, with each decision logged for the end review.
+- [ ] **M14-EXT-03 View-controls disclosure** (2026-07-23)
+  Intent: the zoom/fit/compare toolbar becomes a collapsible "View controls" row — open on first run, persisted in the disclosures store; zoom % and dimensions readouts stay visible; wheel/keyboard routes untouched (retires the A16 waiver beyond D86).
+  Done when: a returning user's collapsed state sticks; every view function stays keyboard-reachable; the spec table's reach column is updated.
 
-- [ ] **M14-SPEC-02 Token system & visual language** [detail] [blocked: M14-AUDIT-01] (2026-07-23)
-  Intent: land `src/ui/styles/tokens.css` — project tokens plus Carbon-convention spacing, type, layer and state tokens in both colour schemes — with every text pair proven by a contrast script.
-  Done when: tokens.css exists (unconsumed, zero visual change), `check-contrast.mjs` proves ≥ 7:1 (4.5:1 large), and the pair table is in the spec doc.
-
-#### Phase 3 — Implementation (each lands green; outputs byte-identical)
-
-- [ ] **M14-IMPL-01 Carbon shell & layout** [detail] [blocked: M14-SPEC-01, M14-SPEC-02] (2026-07-23)
-  Intent: replace the `index.html` dev-shell CSS with token-driven stylesheets under `src/ui/styles` — Carbon productive chrome for header, panels and info strip — preserving preview-first order, the 320 px companion baseline and preview focus.
-  Done when: no dev-shell inline styles remain and shell invariants plus tests hold at 320 px, wide and focus modes in both schemes.
-
-- [ ] **M14-IMPL-02 Control anatomy upgrade** [detail] [blocked: M14-IMPL-01] (2026-07-23)
-  Intent: bring every control to full Carbon anatomy — labels, helper text, validation and disabled states, linked error text — across all panels and toolbars.
-  Done when: every control matches its spec-named pattern with visible label = accessible name, ≥ 44 px targets and no colour-only state.
-
-- [ ] **M14-IMPL-03 Progressive disclosure & IA restructure** [detail] [blocked: M14-IMPL-02] (2026-07-23)
-  Intent: implement the spec structure — novice default surface, depth behind Carbon disclosure, regrouped panels, disclosure state in the preferences store (never the project file), deliberate focus management.
-  Done when: every control sits at its spec tier and location, reachable at the spec's stated depth, with tab order matching visual order.
-
-- [ ] **M14-IMPL-04 First-run & guidance layer** [detail] [blocked: M14-IMPL-03] (2026-07-23)
-  Intent: intentional empty states for every panel (nothing yet / filtered out / failed / unavailable), a cold-start path with a generated sample source, capture-permission expectations, contextual help for non-obvious controls.
-  Done when: a cold start reaches a converted preview through visible affordances alone and no panel state is blank or ambiguous.
-
-- [ ] **M14-IMPL-05 Language & microcopy pass** [detail] [blocked: M14-IMPL-04] (2026-07-23)
-  Intent: apply the terminology map — user language on default surfaces, sentence case, concise labels, helper text that earns its place, errors naming what happened and what to do next, UK English copy.
-  Done when: the before/after copy inventory in the evidence doc shows every surface swept and conflict/status sentences still honest (D55/D72).
+- [ ] **M14-EXT-04 Design-size rename** (2026-07-23)
+  Intent: "Pattern width/height" → "Design width/height" (owner pick over "Canvas" — fabric/M12 and preview-surface collision); labels and helpers via SCALE_LABELS; stitches language, stored values and schema untouched.
+  Done when: every surfaced label and summary says Design consistently (no synonyms left), spec/docs updated, tests green.
 
 #### Phase 4 — Verification & end review
 
-- [ ] **M14-VERIFY-01 Standards conformance verification** [detail] [blocked: M14-IMPL-05] (2026-07-23)
-  Intent: re-run the full audit checklist on the finished UI — keyboard-only walk, accessibility-tree review, contrast script, reduced motion, the width/scheme/mode matrix, the 14 design-review-gate items per changed surface.
-  Done when: every audit finding is closed or explicitly waived with a reason in the evidence doc, and no new violation stands.
-
-- [ ] **M14-VERIFY-02 Journey & depth verification** [detail] [blocked: M14-IMPL-05] (2026-07-23)
-  Intent: re-walk the journeys — cold start to converted preview without instructions, controlled-source capture, depth reachability per spec — and prove the milestone stayed UI-only.
-  Done when: step-count deltas are published, reference exports are byte-identical, and `check` plus `bench` are green.
-
-- [ ] **M14-ACCEPT-01 Maintainer end review** [maintainer] [detail] [blocked: M14-VERIFY-01, M14-VERIFY-02] (2026-07-23)
+- [ ] **M14-ACCEPT-01 Maintainer end review** [maintainer] [detail] [blocked: M14-EXT-01, M14-EXT-02, M14-EXT-03, M14-EXT-04] (2026-07-23)
   Intent: the reserved human gate — judge look, feel and taste over the review pack (changes, logged decisions, before/after evidence, waivers) and a live Photoshop companion session.
   Done when: owner pass/fail notes are recorded; failures route to new M14 fix tasks, never silent rework.
 

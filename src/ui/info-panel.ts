@@ -77,7 +77,9 @@ export function buildRows(perColor: ColorUsage[], options: RowOptions = {}): Row
       thread.provenance === 'mapped' ? ' · colour mapped, not measured' : '';
     return {
       hex: usage.hex,
-      label: `${brand} ${thread.reference} ${thread.name}`.trim(),
+      // Hex rides in the visible label (audit A14): a title tooltip is
+      // hover-only, unreachable by keyboard and silent to AT.
+      label: `${brand} ${thread.reference} ${thread.name}`.trim() + ` · ${usage.hex}`,
       count: usage.count,
       percentText: formatPercent(usage.percent),
       title: `${usage.hex} · ${thread.name}${provenance}`,

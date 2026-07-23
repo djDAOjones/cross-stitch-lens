@@ -15,17 +15,17 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 188 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 210 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 12 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
 - `.github` — 1 file(s)
 - `.windsurf` — 1 file(s)
 - `crates` — 4 file(s)
-- `docs` — 8 file(s)
-- `scripts` — 6 file(s)
-- `src` — 78 file(s)
-- `tests` — 76 file(s)
+- `docs` — 12 file(s)
+- `scripts` — 7 file(s)
+- `src` — 84 file(s)
+- `tests` — 87 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -76,10 +76,15 @@
 - `docs/measurement-contract.md` — boundary contract (bv2): workload ID grammar, matrix blocks, report schema + run validity, budget bindings, browser rehearsal
 - `docs/performance-evidence.md` — measured evidence: bv1 history (M5 audits, M5C decisions) + the bv2 re-baseline (M13-MEAS-01)
 - `docs/requirements.md` — full combined requirements spec (reference only)
+- `docs/ui-audit.md` — M14-AUDIT-01 findings record: surface × state matrix, 22 ranked findings, style inventory, baseline hashes + re-run rules
+- `docs/ui-evidence.md` — M14 implementation evidence: per-task matrix runs, deviations, before/after notes
+- `docs/ui-journeys.md` — M14-AUDIT-02 record: five journey step tables, depth measurements, control-tier inventory
+- `docs/ui-spec.md` — M14-SPEC-01: tier/reach contract, 5-section architecture, control table, terminology map, keyboard model
 
 ## scripts
 
 - `scripts/build-palette.mjs` — derives `dmc.json` from the owner CSV
+- `scripts/check-contrast.mjs` — gate step: WCAG AAA proof of every tokens.css @pair, both schemes
 - `scripts/check-docs.mjs` — docs gate: backticked path/link validation
 - `scripts/check-secrets.mjs` — report-only credential-shape scan (gate step)
 - `scripts/check-wasm.mjs` — gate step: cargo test + wasm-pack build; toolchain-aware skip (hard-fails in CI)
@@ -141,6 +146,7 @@
 - `src/library/records.ts` — Pure library file formats: canonical inventory/palette JSON, validation, additive merge, id-collision rename
 - `src/library/store.ts` — Cross-project library storage behind one interface; IndexedDB impl + memory fallback that announces itself
 - `src/main.ts` — app entry: M2 shell — import, control panel, preview, info panel
+- `src/ui/accordion.ts` — Carbon accordion section: h2-wrapped toggle, hidden panel, derived closed-state summary
 - `src/ui/controls.ts` — Carbon-style field builders: toggle/number/colour/select + clampInt
 - `src/ui/debug-panel.ts` — dev-only profiling panel: rolling timing window (pure) + disclosure DOM
 - `src/ui/diagnostics-button.ts` — the "Copy diagnostics" control + announced status line
@@ -148,12 +154,17 @@
 - `src/ui/dither-panel.ts` — mounts the Dither group: preset/algorithm selects + method-specific controls, rebuilt only on algorithm change
 - `src/ui/import.ts` — import routes → decode: filter (pure) + blob→PixelBuffer
 - `src/ui/info-panel.ts` — stats info panel: pure row model + thin DOM half
+- `src/ui/modal.ts` — Carbon modal (text prompt + danger confirm): trap arithmetic pure, focus restore, Escape/backdrop cancel
 - `src/ui/palette-panel.ts` — Colour panel: brands, source, inventory, count, per-thread rules; pure model + thin DOM half
 - `src/ui/preferences.ts` — Shell preferences (panel collapsed) in localStorage; parse falls back to defaults for anything unreadable. Never project data.
 - `src/ui/preview.ts` — preview controller: toolbar, wheel/drag/keys → worker
+- `src/ui/sample.ts` — deterministic drawn test-card for "Try a sample"; feeds the normal source path
 - `src/ui/scales.ts` — The four resolutions kept apart — pattern/capture/preview/export — with unit-named fields, reference-sharing updaters, and the visible label set.
 - `src/ui/shell.ts` — One shell-state model for panel collapse + preview focus; `visibility()` is the single composition rule for what is hidden.
 - `src/ui/status-line.ts` — Compact status line for preview focus, derived from one owned snapshot rather than scraped DOM.
+- `src/ui/styles/base.css` — element layer: reset, [hidden] contract, focus ring, type ramp, generic fields/buttons/toggle/tables
+- `src/ui/styles/shell.css` — shell chrome: header, columns, preview host, focus-mode chain, capture surfaces, panel containers
+- `src/ui/styles/tokens.css` — design tokens: project + Carbon-convention systems, both schemes, @pair contrast contract (D80)
 - `src/ui/viewport.ts` — pure viewport maths: fit, anchored zoom, pan clamp
 - `src/vite-env.d.ts` — ambient types for injected version/build globals
 - `src/worker/backend-select.ts` — per-workload dither routing (metric-categorical, M5-PERF-27) + recorded per-stage override map
@@ -224,6 +235,7 @@
 - `tests/library-records.test.ts` — Library file round trips, corrupt/oversized import, merge, collisions, memory store
 - `tests/lut-cache.test.ts` — cache identity by palette content, LRU bound, GPU-LUT sanity rejection
 - `tests/matrix/rows.ts` — the correctness matrix: row definitions with `proves` text, adversarial palettes, seeded sources
+- `tests/modal.test.ts` — pure halves: focus-trap decisions + aria-describedby list arithmetic
 - `tests/palette-panel.test.ts` — Panel model: disjoint per-thread roles, source round trip, row filtering, count summary
 - `tests/palette-policy.test.ts` — Policy resolution: brands/source/inventory/exclusions and every explained conflict
 - `tests/palette-presets.test.ts` — Preset semantics: real references, enabled-brand only, visible degradation, stated rules
@@ -239,7 +251,17 @@
 - `tests/stats.test.ts` — stats partition/sum/sort/reference invariants
 - `tests/status-line.test.ts` — Compact-status field order, capture/freshness state coverage, and the never-empty invariant.
 - `tests/thread-equivalents.test.ts` — Nearest cross-brand equivalent: ordering, labelling, curated over computed
+- `tests/ui-baseline/baseline.test.ts` — M14 byte-identity tripwire: pins fixture/pipeline/project hashes inside check
+- `tests/ui-baseline/exports/chart-200x200.pdf` — M14 baseline capture: chart PDF (compare date-normalised, D74)
+- `tests/ui-baseline/exports/chart-200x200.png` — M14 baseline capture: chart PNG at cell 10
+- `tests/ui-baseline/exports/design-200x200.png` — M14 baseline capture: clean PNG, pixels = reference pin
+- `tests/ui-baseline/exports/design-200x200@4x.png` — M14 baseline capture: enlarged PNG at scale 4
+- `tests/ui-baseline/exports/project-200x200.json` — M14 baseline capture: saved project (compare field-wise, D74)
+- `tests/ui-baseline/hashes.json` — Committed SHA-256 pins the baseline test asserts; never regenerated
+- `tests/ui-baseline/source-gradient-256.png` — Deterministic fixture the browser walks import; write-once
+- `tests/ui-baseline/source.ts` — Seeded fixture generator + minimal PNG encoder for the baseline
 - `tests/ui-import.test.ts` — image-file filtering (pure half of import)
+- `tests/ui-styles.test.ts` — stylesheet invariant greps: [hidden]!important, no CSS order, dev-shell absence, import order
 - `tests/viewport.test.ts` — viewport maths exact cases (fit/anchor/clamp)
 - `tests/wasm-dither.test.ts` — wasm↔TS bit-exact parity: golden fixture, metrics/scan modes, full DMC Lab
 - `tests/webgpu-lut.test.ts` — GPU tolerance suite: f32-mirror near-tie bound, static shader scans, skipIf real-GPU parity

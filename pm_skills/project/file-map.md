@@ -94,7 +94,7 @@
 - `src/backends/webgpu/device.ts` — WebGPU feature detect + one lazy shared device (null on failure)
 - `src/backends/webgpu/reduce.ts` — async GPU kernels: LUT build + palette map; null → ts fallback
 - `src/backends/webgpu/wgsl.ts` — WGSL sources + binding indices: lut-build (metric-baked) + integer palette-map
-- `src/bench-browser.ts` — the bv2 browser harness: preview-update/interaction/export rows through the shipped Worker route, the M13 worker-route stage matrix, LUT-build timing and selection-source contention legs (`?auto=` unattended mode), live-capture counters, the M5 GPU gates, downloadable bv2 report. Not imported by the app
+- `src/bench-browser.ts` — the bv2 browser harness: preview-update/interaction/export rows through the shipped Worker route, the M13 worker-route stage matrix, LUT-build timing, selection-source contention and forced-backend comparison legs (`?auto=` unattended mode), live-capture counters, the M5 GPU gates, downloadable bv2 report. Not imported by the app
 - `src/bench-source.ts` — controlled interaction source: repaints on BroadcastChannel command, replies with its own paint timestamp
 - `src/bench/boundaries.ts` — the six measurement boundaries + BOUNDARY_VERSION (code copy of the contract; moved from tests/bench so production entries never import test modules)
 - `src/bench/clock.ts` — absolute cross-context timestamps (timeOrigin + now) + timer-resolution probe
@@ -156,7 +156,7 @@
 - `src/ui/status-line.ts` — Compact status line for preview focus, derived from one owned snapshot rather than scraped DOM.
 - `src/ui/viewport.ts` — pure viewport maths: fit, anchored zoom, pan clamp
 - `src/vite-env.d.ts` — ambient types for injected version/build globals
-- `src/worker/backend-select.ts` — auto backend pick: one-shot calibration + hysteresis policy + selection map
+- `src/worker/backend-select.ts` — per-workload dither routing (metric-categorical, M5-PERF-27) + recorded per-stage override map
 - `src/worker/client.ts` — main-thread client: Worker + coalescing + transfer + optional measurement observer
 - `src/worker/coalesce.ts` — latest-wins scheduler (no queue), drop counter
 - `src/worker/execute.ts` — timed frame execution; errors become responses
@@ -164,7 +164,7 @@
 - `src/worker/lut-cache.ts` — one LUT per palette content+metric; LRU-bounded; rejects implausible GPU LUTs; hit/miss/eviction counters
 - `src/worker/pipeline-worker.ts` — worker entry shell: owns worker scope, wires router
 - `src/worker/preview-surface.ts` — worker: OffscreenCanvas; view/grid/tick/compare redraw (no clip)
-- `src/worker/protocol.ts` — main↔worker message types, transferred buffers, absolute-clock frame marks
+- `src/worker/protocol.ts` — main↔worker message types, transferred buffers, absolute-clock frame marks, harness-only backend force
 - `src/worker/router.ts` — message routing + compare source cache; guarantees one response per request
 
 ## tests

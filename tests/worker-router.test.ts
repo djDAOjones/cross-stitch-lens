@@ -193,6 +193,22 @@ describe('worker router response invariant', () => {
     expect(gateReleasedBy(posted)).toBe(true);
   });
 
+  it('forwards the harness backend force through the export re-shape', async () => {
+    const seen: ProcessRequest[] = [];
+    const { route, posted } = harness({
+      execute: (request) => {
+        seen.push(request);
+        return result(request.id);
+      },
+    });
+    route({ ...exportRequest(31), force: { dither: 'ts' } });
+    await vi.waitFor(() => expect(posted).toHaveLength(1));
+    // Without the forwarding, a forced export comparison silently
+    // measures the routed backend (M13-PROF-03).
+    expect(seen[0]?.force).toEqual({ dither: 'ts' });
+    expect(gateReleasedBy(posted)).toBe(true);
+  });
+
   it('answers exactly once per request', async () => {
     const { route, posted } = harness();
     route(processRequest(21));

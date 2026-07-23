@@ -270,13 +270,25 @@ using the worker's absolute-clock phase marks (`FrameMarks` in
    plus the `mapPaletteGpu` comparison, now bv2 rows), the M13-PROF-02
    LUT-build timing (TS vs WebGPU end-to-end, first-call cold row
    separated), the `export` rows (composite clean-PNG/chart/PDF spans
-   plus their pipeline/scale/encode/assembly children), and the
+   plus their pipeline/scale/encode/assembly children), the
    selection-source contention probe (a 250 ms still-submit pump with
    full-RGB `exportFrame` calls interleaved — the worker-side half of
    "does palette selection block live preview?"; the capture-path
-   confirmation stays with M13-PROF-04).
+   confirmation stays with M13-PROF-04), and the backend end-to-end
+   comparison (M13-PROF-03, button 2c): TS↔WASM Floyd–Steinberg forced
+   through the shipped worker route on the routing rules' own axes
+   (metric × palette × grid, interleaved, byte equality of pixels and
+   the palette-index sidecar asserted per cell), the TS-vs-`mapPaletteGpu`
+   sweep, cold wasm/GPU initialisation rows, the export-boundary
+   comparison on the routed-wasm workload, and the fallback probes
+   (unregistered backend, non-FS delegation guard, GPU device loss —
+   destructive, so it runs last). The force channel is harness-only:
+   it rides on the worker *request* (`force` in
+   `src/worker/protocol.ts`), never on `PipelineConfig`, so it cannot
+   reach a project file.
 
-   **Unattended form**: `bench.html?auto=still,stage,gpu,lut,contention`
+   **Unattended form**:
+   `bench.html?auto=still,stage,backend,gpu,lut,contention`
    runs the listed no-capture legs on load;
    `&post=http://127.0.0.1:<port>/report` POSTs the finished bv2 JSON
    to a local collector. This exists so an agent can run the

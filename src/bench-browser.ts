@@ -23,7 +23,8 @@
  * and it ships only because it is its own HTML entry.
  */
 
-import { isWebGpuAvailable } from './backends/webgpu/device.ts';
+import { registerWasmDither } from './backends/wasm/dither.ts';
+import { getDevice, isWebGpuAvailable } from './backends/webgpu/device.ts';
 import { buildLutGpu, mapPaletteGpu } from './backends/webgpu/reduce.ts';
 import { BOUNDARY_VERSION } from './bench/boundaries.ts';
 import { absNow, timerResolutionMs } from './bench/clock.ts';
@@ -47,7 +48,16 @@ import {
   type BenchRow,
   type EnvironmentIdentity,
 } from './bench/report.ts';
-import { configFor, palette64, sourceBuffer, workloadById } from './bench/workloads.ts';
+import {
+  configFor,
+  FS_DEFAULT,
+  NO_DITHER,
+  palette64,
+  sourceBuffer,
+  workloadById,
+  workloadId,
+  type Workload,
+} from './bench/workloads.ts';
 import type { BenchSourceMessage } from './bench-source.ts';
 import { DirtyGate, frameSignature, hashPixels, sampleVideo } from './capture/dirty.ts';
 import { DraftGovernor } from './capture/draft.ts';
@@ -55,7 +65,7 @@ import { PumpGate, startFramePump } from './capture/pump.ts';
 import { captureErrorMessage, startCapture, type CaptureSession } from './capture/session.ts';
 import { buildLut, LUT_SIZE } from './core/color/lut.ts';
 import type { ColorMetric } from './core/color/metrics.ts';
-import { loadDmcPalette } from './core/palette.ts';
+import { loadDmcPalette, paletteLab } from './core/palette.ts';
 import { fullRgbVariant, type PipelineConfig } from './core/pipeline/config.ts';
 import { reduceStage } from './core/pipeline/reduce.ts';
 import { computeStats } from './core/stats.ts';
@@ -63,8 +73,9 @@ import type { Backend, Palette, PixelBuffer } from './core/types.ts';
 import { chartLayout, encodeChartPng } from './export/chart.ts';
 import { buildChartPdf, type KeyEntry } from './export/pdf.ts';
 import { encodePngBlob, scaleNearest } from './export/png.ts';
+import { routeDither } from './worker/backend-select.ts';
 import { PipelineClient } from './worker/client.ts';
-import type { FrameMarks, StageTiming } from './worker/protocol.ts';
+import type { BackendForce, FrameMarks, StageTiming } from './worker/protocol.ts';
 import { DEFAULT_GRID_STYLE } from './worker/grid.ts';
 
 /** Still-input workloads the harness measures (bv2 matrix IDs). */
@@ -159,18 +170,31 @@ client.setObserver({
  * overwritten by a concurrent job.
  */
 let lastTimings: StageTiming[] = [];
+
+/**
+ * The most recent result buffer, sidecar included — same sequencing
+ * guarantee as {@link lastTimings}. The backend comparison reads it to
+ * assert byte equality between forced backends; it is never retained
+ * across submits.
+ */
+let lastResult: PixelBuffer | null = null;
 client.setOnResult((frame) => {
   lastTimings = frame.timings;
+  lastResult = frame.buffer;
 });
 
 /** Submit one frame and await its settlement (still-input rows). */
-function submitAndWait(buffer: PixelBuffer, config: PipelineConfig): Promise<SettledJob> {
+function submitAndWait(
+  buffer: PixelBuffer,
+  config: PipelineConfig,
+  force?: BackendForce,
+): Promise<SettledJob> {
   return new Promise((resolve) => {
     onSettled = (job) => {
       onSettled = null;
       resolve(job);
     };
-    client.submit(buffer, config);
+    client.submit(buffer, config, force);
   });
 }
 
@@ -1237,6 +1261,619 @@ async function runContentionProbe(): Promise<void> {
   say('Contention probe done.');
 }
 
+// ------------------- backend end-to-end comparison (M13-PROF-03)
+
+/** Fresh copy of a source buffer (submits transfer their pixels). */
+function copyOf(source: PixelBuffer): PixelBuffer {
+  return {
+    width: source.width,
+    height: source.height,
+    data: new Uint8ClampedArray(source.data),
+  };
+}
+
+/** Median of a sample set (report rows carry the full distribution). */
+function medianOf(samples: readonly number[]): number {
+  const sorted = [...samples].sort((a, b) => a - b);
+  return sorted[sorted.length >> 1] ?? 0;
+}
+
+/**
+ * Byte-level output comparison, sidecar included. Every backend-
+ * comparison timing row carries one of these verdicts: a fast invalid
+ * result is a defect signal, never a win (D46).
+ */
+function compareOutputs(
+  a: PixelBuffer,
+  b: PixelBuffer,
+): { verdict: 'EXACT' | 'DISAGREES'; pixelMismatches: number; indices: string } {
+  let pixelMismatches = 0;
+  if (a.data.length !== b.data.length) {
+    pixelMismatches = Math.abs(a.data.length - b.data.length);
+  } else {
+    for (let i = 0; i < a.data.length; i++) if (a.data[i] !== b.data[i]) pixelMismatches++;
+  }
+  let indices: string;
+  const ai = a.indices;
+  const bi = b.indices;
+  if (ai === undefined && bi === undefined) indices = 'absent on both';
+  else if (ai === undefined || bi === undefined) indices = 'missing on one side';
+  else if (ai.length !== bi.length) indices = 'length mismatch';
+  else {
+    let mismatches = 0;
+    for (let i = 0; i < ai.length; i++) if (ai[i] !== bi[i]) mismatches++;
+    indices = mismatches === 0 ? 'EXACT' : `${String(mismatches)} mismatches`;
+  }
+  const verdict =
+    pixelMismatches === 0 && (indices === 'EXACT' || indices === 'absent on both')
+      ? 'EXACT'
+      : 'DISAGREES';
+  return { verdict, pixelMismatches, indices };
+}
+
+/**
+ * The FS cells the worker-route comparison sweeps: the two routing
+ * rules' own axes (metric × palette × grid). Lab cells are frozen-
+ * matrix IDs; rgb cells beyond the matrix's one rgb row are built
+ * through the same grammar (`workloadId`), so their IDs stay truthful
+ * about every axis without widening the frozen matrix itself.
+ */
+function backendCells(): Workload[] {
+  const cells: Workload[] = [];
+  for (const metric of ['lab', 'rgb'] as const) {
+    for (const palette of ['p64', 'p489'] as const) {
+      for (const grid of [200, 300, 1024]) {
+        const spec = {
+          source: 'noise' as const,
+          sourceSize: 'w1280' as const,
+          alpha: 'opaque' as const,
+          grid,
+          palette,
+          metric,
+          dither: FS_DEFAULT,
+          order: 'resize-first' as const,
+          resizeMode: 'stretch' as const,
+          path: 'still' as const,
+        };
+        cells.push({ id: workloadId(spec), ...spec });
+      }
+    }
+  }
+  return cells;
+}
+
+/**
+ * Wait (bounded) until a forced-wasm dither actually runs wasm in the
+ * worker — registration there is fire-and-forget at startup, so an
+ * early forced frame can legitimately fall back to ts.
+ */
+async function awaitWasmInWorker(): Promise<boolean> {
+  const workload = workloadById(STILL_200);
+  const source = sourceBuffer(workload);
+  const config = configFor(workload);
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const job = await submitAndWait(copyOf(source), config, { dither: 'wasm' });
+    if (
+      job.outcome === 'result' &&
+      lastTimings.some((t) => t.stage === 'dither' && t.backend === 'wasm')
+    ) {
+      return true;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+  return false;
+}
+
+/**
+ * Cold initialisation rows: the once-per-context costs a routing
+ * decision would amortise. The wasm figure is the page-context
+ * fetch+compile+init of the same pkg the worker loads (the worker's
+ * own registration is unobservable from here); the GPU figure is
+ * device acquisition, cold only when this leg runs before any other
+ * GPU leg — the meta says which.
+ */
+async function runBackendColdInit(): Promise<void> {
+  if (__WASM_AVAILABLE__) {
+    const start = performance.now();
+    const registered = await registerWasmDither();
+    const ms = performance.now() - start;
+    if (registered) {
+      rows.push(
+        measuredRow({
+          workloadId: STILL_300,
+          boundary: 'prepare',
+          label: 'wasm module init (page context)',
+          backend: 'wasm',
+          cache: 'cold',
+          warmupRuns: 0,
+          samples: [ms],
+          meta: { 'one-shot': 'module caching makes later calls no-ops' },
+        }),
+      );
+    } else {
+      findings.push('backend comparison: page-context wasm registration failed');
+    }
+  } else {
+    rows.push(
+      skippedRow({
+        workloadId: STILL_300,
+        boundary: 'prepare',
+        label: 'wasm module init (page context)',
+        status: 'unsupported',
+        reason: 'wasm pkg not built into this bundle',
+      }),
+    );
+  }
+  const start = performance.now();
+  const device = await getDevice();
+  rows.push(
+    measuredRow({
+      workloadId: STILL_300,
+      boundary: 'prepare',
+      label: 'gpu device acquisition (page context)',
+      backend: 'webgpu',
+      cache: 'cold',
+      warmupRuns: 0,
+      samples: [performance.now() - start],
+      meta: {
+        available: device !== null,
+        'cold only when the backend leg runs before other GPU legs': true,
+      },
+    }),
+  );
+}
+
+/**
+ * TS↔WASM Floyd–Steinberg through the shipped worker route, both
+ * backends forced onto every cell of the routing rules' own axes,
+ * interleaved run-for-run to share thermal and GC noise. Each cell
+ * publishes per-backend `stage` rows (the executor's own dither
+ * timing, so wasm boundary copies are inside the mark) and
+ * `preview-update` rows (the full user-visible span), with byte
+ * equality of pixels *and* the palette-index sidecar asserted between
+ * the two backends' outputs.
+ */
+async function runBackendDitherMatrix(): Promise<void> {
+  const wasmUp = await awaitWasmInWorker();
+  if (!wasmUp) {
+    rows.push(
+      skippedRow({
+        workloadId: STILL_300,
+        boundary: 'stage',
+        label: 'dither backend comparison',
+        status: 'unsupported',
+        reason: 'wasm backend never became available in the worker',
+      }),
+    );
+    return;
+  }
+  const sides = ['ts', 'wasm'] as const;
+  for (const cell of backendCells()) {
+    const source = sourceBuffer(cell);
+    const config = configFor(cell);
+    const routed = routeDither({
+      grid: cell.grid,
+      paletteSize: config.palette?.entries.length ?? 0,
+      metric: cell.metric,
+      algorithm: 'floyd-steinberg',
+      strength: 1,
+    });
+    const plan = cell.grid >= 1024 ? { warmup: 1, runs: 5 } : { warmup: 2, runs: 8 };
+    const perSide: Record<
+      (typeof sides)[number],
+      { stage: number[]; preview: number[]; used: Set<Backend>; final: PixelBuffer | null }
+    > = {
+      ts: { stage: [], preview: [], used: new Set(), final: null },
+      wasm: { stage: [], preview: [], used: new Set(), final: null },
+    };
+    let failed = false;
+    for (let i = 0; i < plan.warmup + plan.runs && !failed; i++) {
+      for (const side of sides) {
+        const job = await submitAndWait(copyOf(source), config, { dither: side });
+        if (job.outcome === 'error') {
+          findings.push(`${cell.id}: worker error during backend comparison (forced ${side})`);
+          failed = true;
+          break;
+        }
+        if (i < plan.warmup) continue;
+        const timing = lastTimings.find((t) => t.stage === 'dither');
+        if (timing !== undefined) {
+          perSide[side].stage.push(timing.ms);
+          perSide[side].used.add(timing.backend);
+        }
+        if (job.marks !== undefined) {
+          perSide[side].preview.push(job.marks.drawDoneAt - job.startAt);
+        }
+        perSide[side].final = lastResult;
+      }
+    }
+    if (failed) continue;
+    if (perSide.wasm.used.has('ts')) {
+      findings.push(`${cell.id}: forced wasm fell back to ts mid-run — cell not comparable`);
+      continue;
+    }
+    const equality =
+      perSide.ts.final !== null && perSide.wasm.final !== null
+        ? compareOutputs(perSide.ts.final, perSide.wasm.final)
+        : null;
+    if (equality !== null && equality.verdict !== 'EXACT') {
+      findings.push(
+        `${cell.id}: forced ts and wasm outputs disagree — ` +
+          `${String(equality.pixelMismatches)} pixel bytes, indices ${equality.indices}`,
+      );
+    }
+    const winner =
+      medianOf(perSide.ts.stage) <= medianOf(perSide.wasm.stage) ? 'ts' : 'wasm';
+    for (const side of sides) {
+      const meta: Record<string, string | number | boolean> = {
+        'routed backend': routed,
+        'stage winner this cell': winner,
+        ...(equality === null
+          ? {}
+          : {
+              'output vs other side': equality.verdict,
+              'indices sidecar': equality.indices,
+            }),
+      };
+      rows.push(
+        measuredRow({
+          workloadId: cell.id,
+          boundary: 'stage',
+          label: `dither (forced ${side})`,
+          backend: side,
+          cache: 'warm',
+          warmupRuns: plan.warmup,
+          samples: perSide[side].stage,
+          meta,
+        }),
+      );
+      rows.push(
+        measuredRow({
+          workloadId: cell.id,
+          boundary: 'preview-update',
+          label: `preview-update (forced ${side})`,
+          backend: side,
+          cache: 'warm',
+          warmupRuns: plan.warmup,
+          samples: perSide[side].preview,
+          meta,
+        }),
+      );
+    }
+    say(`Backend matrix: ${cell.id} done.`);
+    show();
+  }
+}
+
+/**
+ * TS LUT-map vs `mapPaletteGpu`, end-to-end in page context (the GPU
+ * kernel is async and unrouted by design — D41/M5-PERF-23 — so the
+ * page is where its candidate cost is honestly measurable). Grid-sized
+ * sources isolate the mapping from resize. The GPU side has a hard
+ * capability gap either way: it returns no palette-index sidecar, so
+ * wiring it as-is would erase thread identity (D55) — carried on every
+ * row rather than argued from speed.
+ */
+async function runMapBackendSweep(): Promise<void> {
+  if (!isWebGpuAvailable()) {
+    rows.push(
+      skippedRow({
+        workloadId: STILL_300,
+        boundary: 'stage',
+        label: 'reduce backend comparison',
+        status: 'unsupported',
+        reason: 'WebGPU unavailable in this browser',
+      }),
+    );
+    return;
+  }
+  const palettes = [
+    ['p64' as const, palette64()],
+    ['p489' as const, loadDmcPalette()],
+  ] as const;
+  for (const [axis, palette] of palettes) {
+    for (const grid of [200, 300, 1024]) {
+      const spec = {
+        source: 'noise' as const,
+        sourceSize: 'grid' as const,
+        alpha: 'opaque' as const,
+        grid,
+        palette: axis,
+        metric: 'lab' as const,
+        dither: NO_DITHER,
+        order: 'resize-first' as const,
+        resizeMode: 'stretch' as const,
+        path: 'still' as const,
+      };
+      const id = workloadId(spec);
+      const source = sourceBuffer({ id, ...spec });
+      const lut = buildLut(palette, 'lab');
+      const params = { palette, metric: 'lab' as const, path: 'lut' as const, lut };
+      const probe = await mapPaletteGpu(source, palette, lut);
+      if (probe === null) {
+        findings.push(`${id}: mapPaletteGpu returned null — kernel unavailable`);
+        continue;
+      }
+      const plan = grid >= 1024 ? { warmup: 2, runs: 6 } : { warmup: 2, runs: 8 };
+      for (let i = 0; i < plan.warmup; i++) {
+        reduceStage.backends.ts(source, params);
+        await mapPaletteGpu(source, palette, lut);
+      }
+      const tsSamples: number[] = [];
+      const gpuSamples: number[] = [];
+      for (let i = 0; i < plan.runs; i++) {
+        const tsStart = performance.now();
+        reduceStage.backends.ts(source, params);
+        tsSamples.push(performance.now() - tsStart);
+        const gpuStart = performance.now();
+        await mapPaletteGpu(source, palette, lut);
+        gpuSamples.push(performance.now() - gpuStart);
+      }
+      const tsOut = reduceStage.backends.ts(source, params);
+      const gpuOut = await mapPaletteGpu(source, palette, lut);
+      let pixelMismatches = -1;
+      if (gpuOut !== null) {
+        pixelMismatches = 0;
+        for (let i = 0; i < tsOut.data.length; i++) {
+          if (tsOut.data[i] !== gpuOut.data[i]) pixelMismatches++;
+        }
+        if (pixelMismatches > 0) {
+          findings.push(
+            `${id}: mapPaletteGpu pixels disagree with ts LUT path — ` +
+              `${String(pixelMismatches)} bytes`,
+          );
+        }
+      }
+      const meta: Record<string, string | number | boolean> = {
+        'pixel verdict': pixelMismatches === 0 ? 'EXACT' : 'DISAGREES',
+        'indices sidecar': 'ts emits it; gpu returns none — unroutable as-is (D55)',
+        'winner (median)': medianOf(tsSamples) <= medianOf(gpuSamples) ? 'ts' : 'webgpu',
+      };
+      rows.push(
+        measuredRow({
+          workloadId: id,
+          boundary: 'stage',
+          label: 'reduce (ts lut path, page context)',
+          backend: 'ts',
+          cache: 'warm',
+          warmupRuns: plan.warmup,
+          samples: tsSamples,
+          meta,
+        }),
+      );
+      rows.push(
+        measuredRow({
+          workloadId: id,
+          boundary: 'stage',
+          label: 'reduce (webgpu map, end-to-end)',
+          backend: 'webgpu',
+          cache: 'warm',
+          warmupRuns: plan.warmup,
+          samples: gpuSamples,
+          meta,
+        }),
+      );
+      say(`Map sweep: ${id} done.`);
+    }
+  }
+}
+
+/**
+ * Per-call palette preparation the wasm adapter pays on *every frame*:
+ * it recomputes the Lab flatten per call (`paletteLab` builds a fresh
+ * Float32Array each time — src/backends/wasm/dither.ts). Timed here so
+ * the synthesis can weigh caching it; at p64 it may be noise, at p489
+ * it is 489 sRGB→Lab conversions per frame.
+ */
+function runPaletteFlattenRows(): void {
+  const cases = [
+    [palette64(), 'dmc-64-bench', STILL_300],
+    [loadDmcPalette(), 'DMC', STILL_300_P489],
+  ] as const;
+  const plan = { warmup: 2, runs: 10 };
+  for (const [palette, name, id] of cases) {
+    const samples = measure(() => paletteLab(palette), plan);
+    rows.push(
+      measuredRow({
+        workloadId: id,
+        boundary: 'prepare',
+        label: `palette lab flatten (${name})`,
+        backend: 'ts',
+        cache: 'warm',
+        warmupRuns: plan.warmup,
+        samples,
+        meta: { 'recomputed per wasm dither call': true },
+      }),
+    );
+  }
+}
+
+/**
+ * The rgb→wasm rule at the full export boundary: the matrix's one
+ * routed-wasm workload exported with routing (wasm) and forced ts,
+ * interleaved. A stage win that disappears in the composite would
+ * show up here.
+ */
+async function runExportBackendComparison(): Promise<void> {
+  const cell = workloadById(
+    'noise.w1280.opaque.g1024.p64.rgb.fs-s100-serp.resize-first.stretch.still',
+  );
+  const source = sourceBuffer(cell);
+  const config = configFor(cell);
+  const plan = { warmup: 1, runs: 4 };
+  const sides: readonly (readonly [string, BackendForce | undefined])[] = [
+    ['routed (wasm)', undefined],
+    ['forced ts', { dither: 'ts' }],
+  ];
+  for (let i = 0; i < plan.warmup; i++) {
+    for (const [, force] of sides) await client.exportFrame(copyOf(source), config, force);
+  }
+  const samples = new Map<string, number[]>();
+  for (let i = 0; i < plan.runs; i++) {
+    for (const [name, force] of sides) {
+      const start = performance.now();
+      await client.exportFrame(copyOf(source), config, force);
+      const list = samples.get(name) ?? [];
+      list.push(performance.now() - start);
+      samples.set(name, list);
+    }
+  }
+  const routedOut = await client.exportFrame(copyOf(source), config);
+  const forcedOut = await client.exportFrame(copyOf(source), config, { dither: 'ts' });
+  const equality = compareOutputs(routedOut, forcedOut);
+  if (equality.verdict !== 'EXACT') {
+    findings.push(
+      `${cell.id}: routed and forced-ts exports disagree — ` +
+        `${String(equality.pixelMismatches)} pixel bytes, indices ${equality.indices}`,
+    );
+  }
+  for (const [name] of sides) {
+    rows.push(
+      measuredRow({
+        workloadId: cell.id,
+        boundary: 'export',
+        label: `export/pipeline re-run (${name})`,
+        backend: name === 'forced ts' ? 'ts' : 'wasm',
+        cache: 'warm',
+        warmupRuns: plan.warmup,
+        samples: samples.get(name) ?? [],
+        meta: {
+          'output vs other side': equality.verdict,
+          'indices sidecar': equality.indices,
+        },
+      }),
+    );
+  }
+}
+
+/**
+ * Fallback and validity probes — each current failure path answered
+ * exactly once, with the output still correct (D46: a silent path
+ * wedges live preview permanently; a fast wrong result is a defect).
+ */
+async function runFallbackProbes(): Promise<void> {
+  // Probe A: a forced backend that is not registered in the worker
+  // (webgpu never implements the StageFn contract) must fall back to
+  // ts and still answer.
+  const still = workloadById(STILL_300);
+  const jobA = await submitAndWait(copyOf(sourceBuffer(still)), configFor(still), {
+    dither: 'webgpu',
+  });
+  const usedA = lastTimings.find((t) => t.stage === 'dither')?.backend ?? 'none';
+  if (jobA.outcome !== 'result' || usedA !== 'ts') {
+    findings.push(
+      `fallback probe: forced unregistered backend answered ${jobA.outcome} on '${usedA}' — expected a ts fallback result`,
+    );
+  }
+  rows.push(
+    measuredRow({
+      workloadId: still.id,
+      boundary: 'stage',
+      label: 'dither (forced unregistered webgpu → fallback)',
+      backend: 'ts',
+      cache: 'n/a',
+      warmupRuns: 0,
+      samples: [0],
+      meta: {
+        answered: jobA.outcome === 'result',
+        'fell back to': usedA,
+        verdict: jobA.outcome === 'result' && usedA === 'ts' ? 'PASS' : 'FAIL',
+      },
+    }),
+  );
+
+  // Probe B: forced wasm with a non-FS method — the adapter guards by
+  // delegating to the TS reference internally (M8-ALG-01), so the
+  // output must be byte-identical to the routed ts run. Note the
+  // timing-label consequence: StageTiming.backend reports 'wasm'
+  // while TS reference code actually executed — recorded here as a
+  // defect candidate for the synthesis, reachable only via forcing.
+  const atkinsonId =
+    'noise.w1280.opaque.g300.p64.lab.atkinson-s100-serp.resize-first.stretch.still';
+  const atkinson = workloadById(atkinsonId);
+  await submitAndWait(copyOf(sourceBuffer(atkinson)), configFor(atkinson));
+  const routedOut = lastResult;
+  await submitAndWait(copyOf(sourceBuffer(atkinson)), configFor(atkinson), {
+    dither: 'wasm',
+  });
+  const forcedOut = lastResult;
+  const labelB = lastTimings.find((t) => t.stage === 'dither')?.backend ?? 'none';
+  const equalityB =
+    routedOut !== null && forcedOut !== null ? compareOutputs(routedOut, forcedOut) : null;
+  if (equalityB !== null && equalityB.verdict !== 'EXACT') {
+    findings.push(
+      `fallback probe: forced-wasm atkinson output differs from ts — the delegation guard failed`,
+    );
+  }
+  rows.push(
+    measuredRow({
+      workloadId: atkinsonId,
+      boundary: 'stage',
+      label: 'dither (forced wasm, non-FS method → delegation guard)',
+      backend: 'ts',
+      cache: 'n/a',
+      warmupRuns: 0,
+      samples: [0],
+      meta: {
+        'output vs routed ts': equalityB === null ? 'not captured' : equalityB.verdict,
+        'timing label reports': labelB,
+        'actually executed': 'ts reference via adapter delegation (M8-ALG-01)',
+        'label defect candidate': labelB === 'wasm',
+      },
+    }),
+  );
+
+  // Probe C: GPU device loss. Destroying the page-side shared device
+  // must never hang or throw a later kernel call, and the next call
+  // after the lost handler runs must re-initialise. Runs last in the
+  // leg: it deliberately invalidates the page-side pipeline cache.
+  if (!isWebGpuAvailable()) return;
+  const device = await getDevice();
+  if (device === null) return;
+  device.destroy();
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  const during = await buildLutGpu(palette64(), 'lab');
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  const after = await buildLutGpu(palette64(), 'lab');
+  let recovery = 'STILL NULL';
+  if (after !== null) {
+    const ts = buildLut(palette64(), 'lab');
+    let mismatches = 0;
+    for (let i = 0; i < LUT_SIZE; i++) if (after[i] !== ts[i]) mismatches++;
+    recovery = mismatches === 0 ? 'rebuilt, EXACT' : `rebuilt, ${String(mismatches)} mismatches`;
+  }
+  if (after === null || !recovery.includes('EXACT')) {
+    findings.push(`device-lost probe: recovery failed — ${recovery}`);
+  }
+  rows.push(
+    measuredRow({
+      workloadId: STILL_300,
+      boundary: 'prepare',
+      label: 'gpu device-lost recovery (page context)',
+      backend: 'webgpu',
+      cache: 'n/a',
+      warmupRuns: 0,
+      samples: [0],
+      meta: {
+        'call after destroy': during === null ? 'null (fell back)' : 'recovered already',
+        'recovery call': recovery,
+        verdict: recovery.includes('EXACT') ? 'PASS' : 'FAIL',
+      },
+    }),
+  );
+}
+
+/** The full M13-PROF-03 leg, cold rows first, destructive probe last. */
+async function runBackendComparison(): Promise<void> {
+  await runBackendColdInit();
+  await runBackendDitherMatrix();
+  await runMapBackendSweep();
+  runPaletteFlattenRows();
+  await runExportBackendComparison();
+  await runFallbackProbes();
+  say('Backend comparison rows done.');
+}
+
 // -------------------------------------------------------------- report
 
 function browserEnvironment(): EnvironmentIdentity {
@@ -1318,11 +1955,13 @@ function finishReport(): Promise<void> {
 // ----------------------------------------------------------- auto mode
 
 /**
- * Unattended no-capture legs (M13-PROF-01/02 browser halves):
- * `?auto=still,stage,gpu,lut,contention` runs the listed legs on load
- * and, with `post=<url>`, POSTs the serialised bv2 report to a local
- * collector — so an agent can run the gestureless half of the
+ * Unattended no-capture legs (M13-PROF-01/02/03 browser halves):
+ * `?auto=still,stage,backend,gpu,lut,contention` runs the listed legs
+ * on load and, with `post=<url>`, POSTs the serialised bv2 report to a
+ * local collector — so an agent can run the gestureless half of the
  * procedure in a real, foreground browser window it cannot script.
+ * `backend` runs before the M5-era GPU legs so its cold rows stay
+ * cold in a combined run.
  * (A hidden page is CPU-throttled to the point of 10–20× inflated
  * samples — the in-app preview pane can never be a measurement
  * surface.) The capture legs are excluded by construction: they need
@@ -1340,6 +1979,7 @@ async function runAuto(): Promise<void> {
     await runStillPreview(STILL_300);
   }
   if (legs.has('stage')) await runStageMatrix();
+  if (legs.has('backend')) await runBackendComparison();
   if (legs.has('gpu')) await gpuChecks();
   if (legs.has('lut')) await lutBuildTiming();
   if (legs.has('contention')) await runContentionProbe();
@@ -1379,6 +2019,7 @@ function main(): void {
     button('1b · Stage matrix (worker route)', runStageMatrix),
     button('2 · GPU checks (M5 gates)', gpuChecks),
     button('2b · LUT build timing (ts vs webgpu)', lutBuildTiming),
+    button('2c · Backend comparison (ts / wasm / webgpu)', runBackendComparison),
     button('3 · Export rows', runExports),
     button('3b · Selection-source contention (still pump)', runContentionProbe),
     button('4 · Open controlled source window', openSource),

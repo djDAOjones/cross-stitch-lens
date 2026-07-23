@@ -652,3 +652,109 @@ isolations):
   errors, no wedge. At the 4 updates/sec promise cadence a one-off
   ≤ ~50 ms displacement is invisible. The capture-path confirmation
   (pump-side grab contention) rides with M13-PROF-04's live leg.
+
+## M13 backend end-to-end comparison (M13-PROF-03, 2026-07-23, D69)
+
+Artefact: `bench-reports/browser-bench-v0.5.0_20260723.0042e73-backend.json`
+(regenerable: `bench.html?auto=backend` on a production build —
+procedure in `docs/browser-measurement.md`). Chrome, M1 Max, foreground
+and visible, untainted, zero findings. Both backends are **forced
+through the shipped worker route** via the harness-only request `force`
+channel (`src/worker/protocol.ts`), interleaved run-for-run, so wasm
+boundary copies, sidecar adoption and the worker transport sit inside
+the marks on both sides. **Every timed cell carries an output oracle:
+pixels and the palette-index sidecar byte-exact between backends in all
+12 cells, and on both export runs.** Same dirty-tree caveat as
+D67/D68: the report is stamped `0042e73`; this close commit lands the
+force channel and leg it measured.
+
+### Capability table (what a three-column chart would lie about)
+
+| Operation | ts | wasm | webgpu |
+| --- | --- | --- | --- |
+| Exact area resize | yes | — | — |
+| LUT construction | yes | — | yes (wired GPU-first, D68: 2.3–16× win) |
+| LUT palette map | yes | — | implemented, unrouted, **no indices sidecar** |
+| Floyd–Steinberg s=1 | yes | yes | — |
+| Other M8 methods / strengths | yes | — (adapter delegates to ts) | — |
+
+Cold once-per-context costs: wasm module fetch+compile+init 90.3 ms
+(page context; the worker pays the same shape at startup,
+fire-and-forget); GPU device acquisition 8.1 ms.
+
+### Rule 1 — `lab → ts`: **CONFIRMED, every cell** (stage medians, ms)
+
+| Cell | forced ts | forced wasm | wasm/ts |
+| --- | --- | --- | --- |
+| 200²/p64 | 11.7 | 15.6 | 1.33 |
+| 300²/p64 | 25.1 | 35.0 | 1.39 |
+| 1024²/p64 | 285.1 | 437.6 | 1.53 |
+| 200²/p489 | 15.8 | 38.7 | 2.46 |
+| 300²/p489 | 37.0 | 89.8 | 2.43 |
+| 1024²/p489 | 362.8 | 1045.6 | 2.88 |
+
+No crossover anywhere in range; the TS margin *grows* with palette
+size (per-bin candidate pruning is Lab-only and Rust keeps the full
+scan with software `libm` transcendentals — the M5-PERF-27 rationale,
+now proven end-to-end in the browser). The `preview-update` twins of
+every row move in lockstep (transport adds a near-constant ~9–12 ms),
+so the stage verdict survives the user-visible boundary.
+
+### Rule 2 — `rgb → wasm`: **CONFIRMED, every cell** (stage medians, ms)
+
+| Cell | forced ts | forced wasm | ts/wasm |
+| --- | --- | --- | --- |
+| 200²/p64 | 9.3 | 4.1 | 2.26 |
+| 300²/p64 | 22.6 | 9.4 | 2.41 |
+| 1024²/p64 | 303.4 | 110.0 | 2.76 |
+| 200²/p489 | 54.4 | 27.0 | 2.01 |
+| 300²/p489 | 126.7 | 61.4 | 2.06 |
+| 1024²/p489 | 1495.9 | 711.0 | 2.10 |
+
+At the **export boundary** the win survives whole: the routed-wasm
+export of 1024²/p64/rgb runs 138.0 ms vs 329.1 ms forced ts (2.39×),
+byte-exact both ways. Categorical metric routing needs no size or
+palette threshold — the metric decided all 12 cells, exactly as
+M5-PERF-27 recorded; adding a threshold would still be inventing a
+rule the evidence does not show.
+
+### Rule 3 — `mapPaletteGpu` stays unwired: **CONFIRMED** (grid-sized source, lab, ms)
+
+| Cell | ts LUT path | webgpu end-to-end |
+| --- | --- | --- |
+| 200²/p64 | 0.20 | 1.80 |
+| 300²/p64 | 0.40 | 1.95 |
+| 1024²/p64 | 5.25 | 5.45 |
+| 200²/p489 | 0.20 | 1.80 |
+| 300²/p489 | 0.40 | 2.00 |
+| 1024²/p489 | 4.90 | 5.55 |
+
+The GPU curve is flat (~1.8–2.0 ms dispatch/readback floor, palette
+size immaterial) but TS never costs more than ~5 ms even at the 1024²
+ceiling — the GPU map loses **every** cell inside the product's grid
+range, so no crossover exists to route on. Pixels are byte-exact, but
+the kernel also returns **no palette-index sidecar**, so wiring it
+as-is would erase thread identity (D55) even if it were fast. Verdict:
+M5-PERF-23 stands, now on complete evidence; re-open only if an
+executor asyncification lands for other reasons *and* the kernel
+learns to emit indices. GPU pass time via `timestamp-query` was not
+taken: the shared device is created without the optional feature and
+requesting it would edit shipped code, which this ticket forbids —
+CPU wall time settles the wiring question regardless.
+
+### Counter-proven candidate and fallback validity
+
+- **Caching the wasm adapter's per-call palette flatten is not worth
+  it**: `paletteLab` costs 0.0 ms (p64) / 0.1 ms (p489) per call on
+  this machine — recorded so nobody "optimises" it later.
+- **Fallback probes, all PASS, each answered exactly once (D46):**
+  a forced unregistered backend (webgpu on dither) falls back to ts
+  and answers; a forced-wasm non-FS method returns output byte-exact
+  to ts via the adapter's delegation guard (M8-ALG-01); destroying the
+  GPU device mid-session recovers on the next call with an EXACT
+  rebuilt LUT.
+- **Defect found (M13-DEF-01):** in the delegation case above,
+  `StageTiming.backend` reports `wasm` while TS reference code
+  actually executed — the diagnostics label lies. Reachable only via
+  a recorded override or the harness force, never via routing; filed
+  for M13-SYNTH-01 to weigh.

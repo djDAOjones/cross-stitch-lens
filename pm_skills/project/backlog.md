@@ -25,9 +25,9 @@ dither methods are uncovered by the frozen bench matrix (D62).
 
 Each task files defects for performance-sensitive bugs it uncovers.
 
-- [ ] **M13-PROF-03 Backend end-to-end comparison: TS / WASM / WebGPU** [detail] (2026-07-22)
-  Intent: complete costs (setup, dispatch, copy, upload, transfer, readback) across workload sizes on a production build; post-M8 validity of categorical routing (lab→ts, rgb→wasm, FS-only wasm); whether wiring `mapPaletteGpu` is justified.
-  Done when: crossovers published with end-to-end numbers on both sides; each routing rule confirmed or contradicted.
+- [ ] **M13-DEF-01 StageTiming backend label lies under non-FS wasm delegation** (2026-07-23)
+  Intent: a manual override or harness force sending a non-FS dither to the wasm adapter runs the TS reference via the M8-ALG-01 delegation guard, yet `StageTiming.backend` reports `wasm` — diagnostics lie in that corner (found by M13-PROF-03, D69). Unreachable via routing.
+  Done when: the reported backend matches the code that ran (or the corner is unrepresentable), with a regression test.
 
 - [ ] **M13-PROF-04 Live-path profile: capture, scheduling, preview** [detail] (2026-07-22)
   Intent: the live capture→preview path — pump cadence, dirty-detection cost and small-edit misses, coalescing drops, draft governor, split-compare overhead, preview/UI latency, failure recovery.
@@ -39,7 +39,7 @@ Each task files defects for performance-sensitive bugs it uncovers.
 
 #### Phase 3 — Synthesis
 
-- [ ] **M13-SYNTH-01 Performance synthesis: targets, roles, go/no-go** [detail] [sign-off] [blocked: M13-PROF-03, M13-PROF-04, M13-PROF-05] (2026-07-22)
+- [ ] **M13-SYNTH-01 Performance synthesis: targets, roles, go/no-go** [detail] [sign-off] [blocked: M13-PROF-04, M13-PROF-05] (2026-07-22)
   Intent: decide — proven bottlenecks vs measurement artefacts; binding targets (budget rows, 300² promise, 1024² export, the 1024 cap); which quality-neutral changes proceed; whether an appearance-changing trade-off merits exploring; backend roles and crossovers; which Phase-4 tasks are activated, merged or cut.
   Done when: a maintainer-approved synthesis recorded (decision-log + one shared evidence doc later tickets cite); activated tasks cite their evidence; no speculative speedup encoded as acceptance.
 

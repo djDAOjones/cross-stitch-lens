@@ -12,6 +12,7 @@ import { Coalescer } from './coalesce.ts';
 import type { GridStyle } from './grid.ts';
 import { absNow } from '../bench/clock.ts';
 import type {
+  BackendForce,
   ExportRequest,
   FrameMarks,
   ProcessRequest,
@@ -45,6 +46,8 @@ export interface JobObserver {
 interface Job {
   buffer: PixelBuffer;
   config: PipelineConfig;
+  /** Harness-only backend force (M13-PROF-03); app traffic never sets it. */
+  force?: BackendForce;
 }
 
 /** Rebuild a PixelBuffer from a transferred response, sidecar included. */
@@ -129,8 +132,12 @@ export class PipelineClient {
    * single pending slot; superseded frames are dropped silently
    * (latest-wins — there is no queue).
    */
-  submit(buffer: PixelBuffer, config: PipelineConfig): void {
-    const startNow = this.coalescer.submit({ buffer, config });
+  submit(buffer: PixelBuffer, config: PipelineConfig, force?: BackendForce): void {
+    const startNow = this.coalescer.submit({
+      buffer,
+      config,
+      ...(force === undefined ? {} : { force }),
+    });
     if (startNow) this.post(startNow);
   }
 
@@ -140,7 +147,11 @@ export class PipelineClient {
    * preview surface — full quality by construction (AGENTS.md
    * invariant). The caller's buffer is transferred, so pass a copy.
    */
-  exportFrame(buffer: PixelBuffer, config: PipelineConfig): Promise<PixelBuffer> {
+  exportFrame(
+    buffer: PixelBuffer,
+    config: PipelineConfig,
+    force?: BackendForce,
+  ): Promise<PixelBuffer> {
     const id = this.nextId++;
     return new Promise((resolve, reject) => {
       this.pendingExports.set(id, { resolve, reject });
@@ -151,6 +162,7 @@ export class PipelineClient {
         height: buffer.height,
         pixels: buffer.data.buffer as ArrayBuffer,
         config,
+        ...(force === undefined ? {} : { force }),
       };
       this.worker.postMessage(request, [request.pixels]);
     });
@@ -169,6 +181,7 @@ export class PipelineClient {
       height: job.buffer.height,
       pixels: job.buffer.data.buffer as ArrayBuffer,
       config: job.config,
+      ...(job.force === undefined ? {} : { force: job.force }),
     };
     this.observer?.jobStarted(request.id, absNow());
     this.worker.postMessage(request, [request.pixels]);

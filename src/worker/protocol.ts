@@ -8,6 +8,18 @@ import type { PipelineConfig } from '../core/pipeline/config.ts';
 import type { Backend } from '../core/types.ts';
 import type { GridStyle } from './grid.ts';
 
+/**
+ * Harness-only per-stage backend force (M13-PROF-03): stage name →
+ * backend to run, overriding routing and any recorded selection. It
+ * rides on the *request*, never on `PipelineConfig`, precisely so it
+ * cannot reach a project file or persist anywhere. A forced backend
+ * that is not registered falls back to the TS reference exactly like
+ * any other unavailable backend, and the result's `StageTiming.backend`
+ * reports what actually ran. The app never sets this; only the browser
+ * measurement harness does.
+ */
+export type BackendForce = Partial<Record<string, Backend>>;
+
 /** Main → worker: process one frame under a config. */
 export interface ProcessRequest {
   type: 'process';
@@ -18,6 +30,8 @@ export interface ProcessRequest {
   /** RGBA bytes (transferred). */
   pixels: ArrayBuffer;
   config: PipelineConfig;
+  /** Harness-only backend force; absent in all app traffic. */
+  force?: BackendForce;
 }
 
 /** Main → worker: adopt this preview surface (transferred once). */
@@ -71,6 +85,8 @@ export interface ExportRequest {
   /** RGBA bytes (transferred). */
   pixels: ArrayBuffer;
   config: PipelineConfig;
+  /** Harness-only backend force; absent in all app traffic. */
+  force?: BackendForce;
 }
 
 export type WorkerRequest =

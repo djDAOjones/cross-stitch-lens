@@ -167,6 +167,9 @@ export function createRouter(deps: RouterDeps): (request: WorkerRequest) => void
       height: request.height,
       pixels: request.pixels,
       config: request.config,
+      // The harness force must survive the export re-shape, or a
+      // forced export comparison silently measures the routed backend.
+      ...(request.force === undefined ? {} : { force: request.force }),
     });
     if (response.type === 'result') {
       deps.post(

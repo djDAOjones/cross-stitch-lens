@@ -1157,3 +1157,43 @@ timings over page-context stage calls; contention measured worker-side
 under a synthetic 250 ms still pump, caveat named in the row labels.
 Same dirty-tree caveat as D67: the report is stamped `170dcba`, this
 close commit lands the measured harness code.
+
+## D69 — M13-PROF-03: every routing rule confirmed end-to-end; a request-level force makes both sides measurable (2026-07-23)
+
+**Decision:** publish the backend comparison and close M13-PROF-03. The
+worker gained a **harness-only per-stage backend force** riding on the
+request (`force`, `src/worker/protocol.ts`) — top of the executor's
+precedence, TS fallback when the forced backend is unregistered,
+deliberately not on `PipelineConfig` so it can never reach a project
+file. The harness gained a `backend` auto leg: cold-init rows, the
+12-cell forced TS↔WASM Floyd–Steinberg matrix through the shipped
+worker route (interleaved, byte-equality oracle on pixels **and**
+indices per cell), the TS-vs-`mapPaletteGpu` sweep, the export-boundary
+comparison, and fallback probes. Evidence:
+`docs/performance-evidence.md` → "M13 backend end-to-end comparison";
+`bench-reports/browser-bench-v0.5.0_20260723.0042e73-backend.json`.
+
+**Findings:** all three routing rules **confirmed, no crossover in
+range** — `lab → ts` (TS wins 1.33–2.88×, margin grows with palette:
+pruning is Lab-only and Rust's `libm` transcendentals are software),
+`rgb → wasm` (wasm wins 2.0–2.8× and holds 2.39× at the full export
+boundary), `mapPaletteGpu` stays unwired (TS wins every cell including
+the 1024² ceiling, and the kernel still emits no indices sidecar —
+unroutable under D55 regardless of speed). Categorical metric routing
+needs no size threshold: the metric decided all 12 cells. Counter-
+proven: caching the wasm adapter's per-call palette flatten
+(0.0/0.1 ms at p64/p489). Every fallback probe answered exactly once
+(D46); GPU device loss recovers with an EXACT rebuilt LUT. One defect
+filed: **M13-DEF-01** — `StageTiming.backend` reports `wasm` while the
+adapter's non-FS delegation guard actually ran the TS reference
+(reachable only via override/force).
+
+**Auto-jazz assumptions:** scope = harness + force channel only (the
+surface the ticket names), no adapter or routing edits;
+`timestamp-query` GPU pass time deferred — requesting the feature
+means editing shipped `device.ts`, which the ticket forbids, and CPU
+wall time settles the wiring question; off-matrix rgb cells published
+under grammar-derived IDs (contract note added to
+`docs/measurement-contract.md`). Same dirty-tree caveat as D67/D68:
+the report is stamped `0042e73`; this close commit lands the force
+channel and leg it measured.

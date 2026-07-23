@@ -150,6 +150,14 @@ every real ID starts with a source class:
   source is whatever the owner shares, so a matrix ID would lie about
   the input. Actual capture dimensions ride in the row's `meta`.
 
+Comparison and audit legs may additionally publish rows under
+**grammar-derived IDs outside the frozen matrix** (M13-PROF-03: the
+backend sweep needs `rgb`-metric cells at grids the matrix only has
+under `lab`). Such IDs are built by `workloadId` from real axis values,
+so they are truthful and collision-free; they are report rows only —
+the frozen matrix defines what the bench must never lose, and no budget
+row may bind to an off-matrix ID.
+
 ### Axes
 
 | Axis | Values | Why it is in the matrix |

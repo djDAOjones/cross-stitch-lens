@@ -44,6 +44,14 @@
   win at p64/p489, EXACT; selection-source export delays overlapping
   frames by ≤ one export (~51 ms), zero drops. Both PROF items closed.
   See decision-log D68.
+- M13-PROF-03 (2026-07-23) — backend end-to-end comparison through the
+  shipped worker route via a harness-only request-level backend force:
+  `lab → ts` confirmed (TS wins 1.33–2.88×), `rgb → wasm` confirmed
+  (wasm wins 2.0–2.8×, 2.39× at the export boundary), `mapPaletteGpu`
+  stays unwired (loses every cell, still no indices sidecar); all 12
+  cells byte-exact including indices; fallback probes all PASS;
+  M13-DEF-01 filed (StageTiming label lies under non-FS delegation).
+  See decision-log D69.
 
 ## M8 — Dithering expansion (engine + controls shipped 2026-07-22; maintainer acceptance open)
 

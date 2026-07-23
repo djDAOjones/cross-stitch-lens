@@ -9,11 +9,12 @@
  * - Coalescer: latest-wins, no queue.
  */
 
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Coalescer } from '../src/worker/coalesce.ts';
 import { executeRequest } from '../src/worker/execute.ts';
 import { clearLutCache, getLut, lutCacheSize } from '../src/worker/lut-cache.ts';
+import { ditherStage } from '../src/core/pipeline/dither.ts';
 import type { PipelineConfig } from '../src/core/pipeline/config.ts';
 import type { ProcessRequest } from '../src/worker/protocol.ts';
 import type { Palette } from '../src/core/types.ts';
@@ -98,6 +99,49 @@ describe('executeRequest', () => {
     const a = getLut(PALETTE, 'rgb');
     const b = getLut(PALETTE, 'rgb');
     expect(a).toBe(b);
+  });
+});
+
+describe('executeRequest backend force (M13-PROF-03)', () => {
+  beforeEach(clearLutCache);
+  afterEach(() => {
+    delete ditherStage.backends.wasm;
+  });
+
+  /** FS at strength 1 under Lab — the workload the router sends to ts. */
+  const FS_LAB: Partial<PipelineConfig> = {
+    metric: 'lab',
+    dither: { algorithm: 'floyd-steinberg', serpentine: true, strength: 1 },
+  };
+
+  it('force outranks routing and the timing reports the forced backend', () => {
+    const fake = vi.fn(ditherStage.backends.ts);
+    ditherStage.backends.wasm = fake;
+    const response = executeRequest({ ...request(FS_LAB), force: { dither: 'wasm' } });
+    expect(response.type).toBe('result');
+    if (response.type !== 'result') return;
+    const dither = response.timings.find((t) => t.stage === 'dither');
+    expect(dither?.backend).toBe('wasm');
+    expect(fake).toHaveBeenCalledTimes(1);
+  });
+
+  it('without force, routing still decides (lab → ts, wasm untouched)', () => {
+    const fake = vi.fn(ditherStage.backends.ts);
+    ditherStage.backends.wasm = fake;
+    const response = executeRequest(request(FS_LAB));
+    expect(response.type).toBe('result');
+    if (response.type !== 'result') return;
+    const dither = response.timings.find((t) => t.stage === 'dither');
+    expect(dither?.backend).toBe('ts');
+    expect(fake).not.toHaveBeenCalled();
+  });
+
+  it('a forced backend that is not registered falls back to ts', () => {
+    const response = executeRequest({ ...request(FS_LAB), force: { dither: 'webgpu' } });
+    expect(response.type).toBe('result');
+    if (response.type !== 'result') return;
+    const dither = response.timings.find((t) => t.stage === 'dither');
+    expect(dither?.backend).toBe('ts');
   });
 });
 

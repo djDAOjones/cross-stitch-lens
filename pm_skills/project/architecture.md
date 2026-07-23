@@ -95,7 +95,11 @@ interface Stage<P> {
   removed, not retuned (D48). A recorded per-stage override exists
   (`setSelectedBackend`, applied where routing has no opinion) but is
   currently reachable only from tests and audits — there is no
-  user-facing backend override yet.
+  user-facing backend override yet. The measurement harness can
+  additionally force a backend per stage via the worker *request*
+  (`force`, above even routing; M13-PROF-03) — harness-only by
+  construction: it is not on `PipelineConfig`, so it cannot persist
+  or reach a project file.
 
 ### Pipeline
 

@@ -61,13 +61,18 @@ export function executeRequest(
     };
     const timings: StageTiming[] = [];
     for (const instance of stages) {
-      // Explicit instance backend > workload routing > recorded
-      // selection > 'ts'; a requested backend that is not registered
-      // falls back to the TS reference (architecture.md → "Stage
-      // backends"). Routing sits above the recorded selection because
-      // it is per-workload: D42's single startup calibration could not
-      // see that the dither winner flips on metric (M5-PERF-27).
+      // Harness force > explicit instance backend > workload routing >
+      // recorded selection > 'ts'; a requested backend that is not
+      // registered falls back to the TS reference (architecture.md →
+      // "Stage backends"). Routing sits above the recorded selection
+      // because it is per-workload: D42's single startup calibration
+      // could not see that the dither winner flips on metric
+      // (M5-PERF-27). The force sits above everything: measuring both
+      // sides of a routing rule requires overruling the rule
+      // (M13-PROF-03), and it arrives only from the measurement
+      // harness — never from app traffic or a project file.
       const requested: Backend =
+        request.force?.[instance.stage.name] ??
         instance.backend ??
         routeFor(instance.stage.name, request.config) ??
         selectedBackend(instance.stage.name) ??

@@ -48,6 +48,18 @@ export interface DiagnosticsControlDeps {
   collect: () => { text: string; records: number };
   /** Place text on the clipboard; rejects when unavailable. */
   copy: (text: string) => Promise<void>;
+  /**
+   * Save the bundle as a file (M14-EXT-01 "download the log"). Same
+   * redacted bundle as the copy path — never the raw ring buffer.
+   * Optional: absent, no download button renders.
+   */
+  download?: (text: string, filename: string) => void;
+}
+
+/** The announced line after a successful download. */
+export function downloadStatusMessage(records: number, filename: string): string {
+  const plural = records === 1 ? 'record' : 'records';
+  return `Saved a redacted diagnostics log (${String(records)} log ${plural}) as ${filename}.`;
 }
 
 /** The control plus its live region, for the caller to mount. */
@@ -100,6 +112,28 @@ export function createDiagnosticsControl(
   }
 
   button.addEventListener('click', () => void run());
-  wrapper.append(button, status);
+  wrapper.append(button);
+
+  if (deps.download !== undefined) {
+    const downloadDeps = deps.download;
+    const downloadButton = doc.createElement('button');
+    downloadButton.type = 'button';
+    downloadButton.textContent = 'Download log';
+    downloadButton.title = 'Download log';
+    downloadButton.addEventListener('click', () => {
+      try {
+        const { text, records } = deps.collect();
+        const filename = 'cross-stitch-lens-log.txt';
+        downloadDeps(text, filename);
+        status.textContent = downloadStatusMessage(records, filename);
+      } catch (error) {
+        const reason = (error instanceof Error ? error.message : String(error)).replace(/\.\s*$/, '');
+        status.textContent = `Could not save the log: ${reason}.`;
+      }
+    });
+    wrapper.append(downloadButton);
+  }
+
+  wrapper.append(status);
   return { element: wrapper, run };
 }

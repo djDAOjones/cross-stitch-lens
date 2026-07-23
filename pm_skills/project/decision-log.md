@@ -1710,3 +1710,32 @@ on the owner's authority, recorded here.
 
 **Link:** backlog → M14 "Extension — owner feedback triage"; tickets
 `M14-EXT-01/02.md`; ACCEPT-01 now [blocked: EXT-01..04].
+
+## D89 — M14-EXT shipped: the bar, the chooser, the fold, the name (2026-07-23)
+
+**Decision:** the four D88 extension tasks landed as one coherent
+change set (EXT-01+02 share the header rebuild; EXT-03/04 rode the
+same verification pass). Outcomes: one app bar carrying title, quiet
+build id, Source, both shell modes and the dev-only diagnostics
+cluster — including the new Download log affordance, which saves the
+same redacted bundle as the copy path through the app's one download
+route (never the raw ring buffer); a Carbon choice modal
+(`choicesModal` joins `modal.ts`) as the returning user's source
+switcher, with the cold-start entry state and the below-preview
+capture surfaces untouched by construction; view controls behind a
+persisted disclosure open on first run — which supersedes the D86
+A16 waiver outright; and "Design width/height" via the SCALE_LABELS
+single source of truth (legend "Size"; stored values and schema
+untouched).
+
+**Verification:** live walk on cleared storage (bar order/wrap at
+320 px, modal flows incl. the sample route end-to-end, fold
+persistence across reload, focus-mode hiding with a settled-viewport
+no-scroll re-measure, rename sweep); `check` green (938 tests,
+19×2 contrast pairs); engine dirs diff-clean; ui-baseline tripwire
+green. The compact source row and its `sourceNote` element were
+removed rather than left dead.
+
+**Link:** `ui-evidence.md` extension section; `ui-spec.md` §5
+amendments; triage rationale in D88. ACCEPT-01 is now unblocked —
+the milestone's one remaining item.

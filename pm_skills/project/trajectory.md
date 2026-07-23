@@ -19,6 +19,13 @@
 
 ## M14 — UI/UX excellence (in progress — agent half complete, ACCEPT-01 open)
 
+- M14-EXT-01..04 (2026-07-23) — owner-feedback extension shipped as
+  one set: app bar (title, build id, Source, shell modes, dev
+  diagnostics + Download log), Source choice modal with cold-start
+  entry preserved, persisted View-controls fold (supersedes the D86
+  A16 waiver), Design width/height rename. See D88 (triage) + D89
+  (ship); evidence in `docs/ui-evidence.md`.
+
 - M14-VERIFY-02 (2026-07-23) — journeys re-walked on final code (1
   interaction to converted preview; both conflict severities followed
   out; reach contract measured within bounds); byte-identity attested

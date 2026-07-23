@@ -210,6 +210,28 @@ exporting is never the *first* interaction of a session; the section
 header + summary keep it findable at all times. VERIFY-02 measures it
 as reach 2.
 
+### §5 amendments — M14-EXT (owner feedback, D88/D89)
+
+- **Top bar** (M14-EXT-01): the header is one app bar — title · quiet
+  build id (returned from the Project foot; A13 reversed on owner
+  call) · Source · Hide settings · Preview focus · dev-only
+  diagnostics cluster (Copy diagnostics + **Download log**, a new
+  affordance saving the same redacted bundle). Bar controls hide in
+  preview focus except the exit; DOM order = tab order.
+- **Source** (M14-EXT-02): top-bar button, E tier, reach 1 to open;
+  opens a Carbon choice modal (Choose an image / Capture your screen /
+  Try a sample + current-source note). The cold-start entry state
+  remains the first-run path; the compact source row is retired;
+  capture session surfaces stay below the preview.
+- **View controls** (M14-EXT-03): the zoom/fit/compare buttons live in
+  a persisted `View controls` disclosure — open on first run, so the
+  supersession of the D86 Fit-menu waiver is: all view buttons at
+  reach 1 (first run) / 2 (after a user folds it); the zoom % and
+  dimensions readouts stay permanently visible.
+- **Naming** (M14-EXT-04): "Pattern width/height" → **"Design
+  width/height"**; the sub-legend reads "Size" under the Design
+  section header. Stored values and schema untouched.
+
 **Anatomy baseline for every control** (IMPL-02): visible label =
 accessible name; helper only where it prevents error; validation +
 disabled states with a stated local reason where the reason is not

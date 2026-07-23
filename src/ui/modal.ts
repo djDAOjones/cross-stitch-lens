@@ -176,6 +176,61 @@ export function textPromptModal(
   );
 }
 
+/** One choice offered by {@link choicesModal}. */
+export interface ModalChoice {
+  /** Stable id resolved to the caller. */
+  id: string;
+  /** Visible button label. */
+  label: string;
+  /** Primary-filled treatment (at most one per dialog). */
+  primary?: boolean;
+}
+
+/**
+ * Carbon choice modal (M14-EXT-02): a titled dialog offering a short
+ * list of actions — the Source chooser's shape. Resolves the chosen
+ * id, or null on cancel/Escape/backdrop.
+ */
+export function choicesModal(
+  doc: Document,
+  options: { title: string; note?: string; choices: readonly ModalChoice[] },
+): Promise<string | null> {
+  return runModal<string | null>(
+    doc,
+    options.title,
+    (body, close) => {
+      if (options.note !== undefined) {
+        const note = doc.createElement('p');
+        note.className = 'meta';
+        note.textContent = options.note;
+        body.append(note);
+      }
+      const list = doc.createElement('div');
+      list.className = 'modal-choices';
+      let first: HTMLButtonElement | null = null;
+      for (const choice of options.choices) {
+        const button = doc.createElement('button');
+        button.type = 'button';
+        if (choice.primary === true) button.className = 'button-primary';
+        button.textContent = choice.label;
+        button.addEventListener('click', () => close(choice.id));
+        list.append(button);
+        first ??= button;
+      }
+      const actions = doc.createElement('div');
+      actions.className = 'modal-actions';
+      const cancel = doc.createElement('button');
+      cancel.type = 'button';
+      cancel.textContent = 'Cancel';
+      cancel.addEventListener('click', () => close(null));
+      actions.append(cancel);
+      body.append(list, actions);
+      return first ?? cancel;
+    },
+    null,
+  );
+}
+
 /** Carbon danger modal; resolves true only on explicit confirmation. */
 export function confirmDangerModal(
   doc: Document,

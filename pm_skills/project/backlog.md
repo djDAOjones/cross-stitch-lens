@@ -27,31 +27,9 @@ byte-identical; no new runtime dependencies; no project-file schema
 change. Milestone docs land under `docs/` as they are produced:
 `ui-audit.md`, `ui-journeys.md`, `ui-spec.md`, `ui-evidence.md`.
 
-#### Extension — owner feedback triage (2026-07-23, D88)
-
-Agreed items from the owner's UI feedback (pre-M14 notes; the
-already-delivered majority is listed in D88 for re-check at the end
-review). ACCEPT-01 now gates on these.
-
-- [ ] **M14-EXT-01 Top bar consolidation** [detail] (2026-07-23)
-  Intent: one app bar — title, quiet build id (A13 placement reversed on owner call), dev-only diagnostics cluster (Copy diagnostics + Debug log with download), Source button, Hide settings, Preview focus (kept distinct — owner pick).
-  Done when: the six affordances sit in the bar (diagnostics dev-gated per UI-STANDARDS), shell invariants and tests hold at 320 px/wide/focus in both schemes, ui-baseline tripwire green.
-
-- [ ] **M14-EXT-02 Source chooser modal** [detail] (2026-07-23)
-  Intent: the top-bar Source button opens a Carbon modal offering image / screen capture / sample and naming the current source; the cold-start entry state stays the first-run path; live-capture thumbnail, crop and session controls stay below the preview (owner pick).
-  Done when: source switching works wholly through the modal after first conversion, journey-1 cold start still converts through visible affordances alone, and the capture session loop is unchanged.
-
-- [ ] **M14-EXT-03 View-controls disclosure** (2026-07-23)
-  Intent: the zoom/fit/compare toolbar becomes a collapsible "View controls" row — open on first run, persisted in the disclosures store; zoom % and dimensions readouts stay visible; wheel/keyboard routes untouched (retires the A16 waiver beyond D86).
-  Done when: a returning user's collapsed state sticks; every view function stays keyboard-reachable; the spec table's reach column is updated.
-
-- [ ] **M14-EXT-04 Design-size rename** (2026-07-23)
-  Intent: "Pattern width/height" → "Design width/height" (owner pick over "Canvas" — fabric/M12 and preview-surface collision); labels and helpers via SCALE_LABELS; stitches language, stored values and schema untouched.
-  Done when: every surfaced label and summary says Design consistently (no synonyms left), spec/docs updated, tests green.
-
 #### Phase 4 — Verification & end review
 
-- [ ] **M14-ACCEPT-01 Maintainer end review** [maintainer] [detail] [blocked: M14-EXT-01, M14-EXT-02, M14-EXT-03, M14-EXT-04] (2026-07-23)
+- [ ] **M14-ACCEPT-01 Maintainer end review** [maintainer] [detail] (2026-07-23)
   Intent: the reserved human gate — judge look, feel and taste over the review pack (changes, logged decisions, before/after evidence, waivers) and a live Photoshop companion session.
   Done when: owner pass/fail notes are recorded; failures route to new M14 fix tasks, never silent rework.
 

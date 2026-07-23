@@ -328,7 +328,34 @@ settings, same browser build):
 | Engine-dir diff (`src/core`, `src/worker`, `src/backends`, `src/export`) | no changes across the whole milestone |
 
 **Remaining friction, none silent**: the OS-picker leg (owner
-rehearsal, ACCEPT-01); the Fit-menu taste call (D86 waiver); the
-core conflict-sentence wording (D85 deferral); autosave (backlog
-decision, D75). Everything else the journeys flagged is resolved
-above.
+rehearsal, ACCEPT-01); the Fit-menu taste call (D86 waiver —
+**superseded by M14-EXT-03 below**); the core conflict-sentence
+wording (D85 deferral); autosave (backlog decision, D75). Everything
+else the journeys flagged is resolved above.
+
+## M14-EXT-01..04 — Owner-feedback extension (2026-07-23, D88/D89)
+
+**What changed**: one app bar (title · quiet build id — A13 reversed
+on owner call · Source · Hide settings · Preview focus · dev-only
+Copy diagnostics + new **Download log**); a Source choice modal
+(image / capture / sample + current-source and capture-expectation
+note) replacing the compact source row for returning users; the
+zoom/fit/compare toolbar behind a persisted **View controls**
+disclosure (open first-run) with the % and dimensions readouts
+permanently visible; **Design width/height** labels (legend "Size").
+Cold-start entry state untouched by construction.
+
+**Verified live** (Chromium 148, cleared storage → sample → walks):
+
+| Check | Result |
+| --- | --- |
+| Bar composition + order | title, build id, Source, Hide settings, Preview focus, Copy diagnostics, Download log — DOM order = tab order; wraps in rows at 320 px, zero horizontal overflow |
+| Source modal | labelled dialog, current-source note, three routes; sample route → converted preview; focus lands on the primary choice; restoration proven by the modal contract (the one false probe was a programmatic click without focus — method artefact, noted) |
+| Cold-start guard | entry state intact; J1 still 1 interaction (sample), 3 (picker) |
+| View controls | open by default first run; fold **persisted across reload**; readouts remain visible; wheel/keyboard routes unaffected |
+| Focus mode | Source + diagnostics leave the bar, exit control stays, no page scroll at a settled viewport (an earlier false reading was pre-settle timing, re-measured clean) |
+| Rename | two "Design width/height" labels, "Size" legend; `200 × 200 stitches` language unchanged; stored values untouched |
+| Gate | `check` green (938 tests, contrast 19×2 AAA); engine dirs diff-clean; ui-baseline tripwire green |
+
+The D86 A16 waiver is superseded: view controls now fold, which is
+strictly more than the deferred Fit-options menu offered.

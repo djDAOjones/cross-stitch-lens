@@ -15,19 +15,42 @@ main {
   margin: 0 auto;
 }
 
-/* Carbon productive header: the app name as a slim landmark bar with
-  a decorative rule; actions (the shell bar) sit directly under it on
-  a permanent surface. */
+/* Carbon productive header (M14-EXT-01): one app bar — title, quiet
+  build id, then the utility controls (Source, shell modes, dev
+  diagnostics cluster). Wraps at companion widths; DOM order is tab
+  order. */
 .app-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--csl-spacing-02) var(--csl-spacing-05);
   margin-bottom: var(--csl-spacing-03);
   padding-bottom: var(--csl-spacing-03);
   border-bottom: 1px solid var(--csl-border-subtle);
 }
 
-/* Shell bar: collapse and preview-focus live on a permanent surface,
-  so the way out of a mode is always in one place. */
+.app-header h1 {
+  margin: 0;
+}
+
+/* Shell bar: source, collapse and preview-focus live on a permanent
+  surface, so the way out of a mode is always in one place. */
 .shell-bar {
-  margin-top: var(--csl-spacing-03);
+  margin: 0;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+}
+
+/* Dev-only diagnostics cluster rides the bar; its announced status
+  line sits inline rather than opening a second row. */
+.diagnostics-control {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--csl-spacing-03);
+}
+
+.diagnostics-control [role='status'] {
+  margin: 0;
 }
 
 /* Layout model (UI-STANDARDS): preview column and settings panel.
@@ -340,6 +363,20 @@ body.preview-focus .preview-host {
   margin-top: var(--csl-spacing-05);
 }
 
+/* Choice modal (M14-EXT-02): the routes stack full-width so the
+  chooser reads as a list of actions, not a button soup. */
+.modal-choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--csl-spacing-03);
+  margin-top: var(--csl-spacing-04);
+}
+
+.modal-choices button {
+  width: 100%;
+  text-align: left;
+}
+
 /* .modal-primary's fill is the shared .button-primary rule (base.css). */
 
 .modal-danger {
@@ -436,4 +473,12 @@ body.preview-focus .preview-host {
   padding-left: var(--csl-spacing-04);
   border-left: 2px solid var(--csl-border-subtle);
   margin-top: var(--csl-spacing-02);
+}
+
+/* View readouts (M14-EXT-03): the zoom % and dimensions stay visible
+  outside the collapsible controls — state survives the fold. */
+.view-readouts {
+  display: flex;
+  gap: var(--csl-spacing-05);
+  margin: var(--csl-spacing-02) 0 var(--csl-spacing-03);
 }

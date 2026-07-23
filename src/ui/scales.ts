@@ -139,8 +139,11 @@ export function toCssPxPerStitch(devicePxPerStitch: number, dpr: number): number
  * helper line, where it prevents error without bloating the label.
  */
 export const SCALE_LABELS = {
-  patternWidth: 'Pattern width',
-  patternHeight: 'Pattern height',
+  // "Design width/height" (M14-EXT-04, owner pick at D88): user
+  // language matching the Design section; "canvas" rejected for the
+  // fabric (M12) and preview-surface collisions.
+  patternWidth: 'Design width',
+  patternHeight: 'Design height',
   patternHelper: 'Stitches across the design',
   patternHeightHelper: 'Stitches down the design',
   captureRegion: 'Capture region',

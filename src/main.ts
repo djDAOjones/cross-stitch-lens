@@ -101,7 +101,7 @@ import { createDitherControls } from './ui/dither-panel.ts';
 import { decodeImageBlob, imageFiles } from './ui/import.ts';
 import { createInfoPanel } from './ui/info-panel.ts';
 import { createSection, type AccordionSection } from './ui/accordion.ts';
-import { textPromptModal } from './ui/modal.ts';
+import { choicesModal, textPromptModal } from './ui/modal.ts';
 import { SAMPLE_NAME, sampleBuffer } from './ui/sample.ts';
 import { loadPreferences, savePreferences, type ShellPreferences } from './ui/preferences.ts';
 import { PreviewController } from './ui/preview.ts';
@@ -409,28 +409,20 @@ function build(app: HTMLElement): void {
   sampleButton.addEventListener('click', () => {
     loadSample();
   });
-  const sourceNote = document.createElement('p');
-  sourceNote.className = 'meta';
-  sourceNote.id = 'source-note';
-  sourceNote.hidden = true;
-  /** What feeds the pipeline right now, for the source row. */
+  /** What feeds the pipeline right now, for the Source modal's note. */
   let sourceName: string | null = null;
 
   /** Entry state before any source; a compact note after. */
   function updateSourceEntry(): void {
     const hasSource = masterImage !== null || capture !== null;
     entryState.hidden = hasSource;
-    sourceNote.hidden = !hasSource;
-    if (sourceName !== null) sourceNote.textContent = `Source: ${sourceName}`;
-    // Cold start: the entry CTA is the capture affordance. With a
-    // source: the plain button returns so capture stays restartable.
-    // During a session: the session buttons own the row.
-    captureButton.hidden = !hasSource || capture !== null;
-    // The labelled file input is the "replace" route once a source
-    // exists; cold start reaches the same input through the entry CTA
-    // (a hidden input still opens its picker on click()).
-    label.hidden = !hasSource;
-    input.hidden = !hasSource;
+    // The compact source row retired at M14-EXT-02: the top-bar
+    // Source modal is the switcher, statuses carry the source name,
+    // and the file input serves both routes from behind `hidden` (a
+    // hidden input still opens its picker on click()).
+    captureButton.hidden = true;
+    label.hidden = true;
+    input.hidden = true;
   }
 
   /** Load the deterministic sample through the normal source path. */
@@ -533,7 +525,6 @@ function build(app: HTMLElement): void {
   captureRow.append(captureButton, captureFrameButton, pauseButton, lockButton, stopCaptureButton);
   importSection.append(
     entryState,
-    sourceNote,
     label,
     input,
     captureRow,
@@ -645,6 +636,12 @@ function build(app: HTMLElement): void {
           }
           await navigator.clipboard.writeText(text);
         },
+        // "Download the log" (M14-EXT-01): the same redacted bundle as
+        // the copy path, saved as a file through the app's one
+        // download route.
+        download: (text, filename) => {
+          downloadBlob(document, new Blob([text], { type: 'text/plain' }), filename);
+        },
       })
     : null;
 
@@ -737,7 +734,9 @@ function build(app: HTMLElement): void {
   // remove.
   const patternGroup = document.createElement('fieldset');
   const patternLegend = document.createElement('legend');
-  patternLegend.textContent = 'Pattern';
+  // "Size" under the Design section header — repeating "Design" in
+  // the legend would say the word twice in one breath (M14-EXT-04).
+  patternLegend.textContent = 'Size';
   patternGroup.append(
     patternLegend,
     numberField(
@@ -1518,7 +1517,7 @@ function build(app: HTMLElement): void {
   // Build identity moves off the primary surface to the Project foot
   // (audit A13): still user-reachable, no longer the page's second
   // line. `version` is created with the header block above.
-  projectGroup.append(keepNote, saveButton, projectLabel, projectInput, version);
+  projectGroup.append(keepNote, saveButton, projectLabel, projectInput);
 
   /** Snapshot the live UI state as a schema-v2 project file. */
   function currentProject(): ProjectFile {
@@ -1850,7 +1849,37 @@ function build(app: HTMLElement): void {
   const focusToggle = document.createElement('button');
   focusToggle.type = 'button';
   focusToggle.id = 'focus-toggle';
-  shellBar.append(panelToggle, focusToggle);
+  // Source chooser (M14-EXT-02): the returning user's switcher. The
+  // cold-start entry state stays the first-run path; this button is
+  // the permanent affordance once a source exists.
+  const sourceButton = document.createElement('button');
+  sourceButton.type = 'button';
+  sourceButton.id = 'source-button';
+  sourceButton.textContent = 'Source';
+  sourceButton.addEventListener('click', () => {
+    void choicesModal(document, {
+      title: 'Source',
+      note:
+        sourceName === null
+          ? 'No source yet. Your browser will ask which window or screen to share if you capture.'
+          : `Current: ${sourceName}. Your browser will ask which window or screen to share if you capture.`,
+      choices: [
+        { id: 'file', label: 'Choose an image', primary: true },
+        { id: 'capture', label: 'Capture your screen' },
+        { id: 'sample', label: 'Try a sample' },
+      ],
+    }).then((choice) => {
+      if (choice === 'file') input.click();
+      else if (choice === 'capture') void startScreenCapture();
+      else if (choice === 'sample') loadSample();
+    });
+  });
+  shellBar.append(sourceButton, panelToggle, focusToggle);
+  if (diagnostics !== null) {
+    // Dev-only diagnostics cluster on the app bar — the utility
+    // surface UI-STANDARDS prefers (M14-EXT-01).
+    shellBar.append(diagnostics.element);
+  }
 
   /**
    * Push the shell state onto the DOM. One function, one source of
@@ -1866,6 +1895,7 @@ function build(app: HTMLElement): void {
     if (!show.source && importSection.contains(document.activeElement)) focusToggle.focus();
     controls.hidden = !show.controls;
     importSection.hidden = !show.source;
+    sourceButton.hidden = !show.source;
     info.element.hidden = !show.info;
     if (debugPanel !== null) debugPanel.element.hidden = !show.debug;
     if (diagnostics !== null) diagnostics.element.hidden = !show.debug;
@@ -1958,12 +1988,29 @@ function build(app: HTMLElement): void {
     toolbarButton('Fit height', () => preview.fit('height')),
     compareToggle,
     splitWrap,
-    zoomLabel,
-    dimensionsLabel,
   );
-  previewSection.append(toolbar, host, compactStatus, info.element);
+  // View controls fold behind a persisted disclosure (M14-EXT-03) —
+  // open on first run so the affordances teach themselves, collapsed
+  // forever once the owner closes it. The readouts stay visible: the
+  // numbers are state, not controls, and wheel/keyboard routes never
+  // depended on the buttons.
+  const viewControls = document.createElement('details');
+  viewControls.className = 'depth-reveal';
+  const viewSummary = document.createElement('summary');
+  viewSummary.textContent = 'View controls';
+  const viewBody = document.createElement('div');
+  viewBody.className = 'depth-reveal-body';
+  viewBody.append(toolbar);
+  viewControls.append(viewSummary, viewBody);
+  viewControls.open = disclosureOpen('view-controls', true);
+  viewControls.addEventListener('toggle', () => {
+    setDisclosure('view-controls', viewControls.open);
+  });
+  const viewReadouts = document.createElement('p');
+  viewReadouts.className = 'meta view-readouts';
+  viewReadouts.append(zoomLabel, dimensionsLabel);
+  previewSection.append(viewControls, viewReadouts, host, compactStatus, info.element);
   if (debugPanel !== null) previewSection.append(debugPanel.element);
-  if (diagnostics !== null) previewSection.append(diagnostics.element);
 
   // Preview first in the DOM at every width (M6-NARROW-01). The
   // settings panel sits to its right when there is room, so the
@@ -1977,7 +2024,10 @@ function build(app: HTMLElement): void {
   layout.append(content, controls);
   const header = document.createElement('header');
   header.className = 'app-header';
-  header.append(heading, shellBar);
+  // Build identity returns to the chrome as quiet meta text — the
+  // owner's call at the D88 triage, reversing A13's Project-foot
+  // placement.
+  header.append(heading, version, shellBar);
   app.replaceChildren(header, layout);
   applyShell();
   preview.initSurface();

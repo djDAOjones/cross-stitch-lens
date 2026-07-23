@@ -60,6 +60,7 @@
     "instrumentable",
     "killall",
     "libm",
+    "livepath",
     "lockfiles",
     "mypy",
     "Ninke",

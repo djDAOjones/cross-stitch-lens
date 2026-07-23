@@ -758,3 +758,40 @@ CPU wall time settles the wiring question regardless.
   actually executed — the diagnostics label lies. Reachable only via
   a recorded override or the harness force, never via routing; filed
   for M13-SYNTH-01 to weigh.
+
+## M13 live-path gestureless rows (M13-PROF-04 partial, 2026-07-23, D70)
+
+Artefact:
+`bench-reports/browser-bench-v0.5.0_20260723.c68e2c3-livepath.json`
+(regenerable: `bench.html?auto=livepath`). Chrome, M1 Max, foreground,
+untainted. The live half needs the owner's capture gesture — the
+rehearsal sheet in `docs/browser-measurement.md` is that session's
+script; the rows below are what needed no gesture.
+
+- **Dirty detection probability is a function of edit size, and
+  contrast is nearly irrelevant** (canvas replay over a 1512×982
+  gradient document, 20 seeded trials per cell, shipped `hashPixels`
+  over the sampler's exact 64² draw+readback): ≤ 2 px edits are
+  essentially invisible at *any* contrast (1 px full-contrast: 0/20 —
+  confirming the D46-era recorded miss), 4–8 px detect at 0–25%,
+  16 px at 55–70%, and 32 px+ at 100%. The knee sits between 16 and
+  32 px edge at a realistic Retina crop. The 64² averaging destroys
+  the signal before the hash sees it, so the 2 s forced refresh
+  (`DIRTY_MAX_STALE_MS`) is what makes small strokes appear — "up to
+  2 s latency for a 1 px mark" is the number the owner session should
+  expect to *feel*.
+- **The per-tick dirty cost is below the 0.1 ms timer floor**
+  (median 0.00 ms for draw+readback+hash on the realistic source) —
+  the idle path is as cheap as designed; the gate's cost argument
+  holds.
+- **`computeStats` costs 2.0 ms per displayed 300²/p64 frame** on the
+  main thread — real but small against a ~40 ms preview update; the
+  DOM half of the app's per-frame work is measured by the owner
+  session's DevTools trace, not here.
+- **Live-window instrumentation landed for the owner session**: the
+  harness live legs now record dirty-sample/grab medians, long tasks
+  (`PerformanceObserver`, feature-detected), draft transitions with
+  window timestamps, capture-track `frameRate`/`displaySurface`, a
+  200² window variant (6b), and one mid-stream selection-source
+  export with overlap analysis — the pump-side half of the D68
+  contention carry-in.

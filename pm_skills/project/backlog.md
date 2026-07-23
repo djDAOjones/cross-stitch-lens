@@ -29,9 +29,10 @@ Each task files defects for performance-sensitive bugs it uncovers.
   Intent: a manual override or harness force sending a non-FS dither to the wasm adapter runs the TS reference via the M8-ALG-01 delegation guard, yet `StageTiming.backend` reports `wasm` — diagnostics lie in that corner (found by M13-PROF-03, D69). Unreachable via routing.
   Done when: the reported backend matches the code that ran (or the corner is unrepresentable), with a regression test.
 
-- [ ] **M13-PROF-04 Live-path profile: capture, scheduling, preview** [detail] (2026-07-22)
+- [~] **M13-PROF-04 Live-path profile: capture, scheduling, preview** [detail] (2026-07-22)
   Intent: the live capture→preview path — pump cadence, dirty-detection cost and small-edit misses, coalescing drops, draft governor, split-compare overhead, preview/UI latency, failure recovery.
   Done when: an end-to-end latency decomposition at 200²/300² live capture, with dropped/stale-frame behaviour quantified against the ≥ 4 updates/sec promise.
+  Status 2026-07-23: gestureless half published (D70 — dirty replay probability, per-tick cost, stats cost) and the live legs instrumented (dirty/grab medians, long tasks, draft marks, 200² window, mid-stream selection export). Remaining: the owner capture session — rehearsal sheet in `docs/browser-measurement.md`.
 
 - [ ] **M13-PROF-05 Memory, GC and export contention** [detail] (2026-07-22)
   Intent: per-frame allocation census, typed-array reuse candidates, live GC pressure, peak export memory, worker blocking during export.

@@ -441,12 +441,13 @@ async function startCaptureSession(): Promise<void> {
 
 /**
  * Live measurement window: the shipped pump→dirty→submit loop over the
- * captured surface at a 300² grid for `seconds`, with counters
+ * captured surface at a `grid`² grid for `seconds`, with counters
  * snapshotted every 5 s and preview-update spans taken per accepted
  * job. Mirrors `main.ts` policy (latest-wins both gates, dirty skip
- * with bounded staleness, draft governor sampled per frame).
+ * with bounded staleness, draft governor sampled per frame). 300² is
+ * the product-promise grid; 200² is the second M13-PROF-04 anchor.
  */
-async function runLiveWindow(seconds: number): Promise<void> {
+async function runLiveWindow(seconds: number, grid = 300): Promise<void> {
   const session = capture;
   if (session === null) {
     say('Start capture first.');
@@ -454,7 +455,7 @@ async function runLiveWindow(seconds: number): Promise<void> {
   }
   const config: PipelineConfig = {
     preset: 'resize-first',
-    grid: { width: 300, height: 300 },
+    grid: { width: grid, height: grid },
     resizeMode: 'stretch',
     palette: palette64(),
     metric: 'lab',
@@ -473,6 +474,31 @@ async function runLiveWindow(seconds: number): Promise<void> {
   // leak a previous window's marks into this row.
   resetRvfc();
 
+  // M13-PROF-04 decomposition: main-thread capture-side costs the
+  // worker marks cannot see, span records for overlap analysis, draft
+  // transition times, and long tasks while the pump runs.
+  const windowStart = performance.now();
+  const dirtySampleMs: number[] = [];
+  const grabMs: number[] = [];
+  const spanRecords: { startAt: number; endAt: number }[] = [];
+  const draftTransitions: string[] = [];
+  let longTasks = 0;
+  let longTaskTotalMs = 0;
+  let longTaskMaxMs = 0;
+  const canObserveLongTasks =
+    typeof PerformanceObserver !== 'undefined' &&
+    PerformanceObserver.supportedEntryTypes.includes('longtask');
+  const longTaskObserver = canObserveLongTasks
+    ? new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          longTasks++;
+          longTaskTotalMs += entry.duration;
+          longTaskMaxMs = Math.max(longTaskMaxMs, entry.duration);
+        }
+      })
+    : null;
+  longTaskObserver?.observe({ entryTypes: ['longtask'] });
+
   onSettled = (job) => {
     inFlight = Math.max(0, inFlight - 1);
     if (job.outcome === 'error') {
@@ -482,18 +508,27 @@ async function runLiveWindow(seconds: number): Promise<void> {
     counters.results++;
     if (job.marks !== undefined) {
       samples.push(job.marks.drawDoneAt - job.startAt);
+      spanRecords.push({ startAt: job.startAt, endAt: job.marks.drawDoneAt });
       lastJob = job;
       const total = job.marks.computeDoneAt - job.marks.receivedAt;
       const nowDraft = governor.sample(total);
-      if (nowDraft && !wasDraft) counters.draftEnters++;
-      if (!nowDraft && wasDraft) counters.draftExits++;
+      if (nowDraft && !wasDraft) {
+        counters.draftEnters++;
+        draftTransitions.push(`enter@${((performance.now() - windowStart) / 1000).toFixed(1)}s`);
+      }
+      if (!nowDraft && wasDraft) {
+        counters.draftExits++;
+        draftTransitions.push(`exit@${((performance.now() - windowStart) / 1000).toFixed(1)}s`);
+      }
       wasDraft = nowDraft;
     }
   };
 
   const pumpGrab = async (): Promise<void> => {
     try {
+      const dirtyStart = performance.now();
       const signature = frameSignature(hashPixels(sampleVideo(session.video)), null);
+      dirtySampleMs.push(performance.now() - dirtyStart);
       counters.grabs++;
       const skippedBefore = dirtyGate.skippedCount;
       const forcedBefore = dirtyGate.forcedCount;
@@ -502,7 +537,9 @@ async function runLiveWindow(seconds: number): Promise<void> {
         return;
       }
       counters.forcedRefreshes += dirtyGate.forcedCount - forcedBefore;
+      const grabStart = performance.now();
       const buffer = await session.grabFrame();
+      grabMs.push(performance.now() - grabStart);
       counters.submitted++;
       inFlight++;
       client.submit(buffer, config);
@@ -551,16 +588,36 @@ async function runLiveWindow(seconds: number): Promise<void> {
   const tracker = new CounterTracker({ ...counters }, performance.now());
   say(`Measuring live capture for ${String(seconds)} s…`);
   const intervalMeta: Record<string, string | number | boolean> = {};
+  let selectionExport: { ms: number; start: number; end: number } | null = null;
   for (let i = 0; i < Math.ceil(seconds / 5); i++) {
     await new Promise((resolve) => setTimeout(resolve, 5000));
     counters.pumpDrops = pumpGate.droppedCount - pumpDropsBefore;
     counters.clientDrops = client.droppedFrames - clientDropsBefore;
     const interval = tracker.snapshot({ ...counters }, performance.now());
     intervalMeta[`interval ${String(interval.index)}`] = JSON.stringify(interval.deltas);
+    // The D68 carry-in (M13-PROF-04): one selection-source export
+    // fired mid-stream over the real capture path, so the pump-side
+    // half of the contention question is on record.
+    if (i === 2 && selectionExport === null) {
+      try {
+        const grabbed = await session.grabFrame();
+        const exportStart = absNow();
+        const exportT = performance.now();
+        await client.exportFrame(grabbed, fullRgbVariant(config));
+        selectionExport = {
+          ms: performance.now() - exportT,
+          start: exportStart,
+          end: absNow(),
+        };
+      } catch {
+        findings.push('live window: mid-stream selection export failed');
+      }
+    }
   }
   stopPump?.();
   stopPump = null;
   onSettled = null;
+  longTaskObserver?.disconnect();
   if (driver !== null) clearInterval(driver);
   sourceChannel.removeEventListener('message', onPaint);
 
@@ -575,6 +632,17 @@ async function runLiveWindow(seconds: number): Promise<void> {
     'source changes commanded': changesCommanded,
     'source paints confirmed': paintsConfirmed,
   };
+  // Capture-track settings (M13-PROF-04): window and monitor capture
+  // do not behave alike, so the surface type and source cadence ride
+  // with the row rather than being assumed.
+  const track = (session.video.srcObject as MediaStream | null)?.getVideoTracks()[0];
+  if (track !== undefined) {
+    const settings = track.getSettings() as MediaTrackSettings & { displaySurface?: string };
+    if (settings.frameRate !== undefined) sourceMeta['track frameRate'] = settings.frameRate;
+    if (settings.displaySurface !== undefined) {
+      sourceMeta['track displaySurface'] = settings.displaySurface;
+    }
+  }
 
   // A window in which no frame was ever presented is not a measured
   // zero — it is a not-measured row plus a tainting finding (the bv2
@@ -584,7 +652,7 @@ async function runLiveWindow(seconds: number): Promise<void> {
     findings.push(`live window: ${zeroReason}`);
     rows.push(
       skippedRow({
-        workloadId: captureId(300),
+        workloadId: captureId(grid),
         boundary: 'preview-update',
         label: 'preview-update (live capture)',
         status: 'not-measured',
@@ -609,9 +677,35 @@ async function runLiveWindow(seconds: number): Promise<void> {
       cadence['rvfc metadata'] = 'unsupported';
     }
 
+    // M13-PROF-04: the main-thread half of the decomposition, plus the
+    // mid-stream selection-export contention answer.
+    const decomposition: Record<string, string | number | boolean> = {
+      'dirty sample median ms': Number(medianOf(dirtySampleMs).toFixed(2)),
+      'grab median ms': Number(medianOf(grabMs).toFixed(2)),
+      'draft transitions': draftTransitions.length === 0 ? 'none' : draftTransitions.join(','),
+      ...(canObserveLongTasks
+        ? {
+            'long tasks': longTasks,
+            'long task total ms': Math.round(longTaskTotalMs),
+            'long task max ms': Math.round(longTaskMaxMs),
+          }
+        : { 'long tasks': 'unsupported' }),
+    };
+    if (selectionExport !== null) {
+      const exp = selectionExport;
+      const overlapped = spanRecords
+        .filter((r) => r.startAt < exp.end && r.endAt > exp.start)
+        .map((r) => r.endAt - r.startAt);
+      decomposition['selection export ms'] = Number(exp.ms.toFixed(1));
+      decomposition['spans overlapping selection export'] = overlapped.length;
+      if (overlapped.length > 0) {
+        decomposition['overlapping span median ms'] = Number(medianOf(overlapped).toFixed(1));
+      }
+    }
+
     rows.push(
       measuredRow({
-        workloadId: captureId(300),
+        workloadId: captureId(grid),
         boundary: 'preview-update',
         label: 'preview-update (live capture)',
         cache: 'warm',
@@ -626,6 +720,7 @@ async function runLiveWindow(seconds: number): Promise<void> {
           ...sourceMeta,
           ...countersMeta(counters, 'counter '),
           ...cadence,
+          ...decomposition,
           ...intervalMeta,
           ...(lastJob === null ? {} : phaseMeta(lastJob)),
         },
@@ -1259,6 +1354,142 @@ async function runContentionProbe(): Promise<void> {
     }),
   );
   say('Contention probe done.');
+}
+
+// ---------------------- live-path gestureless rows (M13-PROF-04)
+
+/**
+ * Dirty-detection replay without a capture gesture. The shipped
+ * sampler (`sampleVideo`) accepts only a video element, so this leg
+ * mirrors its exact operations — 64² `drawImage` downsample +
+ * `getImageData` — over an OffscreenCanvas source, then runs the
+ * *shipped* `hashPixels` on the bytes. Detection probability is a
+ * property of the averaging and the hash, not of the element type;
+ * the caveat rides in the row meta. Content is a smooth gradient (a
+ * plausible artwork document) — noise content would make every cell
+ * average unstable and overstate detection.
+ */
+async function runDirtyReplay(): Promise<void> {
+  const W = 1512;
+  const H = 982;
+  const canvas = new OffscreenCanvas(W, H);
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const target = new OffscreenCanvas(64, 64);
+  const tctx = target.getContext('2d', { willReadFrequently: true });
+  if (ctx === null || tctx === null) {
+    findings.push('dirty replay: 2d canvas context unavailable');
+    return;
+  }
+  const base = ctx.createImageData(W, H);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4;
+      base.data[i] = Math.round((255 * x) / (W - 1));
+      base.data[i + 1] = Math.round((255 * y) / (H - 1));
+      base.data[i + 2] = Math.round((255 * (x + y)) / (W + H - 2));
+      base.data[i + 3] = 255;
+    }
+  }
+  ctx.putImageData(base, 0, 0);
+  const sample = (): Uint8ClampedArray => {
+    tctx.drawImage(canvas, 0, 0, W, H, 0, 0, 64, 64);
+    return tctx.getImageData(0, 0, 64, 64).data;
+  };
+  // Per-tick cost on the realistic source: the price live capture pays
+  // on every presented frame, changed or not.
+  const costPlan = { warmup: 5, runs: 50 };
+  const costSamples = measure(() => hashPixels(sample()), costPlan);
+  rows.push(
+    measuredRow({
+      workloadId: 'dirty-replay',
+      boundary: 'prepare',
+      label: 'dirty sample+hash per tick (1512×982 canvas)',
+      cache: 'warm',
+      warmupRuns: costPlan.warmup,
+      samples: costSamples,
+      meta: {
+        sampler: 'canvas stand-in mirroring sampleVideo ops; hash is the shipped hashPixels',
+      },
+    }),
+  );
+
+  const baseHash = hashPixels(sample());
+  // Seeded positions so the replay is reproducible run to run.
+  let seed = 0x5eed;
+  const next = (): number => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 0xffffffff;
+  };
+  const sizes = [1, 2, 4, 8, 16, 32, 64];
+  const contrasts: readonly (readonly [string, number])[] = [
+    ['Δ8', 8],
+    ['Δ64', 64],
+    ['full', 255],
+  ];
+  const trials = 20;
+  const table: Record<string, string | number | boolean> = {
+    sampler: 'canvas stand-in; hashPixels + 64² averaging are what decide detection',
+    'stale bound ms': 2000,
+  };
+  for (const size of sizes) {
+    for (const [name, delta] of contrasts) {
+      let hits = 0;
+      for (let t = 0; t < trials; t++) {
+        const x = Math.floor(next() * (W - size));
+        const y = Math.floor(next() * (H - size));
+        const patch = ctx.getImageData(x, y, size, size);
+        const edited = ctx.createImageData(size, size);
+        for (let i = 0; i < patch.data.length; i += 4) {
+          edited.data[i] = Math.min(255, (patch.data[i] ?? 0) + delta);
+          edited.data[i + 1] = Math.min(255, (patch.data[i + 1] ?? 0) + delta);
+          edited.data[i + 2] = Math.min(255, (patch.data[i + 2] ?? 0) + delta);
+          edited.data[i + 3] = 255;
+        }
+        ctx.putImageData(edited, x, y);
+        if (hashPixels(sample()) !== baseHash) hits++;
+        ctx.putImageData(patch, x, y);
+      }
+      table[`detect ${String(size)}px ${name}`] = `${String(hits)}/${String(trials)}`;
+    }
+  }
+  rows.push(
+    measuredRow({
+      workloadId: 'dirty-replay',
+      boundary: 'prepare',
+      label: 'dirty detection probability (canvas replay)',
+      cache: 'n/a',
+      warmupRuns: 0,
+      samples: [0],
+      meta: table,
+    }),
+  );
+  say('Dirty replay rows done.');
+  return Promise.resolve();
+}
+
+/**
+ * `computeStats` cost over a real 300²/p64 output — the main-thread
+ * work the app performs per displayed frame that the harness's live
+ * window deliberately omits (M13-PROF-04: the DOM half is measured by
+ * the owner's DevTools trace, this is the compute half).
+ */
+async function runStatsCost(): Promise<void> {
+  const workload = workloadById(STILL_300);
+  const source = sourceBuffer(workload);
+  const config = configFor(workload);
+  const out = await client.exportFrame(copyOf(source), config);
+  const plan = { warmup: 2, runs: 10 };
+  const samples = measure(() => computeStats(out, palette64()), plan);
+  rows.push(
+    measuredRow({
+      workloadId: STILL_300,
+      boundary: 'stage',
+      label: 'stats (computeStats over pipeline output)',
+      cache: 'warm',
+      warmupRuns: plan.warmup,
+      samples,
+    }),
+  );
 }
 
 // ------------------- backend end-to-end comparison (M13-PROF-03)
@@ -1955,11 +2186,12 @@ function finishReport(): Promise<void> {
 // ----------------------------------------------------------- auto mode
 
 /**
- * Unattended no-capture legs (M13-PROF-01/02/03 browser halves):
- * `?auto=still,stage,backend,gpu,lut,contention` runs the listed legs
- * on load and, with `post=<url>`, POSTs the serialised bv2 report to a
- * local collector — so an agent can run the gestureless half of the
- * procedure in a real, foreground browser window it cannot script.
+ * Unattended no-capture legs (M13-PROF-01/02/03/04 browser halves):
+ * `?auto=still,stage,backend,livepath,gpu,lut,contention` runs the
+ * listed legs on load and, with `post=<url>`, POSTs the serialised bv2
+ * report to a local collector — so an agent can run the gestureless
+ * half of the procedure in a real, foreground browser window it cannot
+ * script.
  * `backend` runs before the M5-era GPU legs so its cold rows stay
  * cold in a combined run.
  * (A hidden page is CPU-throttled to the point of 10–20× inflated
@@ -1980,6 +2212,10 @@ async function runAuto(): Promise<void> {
   }
   if (legs.has('stage')) await runStageMatrix();
   if (legs.has('backend')) await runBackendComparison();
+  if (legs.has('livepath')) {
+    await runDirtyReplay();
+    await runStatsCost();
+  }
   if (legs.has('gpu')) await gpuChecks();
   if (legs.has('lut')) await lutBuildTiming();
   if (legs.has('contention')) await runContentionProbe();
@@ -2022,9 +2258,14 @@ function main(): void {
     button('2c · Backend comparison (ts / wasm / webgpu)', runBackendComparison),
     button('3 · Export rows', runExports),
     button('3b · Selection-source contention (still pump)', runContentionProbe),
+    button('3c · Live-path gestureless rows (dirty replay, stats)', async () => {
+      await runDirtyReplay();
+      await runStatsCost();
+    }),
     button('4 · Open controlled source window', openSource),
     button('5 · Start capture (choose a surface)', startCaptureSession),
-    button('6 · Measure live preview (30 s)', async () => runLiveWindow(30)),
+    button('6 · Measure live preview (30 s, 300²)', async () => runLiveWindow(30)),
+    button('6b · Measure live preview (30 s, 200²)', async () => runLiveWindow(30, 200)),
     button('7 · Interaction run (8 changes)', async () => runInteraction(8)),
     button('8 · Finish & download report', finishReport),
   );

@@ -122,3 +122,22 @@ but the pump-side half (grab/dirty-sample cost racing the export on the
 main thread during live capture) needs this ticket's live leg. One
 targeted window with `ensureSelectionSource` triggered mid-stream is
 enough.
+
+## Status 2026-07-23 (D70) — gestureless half done, owner session next
+
+Published: dirty-detection probability by edit size (size-blind knee at
+16–32 px, contrast irrelevant), per-tick sample cost (< 0.1 ms), and
+`computeStats` at 2.0 ms/frame — report
+`browser-bench-v0.5.0_20260723.c68e2c3-livepath.json`, evidence in
+`docs/performance-evidence.md`. The harness live legs now record the
+main-thread decomposition (dirty/grab medians), long tasks, timestamped
+draft transitions, track `frameRate`/`displaySurface`, a 200² window
+(button 6b), and one mid-stream selection-source export with overlap
+analysis (the D68 carry-in).
+
+Remaining — needs the owner's capture gesture: the rehearsal sheet in
+`docs/browser-measurement.md` → "The M13-PROF-04 owner session"
+(controlled-source windows at 300²/200², Photoshop content cases, the
+DevTools-trace app-side half, adversarial/recovery checks). Close the
+item on that session's numbers plus owner notes; acceptance stays
+M13-ACCEPT-02.

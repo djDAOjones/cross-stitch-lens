@@ -158,6 +158,12 @@ so they are truthful and collision-free; they are report rows only —
 the frozen matrix defines what the bench must never lose, and no budget
 row may bind to an off-matrix ID.
 
+Harness-internal carrier IDs (`env`, `dirty-replay`) identify auxiliary
+rows whose subject is not a pipeline workload at all — the environment
+record and the dirty-detection replay (M13-PROF-04). They collide with
+nothing (no source class is named `env` or `dirty-replay`) and never
+carry budget-bindable pipeline timings.
+
 ### Axes
 
 | Axis | Values | Why it is in the matrix |

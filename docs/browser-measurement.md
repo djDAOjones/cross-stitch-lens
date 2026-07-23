@@ -354,6 +354,39 @@ surface to share, and the harness itself both warns at capture start
 and refuses to publish a zero-frame window as a measured row
 (`zeroFrameReason`, `src/bench/counters.ts`).
 
+### The M13-PROF-04 owner session (rehearsal sheet)
+
+The live half of the live-path profile needs the owner's capture
+gesture. One sitting, three parts; everything else is already
+automated. Keep every shared window at least partially visible.
+
+**Part A — controlled source (repeatable numbers).** Button 4 → 5
+(share the *source* window) → 6 (300², 30 s) → 6b (200², 30 s) → 7 →
+8. The live windows now also record the main-thread decomposition
+(dirty-sample and grab medians), long tasks, draft transitions with
+timestamps, capture-track settings (`frameRate`, `displaySurface`),
+and fire one selection-source export mid-stream (~15 s in) — the
+pump-side half of the D68 contention question.
+
+**Part B — Photoshop content.** Stop sharing, button 5 again, share
+the Photoshop window, rerun 6 and 6b while performing in order:
+10 s hands-off (expect dirty skips plus a forced refresh at most every
+2 s), 1 px pencil marks (expect up to ~2 s latency — the measured
+detection floor, see the dirty replay rows), a slow continuous stroke,
+a large fill, a transform drag, rapid scattered edits. Note perceived
+latency, stalls and the draft badge per case; run button 8 again for a
+second report.
+
+**Part C — app-side responsiveness (DevTools trace).** In the *app*
+(not the harness): capture Photoshop, record a ~30 s Performance
+trace while editing, zooming/panning, and toggling compare and the
+grid. Then the adversarial checks: crop move/resize mid-capture,
+pause/resume, end capture from the browser bar, a declined re-prompt,
+the narrow companion layout, one export mid-edit. Expected: no wedge,
+truthful status, clean recovery, export unaffected by draft mode.
+Traces and owner notes stay out of committed reports if they show
+artwork; acceptance itself stays with M13-ACCEPT-02.
+
 ### Interpretation limits
 
 - The still `preview-update` rows start at the client's job post, not

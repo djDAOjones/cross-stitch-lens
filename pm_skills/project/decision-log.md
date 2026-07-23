@@ -1197,3 +1197,33 @@ under grammar-derived IDs (contract note added to
 `docs/measurement-contract.md`). Same dirty-tree caveat as D67/D68:
 the report is stamped `0042e73`; this close commit lands the force
 channel and leg it measured.
+
+## D70 — M13-PROF-04 gestureless half: the dirty gate is size-blind, not contrast-blind (2026-07-23)
+
+**Decision:** publish the gestureless live-path rows, land the
+owner-session instrumentation, and hold the live half for the owner's
+capture gesture — the rehearsal sheet
+(`docs/browser-measurement.md` → "The M13-PROF-04 owner session") is
+that session's script. PROF-04 stays `[~]`. Evidence:
+`docs/performance-evidence.md` → "M13 live-path gestureless rows";
+`bench-reports/browser-bench-v0.5.0_20260723.c68e2c3-livepath.json`.
+
+**Findings:** detection probability is a function of **edit size
+alone** — ≤ 2 px invisible at any contrast (1 px full-contrast 0/20),
+the knee between 16 px (55–70%) and 32 px (100%) at a realistic
+Retina crop. The 64² averaging destroys the signal before the hash
+sees it, so the 2 s forced refresh is the user-visible latency for
+small strokes — the owner session should *feel* that number, not
+discover it. Per-tick sample cost sits below the 0.1 ms timer floor;
+`computeStats` adds 2.0 ms per displayed 300² frame on the main
+thread. Instrumentation added to the live legs: dirty/grab medians,
+long tasks, timestamped draft transitions, track
+`frameRate`/`displaySurface`, a 200² window (6b), and one mid-stream
+selection export with overlap analysis (the D68 carry-in).
+
+**Auto-jazz assumptions:** the replay mirrors the sampler's canvas
+ops (the shipped `sampleVideo` is video-only) with the shipped hash —
+caveat on every row; no `main.ts` instrumentation (the DevTools trace
+owns the app-side DOM half); no policy tuning (the ticket forbids it).
+Dirty-tree caveat as D67–D69: report stamped `c68e2c3`, this commit
+lands the leg that produced it.

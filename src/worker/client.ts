@@ -127,6 +127,11 @@ export class PipelineClient {
     this.worker.postMessage({ type: 'compare', enabled, position });
   }
 
+  /** Highlight one palette index on the preview; null clears (M14-EXT-17). */
+  setHighlight(index: number | null): void {
+    this.worker.postMessage({ type: 'highlight', index });
+  }
+
   /**
    * Submit a frame. If the worker is busy the frame waits as the
    * single pending slot; superseded frames are dropped silently

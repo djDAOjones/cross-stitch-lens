@@ -98,7 +98,12 @@ main {
 @media (min-width: 60rem) {
   .app-layout {
     flex-direction: row;
-    align-items: flex-start;
+    /* Stretch, not flex-start (M14-EXT-09): the preview pins with
+      `position: sticky`, and sticky only holds within its container —
+      a top-aligned .content ends where its own children end, releasing
+      the preview while the taller settings column keeps scrolling.
+      Stretched, both columns span the row and the pin holds. */
+    align-items: stretch;
   }
 
   .content {
@@ -210,12 +215,67 @@ main {
   min-height: 16rem;
   overflow: hidden;
   border: 1px solid var(--csl-border-strong);
+  /* Unengaged the canvas is inert (M14-EXT-10): no grab cursor, and
+    touch gestures scroll the page rather than being captured. Focus
+    is the engaged state — the existing ring is the "highlighted"
+    look the memo asked for, and it must show for pointer engagement
+    too, so :focus, not :focus-visible. */
+  touch-action: auto;
+}
+
+.preview-host:focus {
   cursor: grab;
   touch-action: none;
 }
 
 .preview-host.grabbing {
   cursor: grabbing;
+}
+
+/* Highlight column (M14-EXT-17): the per-row toggle keeps the app's
+  one control idiom (text button); the cell hugs its content so the
+  colour column keeps the width. */
+.info-panel td.highlight-cell {
+  width: 1%;
+  white-space: nowrap;
+}
+
+/* The preview unit (strip + canvas) stays in view while the settings
+  scroll (M14-EXT-09): sticky in both layouts, above the content that
+  slides beneath it. No height animation — the dock swap is instant,
+  which is both the reduced-motion answer and the refit-thrash guard
+  (one ResizeObserver refit per transition, not one per frame). */
+.content > section[aria-label='Preview'] {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--csl-background);
+}
+
+/* Docked (M14-EXT-09): scrolled past its natural position at the
+  companion width, the canvas caps so a useful settings viewport
+  (> 50 % of the window) remains beneath the pinned layer. */
+@media (max-width: 60rem) {
+  /* The sticky pin must survive the whole page scroll, but .content
+    ends before the settings do (they are its *sibling* in the
+    stacked layout). `display: contents` dissolves the box so the
+    preview's sticky containing block becomes the full column — DOM
+    order, tab order and reading order all untouched. */
+  .content {
+    display: contents;
+  }
+
+  .preview-docked .preview-host {
+    height: 40dvh;
+    min-height: 10rem;
+  }
+
+  /* Keyboard focus must never land beneath the dock (UI-STANDARDS →
+    Operable, focus non-obscuration): reserve the docked preview's
+    worst-case height ahead of any programmatic scroll-to-focus. */
+  html {
+    scroll-padding-top: calc(40dvh + 8rem);
+  }
 }
 
 .preview-host canvas {
@@ -496,20 +556,31 @@ body.preview-focus .preview-host {
   margin-top: var(--csl-spacing-02);
 }
 
-/* View controls (M14-EXT-03/05): the readouts ride the summary row —
-  state survives the fold without spending a row — and the body drops
-  the depth indent, which read as double chrome around a plain
-  toolbar. */
-.view-controls > summary {
-  gap: var(--csl-spacing-05);
+/* View strip (M14-EXT-11, retiring the M14-EXT-03/05 fold): one
+  quiet permanent row — ghost text buttons, readouts at the row end.
+  Quietness comes from dropped chrome, not smaller targets or grey
+  text: minimum sizes and text colour are unchanged, so reach and
+  contrast hold. Wraps to at most two rows at the companion width. */
+.view-strip {
+  margin: 0 0 var(--csl-spacing-02);
+  row-gap: 0;
+}
+
+.view-strip button {
+  border-color: transparent;
+  /* Tighter padding than panel buttons: six controls plus readouts
+    must wrap ≤ 2 rows at 320 px. Minimum target size still binds
+    through the base min-width/min-height. */
+  padding: 0 var(--csl-spacing-03);
+}
+
+.view-strip button:hover:not(:disabled) {
+  border-color: var(--csl-border-strong);
 }
 
 .view-readouts {
   display: inline-flex;
   gap: var(--csl-spacing-05);
   margin-left: auto;
-}
-
-.view-controls-body .toolbar {
-  margin: var(--csl-spacing-02) 0 var(--csl-spacing-03);
+  align-self: center;
 }

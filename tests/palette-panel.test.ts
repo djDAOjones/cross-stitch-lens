@@ -211,9 +211,23 @@ describe('countSummary', () => {
   });
 
   it('reports permitted and palette size with no limit', () => {
-    expect(countSummary(state({ eligibleCount: 489, selectedCount: 489 }))).toBe(
-      '489 permitted · 489 in palette.',
-    );
+    // Explicit no-limit policy: the ambient default became max/8 at
+    // M14-EXT-13 (D98), and this test is about the unlimited branch.
+    expect(
+      countSummary(
+        state({
+          policy: { ...defaultPolicy(), count: { mode: 'all', n: 20 } },
+          eligibleCount: 489,
+          selectedCount: 489,
+        }),
+      ),
+    ).toBe('489 permitted · 489 in palette.');
+  });
+
+  it('defaults to a limit of eight (M14-EXT-13, D98)', () => {
+    // The fresh-session default is at-most-8 — a stitchable first
+    // result, never silent (the summary strings above carry it).
+    expect(defaultPolicy().count).toEqual({ mode: 'max', n: 8 });
   });
 
   it('reports selected against requested when a limit is in force', () => {

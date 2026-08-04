@@ -24,6 +24,8 @@ import {
   setCompare,
   setFrame,
   setGridStyle,
+  setHighlight,
+  setHighlightFrame,
   setSourceFrame,
   setSurface,
   setView,
@@ -240,6 +242,16 @@ export function createRouter(deps: RouterDeps): (request: WorkerRequest) => void
     // buffer — but a failed snapshot only costs the preview redraw, so
     // the pixels still go back and the gate still releases.
     try {
+      // Copy the index sidecar for the highlight decoration before the
+      // transfer detaches it (M14-EXT-17). One typed-array slice per
+      // frame (~180 KB at 300²) — same decoration cost class as the
+      // compare copy, and kept unconditional so a highlight engages
+      // instantly on a static image with no re-run.
+      setHighlightFrame(
+        response.indices === null ? null : new Uint16Array(response.indices),
+        response.width,
+        response.height,
+      );
       const bitmap = await deps.toBitmap(toImageData(response));
       const bitmapDoneAt = absNow();
       setFrame(bitmap);
@@ -282,6 +294,11 @@ export function createRouter(deps: RouterDeps): (request: WorkerRequest) => void
         if (enabling && (stale || compareGeometry === '')) refreshSourceFrame();
         break;
       }
+      case 'highlight':
+        // Decoration only (M14-EXT-17): touches the surface draw and
+        // nothing else — processing, exports and lastFrame unaffected.
+        setHighlight(request.index);
+        break;
       case 'export':
         // Full-quality re-run for an export: no preview draw, no
         // lastFrame update — the result goes straight back by id.

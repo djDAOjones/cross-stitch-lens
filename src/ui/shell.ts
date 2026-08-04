@@ -12,12 +12,21 @@
  * be confused with the M4 draft-quality state, which is about pixels.
  */
 
-/** The two independent shell preferences. */
+/** The shell's presentation state: two preferences plus the cold flag. */
 export interface ShellState {
   /** Settings panel collapsed out of layout and focus order. */
   panelCollapsed: boolean;
   /** Preview focus: everything but the preview and its status hidden. */
   previewFocus: boolean;
+  /**
+   * Cold surface (M14-EXT-06): no source and no project yet, so the
+   * entry state is the page's only product content. Session state,
+   * never persisted; exiting is one-way — every source route (file,
+   * capture, project open, drop, paste) leaves it for good. Cold
+   * overrides both preferences: collapse and preview focus are
+   * meaningless before anything exists to look at.
+   */
+  cold: boolean;
 }
 
 /** Which shell regions are shown, derived from {@link ShellState}. */
@@ -40,18 +49,33 @@ export interface ShellVisibility {
   focusExit: boolean;
 }
 
-/** Shell state at first run: panel open, no focus mode. */
+/** Shell state at first run: cold, panel open, no focus mode. */
 export function defaultShellState(): ShellState {
-  return { panelCollapsed: false, previewFocus: false };
+  return { panelCollapsed: false, previewFocus: false, cold: true };
 }
 
 /**
  * What to show. The single composition rule lives here so no caller
- * has to reason about the interaction: in preview focus only the
- * preview, its compact status, and the exit control survive; otherwise
- * the panel's own collapsed state decides, and everything else shows.
+ * has to reason about the interaction: cold wins over everything —
+ * only the source region (whose entry state is the page) and the
+ * status live region survive, with dev-only diagnostics exempt as
+ * non-product chrome; then preview focus keeps only the preview, its
+ * compact status, and the exit control; otherwise the panel's own
+ * collapsed state decides, and everything else shows.
  */
 export function visibility(state: ShellState): ShellVisibility {
+  if (state.cold) {
+    return {
+      controls: false,
+      source: true,
+      info: false,
+      debug: true,
+      status: true,
+      compactStatus: false,
+      panelToggle: false,
+      focusExit: false,
+    };
+  }
   if (state.previewFocus) {
     return {
       controls: false,

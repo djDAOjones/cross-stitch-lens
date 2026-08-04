@@ -35,6 +35,24 @@ Macro order is **unchanged** (preview-first at every width, no CSS
 `order`): header → layout (content column, then settings panel; panel
 right of content ≥ 60 rem, stacked below it under 60 rem).
 
+*(Amended M14-EXT-09/11, D95: the preview section is now the sticky
+dock unit — view strip · canvas host · compact status — pinned in
+both layouts while everything after it scrolls beneath; the info
+panel and dev profiling panel sit after it in the content flow, not
+inside it. At the companion width, scrolling past the preview's
+natural position caps the canvas to 40dvh; scrolling back restores
+it. Focus non-obscuration is held by `scroll-padding-top` sized to
+the docked worst case. DOM order is still preview-first with no CSS
+`order`.)*
+
+*(Amended M14-EXT-12, D97: during a capture session the whole
+capture surface — thumb + crop overlay, session controls, readout,
+draft badge — lives in a dynamic **Capture region** accordion
+section mounted first in the settings panel, open on first
+appearance with persisted collapse; the source section in the
+content column serves the cold entry only. Supersedes D88's
+below-the-preview placement on the owner's authority, D91.)*
+
 ```text
 header        h1 · shell bar [Hide/Show settings · Preview focus]
 content       preview section [toolbar · canvas host · compact status · info panel]
@@ -88,9 +106,12 @@ obstacles, A4's "what next", IMPL-04 implements):
 - Title line: "Turn a picture into a cross-stitch pattern".
 - Two primary Carbon buttons, equal weight: **"Choose an image"**
   (opens the existing file input) and **"Capture your screen"**
-  (existing capture start). One secondary action: **"Try a sample"** —
-  generates a deterministic in-code sample buffer (no asset, no
-  dependency, not the test fixture) and runs the normal import path.
+  (existing capture start). *(Amended M14-EXT-07, D94: the "Try a
+  sample" entry action is removed on the owner's ask; the sample — a
+  deterministic in-code buffer, no asset, not the test fixture —
+  survives solely as the Source modal's zero-permission demo route.
+  The quiet "Open a project" tertiary from EXT-06 completes the
+  stack.)*
 - One sentence under the buttons: "You can also drop an image
   anywhere, or paste one." (the existing routes, now visually tied to
   the actions).
@@ -117,7 +138,22 @@ surface word), else "the shared screen".
 answer to the no-autosave dead end; the autosave feature itself stays
 out of the milestone (D75).
 
-## 4. Terminology map (D79)
+### §3 amendment — cold surface as a shell state (M14-EXT-06, D93)
+
+Before any source or project, the entry state is the page's only
+product content: the settings panel, info strip, and the bar's
+Hide settings / Preview focus toggles are hidden by a `cold` state in
+the one shell model (`src/ui/shell.ts`), which overrides both
+presentation preferences. Dev-only diagnostics stay (not product
+surface). The entry stack gains a quiet fourth action **"Open a
+project"** (the panel's Load input, so Load is never orphaned cold).
+Exiting cold is one-way and session-scoped, fired by every source
+route — file, capture, project open, drop, paste; source-bearing
+exits announce "Design ready — settings are on the right/below", the
+project route lets its own status speak. A focused entry action that
+hides with the entry hands focus to the bar's Source button, never to
+the void. Reload without a source lands cold again by construction
+(no persistence).
 
 Policy: user language on default surfaces; terms of art kept where the
 craft uses them (dither method names — evidence-bearing, D62);
@@ -132,6 +168,8 @@ no colons; visible label = accessible name.
 | "Colour mode" options "Thread palette" / "Full RGB" | options "Thread palette" / "Unlimited colours (no threads)" | Design |
 | "Palette source" | "Threads to choose from" | Design |
 | "Only threads I own" | unchanged (already user language) | thread depth |
+| "Show grid" / "Row and column numbers" | strip context shortens to "Grid" / "Numbers" (EXT-11, D95) — the long names stay here and in Grid details, where geometry is edited | view strip |
+| "Colour limit" (select) | "Limit colours" switch + "Colours" slider + "Number of colours" field (EXT-13, D98) | Design |
 | "Colour count" modes "Every permitted thread / At most… / Exactly…" | "Colour limit" — "No limit / At most… / Exactly…" | Design |
 | "Find a thread" + placeholder "Search threads" | label "Find a thread", **no placeholder** (A20) | thread depth |
 | "Mark N shown as owned" | "Mark N matching as owned" (A10 — acts on the filter) | thread depth |
@@ -162,20 +200,21 @@ implemented in project code.
 | Preview focus / exit | C | shell bar | ghost button, pressed state | 1 |
 | Choose an image | E | empty state / source row | primary button + file input | 1 |
 | Capture your screen | E | empty state / source row | primary button | 1 |
-| Try a sample | E | empty state | secondary/tertiary button | 1 |
+| Try a sample | E | Source modal only (EXT-07, D94: entry button removed on the memo's ask; the zero-permission demo route survives here) | modal choice button | 2 |
 | drag-drop / paste | E | page-wide | (routes named in empty-state copy) | 1 |
 | Capture frame / Pause / Lock / Stop | C | source row (live) | button group, pressed states | 1 |
 | Crop overlay | E | source row (live) | interactive region (role=application) + status readout | 1+ |
-| Zoom in / out | E | toolbar | icon-free text buttons (existing) | 1 |
-| Fit | C | toolbar | text button | 1 |
-| Fit width / Fit height | C | toolbar (text buttons — amended at VERIFY-01: the planned "Fit options" menu is deferred; five plain buttons all meet targets and wrap acceptably, and a menu trades a click for less wrap — a taste call routed to ACCEPT-01, D86) | text buttons | 1 |
-| Compare + Split | C | toolbar | toggle button + inline slider | 1–2 |
-| zoom % · dimensions readouts | E | toolbar | inline text | 0 |
+| Zoom in / out | E | view strip (EXT-11, D95: permanent quiet row, fold retired) | ghost text buttons | 1 |
+| Reset view | C | view strip (EXT-08, D95: the one surviving fit control under auto-fit; Fit / Fit width / Fit height retired, closing the D86 A16 waiver) | ghost text button | 1 |
+| Compare + Split | C | view strip | ghost toggle button + inline slider | 1–2 |
+| Grid / Numbers | C | view strip (moved from Appearance, EXT-11; anatomy change: switches → toggle buttons) | ghost toggle buttons, aria-pressed | 1 |
+| zoom % · dimensions readouts | E | view strip (row end) | inline text | 0 |
 | Pattern width / height | E | Design (open) | number input, full anatomy | 1–2 |
 | Colour mode | E | Design | select | 1–2 |
 | Threads to choose from (source) | C | Design | select | 1–2 |
 | Preset mode (strict/prefer) | D | Design → shown with preset source | select (contextual reveal) | 2 |
-| Colour limit (mode + n) | C | Design | select + number | 1–3 |
+| Limit colours (switch + slider + number) | C | Design (EXT-13, D98: switch default **on**, slider 1–64, number to 512; fresh default **at most 8**, named in the Design summary — supersedes D55's unlimited) | switch + native range + number | 1–3 |
+| Use exactly this many | D | Design → depth, beside the thread-library disclosure (EXT-13) | checkbox | 2 |
 | Thread library & rules (disclosure) | — | Design → inline disclosure | Carbon "read more"-style disclosure button | 2 to open |
 | 8 brand checkboxes | C→D | thread depth | checkbox group, 44 px rows | 3 |
 | Only threads I own | C→D | thread depth | toggle | 3 |
@@ -187,7 +226,7 @@ implemented in project code.
 | Save as palette | D | thread depth | button + **Carbon modal** for name (A6, replaces prompt) | 3 (+modal) |
 | Delete palette / Undo | D | thread depth | button + inline undo (existing strength) | 3 |
 | Export/Import inventory · Export palettes | D | thread depth | buttons + native file input | 3 |
-| Show grid / Row & column numbers | C | Appearance | toggles | 2 |
+| Show grid / Row & column numbers | — | *retired from Appearance (EXT-11, D95): live on the view strip as Grid / Numbers; the long names survive in this map (§4) and in Grid details, where geometry is edited* | — | — |
 | Dither style (preset) | C | Appearance | select | 2 |
 | Grid details (intervals, thicknesses, colour) | D | Appearance → "Grid details" | inline disclosure, number/colour inputs | 3 |
 | Dither details (method, strength, serpentine) | D | Appearance → "Dither details" | inline disclosure | 3 |
@@ -200,7 +239,8 @@ implemented in project code.
 | "Nothing is kept unless you save" | E (read) | Project | inline text | 0 |
 | version/build line | C (read) | Project foot | inline text (A13) | 2 |
 | Processing order | D | Advanced | select, renamed (D79) | 2 |
-| stats summary + colours table | E (read) | info panel (unchanged) | data table, hex visible in row text at depth (A14: hex joins the visible label in the table's colour cell) | 0 |
+| stats summary + colours table | E (read) | info panel — table collapsed by default (EXT-14, D99, flipping D90; persisted choice wins), the fold line carrying count + leading thread ("Colours by usage — 8 · DMC 310 leads"); EXT-17's row selection therefore sits at reach 2, within the C-tier contract | data table, hex visible in row text at depth (A14) | 0 (summary) / 2 (rows) |
+| Highlight (per thread row) | C | colours table (EXT-17, D100): toggle per row, one selection, session-only; Escape/reselect clear; announcement carries the stitch count; preview scrim is a Compare-class decoration — exports byte-identical by construction | per-row toggle button, visible "Highlight" + accessible "Highlight {thread}" (A2), aria-pressed | 2 |
 | status line / compact status | E (read) | unchanged | role=status | 0 |
 | Profiling / Copy diagnostics | dev | unchanged | unchanged (D50) | 1 |
 
@@ -247,8 +287,14 @@ no colour-only state.
   the tab order.
 - Accordion/disclosure headers: Enter/Space toggle; focus remains on
   the header; `aria-expanded` + `aria-controls` carried.
-- Canvas: `+`/`−`/`0`/arrows unchanged; Escape exits preview focus
-  (convenience; the exit button remains the guaranteed route).
+- Canvas: `+`/`−` zoom and arrows pan unchanged; `0` is **Reset
+  view** (EXT-08 — one rule with the strip button). Pan engagement
+  *is* host focus (EXT-10): unfocused, wheel and drag belong to the
+  page; a click engages (native focus, the ring is the engaged
+  state); wheel never moves the canvas in either state. Escape on a
+  focused canvas blurs it and is consumed; preview-focus mode exits
+  on the *next* Escape (its exit button remains the guaranteed
+  route).
 - Crop overlay: arrows move, shift+arrows resize (unchanged); the
   status readout announces the result (§3).
 - Modals (palette name, bulk disown): Carbon modal keyboard contract —

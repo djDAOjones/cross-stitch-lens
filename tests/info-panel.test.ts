@@ -13,6 +13,7 @@ import {
   formatPercent,
   ROW_CAP,
   summaryText,
+  usageSummaryLabel,
 } from '../src/ui/info-panel.ts';
 
 function usage(overrides: Partial<ColorUsage> = {}): ColorUsage {
@@ -128,5 +129,36 @@ describe('summaryText', () => {
       identified: false,
     };
     expect(summaryText(stats)).toBe('1 × 1 · 1 stitch (0 empty) · 1 colour');
+  });
+});
+
+describe('usageSummaryLabel (M14-EXT-14)', () => {
+  const BRANDS = new Map([['dmc', 'DMC']]);
+  const base: DesignStats = {
+    width: 10,
+    height: 10,
+    totalCells: 100,
+    stitchCount: 100,
+    emptyCount: 0,
+    colorCount: 8,
+    perColor: [],
+    identified: true,
+  };
+
+  it('carries count and the leading thread while collapsed', () => {
+    const stats: DesignStats = {
+      ...base,
+      perColor: [usage({ thread: thread('310', 'Black', [0, 0, 0], { brandId: 'dmc' }) })],
+    };
+    expect(usageSummaryLabel(stats, BRANDS)).toBe('Colours by usage — 8 · DMC 310 leads');
+  });
+
+  it('falls back to the hex when the leader is unidentified', () => {
+    const stats: DesignStats = { ...base, perColor: [usage({ hex: '#123456' })] };
+    expect(usageSummaryLabel(stats, BRANDS)).toBe('Colours by usage — 8 · #123456 leads');
+  });
+
+  it('stays the plain name with no usage at all', () => {
+    expect(usageSummaryLabel(base, BRANDS)).toBe('Colours by usage');
   });
 });

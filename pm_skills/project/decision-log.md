@@ -1765,3 +1765,348 @@ judges the result.
 
 **Link:** ticket M14-EXT-05 (deleted on ship); evidence table in
 `docs/ui-evidence.md`; ACCEPT-01 unblocked again.
+
+## D91 — M14 third look: the voice memo triaged — eleven tasks, two icebox promotions (2026-08-04)
+
+**Decision:** the owner's third look (a voice memo, transcribed and
+repaired 2026-08-04) triages into eleven extension tasks that gate
+ACCEPT-01 again — M14-EXT-06 settings appear with the source, EXT-07
+the sample affordance retired, EXT-08 always-auto-fit with Fit
+width/height removed, EXT-09 sticky preview, EXT-10 click-to-engage
+panning, EXT-11 view controls collapsed/discreet and home to the
+grid toggles, EXT-12 capture region to the top, EXT-13 colour limit
+as a slider defaulting to eight, EXT-14 "Colours by usage" collapsed
+— plus two [sign-off] proposal tasks where the memo asked for
+elegance rather than naming a shape: EXT-15 capture-region aspect
+handling and EXT-16 Design-size rework (the dictation trailed off on
+its destination).
+
+**Routed out of the milestone:** tonal light↔dark transform sliders
+and colour-provenance visualization change or extend engine/worker
+outputs, which M14 forbids (UI-only, byte-identical) — promoted to
+the Icebox as ICE-ADJUST-01 (absorbing the wish-list "Image
+adjustments panel" line; the `adjust` stage exists from M1) and
+ICE-PROVENANCE-01. Parked deliberately, not dropped.
+
+**Supersessions on the owner's own authority:** capture surfaces
+below the preview (D88) → the region section surfaces first and open
+when capture is the source (EXT-12); the view-controls fold open on
+first run (D89) → collapsed and quieter (EXT-11); the colours table
+open by default (D90) → collapsed (EXT-14); the sample route built
+by D84 and kept through D88's modal → retired everywhere
+user-reachable (EXT-07); M7's default colour policy all/n=20 (D55) →
+a default limit of eight (EXT-13). The D86 A16 fit-menu waiver is
+settled rather than re-waived: under always-auto-fit the
+width/height variants go (EXT-08). M6-CAPRES-01's always-on aspect
+lock (D52) is reopened, not reversed — EXT-15 proposes options
+first.
+
+**Assumptions flagged for the end review:** the Source modal's "Try
+a sample" entry goes with the entry button (same affordance; the
+memo named only the button); plain Fit survives as the manual reset
+after zoom (only the width/height variants were named); Zoom in/out
+and Compare stay per the memo. EXT-06 must keep a project-open route
+on the cold surface — hiding the sections must not orphan Load.
+
+**Link:** backlog → M14 "Extension — third-look triage (D91)";
+tickets `M14-EXT-10/13/15/16.md`; ACCEPT-01 re-blocked on
+EXT-06..16.
+
+## D92 — M14 third look, second pass: the critique applied — one viewport arc, one sign-off, the sample lives in the modal (2026-08-04)
+
+**Decision:** the owner accepted the design critique of the D91
+triage in full (2026-08-04) and the extension set is revised
+accordingly. Structural changes: EXT-08..11 are one **viewport arc**
+landing as a set with a dedicated composition verify, M14-EXT-18 —
+the D90 lesson applied in advance rather than learned again; EXT-16
+merges into EXT-15 as one "Size, region & aspect" sign-off (the
+memo's trailed-off sentence and the aspect options are the same
+design decision; the EXT-16 id is retired, never reused); M14-EXT-17
+(thread highlight) joins from the re-scoped ICE-PROVENANCE-01 — the
+per-stitch index sidecar already reaches the UI (M7-BRAND-01), so
+highlighting a thread's stitches is a Compare-class preview
+decoration, not an engine change; the icebox item keeps only the
+tonal-position half.
+
+**Forks decided (owner-accepted recommendations):** a permanent
+quiet **view strip** replaces the collapsed-fold shape — D91's
+EXT-11 would have demoted E-tier zoom to reach 2, breaking the §1
+contract; the strip keeps every view control at reach 1 and retires
+the D89 fold. **Focus-unified panning** — pan engagement *is*
+canvas-host focus; no second mode machinery beside it.
+**The sample survives in the Source modal** — the entry button goes
+(the memo's literal ask) but the one zero-permission demo route
+stays; supersedes D91's remove-everywhere assumption.
+**Colour-limit anatomy** — a "Limit colours" toggle (default on) +
+slider with paired number input; "exactly" demotes to depth; a
+No-limit end-stop would conflate mode and count. **Fit resolves as
+Reset view** — under auto-fit the resting state is fitted, so the
+surviving button's job is returning to it; Fit, Fit width and Fit
+height all retire and the D86 A16 waiver closes with them.
+
+**Constraints bound into the tasks:** the docked preview carries a
+capped height under 60 rem plus scroll-margin clearance so no
+focused control sits beneath it (UI-STANDARDS focus non-obscuration;
+the 320 px companion posture is the budget); EXT-17 re-proves export
+byte-identity on ship, so the decoration reading is enforced rather
+than assumed; EXT-06 lands as a shell-model state, never a second
+hidden layer; EXT-06 adds a quiet "Open a project" entry action so
+hiding the sections cannot orphan Load.
+
+**Link:** backlog → M14 "Extension — third-look triage (D91,
+revised D92)"; every task carries a ticket (`M14-EXT-06..15.md`,
+`M14-EXT-17.md`, `M14-EXT-18.md`; `M14-EXT-16.md` deleted on
+merge); ACCEPT-01 blocked on the full set.
+
+## D93 — M14-EXT-06: cold is a shell state, not a hidden layer (2026-08-04)
+
+**Decision:** the cold surface landed as a third field on the one
+shell model — `cold` in `ShellState`, overriding both presentation
+preferences in `visibility()` — never a second `hidden` layer. The
+entry state's visibility write moved into `applyShell` (the D90
+one-writer rule now covers the whole cold composition), and the five
+source routes plus project open exit cold one-way for the session.
+The entry gained the quiet "Open a project" action (D92 constraint:
+Load must not orphan), wired to the panel's own hidden project input.
+
+**Assumptions at the skipped gates:** dev-only chrome (diagnostics
+cluster, profiling panel) is exempt from "entry only" — it is not
+product surface, and a cold boot error is precisely when Copy
+diagnostics earns its keep. Source-bearing exits announce "Design
+ready — settings are on the right/below" (layout-aware via
+`matchMedia`, the 60 rem breakpoint); the project route exits quietly
+because its own status line already directs ("import an image to see
+it applied"). Focus rescue for an entry action that hides under the
+user's finger goes to the bar's Source button — chooser hands to
+chooser. A denied capture permission keeps the page cold: the route
+never completed, nothing exists to configure.
+
+**Found and fixed in verification:** `applyShell` had never written
+`focusToggle.hidden` (the toggle predates cold and was always
+visible); cold showed a Preview-focus button for a preview that
+cannot exist. Composed from the model as `!panelToggle && !focusExit`
+— true exactly when no mode control is meaningful — rather than a new
+visibility field.
+
+**Link:** ticket M14-EXT-06 (deleted on ship); ui-spec §3 amendment;
+evidence in `docs/ui-evidence.md`; shell tests extended to 18
+(cold-override sweep, exit-onto-preference, no-persistence guard).
+
+## D94 — M14-EXT-07: the sample keeps one door (2026-08-04)
+
+**Decision:** the entry state's "Try a sample" is removed — the
+memo's literal ask — and the Source modal keeps the sample as the one
+zero-permission demo route (the D92 fork, superseding D91's
+remove-everywhere assumption). Entry stack is now Choose an image /
+Capture your screen / Open a project. `loadSample()` and the sample
+buffer stay: the modal calls them, tests and bench rely on the
+deterministic buffer.
+
+**Consequence accepted:** with the Source button hidden cold (D90
+composition) and the entry sample gone, the cold surface has no
+sample route at all — a first-run novice must bring a source or open
+a project before the demo becomes reachable at all. That is the
+owner's stated preference; ACCEPT-01 judges it, and the ticket noted
+reversal is one modal choice away.
+
+**Link:** ticket M14-EXT-07 (deleted on ship); ui-spec §3 amendment +
+§5 row (sample now reach 2, modal only); evidence in
+`docs/ui-evidence.md`.
+
+## D95 — M14-EXT-08..11: the viewport arc — fitting stops being the user's job (2026-08-04)
+
+**Decision:** the four legs landed as one set, per the D92 revision.
+**Auto-fit (EXT-08):** the existing mode machine tightened to two
+states — 'space' (auto, the default; refits on source change, host
+resize, dock transitions) and 'manual' (any deliberate zoom or pan;
+left by Reset view, `0`, or a source replacement). Fit width/height
+retired with their buttons; **Reset view** is the one surviving fit
+control, closing the D86 A16 waiver. A loaded project opens in auto
+regardless of its stored preview scale — predictability over
+restoration; the schema field still round-trips in core, it just no
+longer drives the opening view. **Docked preview (EXT-09):** the
+preview unit (strip · canvas · compact status) is `position: sticky`
+in both layouts; at the companion width, scrolling past its natural
+position caps the canvas to 40dvh via a scroll-threshold class.
+The info panel moved out of the preview section to the content flow —
+it scrolls, the picture doesn't. **Focus-unified panning (EXT-10):**
+pan engagement *is* host focus — unfocused wheel/drag belong to the
+page, the wheel-zoom handler was deleted outright, Escape blurs and
+is consumed so preview-focus exits on the next press. The host shows
+its ring on `:focus` (not `:focus-visible`): the ring is the engaged
+state the memo described, so pointer engagement must show it too.
+**View strip (EXT-11):** the D89 fold retired for a permanent quiet
+row of ghost text buttons — Zoom out · Zoom in · Reset view ·
+Compare · Grid · Numbers + readouts — tighter padding than panel
+buttons but the same 44 px minimum targets; the grid pair moved from
+Appearance switches to strip toggle buttons, and the Appearance
+summary re-derives from what remains (dither state only).
+
+**Found live and fixed:** (1) an IntersectionObserver dock trigger
+oscillates — docking shrinks the page, which moves the trigger back
+into view — and hung the renderer at 375 px; replaced with a
+scroll-position threshold against the sentinel's *static* document
+offset, which the dock state cannot move. (2) A rAF-gated scroll
+handler freezes in a hidden tab with its pending flag wedged; the
+work is one comparison, so it is synchronous now. (3) `position:
+sticky` released mid-scroll because `.content` ends before the
+settings do: at the companion width `.content` becomes
+`display: contents` so the sticky containing block is the full
+column; at wide the row is `align-items: stretch` for the same
+reason. (4) The strip wrapped to 3 rows at 375 px; strip buttons use
+spacing-03 padding, restoring the ≤ 2-row budget (88 px measured).
+
+**Link:** tickets M14-EXT-08/09/10/11 (deleted on ship); ui-spec §2
+amendment, §5 rows, §6 keyboard model, §4 strip terminology;
+composition evidence lands with M14-EXT-18.
+
+## D96 — M14-EXT-18: the composition holds (2026-08-04)
+
+**Decision:** the viewport arc passes as a whole. 188-control
+keyboard walks at 320/800/1280 with zero focus-obscuration
+violations; the memo's palette scenario proven at 320 × 700 (392 px
+of pinned canvas while the colour select holds focus); zero
+duplicated affordances; both schemes; reduced motion by construction.
+The one deviation from the EXT-11 budget is within its own named
+fallback: at 320 px the six strip buttons hold two rows but the
+readouts wrap to a third quiet text line — accepted as the ticket's
+"inline text under the strip" shape, ACCEPT-01 judges the taste.
+J1's fastest zero-permission route now sits behind the Source modal
+(D94 consequence) — recorded for the end review rather than
+re-litigated here. EXT-17's cross-product and the live SR/trackpad
+half are named exclusions, owned by that ship and ACCEPT-01
+respectively.
+
+**Link:** ticket M14-EXT-18 (deleted on ship); evidence matrix in
+`docs/ui-evidence.md`; §2/§4/§5/§6 amendments confirmed in place.
+
+## D97 — M14-EXT-12: the capture surface moves into the settings (2026-08-04)
+
+**Decision:** during a session the whole capture surface — live
+thumb + crop overlay, session controls, position readout, draft
+badge — lives in a **Capture region** accordion section mounted at
+first position in the settings panel; the source section carries the
+cold entry only. Open on first appearance, persisted collapse
+thereafter (per-session remount honours the stored choice). The
+placement supersedes D88's below-the-preview arrangement on the
+owner's own authority (D91), and pays off in both layouts: beside
+the preview at wide, first under the docked preview at narrow.
+Aspect semantics untouched — EXT-15 owns them.
+
+**Consequences accepted:** the capture surfaces now hide with the
+panel (they are settings geography; the preview keeps rendering), and
+the wide-layout thumb is panel-width — both routed to ACCEPT-01 as
+taste. The capture-start announcement lands after the cold-exit line
+and is then overwritten by the first frame's "Preview updated." —
+queued for a screen reader, transient visually; accepted.
+
+**Found in verification:** the focus-rescue contains() check ran
+after the session buttons were hidden, when focus had already
+dropped to body — the flag is now read at the top of `endCaptureUi`,
+and the rescue targets the Source button, falling back to the
+entry's first action for a stop-before-any-frame session. Stopping
+normally keeps the last grabbed frame as the source (existing
+behaviour), so the entry does not return and Source is the right
+target.
+
+**Link:** ticket M14-EXT-12 (deleted on ship); ui-spec §2/§3
+amendment; evidence in `docs/ui-evidence.md`.
+
+## D98 — M14-EXT-13: limit colours by switch and slider; eight is the new default (2026-08-04)
+
+**Decision:** the Colour-limit mode select + number field became a
+**"Limit colours" switch (default on) + slider (1–64) with paired
+number input (1–512)** — the D92 anatomy: a slider "No limit"
+end-stop was rejected as conflating mode and count, and "exactly"
+demoted to a depth checkbox beside the thread-library disclosure
+("Use exactly this many"), remembered across an off/on cycle. The
+fresh-session default is **at most 8 colours** — `defaultPolicy()`
+count `{mode:'max', n:8}`, superseding D55's unlimited default on
+the owner's authority (D91/D92). Never silent: the collapsed Design
+summary reads "… · DMC · 8 colours (limit)" and the count summary
+"489 permitted · 8 selected of 8 requested · 8 used in the design."
+
+**Boundaries held:** the v2→v3 project migration keeps its own
+inline `all/20` literal — an old file meant "no limit" when saved,
+and the migration preserves meaning, not the current taste. Stored
+policies (schema v3) are untouched. The one test fixture that read
+the ambient default in its no-limit branch now pins `mode:'all'`
+explicitly (the ticket's named risk, found in the right direction),
+and a new test pins the eight-default deliberately.
+
+**Verified live:** fresh drop resolves 8; slider arrow → 9 resolves
+9; typing 100 pegs the slider at 64 and resolves 100; switch off →
+unlimited (489, controls hidden); switch on → n and exactness
+remembered; exact checkbox flips mode with the same honest
+selected-vs-requested strings.
+
+**Tripwire resolution:** the ui-baseline tripwire fired on the
+default flip — correctly, but for the wrong reason: it derived its
+pinned config from `defaultPolicy()`, so an intended UI-policy
+decision read as engine drift. The tripwire now freezes the
+audit-time reference policy inline and keeps every committed hash
+untouched — engine byte-identity stays proven over the same config
+as at audit time, and default changes can no longer masquerade as
+engine changes (or vice versa). No hash was refreshed.
+
+**Link:** ticket M14-EXT-13 (deleted on ship); ui-spec §4/§5 rows;
+evidence in `docs/ui-evidence.md`.
+
+## D99 — M14-EXT-14: the colours table folds, the fold line informs (2026-08-04)
+
+**Decision:** the colours-by-usage disclosure defaults **closed**
+(flipping D90's open default on the memo's ask; the persisted choice
+still wins), and the fold line grows a derived readout so the table
+still informs collapsed: "Colours by usage — 8 · DMC 310 leads" —
+count plus leading thread, derived from owned stats at render
+(`usageSummaryLabel`, pure and unit-tested), never scraped from the
+DOM. The D90 name-once rule survives: the visually-hidden caption
+keeps the table's accessible name; the fold line is the disclosure's
+label.
+
+**Tension on record (from the ticket):** the default-8 palette makes
+this table the novice's best feedback, and the owner still wants it
+folded — the summary carries the load, and EXT-17's highlight gives
+the table a reason to open. EXT-17's row selection lands at reach 2
+under this default, inside the C-tier contract (§5 row updated).
+
+**Link:** ticket M14-EXT-14 (deleted on ship); evidence in
+`docs/ui-evidence.md`.
+
+## D100 — M14-EXT-17: where a thread lives, shown without touching a pixel that ships (2026-08-04)
+
+**Decision:** selecting a thread row in Colours by usage highlights
+its stitches on the preview as a **Compare-class decoration**: a new
+`highlight` worker message (deliberately not a `PipelineConfig`
+field, so processing, exports and project files cannot see it by
+construction) sets a palette index on the preview surface, which
+dims every non-matching stitch under a uniform scrim (alpha 150) —
+matching stitches and fabric stay untouched, because thread colours
+are content and absence of scrim IS the highlight. The scrim draws
+under Compare, so the source half stays pristine and the two
+decorations compose. Selection is keyed by palette index (the
+sidecar's vocabulary), owned by the info panel as session state; a
+changed entry list (an entries fingerprint in `resolvePalette`)
+clears it rather than letting it silently point at a different
+thread. Rows carry the A2 per-row anatomy ("Highlight" visible,
+"Highlight DMC 310 Black" accessible, `aria-pressed`); reselect and
+Escape clear; announcements carry the table's own count.
+
+**Costs accepted:** the router copies the index sidecar to the
+surface before the response transfer detaches it — unconditional
+(~180 KB at 300², 0.024 ms measured), so a highlight engages
+instantly on a static image with no re-run. Full added cost with a
+highlight active: 0.796 ms/frame at 300² (copy + mask + draw) —
+0.3 % of the 4 fps budget, ~1 % of the banked 57–86 ms baseline
+frames (D64–D72), so the ≥ 4 updates/sec promise holds by margin.
+The live-pump rate could not be re-measured headless (rAF-frozen
+hidden pane); named for the ACCEPT-01 live session.
+
+**Byte-identity enforced, not assumed (D92):** export PNG SHA-256
+identical with and without an active highlight on the real export
+path; the ui-baseline tripwire stays green; the type system keeps
+the highlight out of every processing request shape.
+
+**Link:** ticket M14-EXT-17 (deleted on ship); ICE-PROVENANCE-01
+keeps the tonal half; evidence in `docs/ui-evidence.md`; mask
+invariants unit-tested (`tests/highlight.test.ts`).

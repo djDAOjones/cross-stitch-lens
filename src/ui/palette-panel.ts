@@ -419,33 +419,84 @@ export function createPalettePanel(
     },
   );
 
-  // --- colour count -------------------------------------------------
-  const countMode = selectField(
+  // --- colour count (M14-EXT-13, D92 anatomy) -----------------------
+  // A "Limit colours" switch + slider replace the mode select: off is
+  // the old 'all', and a slider end-stop for "no limit" was rejected
+  // because it conflates mode and count (error prevention). The
+  // "exactly" mode demotes to a depth checkbox — it modifies what the
+  // number *means*, and is remembered across an off/on cycle.
+  let lastLimitedMode: 'max' | 'exact' = initial.policy.count.mode === 'exact' ? 'exact' : 'max';
+  const limitToggle = toggleField(
     doc,
-    'count-mode',
-    'Colour limit',
-    [
-      ['all', 'No limit'],
-      ['max', 'At most…'],
-      ['exact', 'Exactly…'],
-    ],
-    initial.policy.count.mode,
-    (value) => {
+    'limit-colours',
+    'Limit colours',
+    initial.policy.count.mode !== 'all',
+    (on) => {
       actions.setPolicy({
         ...state.policy,
-        count: { mode: value as PalettePolicy['count']['mode'], n: state.policy.count.n },
+        count: { mode: on ? lastLimitedMode : 'all', n: state.policy.count.n },
       });
     },
   );
+  // Slider to 64 with a paired number input to the 512 ceiling: the
+  // slider covers the stitchable range, the field covers the rest.
+  const countWrap = doc.createElement('div');
+  countWrap.className = 'field';
+  const rangeLabel = doc.createElement('label');
+  rangeLabel.htmlFor = 'count-range';
+  rangeLabel.textContent = 'Colours';
+  const countRange = doc.createElement('input');
+  countRange.type = 'range';
+  countRange.id = 'count-range';
+  countRange.min = '1';
+  countRange.max = '64';
+  countRange.step = '1';
+  countRange.value = String(Math.min(64, initial.policy.count.n));
+  countRange.addEventListener('input', () => {
+    actions.setPolicy({
+      ...state.policy,
+      count: { mode: state.policy.count.mode, n: Number(countRange.value) },
+    });
+  });
+  countWrap.append(rangeLabel, countRange);
   const countN = numberField(
     doc,
     'count-n',
     'Number of colours',
-    { min: 1, max: 512, value: initial.policy.count.n },
+    {
+      min: 1,
+      max: 512,
+      value: initial.policy.count.n,
+      helper: 'The slider reaches 64; type here for more.',
+    },
     (value) => {
       actions.setPolicy({ ...state.policy, count: { mode: state.policy.count.mode, n: value } });
     },
   );
+  // Exact mode at depth, beside the thread-library disclosure: kept
+  // for D55's selected-vs-used honesty, off the everyday surface.
+  const exactWrap = doc.createElement('div');
+  exactWrap.className = 'field';
+  const exactRow = doc.createElement('div');
+  exactRow.className = 'toggle-row';
+  const exactBox = doc.createElement('input');
+  exactBox.type = 'checkbox';
+  exactBox.id = 'count-exact';
+  exactBox.checked = initial.policy.count.mode === 'exact';
+  const exactLabel = doc.createElement('label');
+  exactLabel.htmlFor = exactBox.id;
+  exactLabel.textContent = 'Use exactly this many';
+  exactBox.addEventListener('change', () => {
+    lastLimitedMode = exactBox.checked ? 'exact' : 'max';
+    if (state.policy.count.mode !== 'all') {
+      actions.setPolicy({
+        ...state.policy,
+        count: { mode: lastLimitedMode, n: state.policy.count.n },
+      });
+    }
+  });
+  exactRow.append(exactBox, exactLabel);
+  exactWrap.append(exactRow);
 
   // --- status -------------------------------------------------------
   const summary = doc.createElement('p');
@@ -767,8 +818,17 @@ export function createPalettePanel(
       el.hidden = !paletteMode;
     }
     threadDetails.hidden = !paletteMode;
-    countMode.hidden = !paletteMode;
-    countN.hidden = !paletteMode || next.policy.count.mode === 'all';
+    const limited = next.policy.count.mode !== 'all';
+    if (limited) lastLimitedMode = next.policy.count.mode === 'exact' ? 'exact' : 'max';
+    limitToggle.element.hidden = !paletteMode;
+    limitToggle.input.checked = limited;
+    const toggleState = limitToggle.input.nextElementSibling;
+    if (toggleState !== null) toggleState.textContent = limited ? 'On' : 'Off';
+    countWrap.hidden = !paletteMode || !limited;
+    countN.hidden = !paletteMode || !limited;
+    exactWrap.hidden = !paletteMode || !limited;
+    countRange.value = String(Math.min(64, next.policy.count.n));
+    exactBox.checked = next.policy.count.mode === 'exact';
     // The saved-palette editor exists only for a library source
     // (audit A5): for brands/preset sources the disclosure would open
     // onto nothing.
@@ -844,10 +904,12 @@ export function createPalettePanel(
     modeField,
     sourceWrap,
     presetModeWrap,
-    countMode,
+    limitToggle.element,
+    countWrap,
     countN,
     summary,
     conflictList,
+    exactWrap,
     threadDetails,
   );
   update(initial);

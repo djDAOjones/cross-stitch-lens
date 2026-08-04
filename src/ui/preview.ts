@@ -1,15 +1,23 @@
 /**
  * Preview controller: owns the preview host DOM (toolbar + canvas),
- * translates wheel / drag / keyboard input into viewport changes, and
- * sends the finished transform to the worker. The canvas host is
+ * translates drag / keyboard input into viewport changes, and sends
+ * the finished transform to the worker. The canvas host is
  * keyboard-operable per UI-STANDARDS: focusable with a visible ring,
- * `+`/`−` zoom, `0` fit, arrow-key pan.
+ * `+`/`−` zoom, `0` reset view, arrow-key pan.
  *
- * The view is a *mode*, not just a number (M6-VIEW-01): fit-to-space,
- * fit-width, and fit-height are recomputed from the live host size, so
- * they survive a panel collapse or a window resize that a saved scale
- * would not. Only 'manual' carries a number, and it is reported in CSS
+ * The view is a two-state machine (M14-EXT-08): **auto** ('space') —
+ * fit-to-space, centred, re-derived on every source change and host
+ * resize — and **manual**, entered by any deliberate zoom or pan and
+ * left by Reset view, `0`, or a source replacement. Fitting is not a
+ * task the user owns. Only 'manual' carries a number, reported in CSS
  * px per stitch so it means the same thing at DPR 1 and DPR 2.
+ *
+ * Pan engagement *is* host focus (M14-EXT-10): unfocused, the canvas
+ * is inert to wheel and drag so the page scrolls past it; a click
+ * focuses (native), and only a focused host pans. The wheel never
+ * moves the canvas in either state. Escape blurs — and is consumed,
+ * so preview-focus mode exits on the *next* Escape, never the same
+ * press.
  *
  * Everything here is view-only: no message this class sends can run
  * the pipeline, change the pattern, or touch export settings.
@@ -30,7 +38,6 @@ import {
   panBy,
   scaledView,
   zoomAt,
-  type FitAxis,
   type ViewState,
 } from './viewport.ts';
 
@@ -106,13 +113,14 @@ export class PreviewController {
   }
 
   /**
-   * Restore a saved view (project load). A fit mode recomputes from
-   * the current host; 'manual' restores the saved CSS-px-per-stitch.
-   * Pan is deliberately not restored — a stale offset can reopen a
-   * design almost entirely off-screen.
+   * A saved view arrives (project load). The stored mode and scale
+   * keep round-tripping in the schema, but they no longer drive the
+   * opening view: every load enters auto-fit — predictability over
+   * restoration (M14-EXT-08, D95). The saved scale seeds the manual
+   * value so a later deliberate zoom starts somewhere sensible.
    */
   setScale(scale: PreviewScale): void {
-    this.mode = scale.mode;
+    this.mode = 'space';
     this.manualCssPxPerStitch = Math.min(
       MAX_PREVIEW_CSS_PX,
       Math.max(MIN_PREVIEW_CSS_PX, scale.cssPxPerStitch),
@@ -136,25 +144,24 @@ export class PreviewController {
       this.setView(scaledView(this.imgW, this.imgH, w, h, device));
       return;
     }
+    // Legacy 'width'/'height' modes can only arrive from an old saved
+    // file, and setScale coerces those to 'space' — but keep the axis
+    // pass-through so a value that slips in still fits sanely.
     this.setView(
       fitView(this.imgW, this.imgH, w, h, FIT_MARGIN * window.devicePixelRatio, this.mode),
     );
   }
 
-  /** Fit to the space available, to width, or to height. */
-  fit(axis: FitAxis = 'space'): void {
-    this.mode = axis;
-    this.applyMode();
-  }
-
   /**
-   * Reset view: back to fit-to-space, centred, with automatic
-   * refitting re-enabled. Deliberately not "actual size" — 1:1 is
-   * ambiguous between CSS px, device px, and physical fabric size
-   * until the owner defines which one it means.
+   * Reset view: back to auto-fit — fit-to-space, centred, automatic
+   * refitting re-enabled (the one surviving fit control, M14-EXT-08;
+   * Fit width/height retired with the D86 A16 waiver). Deliberately
+   * not "actual size" — 1:1 is ambiguous between CSS px, device px,
+   * and physical fabric size until the owner defines which one.
    */
   resetView(): void {
-    this.fit('space');
+    this.mode = 'space';
+    this.applyMode();
   }
 
   /** Zoom by a factor anchored at the view centre (buttons / keys). */
@@ -180,24 +187,23 @@ export class PreviewController {
     this.onChange(this.scale());
   }
 
+  /** Pan engagement is host focus (M14-EXT-10). */
+  private engaged(): boolean {
+    return document.activeElement === this.host;
+  }
+
   private bindInput(): void {
-    this.host.addEventListener(
-      'wheel',
-      (event) => {
-        if (this.view === null) return;
-        event.preventDefault();
-        const dpr = window.devicePixelRatio;
-        const rect = this.host.getBoundingClientRect();
-        const ax = (event.clientX - rect.left) * dpr;
-        const ay = (event.clientY - rect.top) * dpr;
-        this.goManual();
-        this.setView(zoomAt(this.view, Math.pow(1.0015, -event.deltaY), ax, ay));
-      },
-      { passive: false },
-    );
+    // No wheel handler at all (M14-EXT-10): the wheel never moves the
+    // canvas in either state — an unfocused preview lets the page
+    // scroll past, and zoom is buttons and keys only. The old
+    // wheel-zoom died here; do not reintroduce it.
 
     this.host.addEventListener('pointerdown', (event) => {
-      if (this.view === null) return;
+      // At pointerdown on an unfocused host the click is the engage
+      // gesture: focus arrives natively right after this event, and
+      // only the *next* drag pans. Not capturing here also keeps
+      // touch scrolling over an unengaged canvas as page scroll.
+      if (this.view === null || !this.engaged()) return;
       this.dragging = { x: event.clientX, y: event.clientY };
       this.host.setPointerCapture(event.pointerId);
       this.host.classList.add('grabbing');
@@ -220,6 +226,15 @@ export class PreviewController {
 
     this.host.addEventListener('keydown', (event) => {
       if (this.view === null) return;
+      // Escape disengages: blur, and consume the press so the
+      // preview-focus-mode exit (a window listener) fires only on the
+      // next Escape — two deliberate steps, never one (M14-EXT-10).
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        this.host.blur();
+        return;
+      }
       const pan = event.shiftKey ? PAN_STEP * 4 : PAN_STEP;
       const actions: Record<string, () => void> = {
         '+': () => this.zoomCentred(ZOOM_STEP),

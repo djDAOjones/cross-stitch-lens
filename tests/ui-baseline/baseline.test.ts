@@ -30,7 +30,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { DEFAULT_DITHER, type PipelineConfig } from '../../src/core/pipeline/config.ts';
-import { defaultPolicy } from '../../src/core/palette-policy.ts';
+import { type PalettePolicy } from '../../src/core/palette-policy.ts';
 import { resolveProjectPalette } from '../../src/core/palette-resolve.ts';
 import { loadCatalogue } from '../../src/core/thread-catalogue.ts';
 import {
@@ -49,15 +49,37 @@ function sha256(bytes: Uint8Array): string {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
-/** The app-default pipeline config over the default resolved palette. */
+/**
+ * The audit-time reference policy, frozen inline. This tripwire pins
+ * *engine* behaviour over a fixed configuration; it deliberately does
+ * not read `defaultPolicy()`, whose fresh-session default is a UI
+ * policy decision that changed at M14-EXT-13 (D98: at-most-8,
+ * superseding D55's unlimited) — a default change is not engine
+ * drift, and coupling the pin to it would make the tripwire fire on
+ * intended taste decisions instead of defects. Engine identity stays
+ * proven by these hashes exactly as at audit time.
+ */
+function auditTimePolicy(): PalettePolicy {
+  return {
+    brands: ['dmc'],
+    source: { kind: 'brands' },
+    ownedOnly: false,
+    count: { mode: 'all', n: 20 },
+    locked: [],
+    preferred: [],
+    excluded: [],
+  };
+}
+
+/** The audit-time pipeline config over the reference resolved palette. */
 function defaultConfig(): PipelineConfig {
   const catalogue = loadCatalogue();
   const resolved = resolveProjectPalette({
-    policy: defaultPolicy(),
+    policy: auditTimePolicy(),
     inputs: { catalogue, owned: new Set<string>() },
     name: 'DMC',
   });
-  if (!resolved.ok) throw new Error('default policy did not resolve');
+  if (!resolved.ok) throw new Error('reference policy did not resolve');
   return {
     preset: 'resize-first',
     grid: { width: 200, height: 200 },
@@ -79,7 +101,7 @@ function defaultProject(config: PipelineConfig): ProjectFile {
       metric: config.metric,
       dither: config.dither,
     },
-    palette: { policy: defaultPolicy(), snapshot: config.palette?.entries ?? [] },
+    palette: { policy: auditTimePolicy(), snapshot: config.palette?.entries ?? [] },
     gridStyle: {
       show: true,
       minorInterval: 1,

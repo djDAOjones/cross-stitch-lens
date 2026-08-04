@@ -27,9 +27,26 @@ byte-identical; no new runtime dependencies; no project-file schema
 change. Milestone docs land under `docs/` as they are produced:
 `ui-audit.md`, `ui-journeys.md`, `ui-spec.md`, `ui-evidence.md`.
 
+#### Extension — third-look triage (D91, revised D92)
+
+The owner's third look (voice memo, 2026-08-04) triaged in D91, then
+revised on the owner-accepted critique (D92): the four viewport tasks
+land as one arc with a dedicated composition verify (the D90 lesson
+applied in advance); EXT-16 merged into EXT-15 (id retired); EXT-17
+joined from the re-scoped icebox item; the sample survives in the
+Source modal. Every task carries a ticket; ui-spec amendments ride
+each ship (D89 precedent).
+
+- [~] **M14-EXT-15 Size, region & aspect** [sign-off] [detail] (2026-08-04)
+  Intent: one owner-signed design covering aspect lock vs free pins *and* where Design size lives (absorbs the retired EXT-16; leading candidate: size joins the region surface during capture) — options with consequences against the four scale quantities and the region-independence promise.
+  Done when: options are recorded with before/after mockups, one is signed, and the signed shape ships with crop-math tests.
+  Status 2026-08-05: **signed A + D + S1** (owner, structured answer). Remaining: implement the signed shape with crop-math tests (locked/unlocked independence split), then delete ticket + options docs on ship.
+
 #### Phase 4 — Verification & end review
 
-- [ ] **M14-ACCEPT-01 Maintainer end review** [maintainer] [detail] (2026-07-23)
+- [ ] **M14-ACCEPT-01 Maintainer end review** [maintainer] [detail] [blocked: M14-EXT-15] (2026-07-23)
+  <!-- EXT-06..14, 17, 18 shipped 2026-08-04 (D93–D100); only the EXT-15 sign-off remains before this gate. -->
+
   Intent: the reserved human gate — judge look, feel and taste over the review pack (changes, logged decisions, before/after evidence, waivers) and a live Photoshop companion session.
   Done when: owner pass/fail notes are recorded; failures route to new M14 fix tasks, never silent rework.
 
@@ -92,6 +109,18 @@ Conditional: activated, merged or cut by M13-SYNTH-01.
 
 <!-- Deferred but worth keeping (post-triage). Needs a decision to
      reactivate. Promote into a milestone when committed. -->
+
+Promoted 2026-08-04 (D91) from the owner's third look — both change
+or extend engine/worker outputs, so they sit outside M14's UI-only
+constraint; candidates for the next UI-capability milestone:
+
+- [ ] **ICE-ADJUST-01 Image adjustment sliders** (2026-08-04)
+  Intent: owner-requested light↔dark tonal sliders in the colour section — the first concrete slice of the §9 adjustments panel (the `adjust` stage exists from M1; absorbs the wish-list line).
+  Done when: tonal sliders remap the source ahead of reduction with live preview, and the adjustment survives project save/load.
+
+- [ ] **ICE-PROVENANCE-01 Tonal provenance view** (2026-08-04)
+  Intent: re-scoped by D92 — the where-on-the-picture half became M14-EXT-17 (the index sidecar already reaches the UI); what remains is the tonal half: show where each chosen thread sits in the source's light↔dark range, which needs new selection-stage introspection from the engine. Pairs with ICE-ADJUST-01.
+  Done when: the palette's tonal coverage is visible against the source's range, labelled as provenance.
 
 Deferred 2026-07-22 (D63) for M13 — intentionally deferred, not
 passed, cut or shipped:

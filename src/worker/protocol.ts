@@ -71,6 +71,18 @@ export interface CompareRequest {
 }
 
 /**
+ * Main → worker: highlight one thread's stitches on the preview
+ * (M14-EXT-17). A Compare-class decoration of the surface draw —
+ * deliberately not a `PipelineConfig` field, so by construction it
+ * cannot reach processing, exports, or a project file.
+ */
+export interface HighlightRequest {
+  type: 'highlight';
+  /** Palette index to highlight, or null to clear. */
+  index: number | null;
+}
+
+/**
  * Main → worker: re-run the pipeline for an export. Same shape as a
  * process request, but the result bypasses the preview surface and
  * coalescing entirely — exports always re-run at full quality
@@ -96,6 +108,7 @@ export type WorkerRequest =
   | SurfaceResizeRequest
   | GridStyleRequest
   | CompareRequest
+  | HighlightRequest
   | ExportRequest;
 
 /** Per-stage wall-clock timing (diagnostics / debug panel). */

@@ -78,7 +78,6 @@ import {
   numberField,
   selectField,
   textField,
-  toggleField,
 } from './ui/controls.ts';
 import { chartFilename, chartLayout, encodeChartPng, maxCellPx } from './export/chart.ts';
 import {
@@ -289,22 +288,34 @@ function build(app: HTMLElement): void {
    * two-step, not a silently violated limit — the palette shown and the
    * palette used are always the same one.
    */
+  /** Set once the info panel exists; resolvePalette runs earlier. */
+  let highlightInvalidated: (() => void) | null = null;
+  let paletteEntriesFingerprint = '';
+
   function resolvePalette(): void {
     if (!paletteMode) {
       config.palette = null;
       paletteConflicts = [];
       eligibleCount = 0;
-      return;
+    } else {
+      const resolved = resolveProjectPalette({
+        policy,
+        inputs: policyInputs(),
+        source: selectionSource ?? undefined,
+        name: paletteName(),
+      });
+      config.palette = resolved.ok ? resolved.palette : null;
+      paletteConflicts = resolved.conflicts;
+      eligibleCount = resolved.eligibleCount;
     }
-    const resolved = resolveProjectPalette({
-      policy,
-      inputs: policyInputs(),
-      source: selectionSource ?? undefined,
-      name: paletteName(),
-    });
-    config.palette = resolved.ok ? resolved.palette : null;
-    paletteConflicts = resolved.conflicts;
-    eligibleCount = resolved.eligibleCount;
+    // A thread highlight is keyed by palette index (M14-EXT-17); when
+    // the entry list changes the indices remap, and a held selection
+    // would silently point at a different thread — clear it instead.
+    const nextFingerprint = (config.palette?.entries ?? []).map((e) => e.id).join('|');
+    if (nextFingerprint !== paletteEntriesFingerprint) {
+      paletteEntriesFingerprint = nextFingerprint;
+      highlightInvalidated?.();
+    }
   }
 
   /** Everything the resized full-RGB grid buffer depends on. */
@@ -403,12 +414,15 @@ function build(app: HTMLElement): void {
   chooseButton.addEventListener('click', () => {
     input.click();
   });
-  const sampleButton = document.createElement('button');
-  sampleButton.type = 'button';
-  sampleButton.textContent = 'Try a sample';
-  sampleButton.addEventListener('click', () => {
-    loadSample();
-  });
+  // No sample on the entry (M14-EXT-07, the memo's ask): the Source
+  // modal keeps the one zero-permission demo route, and loadSample
+  // stays for it. With the settings hidden cold (M14-EXT-06), Load
+  // would be orphaned without an entry route; this quiet action opens
+  // the same hidden project input the panel's Load button uses. Its
+  // listener attaches beside that input, where the wiring lives.
+  const openProjectButton = document.createElement('button');
+  openProjectButton.type = 'button';
+  openProjectButton.textContent = 'Open a project';
   /** What feeds the pipeline right now, for the Source modal's note. */
   let sourceName: string | null = null;
   /** True once any source exists; applyShell composes it (F1). */
@@ -417,7 +431,6 @@ function build(app: HTMLElement): void {
   /** Entry state before any source; a compact note after. */
   function updateSourceEntry(): void {
     sourceExists = masterImage !== null || capture !== null;
-    entryState.hidden = sourceExists;
     // The compact source row retired at M14-EXT-02: the top-bar
     // Source modal is the switcher, statuses carry the source name,
     // and the file input serves both routes from behind `hidden` (a
@@ -425,7 +438,27 @@ function build(app: HTMLElement): void {
     captureButton.hidden = true;
     label.hidden = true;
     input.hidden = true;
+    // A source arriving is a cold exit with the ready line; the panel
+    // appears in place and the status says where (never a focus steal).
+    if (sourceExists) exitCold(true);
     applyShell();
+  }
+
+  /**
+   * Leave the cold surface for good (M14-EXT-06). One-way and
+   * session-permanent: fired by every source route and by project
+   * open — a loaded project's settings matter even before an image.
+   * `withReadyLine` announces where the panel landed; project open
+   * passes false because its own status already carries the guidance.
+   */
+  function exitCold(withReadyLine: boolean): void {
+    if (!shell.cold) return;
+    shell = { ...shell, cold: false };
+    applyShell();
+    if (withReadyLine) {
+      const wide = window.matchMedia('(min-width: 60rem)').matches;
+      status.textContent = `Design ready — settings are ${wide ? 'on the right' : 'below'}.`;
+    }
   }
 
   /** Load the deterministic sample through the normal source path. */
@@ -437,6 +470,9 @@ function build(app: HTMLElement): void {
     invalidateSelectionSource();
     ensureSelectionSource();
     updateSourceEntry();
+    // A source replacement re-enters auto-fit (M14-EXT-08): a zoom
+    // held for the old picture is meaningless on the new one.
+    preview.resetView();
     reprocess();
     status.textContent = 'Sample image loaded — this is a generated test card, not your artwork.';
   }
@@ -527,19 +563,13 @@ function build(app: HTMLElement): void {
     void startScreenCapture();
   });
   captureCta.setAttribute('aria-describedby', captureExpectation.id);
-  entryActions.append(chooseButton, captureCta, captureExpectation, sampleButton);
+  entryActions.append(chooseButton, captureCta, captureExpectation, openProjectButton);
   entryState.append(entryTitle, entryActions, hint);
   captureRow.append(captureButton, captureFrameButton, pauseButton, lockButton, stopCaptureButton);
-  importSection.append(
-    entryState,
-    label,
-    input,
-    captureRow,
-    captureMeta,
-    thumbWrap,
-    cropReadout,
-    draftBadge,
-  );
+  // The source section carries the cold entry only (M14-EXT-06/12):
+  // the capture surfaces live in the Capture region section, mounted
+  // in the settings panel for the duration of a session.
+  importSection.append(entryState, label, input);
 
   // Status is text in an aria-live region — never colour-only, never
   // silent (UI-STANDARDS → "System status").
@@ -590,17 +620,44 @@ function build(app: HTMLElement): void {
   hostHelp.id = 'preview-help';
   hostHelp.className = 'visually-hidden';
   hostHelp.textContent =
-    'Zoom with plus and minus, fit with zero, pan with the arrow keys.';
+    'Zoom with plus and minus, reset the view with zero, pan by dragging or with the arrow keys. Escape releases the preview.';
   host.setAttribute('aria-describedby', hostHelp.id);
   const canvas = document.createElement('canvas');
   host.append(canvas, hostHelp);
 
-  const info = createInfoPanel(document, BRAND_NAMES, {
-    open: disclosureOpen('colours-table', true),
-    onToggle: (open) => {
-      setDisclosure('colours-table', open);
+  const info = createInfoPanel(
+    document,
+    BRAND_NAMES,
+    {
+      // Spec default closed (M14-EXT-14, superseding D90's open); the
+      // persisted choice wins as ever.
+      open: disclosureOpen('colours-table', false),
+      onToggle: (open) => {
+        setDisclosure('colours-table', open);
+      },
     },
-  });
+    // Thread highlight (M14-EXT-17): rows map to palette indices via
+    // the entry order — the sidecar's own vocabulary. Session state,
+    // never project data.
+    {
+      indexFor: (usage) => {
+        const id = usage.thread?.id;
+        if (id === undefined || config.palette === null) return null;
+        const index = config.palette.entries.findIndex((entry) => entry.id === id);
+        return index === -1 ? null : index;
+      },
+      onChange: (selection) => {
+        client.setHighlight(selection === null ? null : selection.index);
+        status.textContent =
+          selection === null
+            ? 'Highlight cleared.'
+            : `${selection.label} — ${selection.count.toLocaleString('en-GB')} stitches highlighted.`;
+      },
+    },
+  );
+  highlightInvalidated = () => {
+    info.clearHighlight();
+  };
 
   // Profiling panel (M5 harness): dev-only per UI-STANDARDS →
   // "Diagnostics affordance" — never mounted in a production build.
@@ -788,23 +845,11 @@ function build(app: HTMLElement): void {
   const gridGroup = document.createElement('fieldset');
   const gridLegend = document.createElement('legend');
   gridLegend.textContent = 'Grid';
-  const gridShow = toggleField(document, 'grid-show', 'Show grid', gridStyle.show, (on) => {
-    gridStyle.show = on;
-    sendGridStyle();
-    refreshSections();
-  });
-  const gridTicks = toggleField(
-    document,
-    'grid-ticks',
-    'Row and column numbers',
-    gridStyle.ticks,
-    (on) => {
-      gridStyle.ticks = on;
-      sendGridStyle();
-    },
-  );
-  // Grid depth (ui-spec §5): line geometry and colour behind one
-  // reveal; the two everyday toggles stay on the surface.
+  // The everyday grid toggles moved to the view strip (M14-EXT-11):
+  // "how I look at it" lives with the preview, as Grid / Numbers
+  // toggle buttons. Appearance keeps only the geometry behind the
+  // Grid-details reveal (ui-spec §5) — one owner per control, no
+  // duplicated affordance (the D90 rule).
   const gridDetails = document.createElement('details');
   gridDetails.className = 'depth-reveal';
   const gridDetailsSummary = document.createElement('summary');
@@ -862,7 +907,7 @@ function build(app: HTMLElement): void {
   gridDetails.addEventListener('toggle', () => {
     setDisclosure('grid-details', gridDetails.open);
   });
-  gridGroup.append(gridLegend, gridShow.element, gridTicks.element, gridDetails);
+  gridGroup.append(gridLegend, gridDetails);
 
   // The Dither group (M8-CTRL-01): preset + algorithm selectors and
   // the method-specific controls, all decided by the pure model in
@@ -1525,6 +1570,11 @@ function build(app: HTMLElement): void {
   loadButton.addEventListener('click', () => {
     projectInput.click();
   });
+  // The cold surface's project route (M14-EXT-06): same input, same
+  // change handler, so both doors lead through one load path.
+  openProjectButton.addEventListener('click', () => {
+    projectInput.click();
+  });
   projectInput.addEventListener('change', () => {
     const file = projectInput.files?.[0];
     projectInput.value = '';
@@ -1608,13 +1658,6 @@ function build(app: HTMLElement): void {
     const el = document.getElementById(id);
     if (el instanceof HTMLInputElement || el instanceof HTMLSelectElement) el.value = value;
   }
-  function setToggleValue(id: string, on: boolean): void {
-    const el = document.getElementById(id);
-    if (!(el instanceof HTMLInputElement)) return;
-    el.checked = on;
-    const state = el.nextElementSibling;
-    if (state !== null) state.textContent = on ? 'On' : 'Off';
-  }
   function syncControls(): void {
     setFieldValue('pattern-width', String(scales.pattern.widthStitches));
     setFieldValue('pattern-height', String(scales.pattern.heightStitches));
@@ -1622,8 +1665,8 @@ function build(app: HTMLElement): void {
     setFieldValue('colour-mode', paletteMode ? 'threads' : 'rgb');
     ditherControls.update(config.dither, config.palette === null);
     palettePanel.update(panelState());
-    setToggleValue('grid-show', gridStyle.show);
-    setToggleValue('grid-ticks', gridStyle.ticks);
+    gridToggle.setAttribute('aria-pressed', String(gridStyle.show));
+    numbersToggle.setAttribute('aria-pressed', String(gridStyle.ticks));
     setFieldValue('grid-minor', String(gridStyle.minorInterval));
     setFieldValue('grid-major', String(gridStyle.majorInterval));
     setFieldValue('grid-color', gridStyle.color);
@@ -1726,6 +1769,10 @@ function build(app: HTMLElement): void {
       projectFileNote = `loaded ${fileBlob.name}`;
       refreshSections();
       reprocess();
+      // A loaded project's settings matter before any image, so this
+      // route exits cold too (M14-EXT-06) — quietly: the line below
+      // already says what happened and what to do next.
+      exitCold(false);
       status.textContent =
         masterImage === null
           ? `Loaded ${fileBlob.name} — import an image to see it applied.`
@@ -1792,22 +1839,29 @@ function build(app: HTMLElement): void {
     'section-design',
     'Design',
     true,
+    // The default colour limit is never silent (M14-EXT-13): a limit
+    // in force is named in the summary, so "8 colours (limit)" is on
+    // the surface from the first conversion.
     () =>
       `${patternSummary(scales.pattern)} · ${
         paletteMode ? (config.palette?.name ?? 'threads') : 'unlimited colours'
+      }${
+        paletteMode && policy.count.mode !== 'all'
+          ? ` · ${String(policy.count.n)} colours (limit)`
+          : ''
       }`,
     patternGroup,
     colourGroup,
     inventoryInput,
   );
+  // Summary re-derived after M14-EXT-11: the grid on/off state moved
+  // to the view strip, so only what this section still owns is
+  // summarised — dither state (grid geometry sits behind the reveal).
   section(
     'section-appearance',
     'Appearance',
     false,
-    () =>
-      `grid ${gridStyle.show ? 'on' : 'off'} · ${
-        config.dither.algorithm === 'none' ? 'no dither' : 'dithered'
-      }`,
+    () => (config.dither.algorithm === 'none' ? 'no dither' : 'dithered'),
     gridGroup,
     ditherGroup,
   );
@@ -1911,12 +1965,21 @@ function build(app: HTMLElement): void {
     // the focus position entirely (WCAG 2.4.3).
     if (!show.controls && controls.contains(document.activeElement)) panelToggle.focus();
     if (!show.source && importSection.contains(document.activeElement)) focusToggle.focus();
+    // The entry hides when a source lands (M14-EXT-06: the shell is
+    // the one writer for the cold composition). If focus was on an
+    // entry action, hand it to the chooser that replaces it — the bar
+    // Source button — rather than letting the page lose it.
+    if (sourceExists && entryState.contains(document.activeElement)) {
+      if (show.source) sourceButton.focus();
+      else focusToggle.focus();
+    }
+    entryState.hidden = sourceExists;
     controls.hidden = !show.controls;
     importSection.hidden = !show.source;
-    // Cold start hides the Source button too (M14-EXT-05): the entry
-    // state IS the chooser, and a bar button opening a modal that
-    // repeats the on-screen actions was duplication. One composed
-    // rule, one writer — the shell owns this line.
+    // The entry state IS the chooser while it shows (M14-EXT-05): a
+    // bar button opening a modal that repeats the on-screen actions
+    // was duplication. One composed rule, one writer — the shell owns
+    // this line.
     sourceButton.hidden = !show.source || !sourceExists;
     info.element.hidden = !show.info;
     if (debugPanel !== null) debugPanel.element.hidden = !show.debug;
@@ -1924,6 +1987,10 @@ function build(app: HTMLElement): void {
     status.hidden = !show.status;
     compactStatus.hidden = !show.compactStatus;
     panelToggle.hidden = !show.panelToggle;
+    // The focus toggle is the enter control in the normal shell and
+    // the exit control in focus mode; cold shows neither, and that is
+    // exactly when both fields are false (M14-EXT-06).
+    focusToggle.hidden = !show.panelToggle && !show.focusExit;
     panelToggle.textContent = panelToggleLabel(shell.panelCollapsed);
     panelToggle.setAttribute('aria-expanded', String(!shell.panelCollapsed));
     focusToggle.textContent = shell.previewFocus ? FOCUS_EXIT_LABEL : FOCUS_ENTER_LABEL;
@@ -1998,45 +2065,45 @@ function build(app: HTMLElement): void {
   });
   compareToggle.setAttribute('aria-pressed', 'false');
 
-  // View controls. "Fit" *is* reset view — fit-to-space, centred,
-  // automatic refitting back on — so there is one control for one
-  // behaviour rather than two names for it (UI-STANDARDS →
-  // "Consistency": no synonyms). The `0` key does the same.
-  toolbar.append(
-    toolbarButton('Zoom in', () => preview.zoomCentred(1.25)),
-    toolbarButton('Zoom out', () => preview.zoomCentred(1 / 1.25)),
-    toolbarButton('Fit', () => preview.resetView()),
-    toolbarButton('Fit width', () => preview.fit('width')),
-    toolbarButton('Fit height', () => preview.fit('height')),
-    compareToggle,
-    splitWrap,
-  );
-  // View controls fold behind a persisted disclosure (M14-EXT-03) —
-  // open on first run so the affordances teach themselves, collapsed
-  // forever once the owner closes it. The readouts stay visible: the
-  // numbers are state, not controls, and wheel/keyboard routes never
-  // depended on the buttons.
-  const viewControls = document.createElement('details');
-  viewControls.className = 'depth-reveal view-controls';
-  const viewSummary = document.createElement('summary');
-  const viewSummaryLabel = document.createElement('span');
-  viewSummaryLabel.textContent = 'View controls';
-  // The readouts ride the summary row (M14-EXT-05): state stays
-  // visible folded or open, without spending a row of its own.
+  // The view strip (M14-EXT-11): one quiet, permanent row of ghost
+  // text buttons on the preview edge — the D89 fold retires, because
+  // a collapsed fold demoted E-tier zoom to reach 2 and broke the §1
+  // contract. "Discreet" is delivered by visual weight, not burial.
+  // The grid toggles move in from Appearance (same state, one owner,
+  // never duplicated); the readouts keep riding the row end.
+  // "Reset view" is the one surviving fit control (M14-EXT-08): under
+  // auto-fit the resting state is fitted, so the button's job is
+  // returning to it. The `0` key does the same (§6, one rule).
+  const gridToggle = toolbarButton('Grid', () => {
+    gridStyle.show = !gridStyle.show;
+    gridToggle.setAttribute('aria-pressed', String(gridStyle.show));
+    sendGridStyle();
+  });
+  gridToggle.setAttribute('aria-pressed', String(gridStyle.show));
+  const numbersToggle = toolbarButton('Numbers', () => {
+    gridStyle.ticks = !gridStyle.ticks;
+    numbersToggle.setAttribute('aria-pressed', String(gridStyle.ticks));
+    sendGridStyle();
+  });
+  numbersToggle.setAttribute('aria-pressed', String(gridStyle.ticks));
   const viewReadouts = document.createElement('span');
   viewReadouts.className = 'meta view-readouts';
   viewReadouts.append(zoomLabel, dimensionsLabel);
-  viewSummary.append(viewSummaryLabel, viewReadouts);
-  const viewBody = document.createElement('div');
-  viewBody.className = 'view-controls-body';
-  viewBody.append(toolbar);
-  viewControls.append(viewSummary, viewBody);
-  viewControls.open = disclosureOpen('view-controls', true);
-  viewControls.addEventListener('toggle', () => {
-    setDisclosure('view-controls', viewControls.open);
-  });
-  previewSection.append(viewControls, host, compactStatus, info.element);
-  if (debugPanel !== null) previewSection.append(debugPanel.element);
+  toolbar.classList.add('view-strip');
+  toolbar.append(
+    toolbarButton('Zoom out', () => preview.zoomCentred(1 / 1.25)),
+    toolbarButton('Zoom in', () => preview.zoomCentred(1.25)),
+    toolbarButton('Reset view', () => preview.resetView()),
+    compareToggle,
+    splitWrap,
+    gridToggle,
+    numbersToggle,
+    viewReadouts,
+  );
+  // The strip and canvas dock together (M14-EXT-09) — "how I look at
+  // it" belongs with the picture; the info panel and everything else
+  // scroll beneath and are appended at the content level below.
+  previewSection.append(toolbar, host, compactStatus);
 
   // Preview first in the DOM at every width (M6-NARROW-01). The
   // settings panel sits to its right when there is room, so the
@@ -2044,7 +2111,41 @@ function build(app: HTMLElement): void {
   // than being reordered by CSS into disagreement.
   const content = document.createElement('div');
   content.className = 'content';
-  content.append(previewSection, status, importSection);
+  // Dock trigger (M14-EXT-09): a zero-height marker above the
+  // preview. Scrolled past its *static document offset*, the preview
+  // docks to a capped height; scrolling back restores full height.
+  // Deliberately a scroll-position threshold, not an
+  // IntersectionObserver: docking shrinks the page, and a trigger
+  // that watches the viewport re-enters an intersection when the
+  // height changes — a feedback oscillation that hangs the renderer
+  // (found live at 375 px). The static offset only depends on content
+  // *above* the sentinel, so the dock state cannot move its own
+  // trigger. Presentation only — never part of the preference shell.
+  const dockSentinel = document.createElement('div');
+  dockSentinel.className = 'dock-sentinel';
+  content.append(dockSentinel, previewSection, info.element, status, importSection);
+  if (debugPanel !== null) content.append(debugPanel.element);
+  let dockThreshold = 0;
+  const measureDockThreshold = (): void => {
+    // The sentinel's offset depends only on content above it, so the
+    // dock state cannot move its own trigger.
+    dockThreshold = dockSentinel.getBoundingClientRect().top + window.scrollY;
+  };
+  const applyDock = (): void => {
+    previewSection.classList.toggle('preview-docked', window.scrollY > dockThreshold);
+  };
+  // Synchronous on purpose: the work is one comparison and one class
+  // toggle, and a rAF gate here freezes in a hidden tab (rAF pauses)
+  // with the pending flag wedged — found live. The browser already
+  // coalesces scroll events; there is nothing worth throttling.
+  window.addEventListener('scroll', applyDock, { passive: true });
+  window.addEventListener('resize', () => {
+    measureDockThreshold();
+    applyDock();
+  });
+  // First measure after layout settles (fonts and the header wrap can
+  // shift it slightly; a rAF after build is late enough in practice).
+  requestAnimationFrame(measureDockThreshold);
   const layout = document.createElement('div');
   layout.className = 'app-layout';
   layout.append(content, controls);
@@ -2103,6 +2204,8 @@ function build(app: HTMLElement): void {
       invalidateSelectionSource();
       ensureSelectionSource();
       updateSourceEntry();
+      // Source replacement → auto-fit (M14-EXT-08).
+      preview.resetView();
       reprocess();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -2123,6 +2226,49 @@ function build(app: HTMLElement): void {
   let capturePaused = false;
   const draftGovernor = new DraftGovernor();
   let draftMode = false;
+
+  // Capture region section (M14-EXT-12): the whole capture surface —
+  // thumb + crop overlay, session controls, readout, draft badge —
+  // as a first-position accordion section, mounted only while a
+  // session runs. Open on first appearance; a collapse persists for
+  // later sessions. Supersedes D88's below-the-preview placement on
+  // the owner's own authority (D91). Created here, after the capture
+  // state it summarises exists (a collapsed stored preference makes
+  // createSection call the summary at build time).
+  const captureSummaryLine = (): string => {
+    if (cropRect === null) return 'no region yet';
+    return (
+      `${String(cropRect.width)} × ${String(cropRect.height)} px at ` +
+      `(${String(cropRect.x)}, ${String(cropRect.y)}) → ` +
+      `${patternSummary(scales.pattern)}${cropLocked ? ' · locked' : ''}`
+    );
+  };
+  const captureSection = createSection(document, {
+    id: 'section-capture',
+    title: 'Capture region',
+    summary: captureSummaryLine,
+    open: disclosureOpen('section-capture', true),
+    onToggle: (open) => {
+      setDisclosure('section-capture', open);
+    },
+  });
+  captureSection.panel.append(captureRow, captureMeta, thumbWrap, cropReadout, draftBadge);
+  sections.push(captureSection);
+
+  /** Mount the capture section first in the panel, per-session. */
+  function showCaptureSection(): void {
+    controls.insertBefore(captureSection.element, controls.firstElementChild);
+    // First appearance opens; thereafter the persisted choice wins.
+    captureSection.setOpen(disclosureOpen('section-capture', true));
+    refreshSections();
+  }
+
+  /** Unmount on session end. Focus rescue is endCaptureUi's job: by
+   *  the time this runs, hiding the session buttons has already
+   *  dropped focus to body, so a contains() check here sees nothing. */
+  function hideCaptureSection(): void {
+    captureSection.element.remove();
+  }
 
   // First paint of the source area: cold start shows the entry state
   // and leaves capture to its CTA (placed here, after the capture
@@ -2211,6 +2357,8 @@ function build(app: HTMLElement): void {
     cropReadout.textContent =
       `${SCALE_LABELS.captureRegion} ${String(cropRect.width)} × ${String(cropRect.height)} px ` +
       `at (${String(cropRect.x)}, ${String(cropRect.y)}) → ${patternSummary(scales.pattern)}`;
+    // The section summary précis carries the same state while folded.
+    captureSection.refreshSummary();
   }
 
   function stopPumpNow(): void {
@@ -2233,6 +2381,10 @@ function build(app: HTMLElement): void {
   }
 
   function endCaptureUi(message: string): void {
+    // Read before anything hides: the click that ends a session comes
+    // from a button inside the capture section, and hiding it drops
+    // focus to body before the section is unmounted.
+    const focusWasInCapture = captureSection.element.contains(document.activeElement);
     stopPumpNow();
     dirtyGate.reset();
     draftGovernor.reset();
@@ -2251,10 +2403,15 @@ function build(app: HTMLElement): void {
     captureMeta.hidden = true;
     thumbWrap.hidden = true;
     cropReadout.hidden = true;
+    hideCaptureSection();
     sessionEnded = true;
     updateSourceEntry();
     updateCompactStatus();
     status.textContent = message;
+    // Hand focus to whichever chooser now exists — the bar's Source
+    // button, or the entry's first action when the session was the
+    // only source and the entry state has returned (M14-EXT-12).
+    if (focusWasInCapture) (sourceButton.hidden ? chooseButton : sourceButton).focus();
   }
 
   async function grabCaptureFrame(): Promise<void> {
@@ -2360,6 +2517,13 @@ function build(app: HTMLElement): void {
       sessionEnded = false;
       sourceName = `Screen capture (${session.label})`;
       updateSourceEntry();
+      // Source replacement → auto-fit (M14-EXT-08).
+      preview.resetView();
+      // The capture surface mounts first in the settings (M14-EXT-12);
+      // the user chose capture, so the context change is expected —
+      // and said, after the cold-exit line so the specific wins.
+      showCaptureSection();
+      status.textContent = 'Capture started — region controls at the top of settings.';
       // Largest region with the pattern's aspect, centred — the source
       // rarely shares the design's proportions, so a full-frame default
       // would start the session outside the lock.
@@ -2431,6 +2595,7 @@ function build(app: HTMLElement): void {
     lockButton.setAttribute('aria-pressed', String(cropLocked));
     cropOverlay.classList.toggle('locked', cropLocked);
     status.textContent = cropLocked ? 'Capture region locked.' : 'Capture region unlocked.';
+    captureSection.refreshSummary();
   });
 
   // Pointer interaction: hit-test decides move / resize-by-handle /

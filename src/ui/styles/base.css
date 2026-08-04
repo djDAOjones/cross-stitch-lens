@@ -209,6 +209,15 @@ button[aria-pressed='true']:active:not(:disabled),
   padding-left: var(--csl-spacing-05);
 }
 
+/* Colour-limit slider (M14-EXT-13): native range, full-width in its
+  field, with the whole control row meeting the 44 px target rule. */
+.field input[type='range'] {
+  display: block;
+  width: 100%;
+  min-height: var(--csl-target-min);
+  accent-color: var(--csl-background-inverse);
+}
+
 /* Carbon-style toggle: switch-role checkbox drawn as a track + thumb;
   state also carried by the On/Off text (never colour-only). */
 .toggle-row {

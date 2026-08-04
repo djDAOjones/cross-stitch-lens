@@ -45,8 +45,37 @@ function fakeStore(initial: string | null = null, fail = false): PreferenceStore
 }
 
 describe('shell visibility', () => {
-  it('shows everything by default', () => {
+  it('starts cold: the entry is the only product surface (M14-EXT-06)', () => {
     const show = visibility(defaultShellState());
+    expect(show).toEqual({
+      controls: false,
+      source: true,
+      info: false,
+      // Dev-only chrome is exempt from "entry only" — it is not
+      // product surface, and cold boot errors are exactly when the
+      // diagnostics affordance earns its keep.
+      debug: true,
+      // The status live region stays in the DOM so the cold-exit
+      // announcement fires from an existing region, never a new one.
+      status: true,
+      compactStatus: false,
+      panelToggle: false,
+      focusExit: false,
+    });
+  });
+
+  it('cold overrides both preferences — they are meaningless before a source', () => {
+    for (const panelCollapsed of [false, true]) {
+      for (const previewFocus of [false, true]) {
+        expect(visibility({ panelCollapsed, previewFocus, cold: true })).toEqual(
+          visibility(defaultShellState()),
+        );
+      }
+    }
+  });
+
+  it('shows everything once populated', () => {
+    const show = visibility({ ...defaultShellState(), cold: false });
     expect(show).toEqual({
       controls: true,
       source: true,
@@ -59,8 +88,18 @@ describe('shell visibility', () => {
     });
   });
 
+  it('exits cold onto exactly the preferred panel state', () => {
+    // Leaving cold must land on the panel state the preference held —
+    // a collapsed preference stays collapsed, never forced open.
+    for (const panelCollapsed of [false, true]) {
+      const populated = visibility({ panelCollapsed, previewFocus: false, cold: false });
+      expect(populated.controls).toBe(!panelCollapsed);
+      expect(populated.panelToggle).toBe(true);
+    }
+  });
+
   it('hides only the settings panel when collapsed', () => {
-    const show = visibility({ panelCollapsed: true, previewFocus: false });
+    const show = visibility({ panelCollapsed: true, previewFocus: false, cold: false });
     expect(show.controls).toBe(false);
     expect(show.source).toBe(true);
     expect(show.info).toBe(true);
@@ -69,7 +108,7 @@ describe('shell visibility', () => {
   });
 
   it('strips the shell to the preview in focus mode', () => {
-    const show = visibility({ panelCollapsed: false, previewFocus: true });
+    const show = visibility({ panelCollapsed: false, previewFocus: true, cold: false });
     expect(show.controls).toBe(false);
     expect(show.source).toBe(false);
     expect(show.info).toBe(false);
@@ -82,8 +121,10 @@ describe('shell visibility', () => {
   it('always offers exactly one status surface', () => {
     for (const panelCollapsed of [false, true]) {
       for (const previewFocus of [false, true]) {
-        const show = visibility({ panelCollapsed, previewFocus });
-        expect(show.status !== show.compactStatus).toBe(true);
+        for (const cold of [false, true]) {
+          const show = visibility({ panelCollapsed, previewFocus, cold });
+          expect(show.status !== show.compactStatus).toBe(true);
+        }
       }
     }
   });
@@ -92,7 +133,7 @@ describe('shell visibility', () => {
     // The regression this guards: focus mode "closing" the panel and
     // exit then "opening" it, losing a deliberately collapsed panel.
     for (const panelCollapsed of [false, true]) {
-      const before: ShellState = { panelCollapsed, previewFocus: false };
+      const before: ShellState = { panelCollapsed, previewFocus: false, cold: false };
       const during: ShellState = { ...before, previewFocus: true };
       const after: ShellState = { ...during, previewFocus: false };
       expect(visibility(during).controls).toBe(false);
@@ -101,7 +142,7 @@ describe('shell visibility', () => {
   });
 
   it('is a pure function of the state', () => {
-    const state: ShellState = { panelCollapsed: true, previewFocus: false };
+    const state: ShellState = { panelCollapsed: true, previewFocus: false, cold: false };
     expect(visibility(state)).toEqual(visibility(state));
   });
 });
@@ -191,8 +232,10 @@ describe('shell preferences', () => {
 
   it('does not persist preview focus', () => {
     // Reopening into a stripped-down shell with no memory of why is a
-    // bad first second; focus mode is deliberately session-only.
+    // bad first second; focus mode is deliberately session-only, and
+    // cold (M14-EXT-06) is derived from what exists, never remembered.
     const text = serializePreferences(defaultPreferences());
     expect(text).not.toContain('previewFocus');
+    expect(text).not.toContain('cold');
   });
 });

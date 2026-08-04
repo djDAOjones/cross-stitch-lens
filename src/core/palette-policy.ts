@@ -63,13 +63,20 @@ export interface PalettePolicy {
   excluded: string[];
 }
 
-/** The default policy: every DMC thread, no restrictions. */
+/**
+ * The default policy: DMC threads, limited to at most eight colours.
+ * The at-most-8 default is the owner's call (M14-EXT-13, D91/D92 —
+ * superseding D55's unlimited default): a stitchable first result
+ * beats a photographic one. Fresh sessions only — the v2→v3 project
+ * migration keeps its own inline `all/20` literal, because an old
+ * file meant "no limit" when it was saved.
+ */
 export function defaultPolicy(): PalettePolicy {
   return {
     brands: ['dmc'],
     source: { kind: 'brands' },
     ownedOnly: false,
-    count: { mode: 'all', n: 20 },
+    count: { mode: 'max', n: 8 },
     locked: [],
     preferred: [],
     excluded: [],

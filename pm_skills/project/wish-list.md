@@ -32,8 +32,6 @@ refer to `docs/requirements.md`.
 
 ## Later (spec §25)
 
-- Image adjustments panel: brightness/contrast/gamma/etc. (§9 — the
-  `adjust` stage exists from M1; this is the UI + additional ops)
 - Fabric simulation / finished-stitch rendering
 - Native ScreenCaptureKit region capture (D2) — Tauri packaging itself
   promoted to ICE-TAURI-01

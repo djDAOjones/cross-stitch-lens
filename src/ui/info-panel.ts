@@ -108,16 +108,56 @@ export function summaryText(stats: DesignStats): string {
   );
 }
 
+/**
+ * The disclosure's visible line (M14-EXT-14): collapsed by default,
+ * the summary must still inform — count plus the leading thread, so
+ * the table's headline survives the fold under the default-8 palette.
+ * Derived from owned stats at render, never scraped from the DOM.
+ */
+export function usageSummaryLabel(
+  stats: DesignStats,
+  brandNames?: ReadonlyMap<string, string>,
+): string {
+  const lead = stats.perColor[0];
+  if (lead === undefined) return 'Colours by usage';
+  const thread = lead.thread;
+  const leadLabel =
+    thread === undefined
+      ? lead.hex
+      : `${brandNames?.get(thread.brandId) ?? thread.brandId} ${thread.reference}`;
+  return `Colours by usage — ${formatCount(stats.colorCount)} · ${leadLabel} leads`;
+}
+
 /** The live info panel: a DOM element plus its per-frame updater. */
 export interface InfoPanel {
   element: HTMLElement;
   update(stats: DesignStats): void;
+  /** Clear any thread highlight (fires onChange if one was set). */
+  clearHighlight(): void;
 }
 
 /** Disclosure wiring for the colours table (M14-EXT-05). */
 export interface InfoPanelDepthOptions {
   open: boolean;
   onToggle(open: boolean): void;
+}
+
+/** A selected highlight row, as reported to the host (M14-EXT-17). */
+export interface HighlightSelection {
+  /** Palette index of the thread. */
+  index: number;
+  /** Row label without the hex tail — announcement material. */
+  label: string;
+  /** Stitches in this colour at selection time. */
+  count: number;
+}
+
+/** Thread-highlight wiring (M14-EXT-17). */
+export interface InfoPanelHighlightOptions {
+  /** Palette index for a usage row; null = row not highlightable. */
+  indexFor(usage: ColorUsage): number | null;
+  /** Selection changed (null = cleared). */
+  onChange(selection: HighlightSelection | null): void;
 }
 
 /**
@@ -133,6 +173,7 @@ export function createInfoPanel(
   doc: Document,
   brandNames?: ReadonlyMap<string, string>,
   depth?: InfoPanelDepthOptions,
+  highlight?: InfoPanelHighlightOptions,
 ): InfoPanel {
   const element = doc.createElement('section');
   element.className = 'info-panel';
@@ -148,7 +189,9 @@ export function createInfoPanel(
   const detailsBody = doc.createElement('div');
   detailsBody.className = 'depth-reveal-body';
   details.append(detailsSummary, detailsBody);
-  details.open = depth?.open ?? true;
+  // Closed by default (M14-EXT-14, flipping the D90 default on the
+  // owner's ask); a persisted user choice still wins at the call site.
+  details.open = depth?.open ?? false;
   details.addEventListener('toggle', () => {
     depth?.onToggle(details.open);
   });
@@ -162,6 +205,17 @@ export function createInfoPanel(
   caption.textContent = 'Colours by usage';
   const thead = doc.createElement('thead');
   const headRow = doc.createElement('tr');
+  if (highlight !== undefined) {
+    // The highlight column's header is real but visually quiet — a
+    // column of toggle buttons still needs a name.
+    const th = doc.createElement('th');
+    th.scope = 'col';
+    const hidden = doc.createElement('span');
+    hidden.className = 'visually-hidden';
+    hidden.textContent = 'Highlight';
+    th.append(hidden);
+    headRow.append(th);
+  }
   for (const text of ['Colour', 'Stitches', '%']) {
     const th = doc.createElement('th');
     th.scope = 'col';
@@ -175,12 +229,73 @@ export function createInfoPanel(
   detailsBody.append(table);
   element.append(summary, details);
 
+  // Thread highlight (M14-EXT-17): one selected palette index at a
+  // time, session-only. Selection is keyed by palette index — the
+  // sidecar's own vocabulary — and survives the per-frame row rebuild.
+  let selectedIndex: number | null = null;
+  const highlightButtons = new Map<number, HTMLButtonElement>();
+
+  function markPressed(): void {
+    for (const [index, button] of highlightButtons) {
+      button.setAttribute('aria-pressed', String(index === selectedIndex));
+    }
+  }
+
+  function changeSelection(next: HighlightSelection | null): void {
+    selectedIndex = next === null ? null : next.index;
+    markPressed();
+    highlight?.onChange(next);
+  }
+
+  // Escape clears the highlight from anywhere inside the table region
+  // — one deliberate step, before it would bubble to canvas/section
+  // handlers. Only when a highlight is set; otherwise pass through.
+  details.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape' || selectedIndex === null) return;
+    event.preventDefault();
+    event.stopPropagation();
+    changeSelection(null);
+  });
+
   function update(stats: DesignStats): void {
     summary.textContent = summaryText(stats);
+    // The caption keeps the table's accessible name; this line is the
+    // disclosure's label, so the name is still said once per surface.
+    detailsSummary.textContent = usageSummaryLabel(stats, brandNames);
     const { rows, overflow } = buildRows(stats.perColor, { brandNames });
+    const columns = highlight === undefined ? 3 : 4;
     tbody.replaceChildren();
-    for (const row of rows) {
+    highlightButtons.clear();
+    rows.forEach((row, i) => {
       const tr = doc.createElement('tr');
+      if (highlight !== undefined) {
+        // buildRows maps perColor 1:1 under the cap, so the raw usage
+        // for this rendered row is perColor[i].
+        const raw = stats.perColor[i];
+        const index = raw === undefined ? null : highlight.indexFor(raw);
+        const cell = doc.createElement('td');
+        cell.className = 'highlight-cell';
+        if (index !== null && raw !== undefined) {
+          const button = doc.createElement('button');
+          button.type = 'button';
+          button.textContent = 'Highlight';
+          // Per-row accessible name over a short visible label — the
+          // sanctioned A2 pattern ("Own {thread}", ui-spec §5).
+          const plainLabel = row.label.split(' · #')[0] ?? row.label;
+          button.setAttribute('aria-label', `Highlight ${plainLabel}`);
+          button.setAttribute('aria-pressed', String(index === selectedIndex));
+          button.addEventListener('click', () => {
+            changeSelection(
+              index === selectedIndex
+                ? null
+                : { index, label: plainLabel, count: raw.count },
+            );
+          });
+          highlightButtons.set(index, button);
+          cell.append(button);
+        }
+        tr.append(cell);
+      }
       const colour = doc.createElement('td');
       colour.title = row.title;
       const swatch = doc.createElement('span');
@@ -196,11 +311,11 @@ export function createInfoPanel(
       percent.textContent = row.percentText;
       tr.append(colour, count, percent);
       tbody.append(tr);
-    }
+    });
     if (overflow !== null) {
       const tr = doc.createElement('tr');
       const td = doc.createElement('td');
-      td.colSpan = 3;
+      td.colSpan = columns;
       td.textContent =
         `+ ${formatCount(overflow.colors)} more colours · ` +
         `${formatCount(overflow.count)} stitches`;
@@ -210,5 +325,11 @@ export function createInfoPanel(
     details.hidden = rows.length === 0;
   }
 
-  return { element, update };
+  return {
+    element,
+    update,
+    clearHighlight(): void {
+      if (selectedIndex !== null) changeSelection(null);
+    },
+  };
 }

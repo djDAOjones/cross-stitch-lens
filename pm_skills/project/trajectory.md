@@ -19,6 +19,38 @@
 
 ## M14 — UI/UX excellence (in progress — agent half complete, ACCEPT-01 open)
 
+- M14-EXT-17 (2026-08-04) — thread highlight as a Compare-class
+  preview decoration over the index sidecar: per-row toggles, scrim
+  over non-matching stitches, export bytes re-proven identical,
+  +0.8 ms/frame at 300². See decision-log D100.
+- M14-EXT-14 (2026-08-04) — colours table collapsed by default, the
+  fold line carrying count + leading thread; persisted choice wins.
+  See decision-log D99.
+- M14-EXT-13 (2026-08-04) — colour limit as "Limit colours" switch +
+  slider (1–64, number to 512); exact demoted to depth; fresh default
+  now at-most-8, announced on three surfaces (supersedes D55's
+  unlimited). See decision-log D98.
+- M14-EXT-12 (2026-08-04) — capture surface moved into a first-position
+  "Capture region" accordion section, open first appearance, persisted
+  collapse; source section is the cold entry only. See decision-log
+  D97.
+- M14-EXT-18 (2026-08-04) — viewport composition verified whole:
+  188-control walks at 320/800/1280 with zero focus obscuration, the
+  memo's palette scenario proven at 320, zero duplicate affordances,
+  both schemes. See decision-log D96.
+- M14-EXT-08..11 (2026-08-04) — the viewport arc as one set: auto-fit
+  until touched with Reset view as the only fit control (D86 waiver
+  closed), sticky/docked preview in both layouts, pan engagement =
+  host focus (wheel-zoom deleted), permanent quiet view strip with
+  the grid toggles moved in. Composition verify is EXT-18. See
+  decision-log D95.
+- M14-EXT-07 (2026-08-04) — entry sample removed on the memo's ask;
+  the Source modal keeps the one zero-permission demo route (sample
+  now reach 2, modal only). See decision-log D94.
+- M14-EXT-06 (2026-08-04) — cold surface as a shell state: entry-only
+  page before any source, `cold` in the one shell model overriding
+  both preferences, five exit routes + quiet "Open a project", focus
+  handed to the Source button on exit. See decision-log D93.
 - M14-EXT-05 (2026-07-23) — polish pass from the owner's second
   look: nine findings (cold-surface duplication, view-controls double
   chrome, ragged wrapping, raw Load input, always-on colours table),

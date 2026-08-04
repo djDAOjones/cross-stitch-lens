@@ -382,3 +382,178 @@ Gate green (938 tests, contrast 19×2 AAA); engine dirs diff-clean;
 tripwire green. Cold-surface before/after: two explanations + six
 affordances above the fold → one title, three stacked actions, one
 hint.
+
+## M14-EXT-06 — Cold surface as a shell state (2026-08-04, D93)
+
+The memo's ask ("settings hidden until a source is chosen") landed as
+a `cold` state in the one shell model — never a second hidden layer —
+with the entry stack as the page's only product content and a quiet
+"Open a project" action so Load survives the hidden panel.
+
+**Verified live** (Chromium, dev server, cleared storage):
+
+| Check | Result |
+| --- | --- |
+| Cold start | entry visible; controls panel, info strip, Hide settings, Preview focus, Source button all hidden; status region present and empty |
+| Focus-toggle regression | found live: `applyShell` never wrote `focusToggle.hidden`, so cold showed Preview focus; fixed as `!panelToggle && !focusExit` composition |
+| Sample route | cold exits; panel + bar controls appear; focus rescued from the vanishing entry action to the Source button; status ends "Sample image loaded — …" |
+| Drop route | synthetic PNG `DragEvent` on `window` exits cold; full pipeline runs ("Preview updated."); paste and file picker share `importBlob` with it |
+| Capture / project routes | code path review: capture exits on session success only (denied permission stays cold); project open exits quietly via `exitCold(false)` before its own status |
+| Reload | lands cold again — session-only by construction, nothing persisted (`serializePreferences` guard test) |
+| Keyboard | tab order = DOM order cold (entry actions → dev cluster); no CSS `order` |
+| Console | zero errors across all probes |
+| Tests | shell suite 18/18 (cold-override sweep, exit-onto-preference, one-status-surface invariant across all 8 states) |
+
+## M14-EXT-07 — Sample demoted to the modal (2026-08-04, D94)
+
+**Verified live** (Chromium, dev server):
+
+| Check | Result |
+| --- | --- |
+| Cold entry | exactly three actions — Choose an image, Capture your screen, Open a project; no sample |
+| Source modal | four buttons — Choose an image, Capture your screen, Try a sample, Cancel |
+| Modal sample route | end-to-end: choice click → `loadSample` → normal import path → "Preview updated."; the test-card status sentence rides the route as before |
+| Duplicate-affordance rule | holds — entry (cold) and Source button (populated) never coexist, sample now exists only behind the latter |
+| Focus restoration | opener-restore contract unchanged; the one null reading was the known programmatic-click-without-focus method artefact (as at D88) |
+| Console | zero errors |
+
+## M14-EXT-08..11 — Viewport arc (2026-08-04, D95)
+
+Landed as one set (D92); the composition matrix is EXT-18's pass —
+this section records the per-leg functional evidence, live at 375 px
+and 1280 px (Chromium, dev server).
+
+| Leg | Check | Result |
+| --- | --- | --- |
+| EXT-08 | auto-fit → zoom ×2 → host resize | 3% → 4% → 4% (manual survives resize) |
+| EXT-08 | Reset view → host resize | 4% → 3% → refit follows the host (auto resumed) |
+| EXT-08 | `0` key parity | 270% manual → 216% fitted, same as Reset view |
+| EXT-08 | fit inside the dock | docked host 327 px → 139% = exact fit re-derivation |
+| EXT-10 | unfocused drag | inert — no pan, no manual entry |
+| EXT-10 | focused drag | grabbing state + pan |
+| EXT-10 | wheel | no wheel listener remains on the host (deleted, not gated) |
+| EXT-10 | Escape ordering | first Escape blurs the host (mode stays), second exits preview focus |
+| EXT-09 | narrow dock | pinned at top through full scroll; canvas caps 489→327 px; settings share ~60 % of the viewport under it |
+| EXT-09 | wide sticky | preview pinned at 0 while the panel scrolls beneath (stretch fix) |
+| EXT-09 | focus non-obscuration (spot) | focused brand control top 687 > dock bottom 581 — clear; full sweep in EXT-18 |
+| EXT-11 | strip anatomy | Zoom out · Zoom in · Reset view · Compare[pressed] · Grid[pressed] · Numbers[pressed] + readouts; ghost borders, 44 px minimums |
+| EXT-11 | 320-budget | strip height 88 px = exactly 2 rows at 375 px (was 3 before the spacing-03 fix) |
+| EXT-11 | Appearance | grid switches gone; summary reads "dithered"/"no dither"; Grid details stays |
+| EXT-11 | Compare + split | split slider appears in the strip while pressed, hides on release |
+| all | horizontal scroll | none at 375 or 1280 |
+
+**Found live:** the IO dock oscillation (renderer hang), the wedged
+rAF gate, the sticky release at the content boundary, and the 3-row
+strip — each fixed and re-proven above; details in D95. The D86 A16
+waiver ledger closes: Fit width / Fit height are gone, Reset view
+survives as the only fit control.
+
+## M14-EXT-18 — Viewport composition verify (2026-08-04, D96)
+
+The arc judged as a whole (the D90 lesson applied in advance): one
+session over the landed EXT-08..11 set, Chromium dev server, both
+schemes.
+
+**Width matrix** (walk = every reachable focusable with all sections
+and disclosures open, focused in DOM order):
+
+| Width | Layout | Keyboard walk | Focus obscured | Strip buttons | Dock | Horizontal scroll |
+| --- | --- | --- | --- | --- | --- | --- |
+| 320 × 700 | stacked | 188 walked | 0 | 2 rows, all ≥ 44 px | caps to 40dvh pinned | none |
+| 800 × 900 | stacked | 188 walked | 0 | 1 row | caps (362 px) pinned | none |
+| 1280 × 800 | two-column | 188 walked | 0 | 1 row | pinned, cap inert | none |
+
+**The memo's scenario** (J3 depth, the reason EXT-09 exists): at
+320 × 700 with the palette-source select focused, the pinned canvas
+keeps 392 px on screen and the control sits fully clear beneath the
+dock — a palette change is visible without a scroll-back.
+
+**Journeys re-walk:** J1 cold → drop → converted preview + "Preview
+updated." (one gesture; note J1's fastest zero-permission route is
+now behind the Source modal since D94 — recorded, not a defect).
+J2 capture expectation line unchanged on the entry. Cold surface
+composition: entry three actions, bar dev-cluster only.
+
+**Reach re-measure of every moved row:** strip Zoom out / Zoom in /
+Reset view / Compare / Grid / Numbers all reach 1 (permanent row —
+the fold's reach-2-after-collapse state no longer exists); Grid /
+Numbers were reach 2 as Appearance switches, now 1; readouts reach 0
+(always visible). Appearance's remaining controls unchanged at 2.
+
+**Interaction cross-products:** focused-canvas pan while docked ✓
+(375 px arc evidence); Escape ordering ✓ (blur first, preview-focus
+exit second); auto-fit re-derived through dock (327 px → 139 %) and
+resize (1280 px → 216 %); Compare's split slider operable in the
+strip while docked.
+
+**Duplicate-affordance check (D90):** zero duplicated visible
+control names across entry, app bar, strip and sections in both cold
+and populated states (programmatic name census, per-row "Own …"
+patterns excluded).
+
+**Schemes and motion:** dark-scheme screenshot composes correctly —
+pressed strip toggles invert, thread/preview colours stay
+colour-managed content; the arc added no transition or animation CSS,
+so reduced-motion holds by construction (the dock swap is an instant
+height change).
+
+**Named as not re-verified here:** EXT-17's highlight cross-product
+(not yet landed — its own ship must prove it against this
+composition); real trackpad/touch physics and a live screen-reader
+pass (synthetic events only in this rig — both named for the
+ACCEPT-01 live session, per the milestone's two-layer testing rule).
+
+## M14-EXT-12 — Capture region section (2026-08-04, D97)
+
+Session driven end-to-end with a canvas `captureStream` standing in
+for `getDisplayMedia` at the permission boundary only — the real
+session, pump, crop and section code paths throughout.
+
+| Check | Result |
+| --- | --- |
+| Start capture | section mounts first (above Design), open on first appearance (cleared storage), title "Capture region" |
+| Contents | thumb + crop overlay, session buttons, position readout, draft badge — all inside the panel; source section reduced to entry + hidden inputs |
+| Collapse | summary carries the region: "600 × 600 px at (100, 0) → 200 × 200 stitches"; crop maths correct for the 800 × 600 fake source |
+| Persistence | collapse survives session end → restart (remounts collapsed) and page reload |
+| Stop | section unmounts; focus from the in-section Stop button lands on the bar's Source button; preview keeps the last frame (existing behaviour) |
+| File sources | no section — first panel child stays Design |
+| Duplicate affordance | none — the capture surface exists in exactly one place |
+| Announcements | "Capture started — region controls at the top of settings." queued after the cold-exit line; visually transient under frame statuses (accepted, D97) |
+
+## M14-EXT-13 — Colour limit: switch + slider, default eight (2026-08-04, D98)
+
+| Check | Result |
+| --- | --- |
+| Fresh session | "489 permitted · 8 selected of 8 requested · 8 used in the design."; info panel "· 8 colours"; collapsed Design summary "200 × 200 stitches · DMC · 8 colours (limit)" — the default announced on three surfaces |
+| Anatomy | switch role + On/Off text; native range 1–64 (44 px row); paired number 1–512 with helper "The slider reaches 64; type here for more."; exact checkbox at depth |
+| Slider keyboard | arrow step 8→9 re-resolves to 9 immediately |
+| Above the slider | typed 100 → number 100, slider pegs 64, 100 selected |
+| Switch off/on | off hides the pair and resolves unlimited (489); on restores n=100 and mode |
+| Exactly mode | depth checkbox flips `max`↔`exact`; survives an off/on cycle; selected-vs-requested strings unchanged (M7-COUNT-01 honesty) |
+| Migration | v2→v3 keeps `all/20` (meaning preserved); fresh default pinned by a new test; the one ambient-default fixture made explicit |
+| Suites | palette panel/policy/selection/project 123 tests green before the full gate |
+
+## M14-EXT-14 — Colours by usage collapsed by default (2026-08-04, D99)
+
+| Check | Result |
+| --- | --- |
+| Fresh profile | collapsed, fold line "Colours by usage — 8 · DMC 452 leads" under the default-8 palette |
+| Persistence | opened by hand → survives reload over the closed default |
+| Live tracking | limit 8 → 3 re-renders the line to "— 3 · DMC 452 leads" with the frame |
+| Name said once | one visually-hidden caption (accessible name), the fold line as the disclosure label |
+| Pure half | `usageSummaryLabel` unit-tested: thread leader, hex fallback for unidentified, plain name at zero usage |
+
+## M14-EXT-17 — Thread highlight (2026-08-04, D100)
+
+| Check | Result |
+| --- | --- |
+| Selection anatomy | 8 per-row toggle buttons under the default-8 palette; visible "Highlight", accessible "Highlight DMC 452 Shell Grey medium" (A2 pattern); real (hidden-text) column header |
+| Counts | announcement "DMC 452 Shell Grey medium — 14,750 stitches highlighted." equals the row's own Stitches cell |
+| Clear routes | reselect clears; Escape inside the table clears (consumed, so canvas/preview-focus Escapes stay two further steps); "Highlight cleared." announced |
+| Scrim visual | non-matching stitches dimmed, selected thread's region and fabric untouched (screenshot); mask maths unit-tested (alpha-only, EMPTY untouched, counts match a known fixture) |
+| Compose with Compare | scrim draws under the compare half — source side pristine |
+| Export byte-identity | export PNG SHA-256 pair identical with/without active highlight, captured on the real export path; tripwire green; `highlight` is not a `PipelineConfig` field (type-level impossibility) |
+| Palette change | entries-fingerprint invalidation: limit 8 → 5 cleared the held selection instead of remapping it |
+| Perf at 300² | added cost measured: 0.024 ms indices copy + 0.618 ms mask + 0.154 ms put/draw = **0.796 ms/frame** — 0.3 % of the 250 ms/frame budget at 4 fps, ~1 % of the banked baseline frame (D64–D72). Live-pump re-measure impossible headless (rAF-frozen pane) — named for ACCEPT-01's live session |
+| Canvas-information rule | the DOM equivalent of the canvas highlight is the selected row + its count — already in the table (noted per ticket) |
+| Isolation | mask build and draw both guarded; a throwing decoration drops itself, never the frame (router precedent) |

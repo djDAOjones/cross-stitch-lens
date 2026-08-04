@@ -1739,3 +1739,29 @@ removed rather than left dead.
 **Link:** `ui-evidence.md` extension section; `ui-spec.md` §5
 amendments; triage rationale in D88. ACCEPT-01 is now unblocked —
 the milestone's one remaining item.
+
+## D90 — M14-EXT-05: the polish pass — nine findings, nine fixes, one lesson (2026-07-23)
+
+**Decision:** the owner's second look was answered with a self-review
+of the running app rather than a defence of the shipped one: nine
+findings (cold-surface duplication ×3, view-controls double chrome,
+ragged bar and entry wrapping, a raw file input, the always-on
+colours table, chevron overlap), all fixed in one pass
+(`ui-evidence.md` table). Notables: the Source button now composes
+shell × source state in applyShell (one visibility writer — the
+shell rule held); the expectation sentence lives in exactly one
+place as a linked helper (the modal choice slot was added for it);
+the entry actions and modal choices share one `.action-stack`
+pattern; the colours table joined the persisted-disclosure system
+(`colours-table`, open by default) with its caption visually hidden
+so the name isn't said twice.
+
+**Lesson recorded:** EXT-01..04 landed feature-complete but
+composition-blind — each new affordance was verified alone, not
+against what already occupied the surface (the Source button next to
+an entry state offering the same actions). "No duplicate affordance
+on any surface" joins the review checklist for UI work; ACCEPT-01
+judges the result.
+
+**Link:** ticket M14-EXT-05 (deleted on ship); evidence table in
+`docs/ui-evidence.md`; ACCEPT-01 unblocked again.

@@ -395,7 +395,7 @@ function build(app: HTMLElement): void {
   entryTitle.className = 'entry-title';
   entryTitle.textContent = 'Turn a picture into a cross-stitch pattern';
   const entryActions = document.createElement('div');
-  entryActions.className = 'toolbar';
+  entryActions.className = 'action-stack';
   const chooseButton = document.createElement('button');
   chooseButton.type = 'button';
   chooseButton.className = 'button-primary';
@@ -411,11 +411,13 @@ function build(app: HTMLElement): void {
   });
   /** What feeds the pipeline right now, for the Source modal's note. */
   let sourceName: string | null = null;
+  /** True once any source exists; applyShell composes it (F1). */
+  let sourceExists = false;
 
   /** Entry state before any source; a compact note after. */
   function updateSourceEntry(): void {
-    const hasSource = masterImage !== null || capture !== null;
-    entryState.hidden = hasSource;
+    sourceExists = masterImage !== null || capture !== null;
+    entryState.hidden = sourceExists;
     // The compact source row retired at M14-EXT-02: the top-bar
     // Source modal is the switcher, statuses carry the source name,
     // and the file input serves both routes from behind `hidden` (a
@@ -423,6 +425,7 @@ function build(app: HTMLElement): void {
     captureButton.hidden = true;
     label.hidden = true;
     input.hidden = true;
+    applyShell();
   }
 
   /** Load the deterministic sample through the normal source path. */
@@ -510,8 +513,11 @@ function build(app: HTMLElement): void {
   // What the permission prompt will do, said before it is triggered
   // (UI-STANDARDS: user-initiated, never on load; D78 expectation
   // copy). Shown only while no session runs.
+  // One place only (M14-EXT-05): the expectation is the capture
+  // action's linked helper, not a second paragraph.
   const captureExpectation = document.createElement('p');
-  captureExpectation.className = 'meta';
+  captureExpectation.className = 'helper';
+  captureExpectation.id = 'capture-expectation';
   captureExpectation.textContent = 'Your browser will ask which window or screen to share.';
   const captureCta = document.createElement('button');
   captureCta.type = 'button';
@@ -520,8 +526,9 @@ function build(app: HTMLElement): void {
   captureCta.addEventListener('click', () => {
     void startScreenCapture();
   });
-  entryActions.append(chooseButton, captureCta, sampleButton);
-  entryState.append(entryTitle, entryActions, captureExpectation, hint);
+  captureCta.setAttribute('aria-describedby', captureExpectation.id);
+  entryActions.append(chooseButton, captureCta, captureExpectation, sampleButton);
+  entryState.append(entryTitle, entryActions, hint);
   captureRow.append(captureButton, captureFrameButton, pauseButton, lockButton, stopCaptureButton);
   importSection.append(
     entryState,
@@ -539,7 +546,11 @@ function build(app: HTMLElement): void {
   const status = document.createElement('p');
   status.id = 'status';
   status.setAttribute('role', 'status');
-  status.textContent = 'No image yet — the preview appears here after import.';
+  // Cold start says nothing here: the entry state carries the
+  // explanation, and two stacked empty-state sentences was the
+  // duplication the owner flagged (M14-EXT-05). The region announces
+  // from the first action onward.
+  status.textContent = '';
 
   // Preview: toolbar (zoom, fit, compare) + the keyboard-operable
   // canvas host. The canvas itself is worker-owned.
@@ -584,7 +595,12 @@ function build(app: HTMLElement): void {
   const canvas = document.createElement('canvas');
   host.append(canvas, hostHelp);
 
-  const info = createInfoPanel(document, BRAND_NAMES);
+  const info = createInfoPanel(document, BRAND_NAMES, {
+    open: disclosureOpen('colours-table', true),
+    onToggle: (open) => {
+      setDisclosure('colours-table', open);
+    },
+  });
 
   // Profiling panel (M5 harness): dev-only per UI-STANDARDS →
   // "Diagnostics affordance" — never mounted in a production build.
@@ -1496,13 +1512,19 @@ function build(app: HTMLElement): void {
   saveButton.type = 'button';
   saveButton.textContent = 'Save project';
   saveButton.addEventListener('click', saveProject);
-  const projectLabel = document.createElement('label');
-  projectLabel.textContent = 'Load project';
-  projectLabel.htmlFor = 'project-file';
+  // A real button over a hidden input (the Choose-an-image pattern,
+  // M14-EXT-05) — the last raw file input leaves the panel.
+  const loadButton = document.createElement('button');
+  loadButton.type = 'button';
+  loadButton.textContent = 'Load project';
   const projectInput = document.createElement('input');
   projectInput.type = 'file';
   projectInput.id = 'project-file';
   projectInput.accept = 'application/json,.json';
+  projectInput.hidden = true;
+  loadButton.addEventListener('click', () => {
+    projectInput.click();
+  });
   projectInput.addEventListener('change', () => {
     const file = projectInput.files?.[0];
     projectInput.value = '';
@@ -1517,7 +1539,7 @@ function build(app: HTMLElement): void {
   // Build identity moves off the primary surface to the Project foot
   // (audit A13): still user-reachable, no longer the page's second
   // line. `version` is created with the header block above.
-  projectGroup.append(keepNote, saveButton, projectLabel, projectInput);
+  projectGroup.append(keepNote, saveButton, loadButton, projectInput);
 
   /** Snapshot the live UI state as a schema-v2 project file. */
   function currentProject(): ProjectFile {
@@ -1859,13 +1881,14 @@ function build(app: HTMLElement): void {
   sourceButton.addEventListener('click', () => {
     void choicesModal(document, {
       title: 'Source',
-      note:
-        sourceName === null
-          ? 'No source yet. Your browser will ask which window or screen to share if you capture.'
-          : `Current: ${sourceName}. Your browser will ask which window or screen to share if you capture.`,
+      note: sourceName === null ? 'No source yet.' : `Current: ${sourceName}`,
       choices: [
         { id: 'file', label: 'Choose an image', primary: true },
-        { id: 'capture', label: 'Capture your screen' },
+        {
+          id: 'capture',
+          label: 'Capture your screen',
+          helper: 'Your browser will ask which window or screen to share.',
+        },
         { id: 'sample', label: 'Try a sample' },
       ],
     }).then((choice) => {
@@ -1875,11 +1898,6 @@ function build(app: HTMLElement): void {
     });
   });
   shellBar.append(sourceButton, panelToggle, focusToggle);
-  if (diagnostics !== null) {
-    // Dev-only diagnostics cluster on the app bar — the utility
-    // surface UI-STANDARDS prefers (M14-EXT-01).
-    shellBar.append(diagnostics.element);
-  }
 
   /**
    * Push the shell state onto the DOM. One function, one source of
@@ -1895,7 +1913,11 @@ function build(app: HTMLElement): void {
     if (!show.source && importSection.contains(document.activeElement)) focusToggle.focus();
     controls.hidden = !show.controls;
     importSection.hidden = !show.source;
-    sourceButton.hidden = !show.source;
+    // Cold start hides the Source button too (M14-EXT-05): the entry
+    // state IS the chooser, and a bar button opening a modal that
+    // repeats the on-screen actions was duplication. One composed
+    // rule, one writer — the shell owns this line.
+    sourceButton.hidden = !show.source || !sourceExists;
     info.element.hidden = !show.info;
     if (debugPanel !== null) debugPanel.element.hidden = !show.debug;
     if (diagnostics !== null) diagnostics.element.hidden = !show.debug;
@@ -1995,21 +2017,25 @@ function build(app: HTMLElement): void {
   // numbers are state, not controls, and wheel/keyboard routes never
   // depended on the buttons.
   const viewControls = document.createElement('details');
-  viewControls.className = 'depth-reveal';
+  viewControls.className = 'depth-reveal view-controls';
   const viewSummary = document.createElement('summary');
-  viewSummary.textContent = 'View controls';
+  const viewSummaryLabel = document.createElement('span');
+  viewSummaryLabel.textContent = 'View controls';
+  // The readouts ride the summary row (M14-EXT-05): state stays
+  // visible folded or open, without spending a row of its own.
+  const viewReadouts = document.createElement('span');
+  viewReadouts.className = 'meta view-readouts';
+  viewReadouts.append(zoomLabel, dimensionsLabel);
+  viewSummary.append(viewSummaryLabel, viewReadouts);
   const viewBody = document.createElement('div');
-  viewBody.className = 'depth-reveal-body';
+  viewBody.className = 'view-controls-body';
   viewBody.append(toolbar);
   viewControls.append(viewSummary, viewBody);
   viewControls.open = disclosureOpen('view-controls', true);
   viewControls.addEventListener('toggle', () => {
     setDisclosure('view-controls', viewControls.open);
   });
-  const viewReadouts = document.createElement('p');
-  viewReadouts.className = 'meta view-readouts';
-  viewReadouts.append(zoomLabel, dimensionsLabel);
-  previewSection.append(viewControls, viewReadouts, host, compactStatus, info.element);
+  previewSection.append(viewControls, host, compactStatus, info.element);
   if (debugPanel !== null) previewSection.append(debugPanel.element);
 
   // Preview first in the DOM at every width (M6-NARROW-01). The
@@ -2026,8 +2052,11 @@ function build(app: HTMLElement): void {
   header.className = 'app-header';
   // Build identity returns to the chrome as quiet meta text — the
   // owner's call at the D88 triage, reversing A13's Project-foot
-  // placement.
+  // placement. The dev diagnostics cluster is its own bar group so it
+  // wraps as a unit and its status line never squeezes the product
+  // controls (M14-EXT-05).
   header.append(heading, version, shellBar);
+  if (diagnostics !== null) header.append(diagnostics.element);
   app.replaceChildren(header, layout);
   applyShell();
   preview.initSurface();
@@ -2223,7 +2252,6 @@ function build(app: HTMLElement): void {
     thumbWrap.hidden = true;
     cropReadout.hidden = true;
     sessionEnded = true;
-    captureExpectation.hidden = false;
     updateSourceEntry();
     updateCompactStatus();
     status.textContent = message;
@@ -2331,7 +2359,6 @@ function build(app: HTMLElement): void {
       cropReadout.hidden = false;
       sessionEnded = false;
       sourceName = `Screen capture (${session.label})`;
-      captureExpectation.hidden = true;
       updateSourceEntry();
       // Largest region with the pattern's aspect, centred — the source
       // rarely shares the design's proportions, so a full-frame default

@@ -114,16 +114,25 @@ export interface InfoPanel {
   update(stats: DesignStats): void;
 }
 
+/** Disclosure wiring for the colours table (M14-EXT-05). */
+export interface InfoPanelDepthOptions {
+  open: boolean;
+  onToggle(open: boolean): void;
+}
+
 /**
  * Build the panel. Starts in its empty state until the first update.
  *
  * `brandNames` labels each row with the brand as well as the
  * reference — "310" alone is not a shopping list once more than one
- * brand can be enabled.
+ * brand can be enabled. The colours table sits behind a persisted
+ * fold (open by default) so the one always-on block left after the
+ * IA restructure can be put away too (M14-EXT-05).
  */
 export function createInfoPanel(
   doc: Document,
   brandNames?: ReadonlyMap<string, string>,
+  depth?: InfoPanelDepthOptions,
 ): InfoPanel {
   const element = doc.createElement('section');
   element.className = 'info-panel';
@@ -132,9 +141,24 @@ export function createInfoPanel(
   summary.id = 'design-stats';
   summary.textContent = 'No design yet — stats appear after import.';
 
+  const details = doc.createElement('details');
+  details.className = 'depth-reveal';
+  const detailsSummary = doc.createElement('summary');
+  detailsSummary.textContent = 'Colours by usage';
+  const detailsBody = doc.createElement('div');
+  detailsBody.className = 'depth-reveal-body';
+  details.append(detailsSummary, detailsBody);
+  details.open = depth?.open ?? true;
+  details.addEventListener('toggle', () => {
+    depth?.onToggle(details.open);
+  });
+  details.hidden = true;
+
   const table = doc.createElement('table');
-  table.hidden = true;
+  // The visible heading is the disclosure summary; the caption keeps
+  // the table's accessible name without saying it twice on screen.
   const caption = doc.createElement('caption');
+  caption.className = 'visually-hidden';
   caption.textContent = 'Colours by usage';
   const thead = doc.createElement('thead');
   const headRow = doc.createElement('tr');
@@ -148,7 +172,8 @@ export function createInfoPanel(
   thead.append(headRow);
   const tbody = doc.createElement('tbody');
   table.append(caption, thead, tbody);
-  element.append(summary, table);
+  detailsBody.append(table);
+  element.append(summary, details);
 
   function update(stats: DesignStats): void {
     summary.textContent = summaryText(stats);
@@ -182,7 +207,7 @@ export function createInfoPanel(
       tr.append(td);
       tbody.append(tr);
     }
-    table.hidden = rows.length === 0;
+    details.hidden = rows.length === 0;
   }
 
   return { element, update };

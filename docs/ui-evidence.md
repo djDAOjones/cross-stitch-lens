@@ -359,3 +359,26 @@ Cold-start entry state untouched by construction.
 
 The D86 A16 waiver is superseded: view controls now fold, which is
 strictly more than the deferred Fit-options menu offered.
+
+## M14-EXT-05 — Polish: de-duplication & control feel (2026-07-23, D90)
+
+Answering the owner's second look ("some duplication, some controls
+clunky") with a self-review of the running app — nine findings, all
+fixed, verified live:
+
+| # | Finding | Fix | Verified |
+| --- | --- | --- | --- |
+| 1 | Source button duplicated the cold entry state | hidden until a source exists (one composed rule in applyShell) | hidden cold, visible populated |
+| 2 | Two stacked empty-state sentences | the global status starts empty; the entry state owns the cold explanation | status `""` cold; announces from first action |
+| 3 | Capture expectation said twice | one place: the capture action's linked helper (entry stack + modal choice helper slot) | exactly one instance, `aria-describedby` both sites |
+| 4 | View-controls double chrome + readout row | readouts ride the summary row; body drops the indent rule and outer margins | readouts in summary, border 0, no extra row |
+| 5 | Ragged bar wrap; status could reflow the bar | bar groups (product / dev cluster) wrap as units; diagnostics status takes a full-width line | two tidy rows at 320 |
+| 6 | Ragged entry actions | shared `.action-stack` (entry + modal choices) | 3 equal-width actions, helper indented |
+| 7 | Load project was a raw file input | button over hidden input (the app's one pattern) | button present, input hidden |
+| 8 | Colours table always-on | persisted fold, open by default; caption visually-hidden (no double heading) | details present, open, persisted id `colours-table` |
+| 9 | Chevron could overlap summaries | reserved right padding on accordion toggles | CSS applied |
+
+Gate green (938 tests, contrast 19×2 AAA); engine dirs diff-clean;
+tripwire green. Cold-surface before/after: two explanations + six
+affordances above the fold → one title, three stacked actions, one
+hint.

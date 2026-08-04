@@ -184,6 +184,8 @@ export interface ModalChoice {
   label: string;
   /** Primary-filled treatment (at most one per dialog). */
   primary?: boolean;
+  /** One-line consequence/expectation, linked via aria-describedby. */
+  helper?: string;
 }
 
 /**
@@ -215,6 +217,14 @@ export function choicesModal(
         button.textContent = choice.label;
         button.addEventListener('click', () => close(choice.id));
         list.append(button);
+        if (choice.helper !== undefined) {
+          const helper = doc.createElement('p');
+          helper.className = 'helper';
+          helper.id = `modal-choice-${choice.id}-helper`;
+          helper.textContent = choice.helper;
+          button.setAttribute('aria-describedby', helper.id);
+          list.append(helper);
+        }
         first ??= button;
       }
       const actions = doc.createElement('div');

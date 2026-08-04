@@ -19,6 +19,11 @@
 
 ## M14 — UI/UX excellence (in progress — agent half complete, ACCEPT-01 open)
 
+- M14-EXT-05 (2026-07-23) — polish pass from the owner's second
+  look: nine findings (cold-surface duplication, view-controls double
+  chrome, ragged wrapping, raw Load input, always-on colours table),
+  nine fixes, one recorded lesson — verify composition, not just each
+  new affordance alone. See D90.
 - M14-EXT-01..04 (2026-07-23) — owner-feedback extension shipped as
   one set: app bar (title, build id, Source, shell modes, dev
   diagnostics + Download log), Source choice modal with cold-start

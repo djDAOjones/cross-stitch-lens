@@ -34,23 +34,36 @@ main {
 }
 
 /* Shell bar: source, collapse and preview-focus live on a permanent
-  surface, so the way out of a mode is always in one place. */
+  surface, so the way out of a mode is always in one place. Hugs the
+  right edge at wide widths; wraps as a tidy left-aligned row at
+  companion widths (M14-EXT-05). */
 .shell-bar {
   margin: 0;
-  flex: 1 1 auto;
-  justify-content: flex-end;
+  flex: 0 1 auto;
+  margin-left: auto;
 }
 
-/* Dev-only diagnostics cluster rides the bar; its announced status
-  line sits inline rather than opening a second row. */
+/* Dev-only diagnostics cluster: its own bar group, wrapping as a
+  unit; the announced status takes a full-width line so a copy or
+  download result never squeezes the product controls. */
 .diagnostics-control {
-  display: inline-flex;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--csl-spacing-03);
 }
 
 .diagnostics-control [role='status'] {
   margin: 0;
+  flex-basis: 100%;
+}
+
+@media (max-width: 60rem) {
+  .shell-bar,
+  .diagnostics-control {
+    margin-left: 0;
+    flex-basis: 100%;
+  }
 }
 
 /* Layout model (UI-STANDARDS): preview column and settings panel.
@@ -363,8 +376,9 @@ body.preview-focus .preview-host {
   margin-top: var(--csl-spacing-05);
 }
 
-/* Choice modal (M14-EXT-02): the routes stack full-width so the
-  chooser reads as a list of actions, not a button soup. */
+/* Choice modal (M14-EXT-02/05): same pattern as the entry actions —
+  one shared stack (base.css .action-stack); this block only adjusts
+  the in-dialog margin. */
 .modal-choices {
   display: flex;
   flex-direction: column;
@@ -375,6 +389,11 @@ body.preview-focus .preview-host {
 .modal-choices button {
   width: 100%;
   text-align: left;
+}
+
+.modal-choices .helper {
+  margin: 0 0 var(--csl-spacing-02);
+  padding-left: var(--csl-spacing-05);
 }
 
 /* .modal-primary's fill is the shared .button-primary rule (base.css). */
@@ -409,7 +428,9 @@ body.preview-focus .preview-host {
   gap: var(--csl-spacing-01);
   width: 100%;
   min-height: var(--csl-target-min);
-  padding: var(--csl-spacing-03) var(--csl-spacing-02);
+  /* Right padding reserves the chevron's lane so a long summary can
+    never run under it (M14-EXT-05). */
+  padding: var(--csl-spacing-03) var(--csl-spacing-07) var(--csl-spacing-03) var(--csl-spacing-02);
   border: 0;
   background: transparent;
   text-align: left;
@@ -475,10 +496,20 @@ body.preview-focus .preview-host {
   margin-top: var(--csl-spacing-02);
 }
 
-/* View readouts (M14-EXT-03): the zoom % and dimensions stay visible
-  outside the collapsible controls — state survives the fold. */
-.view-readouts {
-  display: flex;
+/* View controls (M14-EXT-03/05): the readouts ride the summary row —
+  state survives the fold without spending a row — and the body drops
+  the depth indent, which read as double chrome around a plain
+  toolbar. */
+.view-controls > summary {
   gap: var(--csl-spacing-05);
+}
+
+.view-readouts {
+  display: inline-flex;
+  gap: var(--csl-spacing-05);
+  margin-left: auto;
+}
+
+.view-controls-body .toolbar {
   margin: var(--csl-spacing-02) 0 var(--csl-spacing-03);
 }

@@ -35,6 +35,7 @@ import {
 import {
   clampPan,
   fitView,
+  hugHeight,
   panBy,
   scaledView,
   zoomAt,
@@ -47,6 +48,13 @@ const ZOOM_STEP = 1.25;
 const PAN_STEP = 40;
 /** CSS px reserved around a fitted design for the tick numbering. */
 const FIT_MARGIN = 24;
+/** Smallest useful canvas height (CSS px) under the hug. */
+const HUG_MIN_CSS = 160;
+/** Posture caps for the hugged height, as viewport-height shares. */
+const HUG_CAP_NARROW = 0.4;
+const HUG_CAP_WIDE = 0.6;
+/** The stacked-layout breakpoint (60rem at 16px), in CSS px. */
+const NARROW_MAX_CSS = 960;
 
 export class PreviewController {
   private readonly client: PipelineClient;
@@ -135,9 +143,35 @@ export class PreviewController {
     this.applyMode();
   }
 
+  /**
+   * The host hugs the fitted design under auto-fit (M14-FIX-03): fit
+   * the width, follow the aspect, cap to the posture (40dvh stacked,
+   * 60dvh wide). Height depends only on host width and design shape,
+   * so the ResizeObserver settles in one pass — geometry never feeds
+   * itself, and nothing is scroll-linked (the M14-FIX-06 cure: the
+   * oscillation was the dock's height change moving its own scroll
+   * trigger). Manual zoom freezes the height where the user left it;
+   * preview-focus overrides the inline height in CSS.
+   */
+  private hugHost(): void {
+    const capShare = window.innerWidth < NARROW_MAX_CSS ? HUG_CAP_NARROW : HUG_CAP_WIDE;
+    const wanted = hugHeight(
+      this.imgW,
+      this.imgH,
+      this.host.clientWidth,
+      FIT_MARGIN,
+      HUG_MIN_CSS,
+      Math.round(window.innerHeight * capShare),
+    );
+    if (Math.abs(this.host.clientHeight - wanted) <= 1) return;
+    this.host.style.height = `${String(wanted)}px`;
+    this.syncSurfaceSize();
+  }
+
   /** Re-derive the view from the current mode and host size. */
   private applyMode(): void {
     if (this.imgW === 0) return;
+    if (this.mode !== 'manual') this.hugHost();
     const { w, h } = this.surfaceSize();
     if (this.mode === 'manual') {
       const device = toDevicePxPerStitch(this.manualCssPxPerStitch, window.devicePixelRatio);

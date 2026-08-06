@@ -557,3 +557,59 @@ session, pump, crop and section code paths throughout.
 | Perf at 300² | added cost measured: 0.024 ms indices copy + 0.618 ms mask + 0.154 ms put/draw = **0.796 ms/frame** — 0.3 % of the 250 ms/frame budget at 4 fps, ~1 % of the banked baseline frame (D64–D72). Live-pump re-measure impossible headless (rAF-frozen pane) — named for ACCEPT-01's live session |
 | Canvas-information rule | the DOM equivalent of the canvas highlight is the selected row + its count — already in the table (noted per ticket) |
 | Isolation | mask build and draw both guarded; a throwing decoration drops itself, never the frame (router precedent) |
+
+## M14-EXT-15 — Size, region & aspect: signed shape shipped (2026-08-05, D101)
+
+Owner signed **A + D + S1**. Driven live with a canvas stream at the
+permission boundary (Chromium, dev server):
+
+| Check | Result |
+| --- | --- |
+| Session anatomy | "Aspect follows design" pressed by default; size fields inside the Capture region section (S1); height field enabled with its normal helper |
+| Unlock | aria-pressed false; status "Aspect unlocked — pins drag freely…"; height field disables, helper becomes "Follows the region while aspect is unlocked"; section summary appends "· aspect unlocked" |
+| Free resize (keyboard) | Shift+ArrowUp ×8: region 600 × 600 → 600 × 536; design 200 × 200 → 200 × 179 (= round(200·536/600)); readout "(height follows the region)"; auto-fit refit to the new shape |
+| Field mirror | the disabled height field reads 179 after the derive (found stale at 200 live; applyPattern now mirrors both fields) |
+| Re-lock | region re-constrained to the design's aspect (400 × 358 = exact 200:179 ×2 under the centre-anchor room rule); height re-enables; status announced |
+| Shift-gesture | a shift gesture while locked produced a free (unconstrained) rect and pointerup adopted its shape into the design — demonstrated via the draw route; toggle stayed pressed |
+| Session end | size fields return to Design (first slot); aspect state resets; height re-enabled |
+| Crop maths | 52 tests green, incl. the new locked/unlocked split: derive correctness/rounding/clamps, position-independence, the derive↔constrain fixed point (no feedback loop), and the locked D52 invariant unchanged |
+| Not driveable in this rig | precise pointer handle-drags — the capture video never lays out in a hidden pane (2 × 2 px box), so overlay↔source mapping has no geometry; the mapping code is unchanged M4/M6 territory, and the real drag is named on ACCEPT-01's live checklist |
+| Console | zero errors |
+
+## M14-FIX-06 + FIX-03 — Scroll-neutral, design-hugging preview (2026-08-05, D103)
+
+| Check | Result |
+| --- | --- |
+| Oscillation mechanism | deleted, not damped: no scroll listener, sentinel, threshold or `preview-docked` class remains (grep-clean); layout height has no scroll input |
+| Scroll sweep (380 × 700, capture-scale page) | 8 positions, ONE distinct host height; section pins at top and stays |
+| Hug, wide design | 200 × 80 at 380 px → host 173 px = exact aspect derivation + margins (was a fixed 489 px — the owner's blank band gone) |
+| Hug, square design | capped at 282 px ≈ 40dvh narrow cap |
+| Manual zoom | height frozen where the user left it, through a grid change |
+| Reset view | re-hugs immediately |
+| Fixed point | `hugHeight` pure, height-independent by signature; unit-tested (aspect follow, caps, floor, degenerate) |
+| Preview focus | fills the window by flex — `!important` over the inline hug |
+
+## M14-FIX-01 — Capture region leads the flow (2026-08-05, D104)
+
+| Check | Result |
+| --- | --- |
+| Mount | in the content column, preceding the preview; open on first appearance; focus lands on the section toggle |
+| Collapse gesture | at scrollY 400, collapsing scrolls to 0 — the preview takes the lead |
+| Lock gesture | at scrollY 300, locking scrolls to 0 |
+| Preview focus | section hidden with the source region; restored on exit |
+| Panel collapse | section stays (content geography — D97 consequence reversed, recorded) |
+| Session end | unmounted, nothing dangling |
+| Order discipline | DOM mount, no CSS `order`; §7 exception recorded in UI-STANDARDS + ui-spec |
+
+## M14-FIX-05 / 04 / 02 — the small three (2026-08-05, D105)
+
+| Fix | Check | Result |
+| --- | --- | --- |
+| FIX-05 | stats line | "40,000 stitches (0 empty) · 8 colours" — dimensions live only in the strip readout |
+| FIX-05 | block height at 380 px | canvas-to-source 128 px at the spec default (stats 20 + fold 44 + status 20 + tightened gaps); the open colours table remains the user's persisted choice |
+| FIX-04 | resize burst below 960 px | one debounced line: "Window 380 px wide — works down to 320 px."; silent above 960; zero standing chrome |
+| FIX-02 | capture request | `selfBrowserSurface: 'exclude'` + `surfaceSwitching: 'include'` sent; own-tab exclusion is Chromium-verified territory (picker UI — named for the owner's next live run) |
+| FIX-02 | expectation copy | both homes read "choose the window you draw in — sharing the whole screen includes this app." |
+| all | EXT-18 re-walk under the new geometry | 199 focusables at 380 px, everything open: zero obscured, zero off-viewport |
+| all | console | a fresh page runs the full sequence with zero errors (an earlier page's four uncaught errors were stale-HMR module instances — the known rig artefact, reproduced clean) |
+| all | suites | typecheck, lint, info-panel 13/13 green before the gate |

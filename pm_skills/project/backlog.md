@@ -27,27 +27,74 @@ byte-identical; no new runtime dependencies; no project-file schema
 change. Milestone docs land under `docs/` as they are produced:
 `ui-audit.md`, `ui-journeys.md`, `ui-spec.md`, `ui-evidence.md`.
 
-#### Extension — third-look triage (D91, revised D92)
+The third-look extension set (D91/D92 triage) shipped in full,
+2026-08-04/05: EXT-06..14, 17, 18 (D93–D100) and the owner-signed
+EXT-15 shape (D101). See trajectory + decision log.
 
-The owner's third look (voice memo, 2026-08-04) triaged in D91, then
-revised on the owner-accepted critique (D92): the four viewport tasks
-land as one arc with a dedicated composition verify (the D90 lesson
-applied in advance); EXT-16 merged into EXT-15 (id retired); EXT-17
-joined from the re-scoped icebox item; the sample survives in the
-Source modal. Every task carries a ticket; ui-spec amendments ride
-each ship (D89 precedent).
+The first-pass review feedback (owner live session 2026-08-05, D102)
+shipped in full the same day: FIX-06+03 (D103), FIX-01 (D104),
+FIX-05/04/02 (D105).
 
-- [~] **M14-EXT-15 Size, region & aspect** [sign-off] [detail] (2026-08-04)
-  Intent: one owner-signed design covering aspect lock vs free pins *and* where Design size lives (absorbs the retired EXT-16; leading candidate: size joins the region surface during capture) — options with consequences against the four scale quantities and the region-independence promise.
-  Done when: options are recorded with before/after mockups, one is signed, and the signed shape ships with crop-math tests.
-  Status 2026-08-05: **signed A + D + S1** (owner, structured answer). Remaining: implement the signed shape with crop-math tests (locked/unlocked independence split), then delete ticket + options docs on ship.
+The fourth look (owner dictated feedback, repaired against the live
+UI labels and triaged 2026-08-06, D106) adds EXT-19..30 below —
+listed in run order, each citing its memo item; memo items 14–16
+(colour and dithering profiles) route to the new M15, scoping-first
+with the owner at their explicit ask.
+
+#### Extension — fourth look (D106)
+
+- [ ] **M14-EXT-19 Capture picker prefers the entire screen** (2026-08-06)
+  Intent: memo 1 — pre-select "Entire screen" in the browser's capture dialog where the platform honours a preference: `displaySurface: 'monitor'` on the `getDisplayMedia` call, beside the shipped `selfBrowserSurface: 'exclude'` (D105). A hint, not a guarantee — the picker stays user-owned.
+  Done when: the hint ships and Chrome opens the picker on the screen tab; a browser that ignores it degrades to today's behaviour with no error.
+
+- [ ] **M14-EXT-20 Design size, scale and the free-aspect default** [detail] (2026-08-06)
+  Intent: memo 2+3+7 — the region↔design coupling recut: the session toggle renamed "Lock aspect" and default **off** (region shape drives the design; supersedes D101's default-on), a region drag rederives **both** design dimensions through a fixed source-px-per-stitch scale (supersedes D101's height-only derive), a labelled scale slider makes that ratio visible and editable, and the Size fields shrink to a compact footprint.
+  Done when: dragging the region changes design width and height proportionally at the shown scale; the slider regoverns resolution for the same region; "Lock aspect" on restores the D52 conduct whole; stitches stay square on every path; the compact fields keep visible labels and 44 px targets.
+
+- [ ] **M14-EXT-21 Stats section; capture-region readout retires** [detail] (2026-08-06)
+  Intent: memo 5+8 — a "Stats" section pinned above the capture settings: design size, total stitches, and colours in use — explicitly no region coordinates and no aspect state. The `Capture region … px → … stitches` readout goes (its numbers live here), and Stats takes over D98's never-silent colour-limit duty from the Design fold summary before EXT-22 flattens it.
+  Done when: the stats read at the top with or without a session; the region readout is gone (UI-STANDARDS capture-readout line ledgered in doc-deltas at ship); colour count reflects the post-constraint palette.
+
+- [ ] **M14-EXT-22 Collapsed sections show their heading only** (2026-08-06)
+  Intent: memo 4 — a collapsed fold is just its title: the accordion summaries (D93/D98 lineage) and the informative Colours-by-usage lead line (D99) flatten to bare headings. Runs after EXT-21 so the colour figures never go silent — they move to Stats first.
+  Done when: every collapsed fold shows only its heading; no stat or state rides a closed fold anywhere in the app.
+
+- [ ] **M14-EXT-23 Collapsible preview** (2026-08-06)
+  Intent: memo 6 — the preview region becomes collapsible like any section, default expanded, and expands (or stays expanded) when a capture session starts; supersedes UI-STANDARDS' "the canvas never does" (delta ledgered at ship). Shell-state model, control outside the region — never a second hidden layer.
+  Done when: collapse/expand works from a control outside the region; capture re-opens it; D103's nothing-scroll-linked rule still holds at companion width.
+
+- [ ] **M14-EXT-24 Preview focus retires** (2026-08-06)
+  Intent: memo 10a — the `Preview focus` button goes, and with it the mode: the button is its only entry (Escape is a convenience by rule), so M6-FOCUS-01's mode retires whole rather than idling as dead state — compact status line and focus-only branches removed.
+  Done when: no focus toggle in the app bar; shell state reduces to collapse; no orphaned focus-only code, styles, or preferences; keyboard and AT routes unaffected.
+
+- [ ] **M14-EXT-25 Capture session controls rationalised** [sign-off] [detail] (2026-08-06)
+  Intent: memo 9 — justify or fold each of `Capture frame`, `Pause capture`, `Lock region`, `Stop capture`; Stop moves to the app bar, plausibly as a state of the Source button. The owner asked for options ("help come up with a good solution"), so this is options-first with the pick theirs.
+  Done when: the owner-picked shape ships; stopping capture is reachable from the app bar at all times; no session function disappears without the owner naming it cut.
+
+- [ ] **M14-EXT-26 Debug menu: copy, download, email** [detail] (2026-08-06)
+  Intent: memo 10b — one Debug control gathers the maintainer surfaces per the diagnostics-affordance rules: copy diagnostics JSON, download diagnostics JSON, and a prefilled email-to-dev route (mailto cannot attach — the body instructs attaching the download). Dev-only by default, redacted bundle, visible text label.
+  Done when: all three routes work from one labelled control; redaction and dev-gating hold; each route announces success or failure programmatically.
+
+- [ ] **M14-EXT-27 Trackpad pinch-zoom and two-finger pan** [detail] (2026-08-06)
+  Intent: memo 11 — pinch zooms about the pointer and two-finger scroll pans, armed only while the canvas host is engaged (focus-unified, D92) so an unfocused preview stays inert and the page scrolls past; deliberately reopens D95's no-wheel rule for the engaged state only.
+  Done when: pinch and two-finger pan work while engaged, do nothing while not; keyboard zoom/pan stay equivalent; the unfocused wheel-inert contract is regression-tested.
+
+- [ ] **M14-EXT-28 Colour becomes its own section** (2026-08-06)
+  Intent: memo 12 — the colour group leaves Design: its own accordion section directly after Design, own heading and fold. Design keeps size and geometry.
+  Done when: Colour stands alone with the group whole; tab order, disclosure persistence and section summaries survive the move.
+
+- [ ] **M14-EXT-29 Colour controls recut: Threadify and constrain** [detail] (2026-08-06)
+  Intent: memo 13 — a "Threadify colours" switch leads the section (read as the full-RGB↔threads boolean that `Colour mode` carries today — both readings recorded in the ticket), then "Colours" as slider + number input + stepper buttons; `Use exactly this many` retires; a separate "Constrain number of colours" switch owns the count limit (today's `Limit colours`).
+  Done when: the pick-gate-confirmed naming ships; exact mode's role is absorbed or explicitly cut; slider, input and steppers move in lockstep and announce; defaults keep D98's eight.
+
+- [ ] **M14-EXT-30 Appearance becomes Processing; grid controls move out** [detail] (2026-08-06)
+  Intent: memo 16 (M14-safe half) — the section renames to "Processing" and reduces toward dither-preset selection ahead of M15; the grid geometry controls relocate to a more thematically linked home — recommendation: the view strip's grid reveal, where the on/off toggles already live (D92). Destination options in the ticket.
+  Done when: the section reads "Processing" holding dither only; grid geometry lives at its picked destination; no styling-preset work is preempted from M11.
 
 #### Phase 4 — Verification & end review
 
-- [ ] **M14-ACCEPT-01 Maintainer end review** [maintainer] [detail] [blocked: M14-EXT-15] (2026-07-23)
-  <!-- EXT-06..14, 17, 18 shipped 2026-08-04 (D93–D100); only the EXT-15 sign-off remains before this gate. -->
-
-  Intent: the reserved human gate — judge look, feel and taste over the review pack (changes, logged decisions, before/after evidence, waivers) and a live Photoshop companion session.
+- [ ] **M14-ACCEPT-01 Maintainer end review** [maintainer] [detail] [blocked: M14-EXT-19..30] (2026-07-23)
+  Intent: the reserved human gate — judge look, feel and taste over the review pack (changes, logged decisions, before/after evidence, waivers) and a live Photoshop companion session. The first pass (2026-08-05) produced six findings, all shipped (D103–D105); the fourth look (2026-08-06, D106) re-blocks the gate on EXT-19..30, and the formal pass/fail session follows the set.
   Done when: owner pass/fail notes are recorded; failures route to new M14 fix tasks, never silent rework.
 
 ### Next — M13 Visual processing performance (remainder)
@@ -104,6 +151,27 @@ Conditional: activated, merged or cut by M13-SYNTH-01.
 - [ ] **M13-ACCEPT-02 Maintainer live acceptance** [detail] [maintainer] [blocked: M13-ACCEPT-01] (2026-07-22)
   Intent: the human half — real-browser live Photoshop capture at typical grids, visual review wherever M13 could alter appearance, editing feel against the ≥ 4 updates/sec promise.
   Done when: owner pass/fail notes recorded (failure routes to the synthesis); live editing usable across dither methods and backends.
+
+### Next — M15 Colour & dithering profiles (owner-collaboration scoping first)
+
+The fourth look's memo items 14–16 concentrate here (D106): "Colour
+profile" as the one selector replacing `Colour mode` + `Threads to
+choose from`, a full-surface profile editor (colour libraries, tech
+colour maps, user thread collections, test-image preview), and
+"Dithering profiles" with their own editor. Out of M14 by constraint,
+not preference: profiles change which colours are available (outputs
+not byte-identical) and user libraries add persistence — M14 forbids
+both. Scoping is deliberately a joint owner+agent session per the
+owner's ask; nothing is built before the signed scope. Ordering
+against the M13 remainder is the owner's call at pick time.
+
+- [ ] **M15-SCOPE-01 Colour profiles & editor — joint scoping** [maintainer] [sign-off] [detail] (2026-08-06)
+  Intent: scope the colour-profile concept with the owner — profile = editable preset of the available colour table; the section anatomy ("Colour profile" select, "Colours in use"), the editor surface (libraries incl. brands and tech colour maps, user collections with code/hex search and custom RGB, the five-image test preview with offline placeholders), and where the advanced constraints (minimum colour distance, hue/saturation/brightness ranges) live — the owner explicitly wants that placement discussed.
+  Done when: a signed scope and option pick are recorded (decision log) and the build is broken into agent-executable tasks; no code before that.
+
+- [ ] **M15-SCOPE-02 Dithering profiles & editor — joint scoping** [maintainer] [sign-off] [detail] (2026-08-06)
+  Intent: scope "Dithering profiles" with the owner — the Processing section reduced to profile selection (EXT-30 lands the rename first), a full-surface editor over the five methods and seven evidence-based presets, and how much editor machinery it shares with M15-SCOPE-01's.
+  Done when: same bar as M15-SCOPE-01.
 
 ### Icebox
 

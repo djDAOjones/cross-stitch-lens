@@ -19,6 +19,25 @@
 
 ## M14 — UI/UX excellence (in progress — agent half complete, ACCEPT-01 open)
 
+- M14-FIX-05, M14-FIX-04, M14-FIX-02 (2026-08-05) — stats line loses
+  its duplicated dimensions and the block tightens to 128 px; a
+  debounced zero-chrome window-width guide in the status region; the
+  app's own tab excluded from its capture picker with honest
+  window-share copy. See decision-log D105.
+- M14-FIX-01 (2026-08-05) — capture region mounts above the preview
+  during a session; focus hands to it, collapse/lock return the lead.
+  One signed exception to preview-first order. See decision-log D104.
+- M14-FIX-06+03 (2026-08-05) — the scroll-linked dock deleted (its
+  height change fed back through scroll anchoring as the owner's
+  docked↔undocked flap); the canvas now hugs the fitted design under
+  auto-fit with posture caps — scroll-neutral by construction. See
+  decision-log D103.
+- M14-EXT-15 (2026-08-05) — owner signed A + D + S1 and the shape
+  shipped: aspect-follows toggle (default on, session-only), free
+  pins derive design height, shift-drag exception, size fields join
+  the capture section per session; crop suite gains the
+  locked/unlocked split. AGENTS.md invariant updated. See
+  decision-log D101.
 - M14-EXT-17 (2026-08-04) — thread highlight as a Compare-class
   preview decoration over the index sidecar: per-row toggles, scrim
   over non-matching stitches, export bytes re-proven identical,

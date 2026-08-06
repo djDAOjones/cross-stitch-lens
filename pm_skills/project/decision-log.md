@@ -2110,3 +2110,246 @@ the highlight out of every processing request shape.
 **Link:** ticket M14-EXT-17 (deleted on ship); ICE-PROVENANCE-01
 keeps the tonal half; evidence in `docs/ui-evidence.md`; mask
 invariants unit-tested (`tests/highlight.test.ts`).
+
+## D101 — M14-EXT-15: the signed shape ships — aspect follows by default, frees on demand (2026-08-05)
+
+**Decision:** the owner signed **A + D + S1** (structured in-session
+answer, 2026-08-05; pack in the D91–D100 commit) and the shape is
+implemented. An **"Aspect follows design"** toggle joins the capture
+session controls — pressed by default, session-only, reset each
+session, never project data (schema untouched). Unlocked, every
+shape-changing gesture runs the free geometry (`resizeRect`/
+`clampRect`) and the gesture end adopts the region's shape as the
+design height (`deriveGridHeight` — width stays the user's, stitches
+stay square, nothing distorts). Shift-drag frees a pin temporarily
+while locked; the keyboard route to a free resize is the toggle
+itself, with shift+arrows staying aspect-locked until it is off
+(recorded as D's keyboard answer). S1: the Design size fields join
+the Capture region section for the session and return to Design on
+end — moved, never duplicated, focus preserved across the reparent.
+
+**The independence promise, split as signed:** locked keeps D52
+whole (constrainRect the only route; region chooses which pixels,
+never how many stitches — existing suites stand). Unlocked is the
+one sanctioned crossing: region shape → design height, one
+direction, announced in the readout ("(height follows the region)")
+while the derived height field disables with the reason in its
+helper (A9 adjacency). AGENTS.md's invariant updated to the split;
+ui-spec §3/§5/§7 amended. The derive/constrain pair is a proven
+fixed point (no feedback loop) in the crop suite.
+
+**Losers recorded:** B (resample) distorts stitches — carried as the
+strawman and rejected; C (letterbox) buys freedom at a third concept
+(silent blank bands + D9 fabric semantics without source
+transparency); S2 invents a compound control; S3 moves size edits to
+reach 2 when the complaint was chunkiness, not reach.
+
+**Found in verification:** a region-derived height left a stale
+number in the disabled field — `applyPattern` now mirrors both
+fields whatever drove the change. Pointer-drag geometry could not be
+driven in the headless pane (the capture video never lays out — same
+rig class as the frozen pump); the keyboard route proved the full
+derive chain, the shift-gesture free/adopt path was demonstrated via
+draw, the geometry is unit-tested (52 crop tests incl. the new
+locked/unlocked split), and the real drag sits on ACCEPT-01's live
+checklist.
+
+**Link:** ticket M14-EXT-15 + `docs/ext15-options.md` +
+`docs/ext15-mockups.html` (all deleted on this ship — conclusions
+live here); evidence in `docs/ui-evidence.md`; ACCEPT-01 is now
+unblocked — the milestone's one remaining item, and it is the
+owner's.
+
+## D102 — ACCEPT-01 first pass: six findings routed to fix tasks (2026-08-05)
+
+**Decision:** the owner's first live Photoshop companion run
+(2026-08-05, narrow window beside Photoshop 2026, real capture)
+produced six findings, routed to M14-FIX-01..06 per ACCEPT-01's own
+rule — fix tasks, never silent rework. ACCEPT-01 re-blocks on the
+set; the formal pass/fail session follows.
+
+**The findings, ordered as they will run:** FIX-06 first — a
+scroll-time oscillation of the preview at companion width during
+capture, a defect in my D95 dock/sticky mechanics (prime suspect:
+the dock's page-shortening crossing its own scroll threshold near a
+short page's bottom — the exact loop class D95 dismissed for tall
+pages; a page with everything collapsed is short). Then FIX-01 —
+capture region leading the session flow, which collides with the
+preview-first §7 invariant and carries a reorder-vs-guidance option
+set (the owner explicitly left mechanic latitude); FIX-03 — the
+canvas host hugging the fitted design's height instead of a flat
+60dvh; FIX-05 — the stats block compressed, dropping the
+strip-readout duplication; FIX-04 — a discreet window-width guide
+for the narrow posture; FIX-02 — `selfBrowserSurface: 'exclude'` +
+window-share copy, with the platform's full-screen limit recorded
+("not essential if not viable" is the owner's stated tolerance).
+
+**Also observed in the session artefacts:** the owner shared a
+screen containing the app itself (the design stitched the app's own
+UI) — the motivating reproduction for FIX-02's copy nudge; and the
+shipped extension surfaces (default-8 announced in the Design
+summary, the informative colours fold line, the aspect toggle in
+the capture section) all visible working in the real posture.
+
+**Link:** backlog → "First-pass review feedback"; tickets
+M14-FIX-01/02/03/04/06 (FIX-05 is line-only); owner screenshots in
+the session transcript.
+
+## D103 — M14-FIX-06 + FIX-03: nothing in the layout is scroll-linked (2026-08-05)
+
+**Decision:** the two findings are one geometry decision, landed as
+one change. The D95 scroll-threshold dock is **deleted** — its class
+toggle changed the page height on its own trigger's axis, and scroll
+anchoring / bottom clamping fed the change straight back across the
+threshold as the docked↔undocked flap the owner filmed. The cure is
+categorical, not tuned: no hysteresis, no re-measure — layout height
+simply has no scroll input left. The canvas instead **hugs the
+fitted design** under auto-fit (`hugHeight`, pure: fit the width,
+follow the aspect, clamp to a 10rem floor and a posture cap — 40dvh
+stacked, 60dvh wide). Height depends only on host width and design
+shape — never on the height it replaces — so the ResizeObserver
+settles in one pass; the fixed point is unit-tested, not assumed.
+Manual zoom freezes the height where the user left it; Reset view
+re-hugs; preview focus fills the window by flex (`!important` over
+the inline hug). The D97-era "scroll back restores full height"
+behaviour is retired with the mechanism — under hugging there is no
+unnecessary height to restore (the FIX-03 ask).
+
+**Verified live (380 × 700):** wide 200×80 design → host 173 px
+(derivation exact, was a fixed 489); square design → capped 282 px;
+an 8-position scroll sweep holds ONE height with clean sticky
+pinning; manual zoom froze 173 through a grid change; Reset re-hugged
+to the cap. Nothing in src listens to scroll any more (grep-clean).
+
+**Link:** tickets M14-FIX-06/03 (deleted on ship); ui-spec §2
+re-amended (supersedes D95's dock paragraph); evidence in
+`docs/ui-evidence.md`; EXT-18's dock legs re-walked under the new
+geometry at close of the FIX set.
+
+## D104 — M14-FIX-01: the region leads while it is the task (2026-08-05)
+
+**Decision:** during a capture session the Capture region section
+mounts in the content column **above the preview** — the owner's
+tweak → lock → collapse → progress flow made literal, superseding
+D97's panel-first slot on the first-pass review. Session start hands
+focus to the section's own toggle (the user's gesture was "set up a
+capture"); collapsing or locking scrolls the preview back into the
+lead (instant — reduced-motion by construction). The preview-first
+invariant gains exactly one owner-signed session-time exception,
+recorded in UI-STANDARDS and ui-spec §2/§7 — a DOM mount, never CSS
+`order`, so reading, visual and tab order remain one thing.
+
+**Composition kept honest:** the section now follows the *source*
+region's visibility in applyShell (late-bound — the shell applies
+before the section exists), so preview focus still strips it; and it
+no longer hides with the settings panel — D97's "settings geography"
+consequence reverses to content geography, which matches the flow
+(collapse the settings, keep region + preview). The wide-layout
+thumb gains the content column's width in the bargain.
+
+**Verified live:** mount precedes the preview, open, focus on the
+toggle; collapse at scroll 400 → 0; lock at scroll 300 → 0; preview
+focus hides / exit restores; panel collapse leaves it visible; stop
+unmounts clean.
+
+**Link:** ticket M14-FIX-01 (deleted on ship); UI-STANDARDS layout
+rule + ui-spec §2/§7 amendments; evidence in `docs/ui-evidence.md`.
+
+## D105 — M14-FIX-05/04/02: the small three from the first pass (2026-08-05)
+
+**Decision:** the remaining first-pass findings landed as one pass.
+**FIX-05:** the stats line drops its dimensions — the strip readout
+already says "200 × 200 stitches" a few lines up, and the duplicate
+was height the companion posture pays for; the info block's text
+margins tighten to spacing-02 and the stacked-layout gap to
+spacing-03. Measured at 380 px: canvas-to-source spans 128 px at the
+spec default with every fact kept. **FIX-04:** a window-width guide
+with zero standing chrome — a debounced (350 ms) line in the
+existing status region during a resize burst below 960 px: "Window
+380 px wide — works down to 320 px." / "narrower than the supported
+320 px floor."; silent at roomy widths; the claim is the supported
+floor, not an aesthetic optimum. **FIX-02:** `selfBrowserSurface:
+'exclude'` + `surfaceSwitching: 'include'` on the capture request
+(the app's own tab leaves its picker on Chromium; unknown members
+ignored elsewhere), and the expectation copy now says the honest
+thing in both of its homes: "choose the window you draw in — sharing
+the whole screen includes this app." The platform limit is on
+record: no web API removes a window from a monitor share, so
+window-sharing is the 100 % answer — the owner's "not essential if
+not viable" tolerance is answered with "partially viable, done".
+
+**Link:** tickets M14-FIX-04/02 (deleted on ship; FIX-05 was
+line-only); evidence in `docs/ui-evidence.md`. With these, all six
+first-pass findings are closed — ACCEPT-01 unblocks for the formal
+pass/fail session.
+
+## D106 — M14 fourth look: dictated feedback triaged — twelve tasks, one new milestone (2026-08-06)
+
+**Decision:** the owner's fourth look (dictated feedback, transcript
+repaired against the live UI labels, 2026-08-06) triages into twelve
+extension tasks that gate ACCEPT-01 again, ids in run order —
+EXT-19 the capture picker prefers the entire screen
+(`displaySurface: 'monitor'`, a hint beside D105's exclusions);
+EXT-20 the region↔design coupling recut ("Lock aspect", default off,
+drags rederiving **both** dimensions through a visible
+source-px-per-stitch scale slider, compact Size fields); EXT-21 a
+Stats section pinned above the capture settings (design size, stitch
+total, colours in use — the owner excludes coordinates and aspect
+state) with the capture-region readout retired; EXT-22 collapsed
+folds showing bare headings; EXT-23 a collapsible preview (default
+expanded, re-opened by capture); EXT-24 Preview focus retired whole
+with its button; EXT-25 [sign-off] the session controls rationalised
+with Stop capture moving to the app bar (plausibly a Source-button
+state — options-first, the owner picks); EXT-26 a Debug menu over
+the diagnostics affordance (copy JSON / download JSON / email-dev
+via mailto); EXT-27 engaged-only trackpad pinch-zoom and two-finger
+pan; EXT-28 Colour as its own section out of Design; EXT-29 the
+colour anatomy recut ("Threadify colours" leading, count
+slider+input+steppers, `Use exactly this many` retired, a separate
+constrain switch); EXT-30 Appearance renamed "Processing" with the
+grid geometry relocated (recommendation: the view strip's grid
+reveal, where D92 already homed the toggles).
+
+**Routed out of the milestone:** memo items 14–16 — "Colour profile"
+replacing `Colour mode` + `Threads to choose from`, the profile
+editor (colour libraries incl. tech colour maps, user collections
+with code/hex search and custom RGB, five-image test preview,
+advanced min-distance and H/S/B-range constraints), and "Dithering
+profiles" with their editor — become **M15**, scoping-first as two
+[maintainer] [sign-off] joint sessions (M15-SCOPE-01/02) at the
+owner's explicit ask ("needs more scoping work that would benefit
+from us both"). Out of M14 by constraint, not preference: profiles
+change which colours are available (outputs not byte-identical) and
+user libraries add persistence — M14 forbids both. The scope tickets
+carry the repaired memo text, the M7 machinery it maps onto (named
+palettes, inventory, policy layer), the D55 identity question
+non-thread colours raise, and the D53 evidence against a real second
+browser window.
+
+**Supersessions on the owner's own authority:** D101's
+aspect-follows-by-default and height-only derive → free by default,
+both dimensions through one scale (EXT-20; the D52 conduct survives
+whole behind "Lock aspect" on). The informative fold lines — the
+section summaries and D98's never-silent limit line, D99's
+Colours-by-usage lead → bare headings (EXT-22), with the
+never-silent duty moving to Stats first (EXT-21 precedes EXT-22 for
+exactly this). UI-STANDARDS' "the canvas never does [collapse]" and
+the Capture-UX dimensions readout → EXT-23/EXT-21, protected-doc
+deltas to ledger at ship. M6-FOCUS-01's Preview focus mode → retired
+with its only entry (EXT-24). M14-EXT-10's "no wheel handler — do
+not reintroduce it" → reopened for the engaged state only, the
+unfocused surface keeping the promise verbatim (EXT-27). D92's
+colour-limit anatomy → EXT-29's two-switch recut.
+
+**Assumptions flagged for the pick gates:** "Threadify colours" is
+read as the full-RGB↔threads boolean (today's `Colour mode`) with
+"Constrain number of colours" as the count switch — the literal
+rename-Limit-colours reading is inconsistent but recorded in the
+EXT-29 ticket for the owner to rule on; Stats' "resolution" = design
+size in stitches; "Colours in use" vs the shipped `Colours by usage`
+fold, and the "five test images" against four named presets, resolve
+at M15-SCOPE-01; exact-count's fate is named at EXT-29's gate.
+
+**Link:** backlog → M14 "Extension — fourth look (D106)" + "Next —
+M15"; tickets M14-EXT-20/21/25/26/27/29/30, M15-SCOPE-01/02;
+ACCEPT-01 re-blocked on EXT-19..30.

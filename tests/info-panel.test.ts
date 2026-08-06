@@ -101,7 +101,7 @@ describe('buildRows', () => {
 });
 
 describe('summaryText', () => {
-  it('reads dimensions, stitch/empty split and colour count', () => {
+  it('reads the stitch/empty split and colour count — no dimensions (M14-FIX-05)', () => {
     const stats: DesignStats = {
       width: 200,
       height: 150,
@@ -112,9 +112,9 @@ describe('summaryText', () => {
       perColor: [],
       identified: false,
     };
-    expect(summaryText(stats)).toBe(
-      '200 × 150 · 25,500 stitches (4,500 empty) · 42 colours',
-    );
+    // Dimensions live in the strip readout; repeating them here was
+    // duplicated height (M14-FIX-05, D105).
+    expect(summaryText(stats)).toBe('25,500 stitches (4,500 empty) · 42 colours');
   });
 
   it('uses singular forms for one stitch or one colour', () => {
@@ -128,7 +128,7 @@ describe('summaryText', () => {
       perColor: [],
       identified: false,
     };
-    expect(summaryText(stats)).toBe('1 × 1 · 1 stitch (0 empty) · 1 colour');
+    expect(summaryText(stats)).toBe('1 stitch (0 empty) · 1 colour');
   });
 });
 

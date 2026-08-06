@@ -286,6 +286,19 @@ export function fullAspectRect(bounds: Bounds, grid: PatternGrid, min = MIN_CROP
 }
 
 /**
+ * The design height (stitches) a free-shaped region implies
+ * (M14-EXT-15, option A): the width in stitches stays the user's,
+ * height follows the region's shape, so stitches stay square and
+ * nothing distorts. Clamped to [1, maxSide]. While aspect is
+ * unlocked this is the one direction data flows — region shape
+ * writes design height, never the reverse.
+ */
+export function deriveGridHeight(widthStitches: number, rect: CropRect, maxSide: number): number {
+  if (rect.width <= 0) return widthStitches;
+  return clamp(Math.round((widthStitches * rect.height) / rect.width), 1, maxSide);
+}
+
+/**
  * How far `rect` is from the pattern's aspect, in source pixels — the
  * smaller of the two single-axis errors, because a rect built by
  * rounding one axis from the other is exact on the axis that led.

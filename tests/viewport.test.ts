@@ -15,6 +15,7 @@ import {
   panBy,
   scaledView,
   zoomAt,
+  hugHeight,
 } from '../src/ui/viewport.ts';
 
 describe('fitView', () => {
@@ -169,5 +170,34 @@ describe('panBy / clampPan', () => {
   it('leaves an in-bounds view untouched', () => {
     const view = { scale: 2, tx: 100, ty: 100 };
     expect(clampPan(view, 100, 100, 500, 500)).toEqual(view);
+  });
+});
+
+describe('hugHeight (M14-FIX-03/06)', () => {
+  // The invariants: follow the design's aspect at the host's width,
+  // clamp to floor and cap, and NEVER depend on the height being
+  // replaced — the no-feedback guarantee the ResizeObserver leans on.
+
+  it('follows the design aspect at the fitted width', () => {
+    // 200×100 design in a 448-wide host with 24px margins:
+    // usable 400 → scale 2 → 100·2 + 48 = 248.
+    expect(hugHeight(200, 100, 448, 24, 160, 600)).toBe(248);
+  });
+
+  it('caps tall designs and floors tiny ones', () => {
+    expect(hugHeight(100, 400, 448, 24, 160, 600)).toBe(600);
+    expect(hugHeight(400, 20, 448, 24, 160, 600)).toBe(160);
+  });
+
+  it('is independent of any current height — immediate fixed point', () => {
+    // Same inputs, same answer; nothing about a previous height is an
+    // input, so applying the result cannot change the next result.
+    const first = hugHeight(200, 150, 800, 24, 160, 500);
+    const second = hugHeight(200, 150, 800, 24, 160, 500);
+    expect(first).toBe(second);
+  });
+
+  it('degenerate designs fall to the floor', () => {
+    expect(hugHeight(0, 0, 448, 24, 160, 600)).toBe(160);
   });
 });

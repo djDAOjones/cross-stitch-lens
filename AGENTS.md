@@ -350,10 +350,17 @@ legitimately changes the output stitch count.
   Field names carry their unit.
 - Preview scale crosses persistence in **CSS** px per stitch, never
   device px, so a project reopens the same size at any DPR.
-- The capture region's aspect is **locked** to the pattern. Every crop
-  mutation goes through `constrainRect`; there is no unconstrained
-  path. A region chooses _which_ source pixels feed the pipeline, never
-  _how many_ stitches come out.
+- The capture region's aspect **follows the pattern by default**, and
+  the invariant splits on the session-only aspect toggle (M14-EXT-15,
+  owner-signed A + D — D101, superseding the always-locked D52 rule):
+  **locked** (the default), every crop mutation goes through
+  `constrainRect` and a region chooses _which_ source pixels feed the
+  pipeline, never _how many_ stitches come out; **unlocked** (or
+  during a shift-drag), pins move freely through `clampRect`/
+  `resizeRect` and the region's shape _writes the design height_ via
+  `deriveGridHeight` — one direction only, stitches always square,
+  the derived dimension named in the readout, the height field
+  disabled while derived. There is still no third path.
 
 ### Thread identity (M7 terminology contract — D55/D56)
 

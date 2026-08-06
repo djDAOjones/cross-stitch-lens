@@ -96,12 +96,16 @@ export function buildRows(perColor: ColorUsage[], options: RowOptions = {}): Row
   return { rows, overflow };
 }
 
-/** The one-line design summary shown above the table. */
+/**
+ * The one-line design summary shown above the table. No dimensions
+ * (M14-FIX-05): the view strip's readout already says "200 × 200
+ * stitches" a few lines up, and the duplication was height the
+ * companion posture cannot spare.
+ */
 export function summaryText(stats: DesignStats): string {
   const stitches = stats.stitchCount === 1 ? 'stitch' : 'stitches';
   const colours = stats.colorCount === 1 ? 'colour' : 'colours';
   return (
-    `${String(stats.width)} × ${String(stats.height)} · ` +
     `${formatCount(stats.stitchCount)} ${stitches} ` +
     `(${formatCount(stats.emptyCount)} empty) · ` +
     `${formatCount(stats.colorCount)} ${colours}`

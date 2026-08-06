@@ -19,7 +19,10 @@ import {
 } from './diagnostics/bundle.ts';
 import { installGlobalCapture, log, recentLogs } from './diagnostics/log.ts';
 import {
+  aspectMatches,
+  clampRect,
   constrainRect,
+  deriveGridHeight,
   fullAspectRect,
   hitTest,
   moveRect,
@@ -290,6 +293,8 @@ function build(app: HTMLElement): void {
    */
   /** Set once the info panel exists; resolvePalette runs earlier. */
   let highlightInvalidated: (() => void) | null = null;
+  /** Set once the capture section exists; applyShell runs earlier. */
+  let captureSectionElement: HTMLElement | null = null;
   let paletteEntriesFingerprint = '';
 
   function resolvePalette(): void {
@@ -498,6 +503,14 @@ function build(app: HTMLElement): void {
   lockButton.textContent = 'Lock region';
   lockButton.setAttribute('aria-pressed', 'false');
   lockButton.hidden = true;
+  // Aspect toggle (M14-EXT-15, signed A): pressed by default; off
+  // frees the pins and the design height follows the region. Distinct
+  // from "Lock region", which freezes the whole rect.
+  const aspectButton = document.createElement('button');
+  aspectButton.type = 'button';
+  aspectButton.textContent = 'Aspect follows design';
+  aspectButton.setAttribute('aria-pressed', 'true');
+  aspectButton.hidden = true;
   const pauseButton = document.createElement('button');
   pauseButton.type = 'button';
   pauseButton.textContent = 'Pause capture';
@@ -554,7 +567,8 @@ function build(app: HTMLElement): void {
   const captureExpectation = document.createElement('p');
   captureExpectation.className = 'helper';
   captureExpectation.id = 'capture-expectation';
-  captureExpectation.textContent = 'Your browser will ask which window or screen to share.';
+  captureExpectation.textContent =
+    'Your browser will ask what to share — choose the window you draw in; sharing the whole screen includes this app.';
   const captureCta = document.createElement('button');
   captureCta.type = 'button';
   captureCta.className = 'button-primary';
@@ -565,7 +579,14 @@ function build(app: HTMLElement): void {
   captureCta.setAttribute('aria-describedby', captureExpectation.id);
   entryActions.append(chooseButton, captureCta, captureExpectation, openProjectButton);
   entryState.append(entryTitle, entryActions, hint);
-  captureRow.append(captureButton, captureFrameButton, pauseButton, lockButton, stopCaptureButton);
+  captureRow.append(
+    captureButton,
+    captureFrameButton,
+    pauseButton,
+    aspectButton,
+    lockButton,
+    stopCaptureButton,
+  );
   // The source section carries the cold entry only (M14-EXT-06/12):
   // the capture surfaces live in the Capture region section, mounted
   // in the settings panel for the duration of a session.
@@ -749,6 +770,12 @@ function build(app: HTMLElement): void {
     scales = withPattern(scales, pattern);
     config.grid = { width: pattern.widthStitches, height: pattern.heightStitches };
     dimensionsLabel.textContent = patternSummary(pattern);
+    // The fields mirror the applied value whatever drove the change —
+    // a region-derived height (M14-EXT-15/A) must not leave a stale
+    // number in a disabled input. Field-originated calls rewrite the
+    // same string, which is a no-op for the caret.
+    setFieldValue('pattern-width', String(pattern.widthStitches));
+    setFieldValue('pattern-height', String(pattern.heightStitches));
     reframeCrop();
     updateCompactStatus();
     refreshSections();
@@ -763,13 +790,41 @@ function build(app: HTMLElement): void {
    * centre and as much of the selection as the source allows. The
    * region signature includes all four crop fields, so a changed frame
    * already reads as dirty — no gate reset needed.
+   *
+   * While aspect is unlocked (M14-EXT-15/A) the region leads instead:
+   * it is never reshaped to the design; a width edit re-derives the
+   * design height from the region's shape. One bounce at most — the
+   * derive makes the two aspects equal, so the recursive applyPattern
+   * lands in the equal branch and stops.
    */
   function reframeCrop(): void {
     const bounds = captureBounds();
     if (bounds === null || cropRect === null) return;
+    if (!aspectFollows) {
+      const derived = deriveGridHeight(scales.pattern.widthStitches, cropRect, MAX_PATTERN_SIDE);
+      if (derived !== scales.pattern.heightStitches) {
+        applyPattern({ ...scales.pattern, heightStitches: derived });
+      }
+      return;
+    }
     cropRect = constrainRect(cropRect, bounds, config.grid, 'center');
     renderCrop();
     announceCrop();
+  }
+
+  /**
+   * Adopt the region's shape as the design height (M14-EXT-15/A) —
+   * called at the end of any free gesture. The aspectMatches guard
+   * makes it idempotent and lets one call site serve both the
+   * unlocked state and a shift-drag exception: it only fires when a
+   * free gesture actually changed the shape.
+   */
+  function adoptRegionShape(): void {
+    if (capture === null || cropRect === null || aspectMatches(cropRect, config.grid)) return;
+    applyPattern({
+      ...scales.pattern,
+      heightStitches: deriveGridHeight(scales.pattern.widthStitches, cropRect, MAX_PATTERN_SIDE),
+    });
   }
 
   // Grid overlay: style state lives here (CSS px); thicknesses and
@@ -1835,7 +1890,7 @@ function build(app: HTMLElement): void {
   /** Last saved/loaded project filename; null = nothing this session. */
   let projectFileNote: string | null = null;
 
-  section(
+  const designSection = section(
     'section-design',
     'Design',
     true,
@@ -1941,7 +1996,8 @@ function build(app: HTMLElement): void {
         {
           id: 'capture',
           label: 'Capture your screen',
-          helper: 'Your browser will ask which window or screen to share.',
+          helper:
+            'Your browser will ask what to share — choose the window you draw in; sharing the whole screen includes this app.',
         },
         { id: 'sample', label: 'Try a sample' },
       ],
@@ -1976,6 +2032,12 @@ function build(app: HTMLElement): void {
     entryState.hidden = sourceExists;
     controls.hidden = !show.controls;
     importSection.hidden = !show.source;
+    // The capture section lives in the content column (M14-FIX-01),
+    // so the panel toggles no longer govern it; it is source
+    // machinery, and follows the source region's visibility (hidden
+    // in preview focus, present otherwise while mounted). Late-bound:
+    // the section is created after the shell's first apply.
+    if (captureSectionElement !== null) captureSectionElement.hidden = !show.source;
     // The entry state IS the chooser while it shows (M14-EXT-05): a
     // bar button opening a modal that repeats the on-screen actions
     // was duplication. One composed rule, one writer — the shell owns
@@ -2111,41 +2173,15 @@ function build(app: HTMLElement): void {
   // than being reordered by CSS into disagreement.
   const content = document.createElement('div');
   content.className = 'content';
-  // Dock trigger (M14-EXT-09): a zero-height marker above the
-  // preview. Scrolled past its *static document offset*, the preview
-  // docks to a capped height; scrolling back restores full height.
-  // Deliberately a scroll-position threshold, not an
-  // IntersectionObserver: docking shrinks the page, and a trigger
-  // that watches the viewport re-enters an intersection when the
-  // height changes — a feedback oscillation that hangs the renderer
-  // (found live at 375 px). The static offset only depends on content
-  // *above* the sentinel, so the dock state cannot move its own
-  // trigger. Presentation only — never part of the preference shell.
-  const dockSentinel = document.createElement('div');
-  dockSentinel.className = 'dock-sentinel';
-  content.append(dockSentinel, previewSection, info.element, status, importSection);
+  // No scroll-linked geometry (M14-FIX-06): the D95 dock threshold —
+  // scrolled past a sentinel, cap the canvas — changed the page
+  // height on its own trigger's axis, and scroll anchoring / bottom
+  // clamping fed the change back across the threshold as a visible
+  // docked↔undocked flap (owner's live session, 2026-08-05). The
+  // preview is simply sticky now; its height comes from the design
+  // (the hug in PreviewController, M14-FIX-03) and never from scroll.
+  content.append(previewSection, info.element, status, importSection);
   if (debugPanel !== null) content.append(debugPanel.element);
-  let dockThreshold = 0;
-  const measureDockThreshold = (): void => {
-    // The sentinel's offset depends only on content above it, so the
-    // dock state cannot move its own trigger.
-    dockThreshold = dockSentinel.getBoundingClientRect().top + window.scrollY;
-  };
-  const applyDock = (): void => {
-    previewSection.classList.toggle('preview-docked', window.scrollY > dockThreshold);
-  };
-  // Synchronous on purpose: the work is one comparison and one class
-  // toggle, and a rAF gate here freezes in a hidden tab (rAF pauses)
-  // with the pending flag wedged — found live. The browser already
-  // coalesces scroll events; there is nothing worth throttling.
-  window.addEventListener('scroll', applyDock, { passive: true });
-  window.addEventListener('resize', () => {
-    measureDockThreshold();
-    applyDock();
-  });
-  // First measure after layout settles (fonts and the header wrap can
-  // shift it slightly; a rAF after build is late enough in practice).
-  requestAnimationFrame(measureDockThreshold);
   const layout = document.createElement('div');
   layout.className = 'app-layout';
   layout.append(content, controls);
@@ -2220,6 +2256,15 @@ function build(app: HTMLElement): void {
   let capture: CaptureSession | null = null;
   let cropRect: CropRect | null = null;
   let cropLocked = false;
+  /**
+   * Aspect follows the design (M14-EXT-15, signed A + D + S1).
+   * Session-only, default on each session — never project data.
+   * While off, free pins re-derive Design height from the region's
+   * shape (stitches stay square); shift-drag frees a pin temporarily
+   * even while on. The keyboard route to a free resize is the toggle
+   * itself.
+   */
+  let aspectFollows = true;
   const pumpGate = new PumpGate();
   let stopPump: (() => void) | null = null;
   const dirtyGate = new DirtyGate();
@@ -2240,7 +2285,9 @@ function build(app: HTMLElement): void {
     return (
       `${String(cropRect.width)} × ${String(cropRect.height)} px at ` +
       `(${String(cropRect.x)}, ${String(cropRect.y)}) → ` +
-      `${patternSummary(scales.pattern)}${cropLocked ? ' · locked' : ''}`
+      `${patternSummary(scales.pattern)}${cropLocked ? ' · locked' : ''}${
+        aspectFollows ? '' : ' · aspect unlocked'
+      }`
     );
   };
   const captureSection = createSection(document, {
@@ -2250,14 +2297,27 @@ function build(app: HTMLElement): void {
     open: disclosureOpen('section-capture', true),
     onToggle: (open) => {
       setDisclosure('section-capture', open);
+      // Collapsing is the "done with the region" gesture (M14-FIX-01):
+      // the preview takes the lead back. Instant scroll — reduced
+      // motion by construction.
+      if (!open) window.scrollTo(0, 0);
     },
   });
   captureSection.panel.append(captureRow, captureMeta, thumbWrap, cropReadout, draftBadge);
   sections.push(captureSection);
+  captureSectionElement = captureSection.element;
 
-  /** Mount the capture section first in the panel, per-session. */
+  /**
+   * Mount the capture section above the preview, per-session
+   * (M14-FIX-01, superseding EXT-12's panel-first slot on the
+   * owner's ask): tweak → lock → collapse → progress, with the
+   * region leading the page while it is the task at hand. The move
+   * is a DOM mount, never CSS `order`, so reading, visual and tab
+   * order stay one thing. Collapsing or locking hands the lead back
+   * to the preview (scroll to top — instant, reduced-motion safe).
+   */
   function showCaptureSection(): void {
-    controls.insertBefore(captureSection.element, controls.firstElementChild);
+    content.insertBefore(captureSection.element, previewSection);
     // First appearance opens; thereafter the persisted choice wins.
     captureSection.setOpen(disclosureOpen('section-capture', true));
     refreshSections();
@@ -2354,9 +2414,13 @@ function build(app: HTMLElement): void {
    */
   function announceCrop(): void {
     if (cropRect === null) return;
+    // While aspect is unlocked the height is region-driven, and the
+    // readout says so the moment it derives (the signed EXT-15 rule:
+    // a derived dimension is named, never silent).
+    const derivedNote = aspectFollows ? '' : ' (height follows the region)';
     cropReadout.textContent =
       `${SCALE_LABELS.captureRegion} ${String(cropRect.width)} × ${String(cropRect.height)} px ` +
-      `at (${String(cropRect.x)}, ${String(cropRect.y)}) → ${patternSummary(scales.pattern)}`;
+      `at (${String(cropRect.x)}, ${String(cropRect.y)}) → ${patternSummary(scales.pattern)}${derivedNote}`;
     // The section summary précis carries the same state while folded.
     captureSection.refreshSummary();
   }
@@ -2393,6 +2457,17 @@ function build(app: HTMLElement): void {
     pauseButton.textContent = 'Pause capture';
     pauseButton.setAttribute('aria-pressed', 'false');
     pauseButton.hidden = true;
+    aspectButton.hidden = true;
+    aspectFollows = true;
+    aspectButton.setAttribute('aria-pressed', 'true');
+    // S1 return leg: the size fields go home to Design, first slot,
+    // focus preserved across the reparent.
+    const sizeFocus = patternGroup.contains(document.activeElement)
+      ? (document.activeElement as HTMLElement)
+      : null;
+    designSection.panel.insertBefore(patternGroup, designSection.panel.firstElementChild);
+    sizeFocus?.focus();
+    syncHeightDerivedState();
     capture?.video.remove();
     capture = null;
     cropRect = null;
@@ -2506,6 +2581,20 @@ function build(app: HTMLElement): void {
       stopCaptureButton.hidden = false;
       lockButton.hidden = false;
       pauseButton.hidden = false;
+      // Each session starts with aspect following the design — the
+      // signed default (M14-EXT-15/A); session-only, never persisted.
+      aspectFollows = true;
+      aspectButton.setAttribute('aria-pressed', 'true');
+      aspectButton.hidden = false;
+      // S1: the size fields join the capture surface for the session —
+      // one "what am I stitching" place; moved, never duplicated
+      // (D90 rule). Reparenting would drop focus, so it is restored.
+      const sizeFocus = patternGroup.contains(document.activeElement)
+        ? (document.activeElement as HTMLElement)
+        : null;
+      captureSection.panel.insertBefore(patternGroup, cropReadout);
+      sizeFocus?.focus();
+      syncHeightDerivedState();
       captureMeta.hidden = false;
       captureMeta.textContent = `Capturing ${session.label}.`;
       // Mount the live thumbnail with the full frame selected; the
@@ -2519,11 +2608,14 @@ function build(app: HTMLElement): void {
       updateSourceEntry();
       // Source replacement → auto-fit (M14-EXT-08).
       preview.resetView();
-      // The capture surface mounts first in the settings (M14-EXT-12);
+      // The capture surface mounts above the preview (M14-FIX-01);
       // the user chose capture, so the context change is expected —
-      // and said, after the cold-exit line so the specific wins.
+      // said after the cold-exit line so the specific wins, and focus
+      // hands to the section's own toggle: the user's gesture was
+      // "set up a capture", and this is where that happens.
       showCaptureSection();
-      status.textContent = 'Capture started — region controls at the top of settings.';
+      status.textContent = 'Capture started — region controls above the preview.';
+      document.getElementById('section-capture-toggle')?.focus();
       // Largest region with the pattern's aspect, centred — the source
       // rarely shares the design's proportions, so a full-frame default
       // would start the session outside the lock.
@@ -2535,11 +2627,18 @@ function build(app: HTMLElement): void {
       announceCrop();
       // Source dimensions can change mid-session (e.g. the shared
       // window is resized): re-fit the region rather than let it point
-      // off-frame, keeping the aspect on the way.
+      // off-frame — keeping the aspect on the way while locked; while
+      // unlocked, clamp to the new bounds and adopt any forced shape
+      // change (M14-EXT-15/A).
       session.video.addEventListener('resize', () => {
         const bounds = captureBounds();
         if (bounds === null || cropRect === null) return;
-        cropRect = constrainRect(cropRect, bounds, config.grid, 'center');
+        if (aspectFollows) {
+          cropRect = constrainRect(cropRect, bounds, config.grid, 'center');
+        } else {
+          cropRect = clampRect(cropRect, bounds);
+          adoptRegionShape();
+        }
         renderCrop();
       });
       session.onEnded(() => {
@@ -2596,6 +2695,48 @@ function build(app: HTMLElement): void {
     cropOverlay.classList.toggle('locked', cropLocked);
     status.textContent = cropLocked ? 'Capture region locked.' : 'Capture region unlocked.';
     captureSection.refreshSummary();
+    // Locking is the other "done with the region" gesture
+    // (M14-FIX-01): the preview takes the lead back.
+    if (cropLocked) window.scrollTo(0, 0);
+  });
+
+  /**
+   * The height field is region-driven while aspect is unlocked
+   * (M14-EXT-15/A): a value any drag overwrites must not be editable
+   * — disable it and say why in its own helper (A9 adjacency).
+   */
+  function syncHeightDerivedState(): void {
+    const heightInput = document.getElementById('pattern-height');
+    const helper = document.getElementById('pattern-height-helper');
+    const derived = capture !== null && !aspectFollows;
+    if (heightInput instanceof HTMLInputElement) heightInput.disabled = derived;
+    if (helper !== null) {
+      helper.textContent = derived
+        ? 'Follows the region while aspect is unlocked'
+        : SCALE_LABELS.patternHeightHelper;
+    }
+  }
+
+  aspectButton.addEventListener('click', () => {
+    aspectFollows = !aspectFollows;
+    aspectButton.setAttribute('aria-pressed', String(aspectFollows));
+    if (aspectFollows) {
+      // Re-adopting the design's aspect is idempotent here: the
+      // unlocked state kept design aspect equal to the region's, so
+      // the constrain is a snap at most, never a jump.
+      const bounds = captureBounds();
+      if (bounds !== null && cropRect !== null) {
+        cropRect = constrainRect(cropRect, bounds, config.grid, 'center');
+        renderCrop();
+        announceCrop();
+      }
+      status.textContent = 'Aspect follows the design again.';
+    } else {
+      status.textContent =
+        'Aspect unlocked — pins drag freely, and the design height follows the region.';
+    }
+    syncHeightDerivedState();
+    captureSection.refreshSummary();
   });
 
   // Pointer interaction: hit-test decides move / resize-by-handle /
@@ -2647,29 +2788,38 @@ function build(app: HTMLElement): void {
     const point = overlayToSource(event);
     const dx = point.x - cropDrag.startX;
     const dy = point.y - cropDrag.startY;
-    // A move changes no dimension, so it needs no re-aspecting; every
-    // route that *can* change one ends in constrainRect.
+    // A move changes no dimension, so it needs no re-aspecting. Every
+    // shape-changing route constrains to the design's aspect — unless
+    // the aspect is unlocked, or shift frees the pin for this gesture
+    // (M14-EXT-15, signed A + D); the free shape is adopted as the
+    // design height at pointerup, not per move.
+    const free = !aspectFollows || event.shiftKey;
     if (cropDrag.mode === 'inside') {
       cropRect = moveRect(cropDrag.startRect, dx, dy, bounds);
     } else if (cropDrag.mode === 'draw') {
-      cropRect = constrainRect(
-        {
-          x: Math.min(cropDrag.startX, point.x),
-          y: Math.min(cropDrag.startY, point.y),
-          width: Math.abs(dx),
-          height: Math.abs(dy),
-        },
-        bounds,
-        config.grid,
-        drawAnchor(cropDrag.startX, cropDrag.startY, point.x, point.y),
-      );
+      const drawn = {
+        x: Math.min(cropDrag.startX, point.x),
+        y: Math.min(cropDrag.startY, point.y),
+        width: Math.abs(dx),
+        height: Math.abs(dy),
+      };
+      cropRect = free
+        ? clampRect(drawn, bounds)
+        : constrainRect(
+            drawn,
+            bounds,
+            config.grid,
+            drawAnchor(cropDrag.startX, cropDrag.startY, point.x, point.y),
+          );
     } else {
-      cropRect = constrainRect(
-        resizeRect(cropDrag.startRect, cropDrag.mode, dx, dy, bounds),
-        bounds,
-        config.grid,
-        oppositeAnchor(cropDrag.mode),
-      );
+      cropRect = free
+        ? resizeRect(cropDrag.startRect, cropDrag.mode, dx, dy, bounds)
+        : constrainRect(
+            resizeRect(cropDrag.startRect, cropDrag.mode, dx, dy, bounds),
+            bounds,
+            config.grid,
+            oppositeAnchor(cropDrag.mode),
+          );
     }
     renderCrop();
   });
@@ -2677,6 +2827,9 @@ function build(app: HTMLElement): void {
     if (cropDrag === null) return;
     cropDrag = null;
     cropOverlay.releasePointerCapture(event.pointerId);
+    // A free gesture's shape becomes the design height at the gesture
+    // end (M14-EXT-15/A+D); the guard makes constrained ends a no-op.
+    adoptRegionShape();
     announceCrop();
     log.debug('capture', 'crop region set', { ...(cropRect ?? {}) });
   });
@@ -2696,14 +2849,16 @@ function build(app: HTMLElement): void {
     };
     const move = delta[event.key];
     if (move === undefined) return;
+    // Shift+arrows resize; with aspect unlocked the resize is free and
+    // each press adopts the shape (a press is one deliberate act, so
+    // per-press is the keyboard's gesture end — M14-EXT-15/A). The
+    // locked keyboard route to a free resize is the aspect toggle.
     cropRect = event.shiftKey
-      ? constrainRect(
-          resizeRect(cropRect, 'se', move[0], move[1], bounds),
-          bounds,
-          config.grid,
-          'nw',
-        )
+      ? aspectFollows
+        ? constrainRect(resizeRect(cropRect, 'se', move[0], move[1], bounds), bounds, config.grid, 'nw')
+        : resizeRect(cropRect, 'se', move[0], move[1], bounds)
       : moveRect(cropRect, move[0], move[1], bounds);
+    if (event.shiftKey && !aspectFollows) adoptRegionShape();
     renderCrop();
     announceCrop();
     event.preventDefault();
@@ -2714,6 +2869,22 @@ function build(app: HTMLElement): void {
   input.addEventListener('change', () => {
     const file = imageFiles(input.files ?? []).at(0);
     if (file) void importBlob(file, 'file picker', file.name);
+  });
+
+  // Window-width guide (M14-FIX-04): while the window is being
+  // narrowed toward the companion posture, one debounced line in the
+  // existing status region names the floor — zero standing chrome,
+  // one announcement per resize burst, silent at roomy widths.
+  let widthGuideTimer = 0;
+  window.addEventListener('resize', () => {
+    window.clearTimeout(widthGuideTimer);
+    widthGuideTimer = window.setTimeout(() => {
+      if (window.innerWidth >= 960) return;
+      status.textContent =
+        window.innerWidth < 320
+          ? `Window ${String(window.innerWidth)} px — narrower than the supported 320 px floor.`
+          : `Window ${String(window.innerWidth)} px wide — works down to 320 px.`;
+    }, 350);
   });
 
   window.addEventListener('dragover', (event) => {

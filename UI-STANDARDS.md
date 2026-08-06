@@ -64,7 +64,11 @@ the Carbon/WCAG/Nielsen defaults above do not.
 - **Preview-first DOM order at every width**, with the settings panel to
   its right above 60 rem and stacked below it under that. Never reorder
   regions with CSS `order`: reading order, visual order, and tab order
-  must agree (M6-NARROW-01 / D52).
+  must agree (M6-NARROW-01 / D52). One owner-signed exception
+  (M14-FIX-01, D104): while a capture session runs, the Capture region
+  section mounts above the preview — a DOM mount, not CSS `order`, so
+  the three orders still agree; collapsing or locking the region hands
+  the lead back to the preview.
 - **Companion-window baseline.** The app must stay usable as a tall
   narrow window beside Photoshop: no page-level horizontal scrolling at
   320 CSS px, wide tables scrolling inside their own container, and the

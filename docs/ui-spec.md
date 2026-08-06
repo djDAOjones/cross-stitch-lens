@@ -35,23 +35,52 @@ Macro order is **unchanged** (preview-first at every width, no CSS
 `order`): header → layout (content column, then settings panel; panel
 right of content ≥ 60 rem, stacked below it under 60 rem).
 
-*(Amended M14-EXT-09/11, D95: the preview section is now the sticky
-dock unit — view strip · canvas host · compact status — pinned in
-both layouts while everything after it scrolls beneath; the info
-panel and dev profiling panel sit after it in the content flow, not
-inside it. At the companion width, scrolling past the preview's
-natural position caps the canvas to 40dvh; scrolling back restores
+*(Amended M14-EXT-09/11, D95: the preview section is the sticky
+unit — view strip · canvas host · compact status — pinned in both
+layouts while everything after it scrolls beneath; the info panel
+and dev profiling panel sit after it in the content flow, not inside
 it. Focus non-obscuration is held by `scroll-padding-top` sized to
-the docked worst case. DOM order is still preview-first with no CSS
+the pinned worst case. DOM order is still preview-first with no CSS
 `order`.)*
+
+*(Re-amended M14-FIX-03/06, D103 — superseding D95's scroll-linked
+dock: the canvas height now **hugs the fitted design** under
+auto-fit — fit the width, follow the aspect — clamped to a 10rem
+floor and a posture cap (40dvh stacked, 60dvh wide), constant under
+scroll. The scrolled-past-caps-to-40dvh behaviour is retired: its
+height change fed back through scroll anchoring as a docked↔undocked
+flap (owner's live session). Nothing in the layout is scroll-linked;
+manual zoom freezes the height where the user left it; preview
+focus fills the window by flex as before.)*
 
 *(Amended M14-EXT-12, D97: during a capture session the whole
 capture surface — thumb + crop overlay, session controls, readout,
 draft badge — lives in a dynamic **Capture region** accordion
-section mounted first in the settings panel, open on first
-appearance with persisted collapse; the source section in the
-content column serves the cold entry only. Supersedes D88's
-below-the-preview placement on the owner's authority, D91.)*
+section, open on first appearance with persisted collapse; the
+source section in the content column serves the cold entry only.
+Supersedes D88's below-the-preview placement on the owner's
+authority, D91.)*
+
+*(Re-amended M14-FIX-01, D104 — superseding D97's panel-first slot
+on the owner's first-pass review: the section mounts **in the
+content column above the preview** while a session runs — tweak →
+lock → collapse → progress. Session start hands focus to the
+section's toggle; collapsing or locking scrolls the preview back
+into the lead. The preview-first order gains this one session-time
+exception (a DOM mount, never CSS `order`); the section follows the
+source region's visibility, so preview focus still strips it, and it
+no longer hides with the settings panel.)*
+
+*(Amended M14-EXT-15, D101 — owner-signed A + D + S1: the section
+gains an **"Aspect follows design"** toggle button, pressed by
+default and reset each session. Unlocked, pins drag freely and the
+design height follows the region (`deriveGridHeight`; stitches stay
+square, nothing distorts); the height field disables with the reason
+in its helper, and the readout appends "(height follows the
+region)". Shift-drag frees a pin temporarily while locked — the
+keyboard route to a free resize is the toggle itself. The Design
+width/height fields join this section for the session (S1 — moved,
+never duplicated) and return to Design on session end.)*
 
 ```text
 header        h1 · shell bar [Hide/Show settings · Preview focus]
@@ -209,7 +238,8 @@ implemented in project code.
 | Compare + Split | C | view strip | ghost toggle button + inline slider | 1–2 |
 | Grid / Numbers | C | view strip (moved from Appearance, EXT-11; anatomy change: switches → toggle buttons) | ghost toggle buttons, aria-pressed | 1 |
 | zoom % · dimensions readouts | E | view strip (row end) | inline text | 0 |
-| Pattern width / height | E | Design (open) | number input, full anatomy | 1–2 |
+| Design width / height | E | Design (open); during a capture session they join the Capture region section (EXT-15/S1, D101 — moved, never duplicated) and the height field disables while region-derived | number input, full anatomy | 1–2 |
+| Aspect follows design | C | Capture region section (EXT-15/A, D101): toggle button, pressed by default, session-only; off frees the pins and the design height follows the region; shift-drag is the temporary exception (D) | toggle button, aria-pressed | 1–2 |
 | Colour mode | E | Design | select | 1–2 |
 | Threads to choose from (source) | C | Design | select | 1–2 |
 | Preset mode (strict/prefer) | D | Design → shown with preset source | select (contextual reveal) | 2 |
@@ -306,7 +336,10 @@ no colour-only state.
 
 ## 7. Unchanged invariants (the "what does not change" list)
 
-Preview-first DOM order at every width; no CSS `order`; 320 px
+Preview-first DOM order at every width *(amended D104: one
+owner-signed session-time exception — the Capture region section
+precedes the preview while a session runs, as a DOM mount)*; no CSS
+`order`; 320 px
 companion baseline (no page-level horizontal scroll; preview keeps
 the width majority); preview-focus semantics (exit control persistent,
 compact status only, session-only state); panel-collapse semantics +
@@ -317,7 +350,11 @@ dependencies; exports re-run at full quality; thread colours never
 routed through UI tokens; conflict sentences remain full sentences in
 a polite live region; canvas keyboard operability; the four
 resolutions stay four independently-owned quantities (the derived
-size line is a readout, not a control).
+size line is a readout, not a control). *(Amended D101: with aspect
+unlocked — M14-EXT-15 — the region's shape writes the design height
+by design; the quantities stay independently owned in the default
+locked state, and the one sanctioned crossing is announced in the
+readout while it is live.)*
 
 ## 8. Audit findings answered (closure index)
 

@@ -85,10 +85,19 @@ async function whenReady(video: HTMLVideoElement): Promise<void> {
  * `getDisplayMedia` error — map it with {@link captureErrorMessage}.
  */
 export async function startCapture(): Promise<CaptureSession> {
+  // Keep the app out of its own capture where the platform allows
+  // (M14-FIX-02): `selfBrowserSurface` removes this tab from the
+  // picker (Chromium 107+); the surface hints steer the picker
+  // toward window shares. A full-screen share can still include the
+  // app's window — no web API excludes one window from a monitor
+  // capture; the expectation copy nudges window-sharing for that.
+  // Unknown members are ignored by browsers that predate them.
   const stream = await navigator.mediaDevices.getDisplayMedia({
     video: true,
     audio: false,
-  });
+    selfBrowserSurface: 'exclude',
+    surfaceSwitching: 'include',
+  } as DisplayMediaStreamOptions);
   const track = stream.getVideoTracks()[0];
   if (track === undefined) {
     for (const t of stream.getTracks()) t.stop();

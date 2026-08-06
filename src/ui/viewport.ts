@@ -61,6 +61,29 @@ export function fitView(
 }
 
 /**
+ * The host height that hugs the fitted design (M14-FIX-03): fit the
+ * width, follow the design's aspect, clamp to the posture's floor and
+ * cap. Every unit is the caller's (CSS px here). Deliberately a
+ * function of host *width* and design shape only — never of the host
+ * height it produces — so the ResizeObserver fixed point is immediate
+ * and the geometry cannot feed itself (the M14-FIX-06 rule: nothing
+ * scroll- or self-dependent in layout height).
+ */
+export function hugHeight(
+  imgW: number,
+  imgH: number,
+  hostW: number,
+  margin: number,
+  minH: number,
+  maxH: number,
+): number {
+  if (imgW <= 0 || imgH <= 0) return minH;
+  const availW = Math.max(1, hostW - 2 * margin);
+  const wanted = (imgH * availW) / imgW + 2 * margin;
+  return Math.round(Math.min(Math.max(wanted, minH), maxH));
+}
+
+/**
  * Centre `img` at an explicit scale — the manual/restored-zoom path.
  * Shares fitView's centring so a saved manual scale reopens framed the
  * same way a fit does.

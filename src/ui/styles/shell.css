@@ -209,10 +209,13 @@ main {
 .preview-host {
   position: relative;
   width: 100%;
-  /* Dynamic viewport units: `vh` on mobile Safari measures the
-    chrome-less viewport and pushes controls off-screen. */
-  height: 60dvh;
-  min-height: 16rem;
+  /* Pre-first-frame default only: once a design renders, the
+    controller sets an inline height that hugs the fitted design
+    (M14-FIX-03) — capped per posture, never scroll-linked
+    (M14-FIX-06). Dynamic viewport units: `vh` on mobile Safari
+    measures the chrome-less viewport and pushes controls off-screen. */
+  height: 40dvh;
+  min-height: 10rem;
   overflow: hidden;
   border: 1px solid var(--csl-border-strong);
   /* Unengaged the canvas is inert (M14-EXT-10): no grab cursor, and
@@ -252,9 +255,6 @@ main {
   background: var(--csl-background);
 }
 
-/* Docked (M14-EXT-09): scrolled past its natural position at the
-  companion width, the canvas caps so a useful settings viewport
-  (> 50 % of the window) remains beneath the pinned layer. */
 @media (max-width: 60rem) {
   /* The sticky pin must survive the whole page scroll, but .content
     ends before the settings do (they are its *sibling* in the
@@ -265,14 +265,17 @@ main {
     display: contents;
   }
 
-  .preview-docked .preview-host {
-    height: 40dvh;
-    min-height: 10rem;
+  /* Tighter stacking rhythm at the companion posture (M14-FIX-05):
+    with .content dissolved, this gap runs between every stacked
+    region — preview, stats, status, source, settings. */
+  .app-layout {
+    gap: var(--csl-spacing-03);
   }
 
-  /* Keyboard focus must never land beneath the dock (UI-STANDARDS →
-    Operable, focus non-obscuration): reserve the docked preview's
-    worst-case height ahead of any programmatic scroll-to-focus. */
+  /* Keyboard focus must never land beneath the pinned preview
+    (UI-STANDARDS → Operable, focus non-obscuration): reserve its
+    worst-case hugged height (the 40dvh narrow cap + strip rows)
+    ahead of any programmatic scroll-to-focus. */
   html {
     scroll-padding-top: calc(40dvh + 8rem);
   }
@@ -343,7 +346,9 @@ body.preview-focus .app-header .meta {
 
 body.preview-focus .preview-host {
   flex: 1 1 auto;
-  height: auto;
+  /* !important beats the controller's inline hug height (M14-FIX-03):
+    focus mode fills the window by flex, whatever auto-fit set. */
+  height: auto !important;
 }
 
 /* The compact status is the only status in focus mode, so it keeps
@@ -363,6 +368,16 @@ body.preview-focus .preview-host {
 .debug-panel {
   max-width: 100%;
   overflow-x: auto;
+}
+
+/* Compressed info block (M14-FIX-05): the stats line, colours fold
+  and status stack directly under the preview — every default text
+  margin here is height the companion posture pays for. */
+.info-panel p,
+.info-panel details,
+#status {
+  margin-top: var(--csl-spacing-02);
+  margin-bottom: var(--csl-spacing-02);
 }
 
 .info-panel table,

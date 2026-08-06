@@ -93,3 +93,16 @@
   beyond Floyd–Steinberg" is listed as out-of-MVP-scope; M8 deliberately
   shipped them post-MVP, so the guard reads as stale against the current
   feature set (source: D61/D62)
+- [ ] 2026-08-06 AGENTS §The four resolutions — the D101 split text (aspect
+  "locked (the default)", height-only derive via `deriveGridHeight`) is
+  superseded: "Lock aspect" defaults OFF and both dimensions derive through
+  a held source-px-per-stitch scale (`deriveGridSize`) (source: D107)
+- [ ] 2026-08-06 UI-STANDARDS §Capture UX — "dimensions readout in source
+  pixels and resulting stitches" retired: the numbers live in the Stats
+  section, gesture ends announce via status (source: D107)
+- [ ] 2026-08-06 UI-STANDARDS §Layout model — "Panels collapse; the canvas
+  never does" superseded: the preview collapses like any region
+  (session-only, control outside it, capture re-expands) (source: D107)
+- [ ] 2026-08-06 UI-STANDARDS §Shell presentation modes — preview focus
+  retired whole (M6-FOCUS-01 → EXT-24); the section's focus-mode rules
+  (persistent exit control, focus-only status) are dead letters (source: D107)

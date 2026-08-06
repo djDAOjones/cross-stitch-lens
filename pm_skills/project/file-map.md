@@ -24,8 +24,8 @@
 - `crates` — 4 file(s)
 - `docs` — 12 file(s)
 - `scripts` — 7 file(s)
-- `src` — 84 file(s)
-- `tests` — 87 file(s)
+- `src` — 83 file(s)
+- `tests` — 88 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -161,7 +161,6 @@
 - `src/ui/sample.ts` — deterministic drawn test-card for "Try a sample"; feeds the normal source path
 - `src/ui/scales.ts` — The four resolutions kept apart — pattern/capture/preview/export — with unit-named fields, reference-sharing updaters, and the visible label set.
 - `src/ui/shell.ts` — One shell-state model for panel collapse + preview focus; `visibility()` is the single composition rule for what is hidden.
-- `src/ui/status-line.ts` — Compact status line for preview focus, derived from one owned snapshot rather than scraped DOM.
 - `src/ui/styles/base.css` — element layer: reset, [hidden] contract, focus ring, type ramp, generic fields/buttons/toggle/tables
 - `src/ui/styles/shell.css` — shell chrome: header, columns, preview host, focus-mode chain, capture surfaces, panel containers
 - `src/ui/styles/tokens.css` — design tokens: project + Carbon-convention systems, both schemes, @pair contrast contract (D80)
@@ -209,6 +208,7 @@
 - `tests/capture-session.test.ts` — capture pure half: error messages, surface labels
 - `tests/color-convert.test.ts` — golden: Lab reference values + round-trips
 - `tests/controls.test.ts` — number-input clamping (pure half of controls)
+- `tests/debug-menu.test.ts` — Debug-menu pure halves: mailto redaction boundary, announced outcomes (M14-EXT-26)
 - `tests/debug-panel.test.ts` — timing-window aggregation, cap, stage-change reset, ms formatting
 - `tests/diagnostics-bundle.test.ts` — redaction (secret keys/values, fail-closed, caps), bundle shape, status text
 - `tests/dither-algorithms.test.ts` — M8 method invariants: determinism, membership+sidecar, boundaries, distinctness, tile validity
@@ -231,6 +231,7 @@
 - `tests/helpers/lut-f32.ts` — f32 mirror of the WGSL LUT arithmetic (fround per op)
 - `tests/helpers/threads.ts` — Thread fixtures — one place identity-carrying test palettes are built
 - `tests/helpers/wgsl-reserved.ts` — WGSL reserved-word list + identifier scan (GPU-free shader guard)
+- `tests/highlight.test.ts` — highlight-mask invariants: scrim membership, compare composition, index keying (M14-EXT-17)
 - `tests/info-panel.test.ts` — row cap/overflow, thread-vs-hex labels, percent format
 - `tests/library-records.test.ts` — Library file round trips, corrupt/oversized import, merge, collisions, memory store
 - `tests/lut-cache.test.ts` — cache identity by palette content, LRU bound, GPU-LUT sanity rejection
@@ -249,7 +250,6 @@
 - `tests/scales.test.ts` — The 4×4 independence matrix (identity, not equality) plus the label-distinctness checks.
 - `tests/shell.test.ts` — Shell visibility composition, panel/focus label state, and preference fallback including a throwing storage.
 - `tests/stats.test.ts` — stats partition/sum/sort/reference invariants
-- `tests/status-line.test.ts` — Compact-status field order, capture/freshness state coverage, and the never-empty invariant.
 - `tests/thread-equivalents.test.ts` — Nearest cross-brand equivalent: ordering, labelling, curated over computed
 - `tests/ui-baseline/baseline.test.ts` — M14 byte-identity tripwire: pins fixture/pipeline/project hashes inside check
 - `tests/ui-baseline/exports/chart-200x200.pdf` — M14 baseline capture: chart PDF (compare date-normalised, D74)

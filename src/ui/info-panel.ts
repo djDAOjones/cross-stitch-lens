@@ -1,9 +1,11 @@
 /**
- * Info panel (§11 subset bound to the preview): a summary line plus a
- * colours-by-usage table, re-rendered per processed frame. The row
- * model is pure (tested in node); only createInfoPanel touches the
- * DOM. Thread colours in swatches are content, not UI tokens
- * (UI-STANDARDS → "Colour fidelity").
+ * Info panel (§11 subset bound to the preview): the colours-by-usage
+ * table, re-rendered per processed frame. The headline numbers moved
+ * to the Stats section (M14-EXT-21 — one owner per figure), and the
+ * fold line is the bare heading (M14-EXT-22 — no stat rides a closed
+ * fold). The row model is pure (tested in node); only createInfoPanel
+ * touches the DOM. Thread colours in swatches are content, not UI
+ * tokens (UI-STANDARDS → "Colour fidelity").
  */
 
 import type { ColorUsage, DesignStats } from '../core/stats.ts';
@@ -96,42 +98,6 @@ export function buildRows(perColor: ColorUsage[], options: RowOptions = {}): Row
   return { rows, overflow };
 }
 
-/**
- * The one-line design summary shown above the table. No dimensions
- * (M14-FIX-05): the view strip's readout already says "200 × 200
- * stitches" a few lines up, and the duplication was height the
- * companion posture cannot spare.
- */
-export function summaryText(stats: DesignStats): string {
-  const stitches = stats.stitchCount === 1 ? 'stitch' : 'stitches';
-  const colours = stats.colorCount === 1 ? 'colour' : 'colours';
-  return (
-    `${formatCount(stats.stitchCount)} ${stitches} ` +
-    `(${formatCount(stats.emptyCount)} empty) · ` +
-    `${formatCount(stats.colorCount)} ${colours}`
-  );
-}
-
-/**
- * The disclosure's visible line (M14-EXT-14): collapsed by default,
- * the summary must still inform — count plus the leading thread, so
- * the table's headline survives the fold under the default-8 palette.
- * Derived from owned stats at render, never scraped from the DOM.
- */
-export function usageSummaryLabel(
-  stats: DesignStats,
-  brandNames?: ReadonlyMap<string, string>,
-): string {
-  const lead = stats.perColor[0];
-  if (lead === undefined) return 'Colours by usage';
-  const thread = lead.thread;
-  const leadLabel =
-    thread === undefined
-      ? lead.hex
-      : `${brandNames?.get(thread.brandId) ?? thread.brandId} ${thread.reference}`;
-  return `Colours by usage — ${formatCount(stats.colorCount)} · ${leadLabel} leads`;
-}
-
 /** The live info panel: a DOM element plus its per-frame updater. */
 export interface InfoPanel {
   element: HTMLElement;
@@ -182,12 +148,11 @@ export function createInfoPanel(
   const element = doc.createElement('section');
   element.className = 'info-panel';
 
-  const summary = doc.createElement('p');
-  summary.id = 'design-stats';
-  summary.textContent = 'No design yet — stats appear after import.';
-
   const details = doc.createElement('details');
   details.className = 'depth-reveal';
+  // The fold line is the bare heading (M14-EXT-22): the count and
+  // leading-thread précis retired with every other fold stat — the
+  // numbers live in the Stats section, the detail lives inside.
   const detailsSummary = doc.createElement('summary');
   detailsSummary.textContent = 'Colours by usage';
   const detailsBody = doc.createElement('div');
@@ -231,7 +196,7 @@ export function createInfoPanel(
   const tbody = doc.createElement('tbody');
   table.append(caption, thead, tbody);
   detailsBody.append(table);
-  element.append(summary, details);
+  element.append(details);
 
   // Thread highlight (M14-EXT-17): one selected palette index at a
   // time, session-only. Selection is keyed by palette index — the
@@ -262,10 +227,6 @@ export function createInfoPanel(
   });
 
   function update(stats: DesignStats): void {
-    summary.textContent = summaryText(stats);
-    // The caption keeps the table's accessible name; this line is the
-    // disclosure's label, so the name is still said once per surface.
-    detailsSummary.textContent = usageSummaryLabel(stats, brandNames);
     const { rows, overflow } = buildRows(stats.perColor, { brandNames });
     const columns = highlight === undefined ? 3 : 4;
     tbody.replaceChildren();

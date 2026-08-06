@@ -87,13 +87,16 @@ async function whenReady(video: HTMLVideoElement): Promise<void> {
 export async function startCapture(): Promise<CaptureSession> {
   // Keep the app out of its own capture where the platform allows
   // (M14-FIX-02): `selfBrowserSurface` removes this tab from the
-  // picker (Chromium 107+); the surface hints steer the picker
-  // toward window shares. A full-screen share can still include the
+  // picker (Chromium 107+). `displaySurface: 'monitor'` asks the
+  // picker to open on the entire-screen tab (M14-EXT-19, the owner's
+  // preferred flow) — a hint, not a guarantee: the picker stays
+  // user-owned, and a browser that ignores it degrades to its own
+  // default with no error. A full-screen share can still include the
   // app's window — no web API excludes one window from a monitor
-  // capture; the expectation copy nudges window-sharing for that.
+  // capture; the expectation copy stays honest about that.
   // Unknown members are ignored by browsers that predate them.
   const stream = await navigator.mediaDevices.getDisplayMedia({
-    video: true,
+    video: { displaySurface: 'monitor' },
     audio: false,
     selfBrowserSurface: 'exclude',
     surfaceSwitching: 'include',

@@ -286,16 +286,28 @@ export function fullAspectRect(bounds: Bounds, grid: PatternGrid, min = MIN_CROP
 }
 
 /**
- * The design height (stitches) a free-shaped region implies
- * (M14-EXT-15, option A): the width in stitches stays the user's,
- * height follows the region's shape, so stitches stay square and
- * nothing distorts. Clamped to [1, maxSide]. While aspect is
- * unlocked this is the one direction data flows — region shape
- * writes design height, never the reverse.
+ * The design size (stitches) a free-shaped region implies at a fixed
+ * source-px-per-stitch scale (M14-EXT-20, superseding the D101
+ * height-only derive): both dimensions follow the region through one
+ * scale, so stitches stay square and dragging the region visibly
+ * trades area for stitches at the shown resolution. Clamped to
+ * [1, maxSide] per side — compare against {@link deriveClamped} to
+ * know when the cap bit. While aspect is unlocked this is the one
+ * direction data flows — region shape writes design size, never the
+ * reverse.
  */
-export function deriveGridHeight(widthStitches: number, rect: CropRect, maxSide: number): number {
-  if (rect.width <= 0) return widthStitches;
-  return clamp(Math.round((widthStitches * rect.height) / rect.width), 1, maxSide);
+export function deriveGridSize(pxPerStitch: number, rect: CropRect, maxSide: number): PatternGrid {
+  const scale = Number.isFinite(pxPerStitch) && pxPerStitch > 0 ? pxPerStitch : 1;
+  return {
+    width: clamp(Math.round(rect.width / scale), 1, maxSide),
+    height: clamp(Math.round(rect.height / scale), 1, maxSide),
+  };
+}
+
+/** True when {@link deriveGridSize} had to clamp either side. */
+export function deriveClamped(pxPerStitch: number, rect: CropRect, maxSide: number): boolean {
+  const scale = Number.isFinite(pxPerStitch) && pxPerStitch > 0 ? pxPerStitch : 1;
+  return Math.round(rect.width / scale) > maxSide || Math.round(rect.height / scale) > maxSide;
 }
 
 /**

@@ -19,6 +19,24 @@
 
 ## M14 — UI/UX excellence (in progress — agent half complete, ACCEPT-01 open)
 
+- M14-EXT-25 (2026-08-06) — owner picked option A at the sign-off
+  gate: the Source button carries the session ("Capturing — Source";
+  Stop/Pause/Capture frame lead its modal, primary Stop), the inline
+  row reduces to Lock region beside Lock aspect, nothing cut. See
+  decision-log D108.
+- M14-EXT-19, M14-EXT-20, M14-EXT-21, M14-EXT-22, M14-EXT-23,
+  M14-EXT-24, M14-EXT-26, M14-EXT-27, M14-EXT-28, M14-EXT-29,
+  M14-EXT-30 (2026-08-06) — the fourth look lands in one auto-jazz
+  run: entire-screen picker hint; "Lock aspect" default-off with
+  both dimensions deriving through a visible Stitch size scale and a
+  compact Size row; a Stats section takes every headline figure while
+  the region readout and all fold summaries retire (bare headings
+  app-wide); the preview collapses like any region and preview focus
+  retires whole; a Debug menu gathers copy/download/email; engaged
+  trackpad pinch and pan; Colour stands alone with the
+  Threadify/constrain recut; Appearance becomes Processing with the
+  grid geometry under the view strip. EXT-25 survives as the one
+  owner pick. See decision-log D107.
 - M14-FIX-05, M14-FIX-04, M14-FIX-02 (2026-08-05) — stats line loses
   its duplicated dimensions and the block tightens to 128 px; a
   debounced zero-chrome window-width guide in the status region; the

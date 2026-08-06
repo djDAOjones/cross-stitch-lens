@@ -6,15 +6,9 @@
 
 import { describe, expect, it } from 'vitest';
 
-import type { ColorUsage, DesignStats } from '../src/core/stats.ts';
+import type { ColorUsage } from '../src/core/stats.ts';
 import { thread } from './helpers/threads.ts';
-import {
-  buildRows,
-  formatPercent,
-  ROW_CAP,
-  summaryText,
-  usageSummaryLabel,
-} from '../src/ui/info-panel.ts';
+import { buildRows, formatPercent, ROW_CAP } from '../src/ui/info-panel.ts';
 
 function usage(overrides: Partial<ColorUsage> = {}): ColorUsage {
   return {
@@ -100,65 +94,6 @@ describe('buildRows', () => {
   });
 });
 
-describe('summaryText', () => {
-  it('reads the stitch/empty split and colour count — no dimensions (M14-FIX-05)', () => {
-    const stats: DesignStats = {
-      width: 200,
-      height: 150,
-      totalCells: 30000,
-      stitchCount: 25500,
-      emptyCount: 4500,
-      colorCount: 42,
-      perColor: [],
-      identified: false,
-    };
-    // Dimensions live in the strip readout; repeating them here was
-    // duplicated height (M14-FIX-05, D105).
-    expect(summaryText(stats)).toBe('25,500 stitches (4,500 empty) · 42 colours');
-  });
-
-  it('uses singular forms for one stitch or one colour', () => {
-    const stats: DesignStats = {
-      width: 1,
-      height: 1,
-      totalCells: 1,
-      stitchCount: 1,
-      emptyCount: 0,
-      colorCount: 1,
-      perColor: [],
-      identified: false,
-    };
-    expect(summaryText(stats)).toBe('1 stitch (0 empty) · 1 colour');
-  });
-});
-
-describe('usageSummaryLabel (M14-EXT-14)', () => {
-  const BRANDS = new Map([['dmc', 'DMC']]);
-  const base: DesignStats = {
-    width: 10,
-    height: 10,
-    totalCells: 100,
-    stitchCount: 100,
-    emptyCount: 0,
-    colorCount: 8,
-    perColor: [],
-    identified: true,
-  };
-
-  it('carries count and the leading thread while collapsed', () => {
-    const stats: DesignStats = {
-      ...base,
-      perColor: [usage({ thread: thread('310', 'Black', [0, 0, 0], { brandId: 'dmc' }) })],
-    };
-    expect(usageSummaryLabel(stats, BRANDS)).toBe('Colours by usage — 8 · DMC 310 leads');
-  });
-
-  it('falls back to the hex when the leader is unidentified', () => {
-    const stats: DesignStats = { ...base, perColor: [usage({ hex: '#123456' })] };
-    expect(usageSummaryLabel(stats, BRANDS)).toBe('Colours by usage — 8 · #123456 leads');
-  });
-
-  it('stays the plain name with no usage at all', () => {
-    expect(usageSummaryLabel(base, BRANDS)).toBe('Colours by usage');
-  });
-});
+// `summaryText` and `usageSummaryLabel` retired at M14-EXT-21/22: the
+// headline numbers live in the Stats section, and a collapsed fold is
+// its bare heading — no stat rides a fold line anywhere.

@@ -361,21 +361,22 @@ export function createPalettePanel(
   let state = initial;
   let query = '';
 
+  // No legend: the group is its section's only content from
+  // M14-EXT-28, so the Colour accordion header is the name (a legend
+  // would say it twice — the D83 rule).
   const element = doc.createElement('fieldset');
-  const legend = doc.createElement('legend');
-  legend.textContent = 'Colour';
 
-  const modeField = selectField(
+  // "Threadify colours" leads (M14-EXT-29, reading A of the memo,
+  // owner-coined name): the full-RGB↔threads boolean the old
+  // `Colour mode` select carried, as a switch. Off is unlimited
+  // colours; on converts to threads.
+  const threadifyToggle = toggleField(
     doc,
-    'colour-mode',
-    'Colour mode',
-    [
-      ['threads', 'Thread palette'],
-      ['rgb', 'Unlimited colours (no threads)'],
-    ],
-    'threads',
-    (value) => {
-      actions.setPaletteMode(value === 'threads');
+    'threadify-colours',
+    'Threadify colours',
+    initial.paletteMode,
+    (on) => {
+      actions.setPaletteMode(on);
     },
   );
 
@@ -419,27 +420,29 @@ export function createPalettePanel(
     },
   );
 
-  // --- colour count (M14-EXT-13, D92 anatomy) -----------------------
-  // A "Limit colours" switch + slider replace the mode select: off is
-  // the old 'all', and a slider end-stop for "no limit" was rejected
-  // because it conflates mode and count (error prevention). The
-  // "exactly" mode demotes to a depth checkbox — it modifies what the
-  // number *means*, and is remembered across an off/on cycle.
-  let lastLimitedMode: 'max' | 'exact' = initial.policy.count.mode === 'exact' ? 'exact' : 'max';
+  // --- colour count (M14-EXT-29 recut of the D92/D98 anatomy) ------
+  // A "Constrain number of colours" switch owns the count limit
+  // (today's meaning of off = the old 'all'); a slider end-stop for
+  // "no limit" stays rejected — it conflates mode and count. The
+  // `Use exactly this many` checkbox retired: the switch means "at
+  // most n" (D98's default conduct). A project file saved in exact
+  // mode still resolves exactly — core keeps the semantic — but the
+  // surface no longer writes it; an edit here writes 'max'.
   const limitToggle = toggleField(
     doc,
     'limit-colours',
-    'Limit colours',
+    'Constrain number of colours',
     initial.policy.count.mode !== 'all',
     (on) => {
       actions.setPolicy({
         ...state.policy,
-        count: { mode: on ? lastLimitedMode : 'all', n: state.policy.count.n },
+        count: { mode: on ? 'max' : 'all', n: state.policy.count.n },
       });
     },
   );
-  // Slider to 64 with a paired number input to the 512 ceiling: the
-  // slider covers the stitchable range, the field covers the rest.
+  // Colours: slider + number input + steppers, in lockstep
+  // (M14-EXT-29). Slider to 64 with the input to the 512 ceiling:
+  // the slider covers the stitchable range, the field the rest.
   const countWrap = doc.createElement('div');
   countWrap.className = 'field';
   const rangeLabel = doc.createElement('label');
@@ -473,30 +476,37 @@ export function createPalettePanel(
       actions.setPolicy({ ...state.policy, count: { mode: state.policy.count.mode, n: value } });
     },
   );
-  // Exact mode at depth, beside the thread-library disclosure: kept
-  // for D55's selected-vs-used honesty, off the everyday surface.
-  const exactWrap = doc.createElement('div');
-  exactWrap.className = 'field';
-  const exactRow = doc.createElement('div');
-  exactRow.className = 'toggle-row';
-  const exactBox = doc.createElement('input');
-  exactBox.type = 'checkbox';
-  exactBox.id = 'count-exact';
-  exactBox.checked = initial.policy.count.mode === 'exact';
-  const exactLabel = doc.createElement('label');
-  exactLabel.htmlFor = exactBox.id;
-  exactLabel.textContent = 'Use exactly this many';
-  exactBox.addEventListener('change', () => {
-    lastLimitedMode = exactBox.checked ? 'exact' : 'max';
-    if (state.policy.count.mode !== 'all') {
-      actions.setPolicy({
-        ...state.policy,
-        count: { mode: lastLimitedMode, n: state.policy.count.n },
-      });
-    }
+  // Steppers: one deliberate step per press. Short visible symbols
+  // with full accessible names — the sanctioned A2 anatomy the
+  // palette editor's ↑/↓ established. Their outcome is announced in
+  // a dedicated polite region: the slider and input announce their
+  // own values natively, a button press otherwise says nothing.
+  const countStatus = doc.createElement('p');
+  countStatus.className = 'visually-hidden';
+  countStatus.setAttribute('role', 'status');
+  const stepCount = (delta: number): void => {
+    const n = Math.min(512, Math.max(1, state.policy.count.n + delta));
+    if (n === state.policy.count.n) return;
+    countStatus.textContent = n === 1 ? '1 colour' : `${String(n)} colours`;
+    actions.setPolicy({ ...state.policy, count: { mode: state.policy.count.mode, n } });
+  };
+  const stepRow = doc.createElement('div');
+  stepRow.className = 'toolbar count-steppers';
+  const fewerButton = doc.createElement('button');
+  fewerButton.type = 'button';
+  fewerButton.textContent = '−';
+  fewerButton.setAttribute('aria-label', 'Fewer colours');
+  fewerButton.addEventListener('click', () => {
+    stepCount(-1);
   });
-  exactRow.append(exactBox, exactLabel);
-  exactWrap.append(exactRow);
+  const moreButton = doc.createElement('button');
+  moreButton.type = 'button';
+  moreButton.textContent = '+';
+  moreButton.setAttribute('aria-label', 'More colours');
+  moreButton.addEventListener('click', () => {
+    stepCount(1);
+  });
+  stepRow.append(fewerButton, moreButton, countStatus);
 
   // --- status -------------------------------------------------------
   const summary = doc.createElement('p');
@@ -707,7 +717,9 @@ export function createPalettePanel(
     const palette = selectedLibraryPalette();
     if (palette === undefined) return;
 
-    editorSummary.textContent = `Palette contents — ${palette.name} (${String(palette.threadIds.length)} threads)`;
+    // The fold line stays the bare 'Palette contents' (M14-EXT-22 —
+    // no stat rides a closed fold); the open heading names the
+    // palette and its size.
     const heading = doc.createElement('p');
     heading.className = 'group-label';
     heading.textContent = `Palette contents — ${palette.name} (revision ${String(palette.revision)})`;
@@ -818,17 +830,26 @@ export function createPalettePanel(
       el.hidden = !paletteMode;
     }
     threadDetails.hidden = !paletteMode;
+    // The Threadify switch mirrors the mode whatever set it (a
+    // loaded project flips it too, not only its own clicks).
+    threadifyToggle.input.checked = paletteMode;
+    const threadifyState = threadifyToggle.input.nextElementSibling;
+    if (threadifyState !== null) threadifyState.textContent = paletteMode ? 'On' : 'Off';
     const limited = next.policy.count.mode !== 'all';
-    if (limited) lastLimitedMode = next.policy.count.mode === 'exact' ? 'exact' : 'max';
     limitToggle.element.hidden = !paletteMode;
     limitToggle.input.checked = limited;
     const toggleState = limitToggle.input.nextElementSibling;
     if (toggleState !== null) toggleState.textContent = limited ? 'On' : 'Off';
     countWrap.hidden = !paletteMode || !limited;
     countN.hidden = !paletteMode || !limited;
-    exactWrap.hidden = !paletteMode || !limited;
+    stepRow.hidden = !paletteMode || !limited;
+    // Lockstep (M14-EXT-29): slider, input and steppers mirror every
+    // count change, whichever of them made it.
     countRange.value = String(Math.min(64, next.policy.count.n));
-    exactBox.checked = next.policy.count.mode === 'exact';
+    const countInput = doc.getElementById('count-n');
+    if (countInput instanceof HTMLInputElement) countInput.value = String(next.policy.count.n);
+    fewerButton.disabled = next.policy.count.n <= 1;
+    moreButton.disabled = next.policy.count.n >= 512;
     // The saved-palette editor exists only for a library source
     // (audit A5): for brands/preset sources the disclosure would open
     // onto nothing.
@@ -899,17 +920,19 @@ export function createPalettePanel(
     depth?.onToggle(threadDetails.open);
   });
 
+  // Anatomy order (M14-EXT-29, reading A): Threadify leads, then the
+  // constrain switch and the Colours controls; the source select
+  // follows — the slot M15's "Colour profile" will take.
   element.append(
-    legend,
-    modeField,
-    sourceWrap,
-    presetModeWrap,
+    threadifyToggle.element,
     limitToggle.element,
     countWrap,
     countN,
+    stepRow,
+    sourceWrap,
+    presetModeWrap,
     summary,
     conflictList,
-    exactWrap,
     threadDetails,
   );
   update(initial);

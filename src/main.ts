@@ -19,10 +19,10 @@ import {
 } from './diagnostics/bundle.ts';
 import { installGlobalCapture, log, recentLogs } from './diagnostics/log.ts';
 import {
-  aspectMatches,
   clampRect,
   constrainRect,
-  deriveGridHeight,
+  deriveClamped,
+  deriveGridSize,
   fullAspectRect,
   hitTest,
   moveRect,
@@ -121,17 +121,11 @@ import {
 } from './ui/scales.ts';
 import {
   defaultShellState,
-  FOCUS_ENTER_LABEL,
-  FOCUS_EXIT_LABEL,
   panelToggleLabel,
+  previewToggleLabel,
   visibility,
   type ShellState,
 } from './ui/shell.ts';
-import {
-  statusLine,
-  type CaptureState,
-  type SourceFreshness,
-} from './ui/status-line.ts';
 import { PipelineClient } from './worker/client.ts';
 import { DEFAULT_GRID_STYLE, type GridStyle } from './worker/grid.ts';
 
@@ -165,7 +159,7 @@ function build(app: HTMLElement): void {
   // `scales.pattern`, and `scales.capture` mirrors the crop rect.
   let scales = defaultScales();
 
-  // Shell presentation state (panel collapsed / preview focus) — one
+  // Shell presentation state (panel and preview collapses) — one
   // model for both, so they cannot fight over what is hidden.
   let shell: ShellState = defaultShellState();
   const preferenceStore = (() => {
@@ -255,6 +249,8 @@ function build(app: HTMLElement): void {
    * also reads it.
    */
   let lastColorCount: number | null = null;
+  /** Empty cells in the last frame, for the Stats total line. */
+  let lastEmptyCount: number | null = null;
 
   /** Error → message, for status text and log data. */
   function describeError(error: unknown): string {
@@ -440,7 +436,6 @@ function build(app: HTMLElement): void {
     // Source modal is the switcher, statuses carry the source name,
     // and the file input serves both routes from behind `hidden` (a
     // hidden input still opens its picker on click()).
-    captureButton.hidden = true;
     label.hidden = true;
     input.hidden = true;
     // A source arriving is a cold exit with the ready line; the panel
@@ -485,37 +480,30 @@ function build(app: HTMLElement): void {
   // Screen capture (§3, M4): a live getDisplayMedia session as an
   // alternative source. The permission prompt is user-initiated —
   // button only, never on load (UI-STANDARDS → "Capture UX").
+  // Session controls rationalised (M14-EXT-25, owner-picked option A):
+  // Stop capture, Pause/Resume and Capture frame live in the Source
+  // button's modal — the bar button reads "Capturing — Source" while
+  // a session runs, so stopping is reachable from the bar at all
+  // times. Only the two region toggles stay inline: Lock region (the
+  // whole rect) beside Lock aspect (the shape), where the region is
+  // the task.
   const captureRow = document.createElement('div');
   captureRow.className = 'toolbar';
-  const captureButton = document.createElement('button');
-  captureButton.type = 'button';
-  captureButton.textContent = 'Start screen capture';
-  const captureFrameButton = document.createElement('button');
-  captureFrameButton.type = 'button';
-  captureFrameButton.textContent = 'Capture frame';
-  captureFrameButton.hidden = true;
-  const stopCaptureButton = document.createElement('button');
-  stopCaptureButton.type = 'button';
-  stopCaptureButton.textContent = 'Stop capture';
-  stopCaptureButton.hidden = true;
   const lockButton = document.createElement('button');
   lockButton.type = 'button';
   lockButton.textContent = 'Lock region';
   lockButton.setAttribute('aria-pressed', 'false');
   lockButton.hidden = true;
-  // Aspect toggle (M14-EXT-15, signed A): pressed by default; off
-  // frees the pins and the design height follows the region. Distinct
-  // from "Lock region", which freezes the whole rect.
+  // Aspect toggle (M14-EXT-20, superseding the D101 shape): "Lock
+  // aspect", default off — unlocked, the region's shape drives the
+  // design size through the held stitch size; locked restores the D52
+  // conduct whole. Distinct from "Lock region", which freezes the
+  // whole rect against any drag.
   const aspectButton = document.createElement('button');
   aspectButton.type = 'button';
-  aspectButton.textContent = 'Aspect follows design';
-  aspectButton.setAttribute('aria-pressed', 'true');
+  aspectButton.textContent = 'Lock aspect';
+  aspectButton.setAttribute('aria-pressed', 'false');
   aspectButton.hidden = true;
-  const pauseButton = document.createElement('button');
-  pauseButton.type = 'button';
-  pauseButton.textContent = 'Pause capture';
-  pauseButton.setAttribute('aria-pressed', 'false');
-  pauseButton.hidden = true;
   // Draft state is a visible, persistent label — never colour-only,
   // never silent (UI-STANDARDS: draft preview must be labelled so
   // exports are never mistaken for it).
@@ -555,10 +543,10 @@ function build(app: HTMLElement): void {
   }
   cropOverlay.append(cropRectEl, cropHelp);
   thumbWrap.append(cropOverlay);
-  const cropReadout = document.createElement('p');
-  cropReadout.className = 'meta';
-  cropReadout.setAttribute('role', 'status');
-  cropReadout.hidden = true;
+  // The standing `Capture region … px → … stitches` readout retired
+  // at M14-EXT-21 — its numbers live in the Stats section; gesture
+  // ends announce through the status region instead (the A8 keyboard
+  // feedback survives the readout).
   // What the permission prompt will do, said before it is triggered
   // (UI-STANDARDS: user-initiated, never on load; D78 expectation
   // copy). Shown only while no session runs.
@@ -579,14 +567,7 @@ function build(app: HTMLElement): void {
   captureCta.setAttribute('aria-describedby', captureExpectation.id);
   entryActions.append(chooseButton, captureCta, captureExpectation, openProjectButton);
   entryState.append(entryTitle, entryActions, hint);
-  captureRow.append(
-    captureButton,
-    captureFrameButton,
-    pauseButton,
-    aspectButton,
-    lockButton,
-    stopCaptureButton,
-  );
+  captureRow.append(aspectButton, lockButton);
   // The source section carries the cold entry only (M14-EXT-06/12):
   // the capture surfaces live in the Capture region section, mounted
   // in the settings panel for the duration of a session.
@@ -604,9 +585,14 @@ function build(app: HTMLElement): void {
   status.textContent = '';
 
   // Preview: toolbar (zoom, fit, compare) + the keyboard-operable
-  // canvas host. The canvas itself is worker-owned.
+  // canvas host. The canvas itself is worker-owned. Collapsible like
+  // any region (M14-EXT-23) — its visibility composes "a frame
+  // exists" with the shell's say, both written in applyShell.
   const previewSection = document.createElement('section');
+  previewSection.id = 'preview-section';
   previewSection.hidden = true;
+  /** True once any frame has processed; the preview means nothing before. */
+  let frameExists = false;
   // Named landmark (ui-spec §2, audit A12): regions a screen reader
   // can navigate to by name, not anonymous <section>s.
   previewSection.setAttribute('aria-label', 'Preview');
@@ -621,13 +607,6 @@ function build(app: HTMLElement): void {
   dimensionsLabel.className = 'meta';
   dimensionsLabel.setAttribute('aria-label', 'Pattern dimensions');
   dimensionsLabel.textContent = patternSummary(scales.pattern);
-  // Compact status for preview focus: one derived line, shown only in
-  // that mode. Polite, not assertive — routine frame updates must not
-  // interrupt a screen reader.
-  const compactStatus = document.createElement('p');
-  compactStatus.className = 'meta compact-status';
-  compactStatus.setAttribute('role', 'status');
-  compactStatus.hidden = true;
   // The host is an operable widget, not an image (audit A15): it takes
   // focus and keyboard commands, so it carries an interactive role
   // with a concise name; the usage instructions live in a linked
@@ -736,6 +715,12 @@ function build(app: HTMLElement): void {
         download: (text, filename) => {
           downloadBlob(document, new Blob([text], { type: 'text/plain' }), filename);
         },
+        // "Email the dev" (M14-EXT-26): identity is non-secret by the
+        // versioning rule; the mailto hand-off stays offline.
+        identity: { appVersion: __APP_VERSION__, buildId: __BUILD_ID__ },
+        openMail: (url) => {
+          window.location.href = url;
+        },
       })
     : null;
 
@@ -777,7 +762,6 @@ function build(app: HTMLElement): void {
     setFieldValue('pattern-width', String(pattern.widthStitches));
     setFieldValue('pattern-height', String(pattern.heightStitches));
     reframeCrop();
-    updateCompactStatus();
     refreshSections();
     // A new grid is a new geometry, so the buffer the colour-count
     // selection chooses against has to be rebuilt at that size.
@@ -791,40 +775,44 @@ function build(app: HTMLElement): void {
    * region signature includes all four crop fields, so a changed frame
    * already reads as dirty — no gate reset needed.
    *
-   * While aspect is unlocked (M14-EXT-15/A) the region leads instead:
-   * it is never reshaped to the design; a width edit re-derives the
-   * design height from the region's shape. One bounce at most — the
-   * derive makes the two aspects equal, so the recursive applyPattern
-   * lands in the equal branch and stops.
+   * While aspect is unlocked (M14-EXT-20, the default) the region
+   * leads instead: it is never reshaped to the design; both design
+   * dimensions re-derive from the region at the held stitch size. One
+   * bounce at most — the derive is a fixed point, so the recursive
+   * applyPattern lands in the equal branch and stops.
    */
   function reframeCrop(): void {
     const bounds = captureBounds();
     if (bounds === null || cropRect === null) return;
-    if (!aspectFollows) {
-      const derived = deriveGridHeight(scales.pattern.widthStitches, cropRect, MAX_PATTERN_SIDE);
-      if (derived !== scales.pattern.heightStitches) {
-        applyPattern({ ...scales.pattern, heightStitches: derived });
+    if (!aspectLocked) {
+      const derived = deriveGridSize(stitchSizePx, cropRect, MAX_PATTERN_SIDE);
+      if (
+        derived.width !== scales.pattern.widthStitches ||
+        derived.height !== scales.pattern.heightStitches
+      ) {
+        applyPattern({ widthStitches: derived.width, heightStitches: derived.height });
       }
       return;
     }
     cropRect = constrainRect(cropRect, bounds, config.grid, 'center');
     renderCrop();
-    announceCrop();
+    syncStitchSize();
+    updateStitchSizeUi();
   }
 
   /**
-   * Adopt the region's shape as the design height (M14-EXT-15/A) —
-   * called at the end of any free gesture. The aspectMatches guard
-   * makes it idempotent and lets one call site serve both the
-   * unlocked state and a shift-drag exception: it only fires when a
-   * free gesture actually changed the shape.
+   * Adopt the region's size as the design size (M14-EXT-20,
+   * superseding D101's height-only adopt) — called at the end of any
+   * free gesture. Both dimensions derive through the held
+   * source-px-per-stitch scale; the equality guard makes it idempotent
+   * so a gesture that changed nothing changes nothing. A clamp at the
+   * 1024-stitch cap is announced, never silent.
    */
-  function adoptRegionShape(): void {
-    if (capture === null || cropRect === null || aspectMatches(cropRect, config.grid)) return;
-    applyPattern({
-      ...scales.pattern,
-      heightStitches: deriveGridHeight(scales.pattern.widthStitches, cropRect, MAX_PATTERN_SIDE),
-    });
+  function adoptRegionSize(): void {
+    if (capture === null || cropRect === null) return;
+    const derived = deriveGridSize(stitchSizePx, cropRect, MAX_PATTERN_SIDE);
+    if (derived.width === config.grid.width && derived.height === config.grid.height) return;
+    applyPattern({ widthStitches: derived.width, heightStitches: derived.height });
   }
 
   // Grid overlay: style state lives here (CSS px); thicknesses and
@@ -865,8 +853,16 @@ function build(app: HTMLElement): void {
   // "Size" under the Design section header — repeating "Design" in
   // the legend would say the word twice in one breath (M14-EXT-04).
   patternLegend.textContent = 'Size';
-  patternGroup.append(
-    patternLegend,
+  // Compact footprint (M14-EXT-20): the two fields share one row with
+  // a decorative × between them — visible labels and 44 px targets
+  // unchanged, only the stacked height goes.
+  const sizeRow = document.createElement('div');
+  sizeRow.className = 'size-row';
+  const sizeSep = document.createElement('span');
+  sizeSep.className = 'size-sep meta';
+  sizeSep.textContent = '×';
+  sizeSep.setAttribute('aria-hidden', 'true');
+  sizeRow.append(
     numberField(
       document,
       'pattern-width',
@@ -881,6 +877,7 @@ function build(app: HTMLElement): void {
         applyPattern({ ...scales.pattern, widthStitches: value });
       },
     ),
+    sizeSep,
     numberField(
       document,
       'pattern-height',
@@ -896,17 +893,60 @@ function build(app: HTMLElement): void {
       },
     ),
   );
+  // Stitch size (M14-EXT-20): the region↔design scale made visible —
+  // a slider plus an exact readout, session-only (hidden without a
+  // capture session, a readout while aspect is locked). Lives with
+  // the Size fields so the S1 reparent (D101) carries it too.
+  const stitchSizeField = document.createElement('div');
+  stitchSizeField.className = 'field';
+  stitchSizeField.hidden = true;
+  const stitchSizeLabel = document.createElement('label');
+  stitchSizeLabel.htmlFor = 'stitch-size';
+  stitchSizeLabel.textContent = SCALE_LABELS.stitchSize;
+  const stitchSizeRow = document.createElement('div');
+  stitchSizeRow.className = 'stitch-size-row';
+  const stitchSizeRange = document.createElement('input');
+  stitchSizeRange.type = 'range';
+  stitchSizeRange.id = 'stitch-size';
+  stitchSizeRange.min = '1';
+  stitchSizeRange.max = '64';
+  stitchSizeRange.step = '0.5';
+  const stitchSizeValue = document.createElement('span');
+  stitchSizeValue.className = 'meta';
+  stitchSizeValue.id = 'stitch-size-value';
+  const stitchSizeHelper = document.createElement('p');
+  stitchSizeHelper.className = 'helper';
+  stitchSizeHelper.id = 'stitch-size-helper';
+  stitchSizeHelper.textContent = SCALE_LABELS.stitchSizeHelper;
+  stitchSizeRange.setAttribute('aria-describedby', stitchSizeHelper.id);
+  stitchSizeRow.append(stitchSizeRange, stitchSizeValue);
+  stitchSizeField.append(stitchSizeLabel, stitchSizeRow, stitchSizeHelper);
+  stitchSizeRange.addEventListener('input', () => {
+    stitchSizePx = Number(stitchSizeRange.value);
+    updateStitchSizeUi();
+    // Same region, new resolution: both dimensions re-derive at the
+    // slider's scale (the M14-EXT-20 coupling row).
+    adoptRegionSize();
+  });
+  stitchSizeRange.addEventListener('change', () => {
+    const clampNote =
+      cropRect !== null && deriveClamped(stitchSizePx, cropRect, MAX_PATTERN_SIDE)
+        ? ` — clamped to the ${String(MAX_PATTERN_SIDE)}-stitch maximum`
+        : '';
+    status.textContent =
+      `Stitch size ${formatStitchSize(stitchSizePx)} source px — ` +
+      `design ${patternSummary(scales.pattern)}${clampNote}.`;
+  });
+  patternGroup.append(patternLegend, sizeRow, stitchSizeField);
 
-  const gridGroup = document.createElement('fieldset');
-  const gridLegend = document.createElement('legend');
-  gridLegend.textContent = 'Grid';
-  // The everyday grid toggles moved to the view strip (M14-EXT-11):
-  // "how I look at it" lives with the preview, as Grid / Numbers
-  // toggle buttons. Appearance keeps only the geometry behind the
-  // Grid-details reveal (ui-spec §5) — one owner per control, no
-  // duplicated affordance (the D90 rule).
+  // Grid geometry lives with the view (M14-EXT-30): the on/off
+  // toggles moved to the strip at M14-EXT-11, and the geometry behind
+  // the reveal now follows them — mounted under the strip, out of the
+  // settings panel entirely. Grid lines are a *view* of the pattern,
+  // not the pattern. One owner per control, no duplicated affordance
+  // (the D90 rule); the 'grid-details' preference key is unchanged.
   const gridDetails = document.createElement('details');
-  gridDetails.className = 'depth-reveal';
+  gridDetails.className = 'depth-reveal view-grid-reveal';
   const gridDetailsSummary = document.createElement('summary');
   gridDetailsSummary.textContent = 'Grid details';
   const gridDetailsBody = document.createElement('div');
@@ -962,7 +1002,6 @@ function build(app: HTMLElement): void {
   gridDetails.addEventListener('toggle', () => {
     setDisclosure('grid-details', gridDetails.open);
   });
-  gridGroup.append(gridLegend, gridDetails);
 
   // The Dither group (M8-CTRL-01): preset + algorithm selectors and
   // the method-specific controls, all decided by the pure model in
@@ -1699,8 +1738,6 @@ function build(app: HTMLElement): void {
       new Blob([serializeProject(currentProject())], { type: 'application/json' }),
       filename,
     );
-    projectFileNote = `saved ${filename}`;
-    refreshSections();
     status.textContent = `Saved ${filename}.`;
     log.info('project', 'saved', { filename });
   }
@@ -1717,7 +1754,8 @@ function build(app: HTMLElement): void {
     setFieldValue('pattern-width', String(scales.pattern.widthStitches));
     setFieldValue('pattern-height', String(scales.pattern.heightStitches));
     setFieldValue('order-preset', config.preset);
-    setFieldValue('colour-mode', paletteMode ? 'threads' : 'rgb');
+    // The Threadify switch (M14-EXT-29) mirrors paletteMode inside
+    // palettePanel.update below — no field write needed here.
     ditherControls.update(config.dither, config.palette === null);
     palettePanel.update(panelState());
     gridToggle.setAttribute('aria-pressed', String(gridStyle.show));
@@ -1818,10 +1856,16 @@ function build(app: HTMLElement): void {
       dimensionsLabel.textContent = patternSummary(scales.pattern);
       // A loaded pattern re-aspects the live capture frame the same way
       // an edited one does — the load must not leave a stale ratio.
+      // While unlocked (M14-EXT-20) the region leads instead: honour
+      // the loaded width by re-seeding the stitch size from it, and
+      // let reframeCrop derive the height from the region's shape —
+      // the D101 semantics carried into the two-dimension world.
+      if (capture !== null && !aspectLocked && cropRect !== null) {
+        stitchSizePx = cropRect.width / Math.max(1, scales.pattern.widthStitches);
+        updateStitchSizeUi();
+      }
       reframeCrop();
       preview.setScale(file.preview);
-      updateCompactStatus();
-      projectFileNote = `loaded ${fileBlob.name}`;
       refreshSections();
       reprocess();
       // A loaded project's settings matter before any image, so this
@@ -1842,23 +1886,21 @@ function build(app: HTMLElement): void {
 
   controls.id = 'controls-panel';
 
-  // The five-section architecture (ui-spec §2, D77): Design open by
-  // default, everything else summarised until opened. Summaries are
-  // derived from owned state at refresh — never scraped from the DOM
-  // (the status-line rule). Wording is refined in M14-IMPL-05.
+  // The section architecture (ui-spec §2, D77): Stats and Design open
+  // by default, everything else a bare heading until opened
+  // (M14-EXT-22 — collapsed folds carry no summary line; the numbers
+  // that must stay visible live in Stats).
   const sections: AccordionSection[] = [];
 
   function section(
     id: string,
     title: string,
     specDefaultOpen: boolean,
-    summaryFn: () => string,
     ...content: HTMLElement[]
   ): AccordionSection {
     const built = createSection(document, {
       id,
       title,
-      summary: summaryFn,
       open: disclosureOpen(id, specDefaultOpen),
       onToggle: (open) => {
         setDisclosure(id, open);
@@ -1869,10 +1911,10 @@ function build(app: HTMLElement): void {
     return built;
   }
 
-  /** Recompute every closed section's summary line. */
+  /** Recompute the section-adjacent readouts (Stats, export size). */
   function refreshSections(): void {
     if (!sectionsReady) return;
-    for (const s of sections) s.refreshSummary();
+    refreshStats();
     exportSize.textContent = exportSizeLine();
   }
 
@@ -1887,61 +1929,70 @@ function build(app: HTMLElement): void {
     return `PNG ${String(w * s)} × ${String(h * s)} px · chart ${String(w * cell)} × ${String(h * cell)} px`;
   }
 
-  /** Last saved/loaded project filename; null = nothing this session. */
-  let projectFileNote: string | null = null;
+  // Stats (M14-EXT-21): the design's headline numbers, first in the
+  // panel and readable with or without a session — design size, total
+  // stitches, colours in use. Owns the figures the retired
+  // capture-region readout and info summary carried, and takes over
+  // D98's never-silent colour-limit duty from the Design fold line
+  // (EXT-22 flattens fold lines app-wide). Deliberately no region
+  // coordinates and no aspect state — the owner excluded both.
+  const statsList = document.createElement('dl');
+  statsList.className = 'stats-list';
+  function statsRow(label: string): HTMLElement {
+    const dt = document.createElement('dt');
+    dt.textContent = label;
+    const dd = document.createElement('dd');
+    statsList.append(dt, dd);
+    return dd;
+  }
+  const statsSize = statsRow('Design size');
+  const statsTotal = statsRow('Total stitches');
+  const statsColours = statsRow('Colours in use');
 
-  const designSection = section(
-    'section-design',
-    'Design',
-    true,
-    // The default colour limit is never silent (M14-EXT-13): a limit
-    // in force is named in the summary, so "8 colours (limit)" is on
-    // the surface from the first conversion.
-    () =>
-      `${patternSummary(scales.pattern)} · ${
-        paletteMode ? (config.palette?.name ?? 'threads') : 'unlimited colours'
-      }${
-        paletteMode && policy.count.mode !== 'all'
-          ? ` · ${String(policy.count.n)} colours (limit)`
-          : ''
-      }`,
-    patternGroup,
-    colourGroup,
-    inventoryInput,
-  );
-  // Summary re-derived after M14-EXT-11: the grid on/off state moved
-  // to the view strip, so only what this section still owns is
-  // summarised — dither state (grid geometry sits behind the reveal).
+  /** Colours-in-use value, carrying D98's never-silent limit duty. */
+  function colourInUseLine(): string {
+    if (lastColorCount === null) return 'none yet';
+    const used = String(lastColorCount);
+    if (!paletteMode) return `${used} · unlimited`;
+    if (policy.count.mode !== 'all') return `${used} · limit ${String(policy.count.n)}`;
+    return used;
+  }
+
+  /** Refresh the Stats values from owned state — never recomputed
+   *  from pixels here; the worker's stats land via setOnResult. */
+  function refreshStats(): void {
+    statsSize.textContent = patternSummary(scales.pattern);
+    const total = scales.pattern.widthStitches * scales.pattern.heightStitches;
+    statsTotal.textContent =
+      lastEmptyCount !== null && lastEmptyCount > 0
+        ? `${total.toLocaleString('en-GB')} (${lastEmptyCount.toLocaleString('en-GB')} empty)`
+        : total.toLocaleString('en-GB');
+    statsColours.textContent = colourInUseLine();
+  }
+
+  section('section-stats', 'Stats', true, statsList);
+
+  // The D98 never-silent colour-limit duty moved to the Stats section
+  // (M14-EXT-21) before these fold lines flattened (M14-EXT-22).
+  const designSection = section('section-design', 'Design', true, patternGroup);
+  // Colour stands alone (M14-EXT-28): its own section directly after
+  // Design, the group moved whole; Design keeps size and geometry.
+  // Spec default closed — the default-8 conversion needs no colour
+  // decision first, and Stats carries the count.
+  section('section-colour', 'Colour', false, colourGroup, inventoryInput);
+  // "Processing" (M14-EXT-30): the Appearance rename, reduced to the
+  // Dither group — the grid geometry moved to the view strip's
+  // reveal. The stored open/closed preference migrates by fallback:
+  // a remembered 'section-appearance' choice seeds the new id.
   section(
-    'section-appearance',
-    'Appearance',
-    false,
-    () => (config.dither.algorithm === 'none' ? 'no dither' : 'dithered'),
-    gridGroup,
+    'section-processing',
+    'Processing',
+    disclosureOpen('section-appearance', false),
     ditherGroup,
   );
-  section(
-    'section-export',
-    'Export',
-    false,
-    () =>
-      `PNG ×${String(scales.export.cleanPxPerStitch)} · chart ${String(scales.export.chartCellPx)} px · ${pdfOptions.pageSize === 'a4' ? 'A4' : 'Letter'}`,
-    exportGroup,
-  );
-  section(
-    'section-project',
-    'Project',
-    false,
-    () => projectFileNote ?? 'not saved this session',
-    projectGroup,
-  );
-  section(
-    'section-advanced',
-    'Advanced',
-    false,
-    () => (config.preset === 'resize-first' ? 'resize first' : 'reduce first'),
-    pipelineGroup,
-  );
+  section('section-export', 'Export', false, exportGroup);
+  section('section-project', 'Project', false, projectGroup);
+  section('section-advanced', 'Advanced', false, pipelineGroup);
   controls.append(...sections.map((s) => s.element));
   sectionsReady = true;
   refreshSections();
@@ -1966,20 +2017,23 @@ function build(app: HTMLElement): void {
     log.error('library', 'could not be opened', { message: describeError(error) });
   });
 
-  // Shell bar: the two presentation-mode controls, on a permanent
-  // surface at the top of the app. The collapse button lives *outside*
-  // the region it collapses (otherwise it hides with it), and the exit
-  // route from preview focus is always in this same place —
-  // UI-STANDARDS → "User control and freedom": never trap a mode.
+  // Shell bar: the collapse controls, on a permanent surface at the
+  // top of the app. Each collapse button lives *outside* the region
+  // it collapses (otherwise it hides with it) — UI-STANDARDS →
+  // "User control and freedom": never trap a mode.
   const shellBar = document.createElement('div');
   shellBar.className = 'toolbar shell-bar';
   const panelToggle = document.createElement('button');
   panelToggle.type = 'button';
   panelToggle.id = 'panel-toggle';
   panelToggle.setAttribute('aria-controls', 'controls-panel');
-  const focusToggle = document.createElement('button');
-  focusToggle.type = 'button';
-  focusToggle.id = 'focus-toggle';
+  // Preview collapse control (M14-EXT-23): outside the region it
+  // collapses, on the permanent bar — the shell rule. The Preview
+  // focus toggle that lived here retired with its mode (M14-EXT-24).
+  const previewToggle = document.createElement('button');
+  previewToggle.type = 'button';
+  previewToggle.id = 'preview-toggle';
+  previewToggle.setAttribute('aria-controls', 'preview-section');
   // Source chooser (M14-EXT-02): the returning user's switcher. The
   // cold-start entry state stays the first-run path; this button is
   // the permanent affordance once a source exists.
@@ -1988,11 +2042,24 @@ function build(app: HTMLElement): void {
   sourceButton.id = 'source-button';
   sourceButton.textContent = 'Source';
   sourceButton.addEventListener('click', () => {
+    // The session block leads while capturing (M14-EXT-25/A): Stop is
+    // the primary then, and Pause/Capture frame demote here from the
+    // retired inline row. The source choices stay below, so switching
+    // source never hides behind the same click that stops.
+    const sessionChoices =
+      capture === null
+        ? []
+        : [
+            { id: 'stop', label: 'Stop capture', primary: true },
+            { id: 'pause', label: capturePaused ? 'Resume capture' : 'Pause capture' },
+            { id: 'frame', label: 'Capture frame' },
+          ];
     void choicesModal(document, {
       title: 'Source',
       note: sourceName === null ? 'No source yet.' : `Current: ${sourceName}`,
       choices: [
-        { id: 'file', label: 'Choose an image', primary: true },
+        ...sessionChoices,
+        { id: 'file', label: 'Choose an image', primary: capture === null },
         {
           id: 'capture',
           label: 'Capture your screen',
@@ -2005,38 +2072,48 @@ function build(app: HTMLElement): void {
       if (choice === 'file') input.click();
       else if (choice === 'capture') void startScreenCapture();
       else if (choice === 'sample') loadSample();
+      else if (choice === 'stop') stopSession();
+      else if (choice === 'pause') togglePauseCapture();
+      else if (choice === 'frame') void grabCaptureFrame();
     });
   });
-  shellBar.append(sourceButton, panelToggle, focusToggle);
+  shellBar.append(sourceButton, previewToggle, panelToggle);
 
   /**
    * Push the shell state onto the DOM. One function, one source of
    * truth: every `hidden` in the shell is written here and nowhere
-   * else, so "collapsed" and "preview focus" cannot leave a region in
-   * a state neither of them intended.
+   * else, so the collapses cannot leave a region in a state neither
+   * of them intended.
    */
   function applyShell(): void {
     const show = visibility(shell);
     // Move focus out before hiding its container, or the page loses
     // the focus position entirely (WCAG 2.4.3).
     if (!show.controls && controls.contains(document.activeElement)) panelToggle.focus();
-    if (!show.source && importSection.contains(document.activeElement)) focusToggle.focus();
+    if (
+      !show.preview &&
+      frameExists &&
+      previewSection.contains(document.activeElement)
+    ) {
+      previewToggle.focus();
+    }
     // The entry hides when a source lands (M14-EXT-06: the shell is
     // the one writer for the cold composition). If focus was on an
     // entry action, hand it to the chooser that replaces it — the bar
     // Source button — rather than letting the page lose it.
     if (sourceExists && entryState.contains(document.activeElement)) {
-      if (show.source) sourceButton.focus();
-      else focusToggle.focus();
+      sourceButton.focus();
     }
     entryState.hidden = sourceExists;
     controls.hidden = !show.controls;
     importSection.hidden = !show.source;
+    // The preview shows once a frame exists AND the shell says so
+    // (M14-EXT-23) — one composed rule, one writer.
+    previewSection.hidden = !frameExists || !show.preview;
     // The capture section lives in the content column (M14-FIX-01),
-    // so the panel toggles no longer govern it; it is source
-    // machinery, and follows the source region's visibility (hidden
-    // in preview focus, present otherwise while mounted). Late-bound:
-    // the section is created after the shell's first apply.
+    // so the panel toggles do not govern it; it is source machinery
+    // and follows the source region's visibility while mounted.
+    // Late-bound: the section is created after the first apply.
     if (captureSectionElement !== null) captureSectionElement.hidden = !show.source;
     // The entry state IS the chooser while it shows (M14-EXT-05): a
     // bar button opening a modal that repeats the on-screen actions
@@ -2047,35 +2124,13 @@ function build(app: HTMLElement): void {
     if (debugPanel !== null) debugPanel.element.hidden = !show.debug;
     if (diagnostics !== null) diagnostics.element.hidden = !show.debug;
     status.hidden = !show.status;
-    compactStatus.hidden = !show.compactStatus;
     panelToggle.hidden = !show.panelToggle;
-    // The focus toggle is the enter control in the normal shell and
-    // the exit control in focus mode; cold shows neither, and that is
-    // exactly when both fields are false (M14-EXT-06).
-    focusToggle.hidden = !show.panelToggle && !show.focusExit;
+    previewToggle.hidden = !show.previewToggle;
     panelToggle.textContent = panelToggleLabel(shell.panelCollapsed);
     panelToggle.setAttribute('aria-expanded', String(!shell.panelCollapsed));
-    focusToggle.textContent = shell.previewFocus ? FOCUS_EXIT_LABEL : FOCUS_ENTER_LABEL;
-    focusToggle.setAttribute('aria-pressed', String(shell.previewFocus));
-    document.body.classList.toggle('preview-focus', shell.previewFocus);
+    previewToggle.textContent = previewToggleLabel(shell.previewCollapsed);
+    previewToggle.setAttribute('aria-expanded', String(!shell.previewCollapsed));
     document.body.classList.toggle('panel-collapsed', shell.panelCollapsed);
-    if (show.compactStatus) updateCompactStatus();
-  }
-
-  /**
-   * Enter or leave preview focus. Presentation only: it changes no
-   * pipeline config, no capture quality, no project data, and is not
-   * the M4 draft-quality state — the pump keeps running throughout.
-   */
-  function setPreviewFocus(on: boolean): void {
-    if (shell.previewFocus === on) return;
-    shell = { ...shell, previewFocus: on };
-    applyShell();
-    // The preview host is the thing the mode is about, so it takes
-    // focus on entry; on exit, focus returns to the control that did it.
-    if (on) host.focus();
-    else focusToggle.focus();
-    log.info('shell', on ? 'preview focus entered' : 'preview focus exited');
   }
 
   panelToggle.addEventListener('click', () => {
@@ -2088,15 +2143,15 @@ function build(app: HTMLElement): void {
       : 'Settings shown.';
     log.info('shell', shell.panelCollapsed ? 'settings collapsed' : 'settings expanded');
   });
-  focusToggle.addEventListener('click', () => {
-    setPreviewFocus(!shell.previewFocus);
-  });
-  // Escape is a convenience, never the only exit route.
-  window.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && shell.previewFocus) {
-      event.preventDefault();
-      setPreviewFocus(false);
-    }
+  // Preview collapse (M14-EXT-23): session-only — a working gesture,
+  // not a preference — and re-expanded by a capture session start.
+  previewToggle.addEventListener('click', () => {
+    shell = { ...shell, previewCollapsed: !shell.previewCollapsed };
+    applyShell();
+    status.textContent = shell.previewCollapsed
+      ? 'Preview hidden — Show preview brings it back.'
+      : 'Preview shown.';
+    log.info('shell', shell.previewCollapsed ? 'preview collapsed' : 'preview expanded');
   });
 
   // Split compare (§10): source (full-RGB resize) left of the
@@ -2165,7 +2220,10 @@ function build(app: HTMLElement): void {
   // The strip and canvas dock together (M14-EXT-09) — "how I look at
   // it" belongs with the picture; the info panel and everything else
   // scroll beneath and are appended at the content level below.
-  previewSection.append(toolbar, host, compactStatus);
+  // The grid reveal rides between the strip and the canvas
+  // (M14-EXT-30, destination A): same concept, same home as the
+  // Grid/Numbers toggles above it.
+  previewSection.append(toolbar, gridDetails, host);
 
   // Preview first in the DOM at every width (M6-NARROW-01). The
   // settings panel sits to its right when there is room, so the
@@ -2202,7 +2260,10 @@ function build(app: HTMLElement): void {
     // Pump continuation: the returned result frees the gate; grab
     // again if a newer video frame arrived meanwhile.
     if (stopPump !== null && pumpGate.grabDone()) void pumpGrab();
-    previewSection.hidden = false;
+    if (!frameExists) {
+      frameExists = true;
+      applyShell();
+    }
     exportButton.disabled = false;
     chartButton.disabled = false;
     pdfButton.disabled = false;
@@ -2216,9 +2277,9 @@ function build(app: HTMLElement): void {
     debugPanel?.update(frame.timings, client.droppedFrames);
     for (const timing of frame.timings) activeBackends[timing.stage] = timing.backend;
     lastColorCount = stats.colorCount;
-    lastFreshness = 'changing';
+    lastEmptyCount = stats.emptyCount;
     palettePanel.update(panelState());
-    updateCompactStatus();
+    refreshStats();
     status.textContent = 'Preview updated.';
     log.info('pipeline', 'frame processed', {
       timings: frame.timings,
@@ -2257,14 +2318,23 @@ function build(app: HTMLElement): void {
   let cropRect: CropRect | null = null;
   let cropLocked = false;
   /**
-   * Aspect follows the design (M14-EXT-15, signed A + D + S1).
-   * Session-only, default on each session — never project data.
-   * While off, free pins re-derive Design height from the region's
-   * shape (stitches stay square); shift-drag frees a pin temporarily
-   * even while on. The keyboard route to a free resize is the toggle
+   * "Lock aspect" (M14-EXT-20, superseding D101's default-on follow).
+   * Session-only, default **off** each session — never project data.
+   * Unlocked, free pins re-derive both design dimensions from the
+   * region at the held stitch size (stitches stay square); locked
+   * restores D52 whole, with shift-drag freeing a pin temporarily.
+   * The keyboard route to a free resize while locked is the toggle
    * itself.
    */
-  let aspectFollows = true;
+  let aspectLocked = false;
+  /**
+   * Source px per stitch — the one number coupling region size to
+   * design size while aspect is unlocked (M14-EXT-20). Held fixed
+   * across region drags (a drag trades area for stitches at this
+   * resolution); re-synced from the region and design whenever a
+   * locked-path change moves their ratio. 0 = no session.
+   */
+  let stitchSizePx = 0;
   const pumpGate = new PumpGate();
   let stopPump: (() => void) | null = null;
   const dirtyGate = new DirtyGate();
@@ -2273,27 +2343,15 @@ function build(app: HTMLElement): void {
   let draftMode = false;
 
   // Capture region section (M14-EXT-12): the whole capture surface —
-  // thumb + crop overlay, session controls, readout, draft badge —
-  // as a first-position accordion section, mounted only while a
-  // session runs. Open on first appearance; a collapse persists for
-  // later sessions. Supersedes D88's below-the-preview placement on
-  // the owner's own authority (D91). Created here, after the capture
-  // state it summarises exists (a collapsed stored preference makes
-  // createSection call the summary at build time).
-  const captureSummaryLine = (): string => {
-    if (cropRect === null) return 'no region yet';
-    return (
-      `${String(cropRect.width)} × ${String(cropRect.height)} px at ` +
-      `(${String(cropRect.x)}, ${String(cropRect.y)}) → ` +
-      `${patternSummary(scales.pattern)}${cropLocked ? ' · locked' : ''}${
-        aspectFollows ? '' : ' · aspect unlocked'
-      }`
-    );
-  };
+  // thumb + crop overlay, session controls, draft badge — as a
+  // first-position accordion section, mounted only while a session
+  // runs. Open on first appearance; a collapse persists for later
+  // sessions. Supersedes D88's below-the-preview placement on the
+  // owner's own authority (D91). Collapsed it is its bare heading
+  // (M14-EXT-22).
   const captureSection = createSection(document, {
     id: 'section-capture',
     title: 'Capture region',
-    summary: captureSummaryLine,
     open: disclosureOpen('section-capture', true),
     onToggle: (open) => {
       setDisclosure('section-capture', open);
@@ -2303,7 +2361,7 @@ function build(app: HTMLElement): void {
       if (!open) window.scrollTo(0, 0);
     },
   });
-  captureSection.panel.append(captureRow, captureMeta, thumbWrap, cropReadout, draftBadge);
+  captureSection.panel.append(captureRow, captureMeta, thumbWrap, draftBadge);
   sections.push(captureSection);
   captureSectionElement = captureSection.element;
 
@@ -2335,31 +2393,6 @@ function build(app: HTMLElement): void {
   // state exists, because updateSourceEntry reads it).
   updateSourceEntry();
 
-  // Compact-status inputs, owned here rather than read back out of
-  // rendered DOM strings — a status line assembled from several
-  // rendered surfaces goes stale silently, and in preview focus it is
-  // the only thing reporting whether capture is still running.
-  let sessionEnded = false;
-  let lastFreshness: SourceFreshness = 'changing';
-
-  function captureState(): CaptureState {
-    if (capture === null) return sessionEnded ? 'ended' : 'off';
-    return capturePaused ? 'paused' : 'live';
-  }
-
-  /** Refresh the compact line from owned state (preview focus only). */
-  function updateCompactStatus(): void {
-    if (!shell.previewFocus) return;
-    compactStatus.textContent = statusLine({
-      pattern: scales.pattern,
-      paletteName: config.palette?.name ?? null,
-      colorCount: lastColorCount,
-      capture: captureState(),
-      freshness: lastFreshness,
-      draft: draftMode,
-    });
-  }
-
   function setDraftMode(on: boolean): void {
     if (draftMode === on) return;
     draftMode = on;
@@ -2370,7 +2403,6 @@ function build(app: HTMLElement): void {
     status.textContent = on
       ? 'Preview switched to draft quality (dithering off).'
       : 'Full quality restored.';
-    updateCompactStatus();
     log.info('capture', on ? 'draft quality entered' : 'draft quality exited');
   }
 
@@ -2406,23 +2438,27 @@ function build(app: HTMLElement): void {
   }
 
   /**
-   * Announce the crop's size and position (audit A8: keyboard moves
-   * were silent — the readout reported size only, and position lives
-   * nowhere else in text). Called at end-events — key press, drag
-   * end, session start, reframe — never per pointer-move, so the
-   * status region does not flood a screen reader mid-drag.
+   * Announce a region gesture's outcome (audit A8: keyboard moves
+   * must not be silent; the standing readout retired at M14-EXT-21).
+   * Called at end-events — key press, drag end — never per
+   * pointer-move, so the status region does not flood a screen
+   * reader mid-drag. No coordinates: the owner cut them.
    */
-  function announceCrop(): void {
+  function announceRegion(): void {
     if (cropRect === null) return;
-    // While aspect is unlocked the height is region-driven, and the
-    // readout says so the moment it derives (the signed EXT-15 rule:
-    // a derived dimension is named, never silent).
-    const derivedNote = aspectFollows ? '' : ' (height follows the region)';
-    cropReadout.textContent =
-      `${SCALE_LABELS.captureRegion} ${String(cropRect.width)} × ${String(cropRect.height)} px ` +
-      `at (${String(cropRect.x)}, ${String(cropRect.y)}) → ${patternSummary(scales.pattern)}${derivedNote}`;
-    // The section summary précis carries the same state while folded.
-    captureSection.refreshSummary();
+    const region = `${String(cropRect.width)} × ${String(cropRect.height)} px`;
+    if (aspectLocked) {
+      status.textContent = `Region ${region}.`;
+    } else {
+      // While unlocked the design size is region-driven, and the
+      // announcement says so the moment it derives (the EXT-15 rule
+      // kept through EXT-20: a derived dimension is named, never
+      // silent) — including a clamp at the stitch cap.
+      const clampNote = deriveClamped(stitchSizePx, cropRect, MAX_PATTERN_SIDE)
+        ? ` — clamped to the ${String(MAX_PATTERN_SIDE)}-stitch maximum`
+        : '';
+      status.textContent = `Design ${patternSummary(scales.pattern)} from a ${region} region${clampNote}.`;
+    }
   }
 
   function stopPumpNow(): void {
@@ -2454,12 +2490,10 @@ function build(app: HTMLElement): void {
     draftGovernor.reset();
     setDraftMode(false);
     capturePaused = false;
-    pauseButton.textContent = 'Pause capture';
-    pauseButton.setAttribute('aria-pressed', 'false');
-    pauseButton.hidden = true;
     aspectButton.hidden = true;
-    aspectFollows = true;
-    aspectButton.setAttribute('aria-pressed', 'true');
+    aspectLocked = false;
+    aspectButton.setAttribute('aria-pressed', 'false');
+    stitchSizePx = 0;
     // S1 return leg: the size fields go home to Design, first slot,
     // focus preserved across the reparent.
     const sizeFocus = patternGroup.contains(document.activeElement)
@@ -2467,21 +2501,19 @@ function build(app: HTMLElement): void {
       : null;
     designSection.panel.insertBefore(patternGroup, designSection.panel.firstElementChild);
     sizeFocus?.focus();
-    syncHeightDerivedState();
     capture?.video.remove();
     capture = null;
+    // After `capture` clears: the derived-state check reads it, and
+    // running earlier would leave the Size fields disabled for good.
+    syncSizeDerivedState();
     cropRect = null;
-    captureButton.hidden = false;
-    captureFrameButton.hidden = true;
-    stopCaptureButton.hidden = true;
+    // The bar button hands the session role back (M14-EXT-25/A).
+    sourceButton.textContent = 'Source';
     lockButton.hidden = true;
     captureMeta.hidden = true;
     thumbWrap.hidden = true;
-    cropReadout.hidden = true;
     hideCaptureSection();
-    sessionEnded = true;
     updateSourceEntry();
-    updateCompactStatus();
     status.textContent = message;
     // Hand focus to whichever chooser now exists — the bar's Source
     // button, or the entry's first action when the session was the
@@ -2538,16 +2570,10 @@ function build(app: HTMLElement): void {
         hashPixels(sampleVideo(capture.video, cropRect ?? undefined)),
         cropRect,
       );
-      const skippedBefore = dirtyGate.skippedCount;
       if (!dirtyGate.shouldProcess(signature, Date.now())) {
         if (status.textContent !== 'Source unchanged.') {
           status.textContent = 'Source unchanged.';
         }
-        // Two skips in a row means the forced refresh is what will
-        // break the tie next — say so rather than repeat "unchanged".
-        lastFreshness =
-          dirtyGate.skippedCount > skippedBefore + 1 ? 'refresh-pending' : 'unchanged';
-        updateCompactStatus();
         if (pumpGate.grabDone()) void pumpGrab();
         return;
       }
@@ -2565,26 +2591,28 @@ function build(app: HTMLElement): void {
       stopPump?.();
       stopPump = null;
       pumpGate.reset();
-      status.textContent = `Live update stopped (${message}). Capture is still running — use Capture frame.`;
+      // The recovery route lives in the Source menu since M14-EXT-25
+      // moved Capture frame there — the copy points at it.
+      status.textContent = `Live update stopped (${message}). Capture is still running — use Capture frame in the Source menu.`;
       log.error('capture', 'pump grab failed', { message });
     }
   }
 
   async function startScreenCapture(): Promise<void> {
     status.textContent = 'Requesting screen capture…';
-    captureButton.disabled = true;
     try {
       const session = await startCapture();
       capture = session;
-      captureButton.hidden = true;
-      captureFrameButton.hidden = false;
-      stopCaptureButton.hidden = false;
       lockButton.hidden = false;
-      pauseButton.hidden = false;
-      // Each session starts with aspect following the design — the
-      // signed default (M14-EXT-15/A); session-only, never persisted.
-      aspectFollows = true;
-      aspectButton.setAttribute('aria-pressed', 'true');
+      // The bar button carries the session (M14-EXT-25/A): its label
+      // — and with it the accessible name — says so, and its modal
+      // now leads with Stop / Pause / Capture frame.
+      sourceButton.textContent = 'Capturing — Source';
+      // Each session starts unlocked — the M14-EXT-20 default,
+      // superseding D101's follow-by-default; session-only, never
+      // persisted.
+      aspectLocked = false;
+      aspectButton.setAttribute('aria-pressed', 'false');
       aspectButton.hidden = false;
       // S1: the size fields join the capture surface for the session —
       // one "what am I stitching" place; moved, never duplicated
@@ -2592,9 +2620,8 @@ function build(app: HTMLElement): void {
       const sizeFocus = patternGroup.contains(document.activeElement)
         ? (document.activeElement as HTMLElement)
         : null;
-      captureSection.panel.insertBefore(patternGroup, cropReadout);
+      captureSection.panel.insertBefore(patternGroup, draftBadge);
       sizeFocus?.focus();
-      syncHeightDerivedState();
       captureMeta.hidden = false;
       captureMeta.textContent = `Capturing ${session.label}.`;
       // Mount the live thumbnail with the full frame selected; the
@@ -2602,9 +2629,10 @@ function build(app: HTMLElement): void {
       // stays a single linear scale.
       thumbWrap.prepend(session.video);
       thumbWrap.hidden = false;
-      cropReadout.hidden = false;
-      sessionEnded = false;
       sourceName = `Screen capture (${session.label})`;
+      // A capture session re-opens a collapsed preview (M14-EXT-23):
+      // the session exists to watch the design update.
+      shell = { ...shell, previewCollapsed: false };
       updateSourceEntry();
       // Source replacement → auto-fit (M14-EXT-08).
       preview.resetView();
@@ -2616,28 +2644,33 @@ function build(app: HTMLElement): void {
       showCaptureSection();
       status.textContent = 'Capture started — region controls above the preview.';
       document.getElementById('section-capture-toggle')?.focus();
-      // Largest region with the pattern's aspect, centred — the source
-      // rarely shares the design's proportions, so a full-frame default
-      // would start the session outside the lock.
+      // Largest region with the pattern's aspect, centred — a gentle
+      // start even unlocked: the derive from this region is the design
+      // size already on the fields, so nothing jumps until the user
+      // drags. The held stitch size seeds from this ratio.
       cropRect = fullAspectRect(
         { width: session.video.videoWidth, height: session.video.videoHeight },
         config.grid,
       );
+      syncStitchSize();
+      updateStitchSizeUi();
+      syncSizeDerivedState();
       renderCrop();
-      announceCrop();
       // Source dimensions can change mid-session (e.g. the shared
       // window is resized): re-fit the region rather than let it point
       // off-frame — keeping the aspect on the way while locked; while
-      // unlocked, clamp to the new bounds and adopt any forced shape
-      // change (M14-EXT-15/A).
+      // unlocked, clamp to the new bounds and adopt any forced size
+      // change (M14-EXT-20).
       session.video.addEventListener('resize', () => {
         const bounds = captureBounds();
         if (bounds === null || cropRect === null) return;
-        if (aspectFollows) {
+        if (aspectLocked) {
           cropRect = constrainRect(cropRect, bounds, config.grid, 'center');
+          syncStitchSize();
+          updateStitchSizeUi();
         } else {
           cropRect = clampRect(cropRect, bounds);
-          adoptRegionShape();
+          adoptRegionSize();
         }
         renderCrop();
       });
@@ -2655,27 +2688,21 @@ function build(app: HTMLElement): void {
       const message = captureErrorMessage(error);
       status.textContent = message;
       log.warn('capture', 'session not started', { message });
-    } finally {
-      captureButton.disabled = false;
     }
   }
 
-  captureButton.addEventListener('click', () => {
-    void startScreenCapture();
-  });
-  captureFrameButton.addEventListener('click', () => {
-    void grabCaptureFrame();
-  });
-  stopCaptureButton.addEventListener('click', () => {
+  /** End the session from the Source menu (M14-EXT-25/A). */
+  function stopSession(): void {
     capture?.stop();
     endCaptureUi('Screen capture stopped.');
     log.info('capture', 'session stopped');
-  });
-  pauseButton.addEventListener('click', () => {
+  }
+
+  /** Freeze/resume the live pump — a named state, never silent. The
+   *  Source menu derives its Pause/Resume label from `capturePaused`. */
+  function togglePauseCapture(): void {
     if (capture === null) return;
     capturePaused = !capturePaused;
-    pauseButton.textContent = capturePaused ? 'Resume capture' : 'Pause capture';
-    pauseButton.setAttribute('aria-pressed', String(capturePaused));
     if (capturePaused) {
       stopPumpNow();
       draftGovernor.reset();
@@ -2687,56 +2714,88 @@ function build(app: HTMLElement): void {
       status.textContent = 'Capture resumed.';
       log.info('capture', 'resumed');
     }
-    updateCompactStatus();
-  });
+  }
   lockButton.addEventListener('click', () => {
     cropLocked = !cropLocked;
     lockButton.setAttribute('aria-pressed', String(cropLocked));
     cropOverlay.classList.toggle('locked', cropLocked);
     status.textContent = cropLocked ? 'Capture region locked.' : 'Capture region unlocked.';
-    captureSection.refreshSummary();
     // Locking is the other "done with the region" gesture
     // (M14-FIX-01): the preview takes the lead back.
     if (cropLocked) window.scrollTo(0, 0);
   });
 
   /**
-   * The height field is region-driven while aspect is unlocked
-   * (M14-EXT-15/A): a value any drag overwrites must not be editable
-   * — disable it and say why in its own helper (A9 adjacency).
+   * Both Size fields are region-driven while aspect is unlocked
+   * (M14-EXT-20): a value any drag overwrites must not be editable —
+   * disable them and say why in their own helpers (A9 adjacency).
+   * The stitch-size slider inverts: editable while unlocked (it is
+   * the resolution control), a disabled readout while locked (there
+   * the ratio is a consequence of region and design, not an input).
    */
-  function syncHeightDerivedState(): void {
-    const heightInput = document.getElementById('pattern-height');
-    const helper = document.getElementById('pattern-height-helper');
-    const derived = capture !== null && !aspectFollows;
-    if (heightInput instanceof HTMLInputElement) heightInput.disabled = derived;
-    if (helper !== null) {
-      helper.textContent = derived
-        ? 'Follows the region while aspect is unlocked'
-        : SCALE_LABELS.patternHeightHelper;
+  function syncSizeDerivedState(): void {
+    const derived = capture !== null && !aspectLocked;
+    for (const [id, helperText] of [
+      ['pattern-width', SCALE_LABELS.patternHelper],
+      ['pattern-height', SCALE_LABELS.patternHeightHelper],
+    ] as const) {
+      const input = document.getElementById(id);
+      const helper = document.getElementById(`${id}-helper`);
+      if (input instanceof HTMLInputElement) input.disabled = derived;
+      if (helper !== null) {
+        helper.textContent = derived
+          ? 'Follows the region while aspect is unlocked'
+          : helperText;
+      }
     }
+    stitchSizeField.hidden = capture === null;
+    stitchSizeRange.disabled = aspectLocked;
+    stitchSizeHelper.textContent = aspectLocked
+      ? 'Follows the region and design while aspect is locked'
+      : SCALE_LABELS.stitchSizeHelper;
+  }
+
+  /** Re-derive the held scale from the current region and design. */
+  function syncStitchSize(): void {
+    if (cropRect === null || scales.pattern.widthStitches <= 0) return;
+    stitchSizePx = cropRect.width / scales.pattern.widthStitches;
+  }
+
+  /** One decimal at most, no trailing zero: "5.4", "8". */
+  function formatStitchSize(value: number): string {
+    const rounded = Math.round(value * 10) / 10;
+    return String(Number.isInteger(rounded) ? rounded : rounded.toFixed(1));
+  }
+
+  /** Mirror the held scale onto the slider and its exact readout. */
+  function updateStitchSizeUi(): void {
+    if (stitchSizePx <= 0) return;
+    stitchSizeRange.value = String(Math.min(64, Math.max(1, stitchSizePx)));
+    stitchSizeValue.textContent = `${formatStitchSize(stitchSizePx)} px`;
   }
 
   aspectButton.addEventListener('click', () => {
-    aspectFollows = !aspectFollows;
-    aspectButton.setAttribute('aria-pressed', String(aspectFollows));
-    if (aspectFollows) {
-      // Re-adopting the design's aspect is idempotent here: the
-      // unlocked state kept design aspect equal to the region's, so
+    aspectLocked = !aspectLocked;
+    aspectButton.setAttribute('aria-pressed', String(aspectLocked));
+    if (aspectLocked) {
+      // Snapping to the design's aspect is idempotent here: the
+      // unlocked state kept design size derived from the region, so
       // the constrain is a snap at most, never a jump.
       const bounds = captureBounds();
       if (bounds !== null && cropRect !== null) {
         cropRect = constrainRect(cropRect, bounds, config.grid, 'center');
         renderCrop();
-        announceCrop();
+        syncStitchSize();
+        updateStitchSizeUi();
       }
-      status.textContent = 'Aspect follows the design again.';
+      status.textContent = 'Aspect locked — the region keeps the design’s shape.';
     } else {
+      syncStitchSize();
+      updateStitchSizeUi();
       status.textContent =
-        'Aspect unlocked — pins drag freely, and the design height follows the region.';
+        'Aspect unlocked — the region shape and stitch size drive the design size.';
     }
-    syncHeightDerivedState();
-    captureSection.refreshSummary();
+    syncSizeDerivedState();
   });
 
   // Pointer interaction: hit-test decides move / resize-by-handle /
@@ -2748,6 +2807,11 @@ function build(app: HTMLElement): void {
     startX: number;
     startY: number;
     startRect: CropRect;
+    /** Whether the last move ran the free geometry (M14-EXT-20):
+     *  only a free gesture's end adopts the region size — a
+     *  constrained end while locked must never change stitch counts
+     *  (D52), it re-syncs the held stitch size instead. */
+    free: boolean;
   } | null = null;
 
   /**
@@ -2778,6 +2842,7 @@ function build(app: HTMLElement): void {
         mode === null
           ? { x: Math.round(point.x), y: Math.round(point.y), width: 0, height: 0 }
           : cropRect,
+      free: false,
     };
     cropOverlay.setPointerCapture(event.pointerId);
     event.preventDefault();
@@ -2790,10 +2855,11 @@ function build(app: HTMLElement): void {
     const dy = point.y - cropDrag.startY;
     // A move changes no dimension, so it needs no re-aspecting. Every
     // shape-changing route constrains to the design's aspect — unless
-    // the aspect is unlocked, or shift frees the pin for this gesture
-    // (M14-EXT-15, signed A + D); the free shape is adopted as the
-    // design height at pointerup, not per move.
-    const free = !aspectFollows || event.shiftKey;
+    // the aspect is unlocked (the default), or shift frees the pin for
+    // this gesture while locked (M14-EXT-20); the free size is adopted
+    // as the design size at pointerup, not per move.
+    const free = !aspectLocked || event.shiftKey;
+    cropDrag.free = free;
     if (cropDrag.mode === 'inside') {
       cropRect = moveRect(cropDrag.startRect, dx, dy, bounds);
     } else if (cropDrag.mode === 'draw') {
@@ -2825,12 +2891,19 @@ function build(app: HTMLElement): void {
   });
   cropOverlay.addEventListener('pointerup', (event) => {
     if (cropDrag === null) return;
+    const wasFree = cropDrag.free;
     cropDrag = null;
     cropOverlay.releasePointerCapture(event.pointerId);
-    // A free gesture's shape becomes the design height at the gesture
-    // end (M14-EXT-15/A+D); the guard makes constrained ends a no-op.
-    adoptRegionShape();
-    announceCrop();
+    // A free gesture's size becomes the design size at the gesture end
+    // (M14-EXT-20); a constrained end while locked changes resolution,
+    // not stitches, so the held stitch size re-syncs instead.
+    if (wasFree) {
+      adoptRegionSize();
+    } else if (aspectLocked) {
+      syncStitchSize();
+      updateStitchSizeUi();
+    }
+    announceRegion();
     log.debug('capture', 'crop region set', { ...(cropRect ?? {}) });
   });
 
@@ -2849,18 +2922,26 @@ function build(app: HTMLElement): void {
     };
     const move = delta[event.key];
     if (move === undefined) return;
-    // Shift+arrows resize; with aspect unlocked the resize is free and
-    // each press adopts the shape (a press is one deliberate act, so
-    // per-press is the keyboard's gesture end — M14-EXT-15/A). The
-    // locked keyboard route to a free resize is the aspect toggle.
+    // Shift+arrows resize; with aspect unlocked (the default) the
+    // resize is free and each press adopts the size (a press is one
+    // deliberate act, so per-press is the keyboard's gesture end —
+    // M14-EXT-20). The locked keyboard route to a free resize is the
+    // aspect toggle.
     cropRect = event.shiftKey
-      ? aspectFollows
+      ? aspectLocked
         ? constrainRect(resizeRect(cropRect, 'se', move[0], move[1], bounds), bounds, config.grid, 'nw')
         : resizeRect(cropRect, 'se', move[0], move[1], bounds)
       : moveRect(cropRect, move[0], move[1], bounds);
-    if (event.shiftKey && !aspectFollows) adoptRegionShape();
+    if (event.shiftKey) {
+      if (aspectLocked) {
+        syncStitchSize();
+        updateStitchSizeUi();
+      } else {
+        adoptRegionSize();
+      }
+    }
     renderCrop();
-    announceCrop();
+    announceRegion();
     event.preventDefault();
   });
 

@@ -5,10 +5,11 @@
  * button (the app's heading structure — audit A12 — *is* the section
  * list), `aria-expanded`/`aria-controls` on the button, and a panel
  * region that leaves layout and the tab order entirely when closed
- * (`hidden` — the shell's one visibility idiom). The button carries
- * the title plus a derived one-line state summary shown while closed
- * (recognition over recall; derived from owned state at refresh,
- * never scraped from the DOM — the status-line rule).
+ * (`hidden` — the shell's one visibility idiom). A collapsed section
+ * shows its bare heading only (M14-EXT-22, retiring the derived
+ * summary line of D93/D98 lineage): no stat or state rides a closed
+ * fold — the numbers that must stay visible live in the Stats
+ * section.
  *
  * Native `<details>` is deliberately not used here: the section
  * headers double as the page's h2 landmarks, and `summary` cannot be
@@ -29,8 +30,6 @@ export interface AccordionSection {
   isOpen(): boolean;
   /** Set the state programmatically (no onToggle callback fired). */
   setOpen(open: boolean): void;
-  /** Recompute the closed-state summary line. */
-  refreshSummary(): void;
 }
 
 /** Options for {@link createSection}. */
@@ -39,8 +38,6 @@ export interface SectionOptions {
   id: string;
   /** Visible section title (also the accessible name). */
   title: string;
-  /** Derived one-line state summary, shown while closed. */
-  summary: () => string;
   /** Initial open state (spec default or the stored preference). */
   open: boolean;
   /** User toggles only (not programmatic setOpen). */
@@ -61,15 +58,13 @@ export function createSection(doc: Document, options: SectionOptions): Accordion
   const title = doc.createElement('span');
   title.className = 'accordion-title';
   title.textContent = options.title;
-  const summary = doc.createElement('span');
-  summary.className = 'accordion-summary meta';
   const panel = doc.createElement('div');
   panel.className = 'accordion-panel';
   panel.id = `${options.id}-panel`;
   panel.setAttribute('role', 'region');
   panel.setAttribute('aria-labelledby', button.id);
   button.setAttribute('aria-controls', panel.id);
-  button.append(title, summary);
+  button.append(title);
   heading.append(button);
   element.append(heading, panel);
 
@@ -78,10 +73,6 @@ export function createSection(doc: Document, options: SectionOptions): Accordion
   const apply = (): void => {
     panel.hidden = !open;
     button.setAttribute('aria-expanded', String(open));
-    // The summary reads while closed; open sections show their real
-    // controls instead of a précis of them.
-    summary.textContent = open ? '' : options.summary();
-    summary.hidden = open;
   };
 
   button.addEventListener('click', () => {
@@ -100,9 +91,6 @@ export function createSection(doc: Document, options: SectionOptions): Accordion
       if (open === next) return;
       open = next;
       apply();
-    },
-    refreshSummary(): void {
-      if (!open) summary.textContent = options.summary();
     },
   };
 }

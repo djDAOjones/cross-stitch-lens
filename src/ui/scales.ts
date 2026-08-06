@@ -146,6 +146,11 @@ export const SCALE_LABELS = {
   patternHeight: 'Design height',
   patternHelper: 'Stitches across the design',
   patternHeightHelper: 'Stitches down the design',
+  // The region↔design scale (M14-EXT-20): the unit lives in the
+  // helper per the house idiom, and "scale" alone is banned (D52 —
+  // a bare "scale" label is how the four resolutions fuse).
+  stitchSize: 'Stitch size',
+  stitchSizeHelper: 'Source pixels per stitch',
   captureRegion: 'Capture region',
   previewScale: 'Preview scale',
   exportScale: 'Export scale',
@@ -157,16 +162,6 @@ export const SCALE_LABELS = {
 /** `200 × 150 stitches` — the pattern readout. */
 export function patternSummary(pattern: PatternResolution): string {
   return `${String(pattern.widthStitches)} × ${String(pattern.heightStitches)} stitches`;
-}
-
-/**
- * `Capture region 800 × 600 px → 200 × 150 stitches` — both units in
- * one line so the two are never mistaken for each other
- * (UI-STANDARDS → "Capture UX": source pixels *and* stitches).
- */
-export function captureSummary(model: ScaleModel): string {
-  const { widthPx, heightPx } = model.capture;
-  return `${SCALE_LABELS.captureRegion} ${String(widthPx)} × ${String(heightPx)} px → ${patternSummary(model.pattern)}`;
 }
 
 /** `Preview scale 250%` — screen size only, never pattern size. */

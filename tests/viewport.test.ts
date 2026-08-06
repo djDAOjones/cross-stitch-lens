@@ -13,7 +13,9 @@ import {
   MAX_SCALE,
   MIN_SCALE,
   panBy,
+  pinchZoomFactor,
   scaledView,
+  wheelIntent,
   zoomAt,
   hugHeight,
 } from '../src/ui/viewport.ts';
@@ -199,5 +201,42 @@ describe('hugHeight (M14-FIX-03/06)', () => {
 
   it('degenerate designs fall to the floor', () => {
     expect(hugHeight(0, 0, 448, 24, 160, 600)).toBe(160);
+  });
+});
+
+describe('wheelIntent (M14-EXT-27)', () => {
+  it('unengaged is inert — the M14-EXT-10 promise, verbatim', () => {
+    // The regression this pins: no wheel input may reach an unfocused
+    // canvas, whatever modifiers ride it. The page scrolls past.
+    expect(wheelIntent(false, false)).toBe('none');
+    expect(wheelIntent(false, true)).toBe('none');
+  });
+
+  it('engaged: ctrl-wheel pinch zooms, plain wheel pans', () => {
+    expect(wheelIntent(true, true)).toBe('zoom');
+    expect(wheelIntent(true, false)).toBe('pan');
+  });
+});
+
+describe('pinchZoomFactor', () => {
+  it('is 1 at rest and symmetric in and out', () => {
+    expect(pinchZoomFactor(0)).toBe(1);
+    // Equal finger travel in then out must cancel exactly — the
+    // exponential mapping's whole justification.
+    expect(pinchZoomFactor(30) * pinchZoomFactor(-30)).toBeCloseTo(1, 12);
+  });
+
+  it('zooms in for negative deltas (fingers apart) and out for positive', () => {
+    expect(pinchZoomFactor(-10)).toBeGreaterThan(1);
+    expect(pinchZoomFactor(10)).toBeLessThan(1);
+  });
+
+  it('composes with zoomAt keeping the anchor stationary', () => {
+    const view = { scale: 2, tx: 100, ty: 50 };
+    const out = zoomAt(view, pinchZoomFactor(-20), 300, 200);
+    // The content point under (300, 200) stays under (300, 200).
+    const beforeX = (300 - view.tx) / view.scale;
+    const afterX = (300 - out.tx) / out.scale;
+    expect(afterX).toBeCloseTo(beforeX, 10);
   });
 });

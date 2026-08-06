@@ -14,10 +14,10 @@
  *
  * Pan engagement *is* host focus (M14-EXT-10): unfocused, the canvas
  * is inert to wheel and drag so the page scrolls past it; a click
- * focuses (native), and only a focused host pans. The wheel never
- * moves the canvas in either state. Escape blurs — and is consumed,
- * so preview-focus mode exits on the *next* Escape, never the same
- * press.
+ * focuses (native), and only a focused host pans. While engaged the
+ * trackpad drives the view too (M14-EXT-27): pinch zooms about the
+ * pointer, two-finger scroll pans. Escape blurs — disengaging is one
+ * deliberate step.
  *
  * Everything here is view-only: no message this class sends can run
  * the pipeline, change the pattern, or touch export settings.
@@ -37,7 +37,9 @@ import {
   fitView,
   hugHeight,
   panBy,
+  pinchZoomFactor,
   scaledView,
+  wheelIntent,
   zoomAt,
   type ViewState,
 } from './viewport.ts';
@@ -150,8 +152,7 @@ export class PreviewController {
    * so the ResizeObserver settles in one pass — geometry never feeds
    * itself, and nothing is scroll-linked (the M14-FIX-06 cure: the
    * oscillation was the dock's height change moving its own scroll
-   * trigger). Manual zoom freezes the height where the user left it;
-   * preview-focus overrides the inline height in CSS.
+   * trigger). Manual zoom freezes the height where the user left it.
    */
   private hugHost(): void {
     const capShare = window.innerWidth < NARROW_MAX_CSS ? HUG_CAP_NARROW : HUG_CAP_WIDE;
@@ -227,10 +228,77 @@ export class PreviewController {
   }
 
   private bindInput(): void {
-    // No wheel handler at all (M14-EXT-10): the wheel never moves the
-    // canvas in either state — an unfocused preview lets the page
-    // scroll past, and zoom is buttons and keys only. The old
-    // wheel-zoom died here; do not reintroduce it.
+    // The M14-EXT-10 rule split by M14-EXT-27 (owner authority,
+    // D106): the UNFOCUSED surface keeps the no-wheel promise
+    // verbatim — wheelIntent returns 'none' and the page scrolls
+    // past. The ENGAGED state reopens it: ctrl-wheel (macOS trackpad
+    // pinch in Chromium/Firefox) zooms about the pointer, a plain
+    // wheel pans. Non-passive only because the engaged preventDefault
+    // is the contract; it never fires unengaged, so page scroll and
+    // browser zoom outside the engaged canvas are untouched.
+    this.host.addEventListener(
+      'wheel',
+      (event) => {
+        const intent = wheelIntent(this.engaged(), event.ctrlKey);
+        if (intent === 'none' || this.view === null) return;
+        event.preventDefault();
+        const dpr = window.devicePixelRatio;
+        this.goManual();
+        if (intent === 'zoom') {
+          const rect = this.host.getBoundingClientRect();
+          this.setView(
+            zoomAt(
+              this.view,
+              pinchZoomFactor(event.deltaY),
+              (event.clientX - rect.left) * dpr,
+              (event.clientY - rect.top) * dpr,
+            ),
+          );
+        } else {
+          this.setView(panBy(this.view, -event.deltaX * dpr, -event.deltaY * dpr));
+        }
+      },
+      { passive: false },
+    );
+
+    // Safari fires proprietary gesture events for trackpad pinch, not
+    // ctrl-wheel. Same contract: armed only while engaged — an
+    // unengaged canvas leaves browser page zoom alone (AAA: never
+    // break user agent zoom). The events carry an absolute `scale`
+    // relative to the gesture start, so the start pins the base.
+    let gestureBaseScale = 1;
+    const gestureScaleOf = (event: Event): number | null => {
+      const scale = (event as { scale?: unknown }).scale;
+      return typeof scale === 'number' && Number.isFinite(scale) && scale > 0 ? scale : null;
+    };
+    this.host.addEventListener('gesturestart', (event) => {
+      if (!this.engaged() || this.view === null) return;
+      event.preventDefault();
+      gestureBaseScale = this.view.scale;
+    });
+    this.host.addEventListener('gesturechange', (event) => {
+      if (!this.engaged() || this.view === null) return;
+      event.preventDefault();
+      const scale = gestureScaleOf(event);
+      if (scale === null) return;
+      const raw = event as { clientX?: unknown; clientY?: unknown };
+      const rect = this.host.getBoundingClientRect();
+      const dpr = window.devicePixelRatio;
+      const cx = typeof raw.clientX === 'number' ? raw.clientX : rect.left + rect.width / 2;
+      const cy = typeof raw.clientY === 'number' ? raw.clientY : rect.top + rect.height / 2;
+      this.goManual();
+      this.setView(
+        zoomAt(
+          this.view,
+          (gestureBaseScale * scale) / this.view.scale,
+          (cx - rect.left) * dpr,
+          (cy - rect.top) * dpr,
+        ),
+      );
+    });
+    this.host.addEventListener('gestureend', (event) => {
+      if (this.engaged()) event.preventDefault();
+    });
 
     this.host.addEventListener('pointerdown', (event) => {
       // At pointerdown on an unfocused host the click is the engage
@@ -260,9 +328,8 @@ export class PreviewController {
 
     this.host.addEventListener('keydown', (event) => {
       if (this.view === null) return;
-      // Escape disengages: blur, and consume the press so the
-      // preview-focus-mode exit (a window listener) fires only on the
-      // next Escape — two deliberate steps, never one (M14-EXT-10).
+      // Escape disengages: blur, and consume the press so no outer
+      // Escape handler treats the same press as its own (M14-EXT-10).
       if (event.key === 'Escape') {
         event.preventDefault();
         event.stopPropagation();

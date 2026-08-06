@@ -613,3 +613,28 @@ permission boundary (Chromium, dev server):
 | all | EXT-18 re-walk under the new geometry | 199 focusables at 380 px, everything open: zero obscured, zero off-viewport |
 | all | console | a fresh page runs the full sequence with zero errors (an earlier page's four uncaught errors were stale-HMR module instances — the known rig artefact, reproduced clean) |
 | all | suites | typecheck, lint, info-panel 13/13 green before the gate |
+
+## Fourth look — M14-EXT-19..24, 26..30 (D107, 2026-08-06)
+
+Automated: typecheck 0 · ESLint 0 · 964 tests green (54 crop incl.
+the two-dimension derive suite, 28 viewport incl. the wheel-intent
+regression, 7 debug-menu, rewritten shell/info-panel/scales suites).
+Live (dev server, drop-fed 320×240 source, desktop 1280×720 and
+companion 380×700):
+
+| Task | Check | Evidence |
+| --- | --- | --- |
+| EXT-19 | capture request | `displaySurface: 'monitor'` sent inside `video`; picker behaviour is user-owned — named for the owner's next live run |
+| EXT-20 | compact Size + slider | one-row width × height with labels/helpers/44 px kept (314 px wide at the 380 px posture); Stitch size hidden without a session (session legs are unit-tested; the real drag sits on ACCEPT-01's checklist, as with D101) |
+| EXT-21 | Stats | first section reads "200 × 200 stitches · 40,000 (10,000 empty) · 8 · limit 8" with and without a frame ("none yet" pre-frame); no coordinates, no aspect state |
+| EXT-21 | readout retired | no crop-readout element in the DOM; grep-clean |
+| EXT-22 | bare headings | every accordion header renders its title only; Colours by usage and Palette contents folds likewise |
+| EXT-23 | preview collapse | Hide preview → region hidden, label flips to Show preview, status announces; round-trip clean; capture start re-expands by code path |
+| EXT-24 | focus retired | no focus toggle in the DOM; `status-line.ts` and the CSS chain deleted; Escape still blurs the host |
+| EXT-26 | Debug menu | one "Debug" disclosure holding Copy diagnostics / Download log / Email the dev; mailto is identity-only (redaction boundary unit-tested) |
+| EXT-27 | wheel contract | unfocused ctrl-wheel: zoom pinned at 192%; engaged ctrl-wheel (Δy −100): 192% → 522% (= e¹ exactly, anchor math unit-proven); plain-wheel pan engaged-only |
+| EXT-28/29 | Colour section | Threadify colours → Constrain number of colours → Colours slider+input+steppers, lockstep verified (8→9→7 mirrored across all three); Threadify off reads "Unlimited colours — no thread palette." |
+| EXT-30 | Processing | section renders "Processing" with Dither only; Grid details lives between strip and canvas, `grid-details` preference honoured (a stored open state carried over) |
+| all | companion posture | 380 × 700: zero horizontal overflow (scrollWidth 380), canvas hugged to 282 px (the 40dvh cap), strip wraps to two rows |
+| all | console | zero app errors across the full sequence (the one uncaught error was this rig's own failed eval, confirmed by re-running every leg with a listener attached) |
+| EXT-25 (option A, D108) | Source carries the session | no-session modal unchanged (three choices, current-source note, "Source" label); the in-session block (Stop primary · Pause/Resume · Capture frame) and the "Capturing — Source" label ride code paths the headless pane cannot drive — named for ACCEPT-01's live session |

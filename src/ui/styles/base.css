@@ -218,6 +218,51 @@ button[aria-pressed='true']:active:not(:disabled),
   accent-color: var(--csl-background-inverse);
 }
 
+.field input[type='range']:disabled {
+  opacity: var(--csl-disabled-opacity);
+  cursor: not-allowed;
+}
+
+/* Compact Size row (M14-EXT-20): width × height share one line — the
+  labels, helpers and 44 px targets are unchanged; only the stacked
+  height goes. The × is decorative (aria-hidden). */
+.size-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--csl-spacing-03);
+}
+
+.size-row .field {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.size-row .size-sep {
+  flex: none;
+  /* Clear the label line so the × sits beside the inputs. */
+  padding-top: calc(var(--csl-label-01-line) + var(--csl-spacing-02) + 0.625rem);
+}
+
+/* Stitch-size row (M14-EXT-20): the scale slider and its exact
+  readout share a line; the readout keeps a stable width so the
+  slider does not shimmy as digits change. */
+.stitch-size-row {
+  display: flex;
+  align-items: center;
+  gap: var(--csl-spacing-03);
+}
+
+.stitch-size-row input[type='range'] {
+  flex: 1 1 auto;
+  width: auto;
+}
+
+.stitch-size-row .meta {
+  flex: none;
+  min-width: 3.5rem;
+  text-align: right;
+}
+
 /* Carbon-style toggle: switch-role checkbox drawn as a track + thumb;
   state also carried by the On/Off text (never colour-only). */
 .toggle-row {

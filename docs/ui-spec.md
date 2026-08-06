@@ -82,15 +82,38 @@ keyboard route to a free resize is the toggle itself. The Design
 width/height fields join this section for the session (S1 — moved,
 never duplicated) and return to Design on session end.)*
 
+*(Amended fourth look, D106/D107 — M14-EXT-20..24, 28..30: the
+region↔design coupling recut — the session toggle is **"Lock
+aspect"**, default **off**; unlocked, a region drag or the new
+**Stitch size** slider (source px per stitch, slider + exact readout
+beside the compact one-row Size fields) re-derives **both** design
+dimensions through the held scale (`deriveGridSize`), both fields
+disabled-with-reason while derived; locked restores the D52 conduct
+whole. **Preview focus retired whole** — its button was the mode's
+only entry, so the mode went with it (compact status line deleted);
+the preview instead **collapses like any region** via a bar
+"Hide/Show preview" control — session-only, re-expanded by capture
+start. A **Stats** section (design size · total stitches · colours in
+use, carrying D98's never-silent limit duty) leads the settings
+panel; the standing capture-region readout retired with its
+coordinates — gesture ends announce through the status region.
+Collapsed folds are **bare headings** (summaries retired app-wide).
+**Colour** left Design as its own section; **Appearance renamed
+Processing** (dither only), with the grid geometry reveal moved under
+the view strip.)*
+
 ```text
-header        h1 · shell bar [Hide/Show settings · Preview focus]
-content       preview section [toolbar · canvas host · compact status · info panel]
+header        h1 · shell bar [Source · Hide/Show preview · Hide/Show settings] · (dev: Debug menu)
+content       preview section [view strip · grid-details reveal · canvas host]
+              info panel [Colours by usage fold]
               status line (role=status)
               source section [empty state / import + capture + crop]
-              (dev: profiling disclosure · copy diagnostics)
-panel (aside) accordion:
-              ▸ Design      (OPEN by default)
-              ▸ Appearance
+              (dev: profiling disclosure)
+panel (aside) accordion (collapsed = bare heading, EXT-22):
+              ▸ Stats       (OPEN by default; readout, not controls)
+              ▸ Design      (OPEN by default; Size + Stitch size)
+              ▸ Colour
+              ▸ Processing  (dither only)
               ▸ Export
               ▸ Project
               ▸ Advanced
@@ -120,12 +143,11 @@ header after toggle; no focus teleporting. Collapsed sections are out
 of the tab order entirely (content unmounted or `hidden` — J3's ~130
 tab stops die here).
 
-**Collapsed state summaries** (recognition over recall): each closed
-section header carries a derived one-line summary of its live state —
-Design: "200 × 200 · DMC · all colours"; Appearance: "grid on ·
-Balanced dither"; Export: "PNG ×1 · chart 10 px · A4"; Project:
-"unsaved changes" / "saved as …". Derived from state at render, never
-scraped from DOM (status-line precedent).
+**Collapsed state summaries** — *retired (M14-EXT-22, D107,
+superseding the D93/D98/D99 lineage on the owner's ask): a collapsed
+fold is its bare title; no stat or state rides a closed fold anywhere
+in the app. The recognition duty moved to the always-readable Stats
+section (EXT-21) before the flatten, so nothing went silent.*
 
 ## 3. First-run and the content column (D78)
 
@@ -155,12 +177,18 @@ default palette (J1) is answered by the Design section being open with
 "Thread palette · DMC" visible, plus the collapsed-summary line
 thereafter.
 
-**Capture session**: crop readout gains position and becomes a polite
-status ("Region 600 × 600 px at (100, 40) → 200 × 200 stitches"),
-updated at drag-end / key-release, answering A8 without per-move
-flooding. Machine-token labels are filtered allow-list-style (A7):
-show the label only if it looks human (has a space or is a known
-surface word), else "the shared screen".
+**Capture session**: *(amended M14-EXT-21, D107: the standing
+`Capture region … px → … stitches` readout retired — its numbers
+live in the Stats section, and the owner cut the coordinates.)*
+Gesture ends (drag-end / key-release, never per-move) announce
+through the one status region — "Design 200 × 150 stitches from a
+800 × 600 px region" while unlocked (naming a clamp at the cap),
+"Region 800 × 600 px" while locked — so A8's keyboard feedback
+survives the readout. Machine-token labels stay filtered
+allow-list-style (A7): show the label only if it looks human, else
+"the shared screen". The capture request hints `displaySurface:
+'monitor'` (EXT-19) so the picker opens on the entire-screen tab
+where honoured — a hint beside D105's exclusions, degrading silently.
 
 **Unsaved-work honesty** (J5): the Project section carries the line
 "Nothing is kept unless you save your project." — the M14-scope
@@ -302,6 +330,54 @@ as reach 2.
   width/height"**; the sub-legend reads "Size" under the Design
   section header. Stored values and schema untouched.
 
+### §5 amendments — fourth look (D106/D107, M14-EXT-19..30)
+
+- **Shell bar**: Preview focus / exit retired with its mode (EXT-24);
+  **Hide/Show preview** takes its place (EXT-23) — ghost button,
+  aria-expanded, session-only state, capture start re-expands.
+- **Stats** (EXT-21): new first section, C-tier readout (reach 0 open
+  by default) — design size · total stitches (+empty) · colours in
+  use with the limit named; no coordinates, no aspect state.
+- **Design** (EXT-20): the Size fields share one compact row (labels,
+  helpers and 44 px targets kept); a **Stitch size** slider (label +
+  "Source pixels per stitch" helper, slider + exact px readout) rides
+  with them — hidden without a session, disabled-with-reason while
+  aspect is locked. Both Size fields disable-with-reason while
+  unlocked (both derive). The session toggle is **"Lock aspect"**,
+  default off, superseding D101's "Aspect follows design" default-on;
+  shift-drag and the toggle keep their D101 keyboard roles.
+- **Colour** (EXT-28/29): its own section after Design. Anatomy:
+  **Threadify colours** switch (the full-RGB↔threads boolean, reading
+  A of the memo) → **Constrain number of colours** switch (the count
+  limit; `Use exactly this many` retired — the switch means "at most
+  n"; core still honours a loaded exact policy, edits write max) →
+  Colours slider + number input + **− / + steppers** (aria-labels
+  "Fewer/More colours", the ↑/↓ A2 precedent), all in lockstep, the
+  steppers announcing through a dedicated polite region → the source
+  select (M15's future "Colour profile" slot) → summary, conflicts,
+  thread depth.
+- **Processing** (EXT-30): Appearance renamed, holding the Dither
+  group only; the stored `section-appearance` disclosure preference
+  seeds `section-processing` by fallback. **Grid details** moved out
+  of the panel to the view strip's reveal (between strip and canvas,
+  same `grid-details` key).
+- **Debug menu** (EXT-26): the dev cluster's loose buttons gathered
+  under one labelled `details` disclosure ("Debug") — Copy
+  diagnostics · Download log · **Email the dev** (downloads the
+  redacted log, then opens a prefilled mailto whose body says to
+  attach it; identity-only content, address a placeholder constant).
+- **Trackpad** (EXT-27): while the canvas host is engaged, ctrl-wheel
+  pinch zooms about the pointer and plain wheel pans (Safari gesture
+  events equivalently); unengaged stays wheel-inert — the EXT-10
+  promise verbatim, regression-tested (`wheelIntent`).
+- **Session controls** (EXT-25, owner-picked option A, D108): the
+  Source button reads **"Capturing — Source"** during a session and
+  its modal leads with Stop capture (primary) · Pause/Resume ·
+  Capture frame above the source choices; inline, the session row is
+  Lock region beside Lock aspect only. Stop is bar-reachable at all
+  times; nothing cut — the pump-death recovery copy points at the
+  Source menu.
+
 **Anatomy baseline for every control** (IMPL-02): visible label =
 accessible name; helper only where it prevents error; validation +
 disabled states with a stated local reason where the reason is not
@@ -321,10 +397,12 @@ no colour-only state.
   view** (EXT-08 — one rule with the strip button). Pan engagement
   *is* host focus (EXT-10): unfocused, wheel and drag belong to the
   page; a click engages (native focus, the ring is the engaged
-  state); wheel never moves the canvas in either state. Escape on a
-  focused canvas blurs it and is consumed; preview-focus mode exits
-  on the *next* Escape (its exit button remains the guaranteed
-  route).
+  state). *(Amended EXT-27, D107: while engaged, ctrl-wheel pinch
+  zooms about the pointer and a plain wheel pans — gestures are an
+  addition, never the only route; the unfocused surface keeps the
+  EXT-10 wheel-inert promise verbatim.)* Escape on a focused canvas
+  blurs it and is consumed — disengaging is one deliberate step
+  (preview-focus mode retired at EXT-24).
 - Crop overlay: arrows move, shift+arrows resize (unchanged); the
   status readout announces the result (§3).
 - Modals (palette name, bulk disown): Carbon modal keyboard contract —
@@ -341,20 +419,23 @@ owner-signed session-time exception — the Capture region section
 precedes the preview while a session runs, as a DOM mount)*; no CSS
 `order`; 320 px
 companion baseline (no page-level horizontal scroll; preview keeps
-the width majority); preview-focus semantics (exit control persistent,
-compact status only, session-only state); panel-collapse semantics +
-persistence; controls apply immediately — no Apply buttons; shell/
-disclosure state in preferences, never the project file; no pipeline
-semantics change; no project-file schema change; no new runtime
-dependencies; exports re-run at full quality; thread colours never
-routed through UI tokens; conflict sentences remain full sentences in
-a polite live region; canvas keyboard operability; the four
-resolutions stay four independently-owned quantities (the derived
-size line is a readout, not a control). *(Amended D101: with aspect
-unlocked — M14-EXT-15 — the region's shape writes the design height
-by design; the quantities stay independently owned in the default
-locked state, and the one sanctioned crossing is announced in the
-readout while it is live.)*
+the width majority); *(preview-focus semantics retired whole with the
+mode, EXT-24/D107; the preview collapse — EXT-23, session-only,
+control outside the region — takes the row)*; panel-collapse
+semantics + persistence; controls apply immediately — no Apply
+buttons; shell/ disclosure state in preferences, never the project
+file; no pipeline semantics change; no project-file schema change; no
+new runtime dependencies; exports re-run at full quality; thread
+colours never routed through UI tokens; conflict sentences remain
+full sentences in a polite live region; canvas keyboard operability;
+the four resolutions stay four independently-owned quantities (the
+derived size line is a readout, not a control). *(Re-amended D107,
+superseding D101's height-only split: with aspect unlocked —
+M14-EXT-20, now the session default — the region's size writes
+**both** design dimensions through the held source-px-per-stitch
+scale; the quantities stay independently owned while locked, and the
+sanctioned crossing is announced at every gesture end while it is
+live.)*
 
 ## 8. Audit findings answered (closure index)
 

@@ -132,6 +132,33 @@ export function panBy(view: ViewState, dx: number, dy: number): ViewState {
   return { ...view, tx: view.tx + dx, ty: view.ty + dy };
 }
 
+/** What a wheel event may do to the view (M14-EXT-27). */
+export type WheelIntent = 'none' | 'zoom' | 'pan';
+
+/**
+ * The engaged-only wheel contract (M14-EXT-27): unengaged, every
+ * wheel input belongs to the page — the M14-EXT-10 promise verbatim;
+ * engaged, ctrl-wheel (how macOS trackpad pinch arrives in
+ * Chromium/Firefox) zooms and a plain wheel pans. Pure so the
+ * unfocused-inert half is a regression test, not a hope.
+ */
+export function wheelIntent(engaged: boolean, ctrlKey: boolean): WheelIntent {
+  if (!engaged) return 'none';
+  return ctrlKey ? 'zoom' : 'pan';
+}
+
+/** How hard a pinch delta zooms; e^(−Δy·k) keeps it symmetric. */
+const PINCH_ZOOM_SENSITIVITY = 0.01;
+
+/**
+ * Zoom factor for one ctrl-wheel pinch delta. Exponential so equal
+ * finger travel in and out cancels exactly (factor(d)·factor(−d)=1),
+ * which a linear mapping cannot promise.
+ */
+export function pinchZoomFactor(deltaY: number): number {
+  return Math.exp(-deltaY * PINCH_ZOOM_SENSITIVITY);
+}
+
 /**
  * Keep the image from being panned fully out of sight: at least
  * {@link VISIBLE_MARGIN} device px of it must remain inside the view

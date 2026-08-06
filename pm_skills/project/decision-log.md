@@ -2353,3 +2353,155 @@ at M15-SCOPE-01; exact-count's fate is named at EXT-29's gate.
 **Link:** backlog → M14 "Extension — fourth look (D106)" + "Next —
 M15"; tickets M14-EXT-20/21/25/26/27/29/30, M15-SCOPE-01/02;
 ACCEPT-01 re-blocked on EXT-19..30.
+
+## D107 — M14-EXT-19..24, 26..30: the fourth-look extension lands in one auto-jazz run (2026-08-06)
+
+**Decision:** eleven of the twelve fourth-look tasks shipped as one
+gateless run (auto-jazz, per the owner's "autojazz the backlog"
+instruction — conservative picks at every skipped gate, each named
+here). EXT-19: `displaySurface: 'monitor'` rides inside the `video`
+constraints beside D105's exclusions; D105's choose-a-window
+expectation copy deliberately stays (still the honest warning — the
+tension is ACCEPT-01's to judge). EXT-20: "Lock aspect" defaults
+off; `deriveGridSize` replaces `deriveGridHeight` (both dimensions
+through one held source-px-per-stitch scale, fixed-point-proven);
+the slider ships as **"Stitch size"** + "Source pixels per stitch"
+helper (the unit-in-helper idiom — a bare "scale" label is D52-banned
+and "Detail" inverts); both Size fields disable-with-reason while
+unlocked (the ticket's pick for the open field-edit question — the
+user's handles are region and slider); a mid-session project load
+re-seeds the scale from the loaded width, keeping D101's
+width-honoured semantics. EXT-21: Stats leads the panel (not the
+page — the ticket's recommendation); the info panel's summary line
+retired with the region readout (Stats owns every headline figure —
+the "no third copy" duty), and gesture-end status announcements keep
+A8's keyboard feedback without a standing readout; coordinates die
+unmourned. EXT-22: the accordion summary machinery deleted whole,
+not emptied — `usageSummaryLabel`, `captureSummary` and the Design/
+capture fold lines went with it. EXT-23/24: preview collapse is a
+third shell-model field, **session-only** (a working gesture, not a
+preference — reopening into a hidden canvas is a bad first second);
+preview focus retired whole — `status-line.ts`, the compact status,
+the CSS flex chain, and the Escape-exit listener all deleted, none
+idled. EXT-26: the Debug menu is a `details` disclosure (the house
+pattern); Email the dev downloads the redacted log then opens an
+identity-only mailto (redaction boundary unit-tested); the address
+ships as an empty placeholder constant — the owner names what a
+public bundle exposes. EXT-27: the engaged/unengaged split lives in
+a pure `wheelIntent` (the unfocused-inert promise is a regression
+test); pinch is exponential (`e^(−Δy/100)`, in/out cancels exactly);
+Safari's gesture events covered. EXT-28: Colour defaults closed
+(every non-Design section does; Stats carries the count). EXT-29:
+reading A shipped — Threadify colours = the mode boolean, Constrain
+number of colours = the count switch; exact mode cut from the
+surface, kept in core for loaded files (edits write 'max'); steppers
+announce via a dedicated polite region because a button press is
+natively silent where slider and input are not. EXT-30: destination
+A — the grid reveal mounts between strip and canvas; the
+`section-appearance` disclosure preference seeds `section-processing`
+by fallback, nothing stranded.
+
+**Verified:** typecheck/lint 0, 964 tests (54 crop, 28 viewport, 7
+debug-menu; shell/info-panel/scales suites rewritten to the new
+contracts — approved behaviour changes, not weakening); live sweep at
+1280×720 and 380×700 (evidence table in `docs/ui-evidence.md`):
+Stats honest pre- and post-frame, wheel contract exact (192%→522% =
+e¹), lockstep count controls, zero horizontal overflow, zero app
+console errors. Live capture legs are unit-tested geometry plus
+ACCEPT-01's checklist — same rig limitation as D101.
+
+**Supersessions land as triaged (D106):** D101's default-on and
+height-only derive; D93/D98/D99's informative fold lines; M6-FOCUS-01
+whole; M14-EXT-10's no-wheel rule for the engaged state only;
+UI-STANDARDS' capture readout and never-collapsing canvas plus
+AGENTS' four-resolutions split text → ledgered in `doc-deltas.md`,
+never auto-edited.
+
+**Link:** backlog → EXT-25 is the set's one survivor ([sign-off] —
+options prepared in its ticket, the pick is the owner's); ACCEPT-01
+re-blocks on it alone; tickets M14-EXT-20/21/26/27/29/30 deleted on
+ship; ui-spec §2/§3/§5/§6/§7 amended; evidence in
+`docs/ui-evidence.md`.
+
+## D108 — M14-EXT-25: the Source button carries the session (2026-08-06)
+
+**Decision:** the owner picked **option A** at the sign-off gate
+(structured in-session answer, 2026-08-06; the pack is preserved in
+this entry's losers). During a capture session the bar's Source
+button reads **"Capturing — Source"** (label = accessible name, so
+the state is announced to whoever reads the control) and its modal
+leads with a session block — **Stop capture** (primary while
+capturing) · **Pause/Resume capture** (label derived from the pump
+state) · **Capture frame** — above the unchanged source choices, so
+switching source never hides behind the same click that stops.
+Inline, the session row reduces to the two region toggles that pair
+naturally: **Lock region** beside **Lock aspect**. Nothing is cut:
+pause and frame-grab demoted to the modal, and the pump-death
+recovery copy now points there ("use Capture frame in the Source
+menu"). Stop is reach 2 (bar → modal) but reachable from the bar at
+all times — the fixed point the backlog demanded. The vestigial
+"Start screen capture" button (hidden since the EXT-02 modal took
+over) went with the row.
+
+**Losers recorded:** B (a dedicated bar Stop during sessions) kept
+the unjustified inline row and paid a fourth bar control at
+companion width; C (bar Stop + Capture frame cut) removed a shipped
+recovery route — the owner did not name the cut.
+
+**Verified:** typecheck/lint 0, 957 tests; live: the no-session
+modal unchanged (three choices, current-source note), the inline row
+reduced to the two locks by construction. The in-session modal block
+and the label swap ride code paths a headless pane cannot drive
+(getDisplayMedia) — named for ACCEPT-01's live session with the
+region-drag legs.
+
+**Link:** ticket M14-EXT-25 (deleted on ship — the option pack lives
+in its D107/D108 trail); ui-spec §5 amended; ACCEPT-01 is now
+unblocked — the milestone's one remaining item, and it is the
+owner's.
+
+## D109 — M14 fifth look: refinements on the fourth-look surface triaged — seven tasks (2026-08-06)
+
+**Decision:** the owner's fifth look (ten typed refinements on the
+just-shipped fourth-look surface, 2026-08-06) triages into seven
+extension tasks that gate ACCEPT-01 again, ids in run order —
+EXT-31 the preview gains a real accordion-style header and collapses
+from it, the bar toggle retiring with the move (memos 6+2, one task
+because the header is the replacement route); EXT-32 the settings
+toggle retires and the whole-panel collapse mode with it (memo 3 —
+the M6-PANEL-01 sunset, EXT-24's pattern; after 31+32 the shell
+model tends to `cold` alone); EXT-33 the capture section recut
+(memos 1+4+5: rename to "Capture", every session starts expanded,
+and the session controls return from the Source modal to the
+section — the Source button reads "Source" always); EXT-34 the
+empty-Design fix (memo 8 — diagnosed as EXT-28 plus D101's S1
+reparent composing into an open heading over nothing during
+sessions; recommendation: retire S1, options in the ticket); EXT-35
+grid details as a live-apply form modal from the strip, Numbers
+folding into it (memo 7 — bounded to existing GridStyle capability,
+tick font size finally surfaced; new rendering capability stays
+M11's); EXT-36 the look/feel/ergonomics/intuitiveness polish pass
+(memo 9, the EXT-05 method scaled up); EXT-37 the full Carbon
+conformance review (memo 10, VERIFY-01's table discipline over
+every component class, after EXT-36 so the audit sees the final
+surface).
+
+**Supersessions on the owner's own authority, same day, having seen
+them live:** D107's bar Hide/Show preview → the section header
+(EXT-31); D108's option A — the Source button carrying the session
+and its bar-reachability fixed point → session controls inline in
+the Capture section (EXT-33); D107's under-strip grid-reveal
+placement and D95's strip Numbers toggle → the modal (EXT-35);
+D97's persisted-collapse-at-mount → always-open session start
+(EXT-33). EXT-34's recommendation would touch D101's S1 half only —
+the lock conduct and derive halves stand.
+
+**Memo repair note:** "capturing source" (memo 4) is matched to the
+shipped **"Capturing — Source"** bar-button state — the only surface
+by that name — and "move" read as relocating the session affordance
+whole; the narrower label-only reading is recorded in the EXT-33
+ticket for the gate.
+
+**Link:** backlog → M14 "Extension — fifth look (D109)"; tickets
+M14-EXT-31/33/34/35/36/37 (EXT-32 is line-only); ACCEPT-01
+re-blocked on EXT-31..37. Nothing implemented in this triage.

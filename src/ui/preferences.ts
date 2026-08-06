@@ -4,9 +4,9 @@
  * Deliberately **not** in the project file. A project is creative data
  * that gets shared; a collaborator opening it should not have their
  * settings panel disappear because of how someone else likes to work.
- * Preview focus is not persisted at all — it is a transient working
- * mode, and reopening into a stripped-down shell with no memory of why
- * is a bad first second.
+ * The preview collapse (M14-EXT-23) is not persisted at all — it is a
+ * transient working gesture, and reopening into a hidden canvas with
+ * no memory of why is a bad first second.
  *
  * Storage is injected, so the parse/merge policy is pure and testable
  * without a browser. Corrupt, absent, or newer-versioned data all fall

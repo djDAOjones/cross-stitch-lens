@@ -17,7 +17,8 @@ import {
   aspectMatches,
   clampRect,
   constrainRect,
-  deriveGridHeight,
+  deriveClamped,
+  deriveGridSize,
   fullAspectRect,
   fullRect,
   hitTest,
@@ -351,45 +352,77 @@ describe('aspectErrorPx', () => {
   });
 });
 
-describe('deriveGridHeight (M14-EXT-15, signed A — the unlocked half)', () => {
-  // The signed contract splits the independence invariant: locked,
-  // the region chooses WHICH pixels, never how many stitches (the
-  // constrainRect suites above); unlocked, the region's shape writes
-  // the design height — one direction, stitches always square.
+describe('deriveGridSize (M14-EXT-20 — the unlocked half)', () => {
+  // The independence invariant still splits on the lock: locked, the
+  // region chooses WHICH pixels, never how many stitches (the
+  // constrainRect suites above); unlocked, the region's size writes
+  // BOTH design dimensions through one source-px-per-stitch scale —
+  // one direction, stitches always square. Supersedes the D101
+  // height-only derive.
   const MAX = 1024;
 
-  it('derives height from the region shape, width untouched', () => {
-    // 780 × 570 at 200 across → 200 × round(200·570/780) = 146.
-    expect(deriveGridHeight(200, { x: 0, y: 0, width: 780, height: 570 }, MAX)).toBe(146);
+  it('derives both dimensions from the region at the scale', () => {
+    // 780 × 570 at 4 px per stitch → 195 × round(570/4) = 143.
+    expect(deriveGridSize(4, { x: 0, y: 0, width: 780, height: 570 }, MAX)).toEqual({
+      width: 195,
+      height: 143,
+    });
   });
 
-  it('is the identity when the aspects already match', () => {
-    expect(deriveGridHeight(200, { x: 5, y: 9, width: 600, height: 600 }, MAX)).toBe(200);
-    expect(deriveGridHeight(100, { x: 0, y: 0, width: 400, height: 300 }, MAX)).toBe(75);
+  it('is a fixed point when the region already derives the grid', () => {
+    // A region built as grid × scale round-trips exactly.
+    expect(deriveGridSize(3, { x: 5, y: 9, width: 600, height: 450 }, MAX)).toEqual({
+      width: 200,
+      height: 150,
+    });
   });
 
-  it('region position never matters, only shape', () => {
-    const a = deriveGridHeight(120, { x: 0, y: 0, width: 500, height: 320 }, MAX);
-    const b = deriveGridHeight(120, { x: 250, y: 199, width: 500, height: 320 }, MAX);
-    expect(a).toBe(b);
+  it('region position never matters, only size', () => {
+    const a = deriveGridSize(2.5, { x: 0, y: 0, width: 500, height: 320 }, MAX);
+    const b = deriveGridSize(2.5, { x: 250, y: 199, width: 500, height: 320 }, MAX);
+    expect(a).toEqual(b);
   });
 
-  it('clamps to [1, maxSide]', () => {
-    expect(deriveGridHeight(10, { x: 0, y: 0, width: 4000, height: 1 }, MAX)).toBe(1);
-    expect(deriveGridHeight(1000, { x: 0, y: 0, width: 10, height: 20000 }, MAX)).toBe(MAX);
+  it('a fractional scale still yields integer stitches', () => {
+    const out = deriveGridSize(5.4, { x: 0, y: 0, width: 1080, height: 700 }, MAX);
+    expect(out).toEqual({ width: 200, height: 130 });
+    expect(Number.isInteger(out.width)).toBe(true);
+    expect(Number.isInteger(out.height)).toBe(true);
   });
 
-  it('reaches a fixed point with constrainRect — derive, reframe, derive again', () => {
-    // The unlocked flow: free rect → derive height → the grid adopts
-    // the region's aspect → a reframe constrain is a snap at most and
-    // a second derive changes nothing. This is the no-feedback-loop
+  it('clamps each side to [1, maxSide] and deriveClamped reports it', () => {
+    expect(deriveGridSize(10, { x: 0, y: 0, width: 4000, height: 1 }, MAX)).toEqual({
+      width: 400,
+      height: 1,
+    });
+    expect(deriveGridSize(1, { x: 0, y: 0, width: 10, height: 20_000 }, MAX)).toEqual({
+      width: 10,
+      height: MAX,
+    });
+    expect(deriveClamped(1, { x: 0, y: 0, width: 10, height: 20_000 }, MAX)).toBe(true);
+    expect(deriveClamped(4, { x: 0, y: 0, width: 780, height: 570 }, MAX)).toBe(false);
+  });
+
+  it('reaches a fixed point with constrainRect — derive, lock, derive again', () => {
+    // The unlocked flow: free rect → derive size → locking constrains
+    // the region to the derived grid's aspect → a second derive at the
+    // re-synced scale changes nothing. This is the no-feedback-loop
     // guarantee the implementation leans on.
     const free: CropRect = { x: 40, y: 25, width: 780, height: 570 };
-    const width = 200;
-    const height = deriveGridHeight(width, free, MAX);
-    const reframed = constrainRect(free, BOUNDS, { width, height }, 'center');
-    expect(aspectMatches(reframed, { width, height })).toBe(true);
-    expect(deriveGridHeight(width, reframed, MAX)).toBe(height);
+    const grid = deriveGridSize(4, free, MAX);
+    const reframed = constrainRect(free, BOUNDS, grid, 'center');
+    expect(aspectMatches(reframed, grid)).toBe(true);
+    // Locking re-syncs the scale from the constrained region.
+    const resynced = reframed.width / grid.width;
+    expect(deriveGridSize(resynced, reframed, MAX)).toEqual(grid);
+  });
+
+  it('slider path is a fixed point too — same region, new scale, derive twice', () => {
+    const rect: CropRect = { x: 0, y: 0, width: 900, height: 600 };
+    const first = deriveGridSize(2, rect, MAX);
+    expect(first).toEqual({ width: 450, height: 300 });
+    // Deriving again at the same scale changes nothing.
+    expect(deriveGridSize(2, rect, MAX)).toEqual(first);
   });
 
   it('locked half unchanged: constrained rects still ignore region size', () => {
@@ -403,7 +436,14 @@ describe('deriveGridHeight (M14-EXT-15, signed A — the unlocked half)', () => 
     expect(small.width).not.toBe(large.width);
   });
 
-  it('degenerate zero-width region falls back to the given width', () => {
-    expect(deriveGridHeight(200, { x: 0, y: 0, width: 0, height: 100 }, MAX)).toBe(200);
+  it('degenerate scales fall back to 1 px per stitch', () => {
+    expect(deriveGridSize(0, { x: 0, y: 0, width: 100, height: 50 }, MAX)).toEqual({
+      width: 100,
+      height: 50,
+    });
+    expect(deriveGridSize(Number.NaN, { x: 0, y: 0, width: 100, height: 50 }, MAX)).toEqual({
+      width: 100,
+      height: 50,
+    });
   });
 });

@@ -33,9 +33,9 @@ main {
   margin: 0;
 }
 
-/* Shell bar: source, collapse and preview-focus live on a permanent
-  surface, so the way out of a mode is always in one place. Hugs the
-  right edge at wide widths; wraps as a tidy left-aligned row at
+/* Shell bar: source and the two collapse controls live on a permanent
+  surface, so the way out of a collapse is always in one place. Hugs
+  the right edge at wide widths; wraps as a tidy left-aligned row at
   companion widths (M14-EXT-05). */
 .shell-bar {
   margin: 0;
@@ -56,6 +56,36 @@ main {
 .diagnostics-control [role='status'] {
   margin: 0;
   flex-basis: 100%;
+}
+
+/* Debug menu (M14-EXT-26): one labelled disclosure over the three
+  maintainer routes. The open body floats over the page so a header
+  disclosure does not reflow the layout under the pointer. */
+.debug-menu {
+  position: relative;
+}
+
+.debug-menu > summary {
+  padding: 0 var(--csl-spacing-03);
+  border: 1px solid var(--csl-border-strong);
+}
+
+.debug-menu-body {
+  position: absolute;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: var(--csl-spacing-02);
+  min-width: 12rem;
+  padding: var(--csl-spacing-03);
+  background: var(--csl-layer-01);
+  border: 1px solid var(--csl-border-strong);
+}
+
+.debug-menu-body button {
+  width: 100%;
+  text-align: left;
 }
 
 @media (max-width: 60rem) {
@@ -288,78 +318,12 @@ main {
   height: 100%;
 }
 
-/* Preview focus: the preview takes the window. Built as a flex chain
-  down to the host rather than `100vh minus a guess`, so the height
-  stays correct when the toolbar wraps to two rows at a narrow width
-  or the text size changes. */
-body.preview-focus {
-  height: 100dvh;
-  /* Without border-box the page padding is added *outside* the
-    100dvh, making the body taller than the viewport and pushing the
-    compact status under the fold — where `overflow: hidden` then
-    clips the mode's only status line. */
-  box-sizing: border-box;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
+/* Preview focus retired whole at M14-EXT-24 (its button was the
+  mode's only entry): the flex chain, the compact status, and the
+  hug override went with it. The preview now collapses like any
+  region (M14-EXT-23), via [hidden]. */
 
-body.preview-focus main,
-body.preview-focus .app-layout,
-body.preview-focus .content,
-body.preview-focus .content > section {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
-  /* Restated, not inherited: the wide-layout media query sets
-    `align-items: flex-start` for the side-by-side row, and left in
-    place here it becomes a *cross-axis* rule that shrinks every child
-    to its content width. */
-  align-items: stretch;
-}
-
-/* `main` keeps `margin: 0 auto` for centring, and auto margins on the
-  cross axis suppress `align-items: stretch` — without an explicit
-  width it collapses to its content and the preview gets *smaller* in
-  the mode meant to enlarge it. */
-body.preview-focus main {
-  width: 100%;
-}
-
-/* Trade the title block for preview height: the app name stays as the
-  landmark, the build line is still in diagnostics. */
-body.preview-focus .app-header {
-  flex: 0 0 auto;
-  margin-bottom: 0;
-}
-
-body.preview-focus .app-header h1 {
-  font-size: var(--csl-heading-02-size);
-  line-height: var(--csl-heading-02-line);
-  margin: 0;
-}
-
-body.preview-focus .app-header .meta {
-  display: none;
-}
-
-body.preview-focus .preview-host {
-  flex: 1 1 auto;
-  /* !important beats the controller's inline hug height (M14-FIX-03):
-    focus mode fills the window by flex, whatever auto-fit set. */
-  height: auto !important;
-}
-
-/* The compact status is the only status in focus mode, so it keeps
-  full-size text rather than the .meta reduction. */
-.compact-status {
-  margin: var(--csl-spacing-03) 0 0;
-  font-size: var(--csl-body-01-size);
-  color: var(--csl-text-primary);
-}
-
-/* Info panel: summary + colours-by-usage table. Swatch colours are
+/* Info panel: the colours-by-usage table. Swatch colours are
   content (thread colours), never UI tokens. Wide tables scroll inside
   their own panel rather than pushing the page sideways — page-level
   horizontal scrolling is the thing a companion window must never do
@@ -543,6 +507,27 @@ body.preview-focus .preview-host {
   padding: var(--csl-spacing-03) var(--csl-spacing-02) var(--csl-spacing-05);
 }
 
+/* Stats section (M14-EXT-21): a quiet two-column definition list —
+  label left, value right. The values are text, updated from owned
+  state; nothing here is a control. */
+.stats-list {
+  margin: 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--csl-spacing-02) var(--csl-spacing-05);
+}
+
+.stats-list dt {
+  font-size: var(--csl-label-01-size);
+  color: var(--csl-text-secondary);
+  line-height: var(--csl-body-01-line);
+}
+
+.stats-list dd {
+  margin: 0;
+  text-align: right;
+}
+
 /* Inline depth reveals (native details): the summary row reads as a
   quiet control; content indents under it like the dither method
   group. */
@@ -569,6 +554,17 @@ body.preview-focus .preview-host {
   padding-left: var(--csl-spacing-04);
   border-left: 2px solid var(--csl-border-subtle);
   margin-top: var(--csl-spacing-02);
+}
+
+/* Grid-geometry reveal under the strip (M14-EXT-30): part of the
+  sticky preview unit — opening it grows the unit on a user action,
+  never on scroll (D103 holds). */
+.view-grid-reveal {
+  margin: 0 0 var(--csl-spacing-02);
+}
+
+.view-grid-reveal > .depth-reveal-body {
+  padding-bottom: var(--csl-spacing-03);
 }
 
 /* View strip (M14-EXT-11, retiring the M14-EXT-03/05 fold): one

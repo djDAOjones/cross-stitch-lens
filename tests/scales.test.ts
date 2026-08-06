@@ -15,7 +15,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  captureSummary,
   defaultScales,
   MAX_PATTERN_SIDE,
   MIN_PATTERN_SIDE,
@@ -151,6 +150,7 @@ describe('visible labels keep the four apart', () => {
   it('gives each quantity its own words', () => {
     const labels = [
       SCALE_LABELS.patternWidth,
+      SCALE_LABELS.stitchSize,
       SCALE_LABELS.captureRegion,
       SCALE_LABELS.previewScale,
       SCALE_LABELS.exportScale,
@@ -167,9 +167,13 @@ describe('visible labels keep the four apart', () => {
     }
   });
 
-  it('names both units in the capture readout', () => {
-    const text = captureSummary(populated());
-    expect(text).toBe('Capture region 800 × 600 px → 200 × 150 stitches');
+  it('carries the stitch-size unit in the helper, not the label', () => {
+    // The M14-EXT-20 slider: "Stitch size" + "Source pixels per
+    // stitch" — the unit-in-helper idiom, and "source" distinguishes
+    // it from the export and preview px-per-stitch quantities.
+    expect(SCALE_LABELS.stitchSize).toBe('Stitch size');
+    expect(SCALE_LABELS.stitchSizeHelper.toLowerCase()).toContain('source');
+    expect(SCALE_LABELS.stitchSizeHelper.toLowerCase()).toContain('per stitch');
   });
 
   it('reports preview scale as a percentage of 1:1', () => {

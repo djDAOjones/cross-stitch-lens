@@ -2565,3 +2565,84 @@ rig, D101's limitation) — named for ACCEPT-01's live checklist.
 M14-EXT-31/33/34/35/36/37 deleted on ship; ui-spec §2/§5/§7/§9
 amended; UI-STANDARDS deltas ledgered in `doc-deltas.md`, never
 auto-edited.
+
+## D111 — M14 sixth look: five memos on the fifth-look surface triaged — four tasks (2026-08-07)
+
+**Decision:** the owner's sixth look (five typed memos on the
+just-shipped fifth-look surface, 2026-08-07) triages into four
+extension tasks that gate ACCEPT-01 again, ids in run order —
+EXT-38 the capture-row trims (memos 1+2: Capture frame retires —
+the cut D108 declined precisely because the owner had not named it
+is now named; "Pause capture" renames to Freeze; the pump-death
+recovery copy re-points at the freeze toggle, whose resume leg
+restarts the pump); EXT-39 the status line relocates under the
+header's build id with an economy pass (memo 4 — the off-viewport
+announcement trade at narrow recorded, not hidden); EXT-40 Design
+dissolves into Capture, Stitch size becomes **Zoom**, Stats gains
+the readout row (memo 5 [detail] — the ticket carries the
+no-session-home question with the permanent-Capture-section
+recommendation, the factor definition with the same-number "3×"
+recommendation, and the named collision with the preview's zoom
+vocabulary that D52 exists to police); EXT-41 "Colours by usage" →
+**"Colours used"** as a real accordion section plus the
+one-hierarchy pass (memo 3 [detail] — anatomy promotion as the
+floor, aside-box flattening as the recommendation, the two-column
+companion layout explicitly not in question; runs last so the
+equalisation lands on the final census).
+
+**Supersessions on the owner's own authority, having seen them
+live:** D110's EXT-33-restored Capture frame button → cut (EXT-38);
+D110's EXT-34/A — Size's permanent Design home, held one day → the
+fields' only home is the Capture section (EXT-40); D99's fold-line
+placement of the colours table → section anatomy, its
+collapsed-by-default choice surviving (EXT-41); the M2-era content
+placement of the status region → header (EXT-39).
+
+**Memo repair notes:** "moe" read as "move" (memo 5); "resolution
+integer controls" matched to the Design width/height number fields —
+the only integer size controls in the live UI; "the 'source
+unchanged' dialogue" matched to the one status live region (that
+string is its most persistent occupant during capture), so EXT-39
+moves the region, not one message.
+
+**Link:** backlog → M14 "Extension — sixth look (D111)"; tickets
+M14-EXT-40/41 (38/39 are line-only); ACCEPT-01 re-blocked on
+EXT-38..41 and its live-session list extended with the sixth look's
+trades. Nothing implemented in this triage.
+
+## D112 — M14 sixth look, second batch: memos 6–8 triaged — three tasks (2026-08-07)
+
+**Decision:** the sixth look's second batch (three typed memos, same
+day) triages into EXT-42..44, extending the D111 set; the whole
+sixth-look run order is restated in the backlog (38 → 39 → 43 → 40 →
+42 → 44 → 41: the dropdown defect runs before the Colour compression
+that would churn the same panel; the hierarchy pass stays last).
+EXT-42 [detail] — the Colour section's redundancy census (seven
+elements for one integer, eight near-identical brand helper lines, a
+summary overlapping Stats, six standing library buttons) compresses
+with a gate; the steppers cut would reverse the owner's own EXT-29
+ask and is flagged as such, and the compression must not foreclose
+M15's Colour-profile slot. EXT-43 [detail] — a defect, bug mode:
+the "Threads to choose from" popup collapses because
+`palettePanel.update()` fires on every processed frame and rebuilds
+controls under it (hypothesis; the dither panel — rebuilt only on
+algorithm change — surviving is the confirming contrast); fix shape
+is diff-update on an option fingerprint, never rebuilding a focused
+or open control. EXT-44 [detail] — Processing order retires and the
+Advanced section sunsets with it (the EXT-32 pattern).
+
+**The memo-8 question, answered on record:** reduce-first is not
+literally redundant (its output differs) but no longer earns UI:
+slower by construction (per-pixel work before the resize lever,
+D3), stats degrade while active (the sidecar dies under
+resize-after-reduce, so no thread references), and its one virtue —
+a softer look — is served deliberately by the M8 dither surface.
+Loaded-file conduct recommended: honour + say so (core keeps the
+preset, the UI states it while active) — the only shape satisfying
+both reopen-identical and visible-state; coerce-on-load and
+honour-silently each break one hard rule and are rejected in the
+ticket.
+
+**Link:** backlog → sixth-look section extended to EXT-38..44,
+ACCEPT-01 re-blocked on the full range; tickets M14-EXT-42/43/44.
+Nothing implemented in this triage.

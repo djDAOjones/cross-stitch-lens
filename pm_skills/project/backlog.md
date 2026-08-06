@@ -29,13 +29,48 @@ change. Milestone docs land under `docs/` as they are produced:
 
 Five owner looks have shipped whole — third (D91–D101), first-pass
 fixes (D102–D105), fourth (D106–D108), fifth (D109–D110) — see
-trajectory + decision log. The gate below is the milestone's one
-remaining item.
+trajectory + decision log. The sixth look (owner typed memos on the
+shipped fifth-look surface, triaged 2026-08-07 in two batches — D111
+memos 1–5, D112 memos 6–8) adds EXT-38..44 below; several supersede
+fifth-look decisions on the owner's own authority, having seen them
+live (the restored Capture frame button, EXT-34/A's permanent Design
+home for Size). Run order: 38 → 39 → 43 (defect before restructure)
+→ 40 → 42 → 44 → 41 (the hierarchy pass lands on the final census).
+
+#### Extension — sixth look (D111)
+
+- [ ] **M14-EXT-38 Capture row trims: Capture frame retires, Pause becomes Freeze** (2026-08-07)
+  Intent: memos 1+2 — the Capture frame button goes (the owner now names the cut D108 declined for want of exactly that); the pump-death recovery copy re-points at the freeze toggle (unfreeze restarts the pump — verify that leg). "Pause capture" renames to "Freeze"; settle at the gate whether the label flips (Freeze/Unfreeze) or stays constant under aria-pressed, and sweep the paused-state copy for the rename.
+  Done when: the row reads Stop capture · Freeze · Lock aspect · Lock region; a dead pump is still recoverable and the copy says how; no orphaned handlers or copy.
+
+- [ ] **M14-EXT-39 Status line moves under the build id; header economised** (2026-08-07)
+  Intent: memo 4 — the app's one live region (home of "Source unchanged.", export confirmations, the width guide) relocates from the content column to the header, under the version/build line; same element, still the app's only status region. Then an economy pass over the header block (dead space, wrap behaviour at 380 px). Consequence to record: announcements leave the viewport when scrolled deep at narrow — visible-status loss is the owner's accepted trade, named for ACCEPT-01.
+  Done when: status renders under the build id at both postures with no header overflow at 320 px; the content column no longer reserves a status row; the trade is recorded.
+
+- [ ] **M14-EXT-40 Design dissolves into Capture; Stitch size becomes Zoom; Stats gains the row** [detail] (2026-08-07)
+  Intent: memo 5 — the Design section is removed; the width × height fields move to the Capture section beside the slider; "Stitch size" renames to **"Zoom"** with a zoom factor; Stats gains a stitch-size readout row. Supersedes D110's EXT-34/A (Size's permanent Design home) on the owner's authority. The ticket carries the three gate questions: the no-session home (the Capture section currently mounts only during sessions), the factor's definition and direction, and the naming collision with the preview's zoom (D52 terminology contract).
+  Done when: no Design section; size and zoom edit in one place with or without a session; Stats reads the stitch size; the supersession and the zoom-vocabulary decision are recorded.
+
+- [ ] **M14-EXT-42 Colour section: compress the redundancy** [detail] (2026-08-07)
+  Intent: memo 6 — the Colour section spends seven elements on one integer (count switch + slider + number + two steppers + helper + status regions), eight near-identical per-brand helper lines, a summary line overlapping Stats' count row, and six standing library buttons. Rank the redundancies, compress with a design gate (candidates in the ticket); one flagged reversal — the steppers were the owner's own EXT-29 ask. Must not foreclose M15's Colour-profile slot (the source select is its future home).
+  Done when: the section's default surface is materially shorter at both postures with no lost capability, before/after evidence recorded; any owner-ask reversal named.
+
+- [ ] **M14-EXT-43 Threads dropdown snaps shut — diagnose and fix** [detail] (2026-08-07)
+  Intent: memo 7 (a defect) — "Threads to choose from" (and likely every select in the Colour panel) closes before a choice can be made; the dither selects are fine. Hypothesis recorded: `palettePanel.update()` runs on every processed frame and rebuilds controls under the open popup — the dither panel is rebuilt only on algorithm change, which is why it survives. Fix shape: never rebuild an open/focused control; diff-update option lists on a fingerprint instead of wholesale.
+  Done when: a select stays open and selectable during live capture and across frame results; a regression test pins the no-rebuild-when-unchanged contract; the fix is evidence-backed live.
+
+- [ ] **M14-EXT-44 Processing order retires; Advanced sunsets** [detail] (2026-08-07)
+  Intent: memo 8 — the Processing order select goes and the Advanced section (its only occupant) retires with it (the EXT-32 sunset pattern). Core keeps the `reduce-first` capability for loaded files — the EXT-29 precedent; the recommended conduct (honour + a visible one-line note while a loaded reduce-first project renders) reconciles reopen-identical with honest state; options and the recorded pros/cons in the ticket.
+  Done when: no Processing order control, no Advanced section, no orphaned keys; a loaded reduce-first project still reopens byte-identical and says what it is doing; save round-trip unchanged.
+
+- [ ] **M14-EXT-41 Colours used: rename and one section hierarchy everywhere** [detail] (2026-08-07)
+  Intent: memo 3 — "Colours by usage" renames to **"Colours used"** and becomes a real accordion section with the same anatomy as Capture and Preview; Stats, Colour and the rest read at the same hierarchy level (the ticket's options: anatomy-only vs flattening the aside's boxed panel treatment; the two-column companion layout itself is load-bearing and stays). Runs after EXT-40 so the equalisation lands on the final section census.
+  Done when: one section treatment across every region at both postures; the renamed section collapses to a bare heading with its disclosure persisted (old key seeded by fallback); highlight rows keep reach 2.
 
 #### Phase 4 — Verification & end review
 
-- [ ] **M14-ACCEPT-01 Maintainer end review** [maintainer] [detail] (2026-07-23)
-  Intent: the reserved human gate — judge look, feel and taste over the review pack (changes, logged decisions, before/after evidence, waivers) and a live Photoshop companion session. Every triaged look through the fifth (D110) has shipped; the formal pass/fail session is all that remains. Named for the live session: the real region drag under the unlocked default, the recut in-session capture controls (EXT-33, incl. the consciously surrendered D108 bar-Stop fixed point), the always-open Capture start, the entire-screen picker hint, the D105-copy tension EXT-19 leaves, the EXT-37 chevron waiver, and the one-time uncaught-error pair on EXT-36's watch list.
+- [ ] **M14-ACCEPT-01 Maintainer end review** [maintainer] [detail] [blocked: M14-EXT-38..44] (2026-07-23)
+  Intent: the reserved human gate — judge look, feel and taste over the review pack (changes, logged decisions, before/after evidence, waivers) and a live Photoshop companion session. Every triaged look through the fifth (D110) has shipped; the sixth (D111) re-blocks the gate on EXT-38..41. Named for the live session: the real region drag under the unlocked default, the recut in-session capture controls (EXT-33, incl. the consciously surrendered D108 bar-Stop fixed point), the always-open Capture start, the entire-screen picker hint, the D105-copy tension EXT-19 leaves, the EXT-37 chevron waiver, the one-time uncaught-error pair on EXT-36's watch list, and the sixth look's named trades (recovery-without-Capture-frame, off-viewport status at narrow, the Zoom naming beside the preview's zoom).
   Done when: owner pass/fail notes are recorded; failures route to new M14 fix tasks, never silent rework.
 
 ### Next — M13 Visual processing performance (remainder)

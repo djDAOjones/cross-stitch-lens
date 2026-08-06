@@ -102,16 +102,36 @@ Collapsed folds are **bare headings** (summaries retired app-wide).
 Processing** (dither only), with the grid geometry reveal moved under
 the view strip.)*
 
+*(Amended fifth look, D109/D110 — M14-EXT-31..35: the **preview is a
+real accordion section** — "Preview" h2-wrapped header, persisted
+disclosure like every section, collapsed = bare heading; the whole
+section still appears with the first frame, capture start still
+re-expands it. The sticky unit gains the header; a **collapsed
+heading is not sticky** (the class flips on toggle, never scroll —
+D103 intact). The bar's Hide/Show preview and Hide/Show settings
+toggles **retired** with their modes — the shell model reduces to
+`cold` alone, and the `panelCollapsed` preference stops being
+written (older records still parse; the field drops on next write).
+Consequence, recorded: at ≥ 60 rem the 16 rem settings column always
+stands — reclaim-the-width died with the mode. The capture section
+is **"Capture"** (the crop overlay keeps its own "Capture region"
+name), starts **every session expanded** — superseding D97's
+persisted collapse; its disclosure is deliberately no longer
+persisted — and carries the session controls inline again (see §5).
+The grid-details reveal under the strip became the **Grid options
+modal** (EXT-35, §5).)*
+
 ```text
-header        h1 · shell bar [Source · Hide/Show preview · Hide/Show settings] · (dev: Debug menu)
-content       preview section [view strip · grid-details reveal · canvas host]
+header        h1 · shell bar [Source] · (dev: Debug menu)
+content       preview accordion section [header ▸ view strip · canvas host]
               info panel [Colours by usage fold]
               status line (role=status)
-              source section [empty state / import + capture + crop]
+              source section [empty state / import]
               (dev: profiling disclosure)
+              — during a session, the Capture section mounts above the preview (D104)
 panel (aside) accordion (collapsed = bare heading, EXT-22):
               ▸ Stats       (OPEN by default; readout, not controls)
-              ▸ Design      (OPEN by default; Size + Stitch size)
+              ▸ Design      (OPEN by default; Size — its permanent home, EXT-34)
               ▸ Colour
               ▸ Processing  (dither only)
               ▸ Export
@@ -378,6 +398,50 @@ as reach 2.
   times; nothing cut — the pump-death recovery copy points at the
   Source menu.
 
+### §5 amendments — fifth look (D109/D110, M14-EXT-31..35)
+
+- **Preview header** (EXT-31): the preview collapses from its own
+  accordion header — the bar Hide/Show preview button retired one
+  look after it shipped. Disclosure persisted (`preview-section`
+  key); capture start re-expands and persists the re-expand.
+- **Settings toggle retired** (EXT-32): the whole-panel collapse mode
+  is gone (M6-PANEL-01 sunset) — sections already collapse
+  individually; `ShellState` reduces to `cold`;
+  `body.panel-collapsed` (already consumer-less) and the
+  `panelCollapsed` preference die.
+- **Capture recut** (EXT-33, superseding D108's option A on the
+  owner's authority, live): the section renames to **"Capture"**,
+  opens expanded at every session start (superseding D97's persisted
+  collapse — the disclosure is deliberately not persisted), and the
+  session controls return inline: **Stop capture · Pause/Resume
+  capture (aria-pressed) · Capture frame · Lock aspect · Lock
+  region** — one row, one owner per control. The Source button reads
+  **"Source" at all times**; its modal holds the three source
+  choices only (no primary during a session — emphasis would nudge
+  replacing the live source). The D108 bar-reachability fixed point
+  is consciously given up — named for ACCEPT-01. Pump-death recovery
+  copy points at the Capture section.
+- **Design never empty** (EXT-34, option A — retiring D101's S1
+  reparent; the lock-conduct and derive halves of D101 stand): Size
+  lives in Design permanently; only the session-only **Stitch size**
+  slider lives in the Capture section. Rationale recorded: Stats
+  already shows the design size beside the capture settings, and the
+  unlocked default disables the Size fields during sessions anyway —
+  reparenting disabled fields was noise that left Design an open
+  heading over nothing.
+- **Grid options modal** (EXT-35, superseding EXT-30's under-strip
+  reveal and EXT-11's strip Numbers toggle): the strip keeps **Grid**
+  (on/off) plus a **"Grid options"** trigger; the modal — the new
+  live-apply form-modal variant (`formModal`) — holds Minor/Major
+  interval, Line colour, Minor/Major thickness, **Numbers** (the
+  strip toggle folded in) and **Number size** (`tickFontPx`,
+  surfaced for the first time; the chart export shares it). No
+  Apply — Close/Escape/backdrop all just close; focus returns to the
+  trigger. The `grid-details` disclosure preference retired. Strip
+  budget re-measured: controls hold two rows to the 320 px floor
+  (readouts take a third line there — pre-existing, identical with
+  the old Numbers label).
+
 **Anatomy baseline for every control** (IMPL-02): visible label =
 accessible name; helper only where it prevents error; validation +
 disabled states with a stated local reason where the reason is not
@@ -420,9 +484,12 @@ precedes the preview while a session runs, as a DOM mount)*; no CSS
 `order`; 320 px
 companion baseline (no page-level horizontal scroll; preview keeps
 the width majority); *(preview-focus semantics retired whole with the
-mode, EXT-24/D107; the preview collapse — EXT-23, session-only,
-control outside the region — takes the row)*; panel-collapse
-semantics + persistence; controls apply immediately — no Apply
+mode, EXT-24/D107; the preview collapse — EXT-23, then EXT-31: the
+section's own persisted header, the accordion contract satisfying
+"the control lives outside the region" — takes the row)*;
+*(panel-collapse semantics retired with the mode, EXT-32/D110 —
+section disclosures are the persistence that remains)*; controls
+apply immediately — no Apply
 buttons; shell/ disclosure state in preferences, never the project
 file; no pipeline semantics change; no project-file schema change; no
 new runtime dependencies; exports re-run at full quality; thread
@@ -518,7 +585,7 @@ only), the capture-region set (content-adjacent double-ring design).
 | panel/table 1 px borders | `border-strong` (controls) / `border-subtle` (decorative rules) + layer model at IMPL-01 |
 | crop overlay colours, dim, handles | project capture-region set |
 | grid default `#666666`, tick 11 px (worker) | **intentionally untokenised** — chart furniture is content-adjacent worker state (`DEFAULT_GRID_STYLE`), not UI chrome |
-| preview host `60dvh`/`16rem`, breakpoint `60rem`, panel `16rem` | layout literals defined in IMPL-01's stylesheet; breakpoints cannot read custom properties (CSS limitation) — recorded, not tokenised |
+| preview host `60dvh`/`16rem`, breakpoint `60rem`, panel `16rem`, scroll-padding reserve `40dvh + 12rem` (EXT-36 re-measure: header + three floor-width strip rows) | layout literals defined in IMPL-01's stylesheet; breakpoints cannot read custom properties (CSS limitation) — recorded, not tokenised |
 | swatch/table cell paddings | `spacing-02..04` at IMPL-01 |
 
 ### Scales (Carbon names)

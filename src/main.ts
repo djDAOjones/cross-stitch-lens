@@ -81,6 +81,7 @@ import {
   numberField,
   selectField,
   textField,
+  toggleField,
 } from './ui/controls.ts';
 import { chartFilename, chartLayout, encodeChartPng, maxCellPx } from './export/chart.ts';
 import {
@@ -103,7 +104,7 @@ import { createDitherControls } from './ui/dither-panel.ts';
 import { decodeImageBlob, imageFiles } from './ui/import.ts';
 import { createInfoPanel } from './ui/info-panel.ts';
 import { createSection, type AccordionSection } from './ui/accordion.ts';
-import { choicesModal, textPromptModal } from './ui/modal.ts';
+import { choicesModal, formModal, textPromptModal } from './ui/modal.ts';
 import { SAMPLE_NAME, sampleBuffer } from './ui/sample.ts';
 import { loadPreferences, savePreferences, type ShellPreferences } from './ui/preferences.ts';
 import { PreviewController } from './ui/preview.ts';
@@ -119,13 +120,7 @@ import {
   withPreview,
   type PatternResolution,
 } from './ui/scales.ts';
-import {
-  defaultShellState,
-  panelToggleLabel,
-  previewToggleLabel,
-  visibility,
-  type ShellState,
-} from './ui/shell.ts';
+import { defaultShellState, visibility, type ShellState } from './ui/shell.ts';
 import { PipelineClient } from './worker/client.ts';
 import { DEFAULT_GRID_STYLE, type GridStyle } from './worker/grid.ts';
 
@@ -159,8 +154,8 @@ function build(app: HTMLElement): void {
   // `scales.pattern`, and `scales.capture` mirrors the crop rect.
   let scales = defaultScales();
 
-  // Shell presentation state (panel and preview collapses) — one
-  // model for both, so they cannot fight over what is hidden.
+  // Shell presentation state — since M14-EXT-31/32 just the cold
+  // flag; every collapsible region owns its own header instead.
   let shell: ShellState = defaultShellState();
   const preferenceStore = (() => {
     try {
@@ -170,7 +165,6 @@ function build(app: HTMLElement): void {
     }
   })();
   let preferences: ShellPreferences = loadPreferences(preferenceStore);
-  shell = { ...shell, panelCollapsed: preferences.panelCollapsed };
 
   /** Stored disclosure state, falling back to the spec default. */
   function disclosureOpen(id: string, specDefault: boolean): boolean {
@@ -480,15 +474,36 @@ function build(app: HTMLElement): void {
   // Screen capture (§3, M4): a live getDisplayMedia session as an
   // alternative source. The permission prompt is user-initiated —
   // button only, never on load (UI-STANDARDS → "Capture UX").
-  // Session controls rationalised (M14-EXT-25, owner-picked option A):
-  // Stop capture, Pause/Resume and Capture frame live in the Source
-  // button's modal — the bar button reads "Capturing — Source" while
-  // a session runs, so stopping is reachable from the bar at all
-  // times. Only the two region toggles stay inline: Lock region (the
-  // whole rect) beside Lock aspect (the shape), where the region is
-  // the task.
+  // The session controls live inline in the Capture section
+  // (M14-EXT-33, the owner's fifth look superseding D108's
+  // modal-carried option A having seen it live): Stop capture,
+  // Pause/Resume and Capture frame beside the two region toggles —
+  // one row, one owner per control; the Source modal holds source
+  // choices only and the bar button reads "Source" at all times. The
+  // D108 fixed point (Stop reachable from the bar) is consciously
+  // given up by that move. The section mounts only while a session
+  // runs, so the session verbs need no per-session hidden dance.
   const captureRow = document.createElement('div');
   captureRow.className = 'toolbar';
+  const stopCaptureButton = document.createElement('button');
+  stopCaptureButton.type = 'button';
+  stopCaptureButton.textContent = 'Stop capture';
+  stopCaptureButton.addEventListener('click', () => {
+    stopSession();
+  });
+  const pauseButton = document.createElement('button');
+  pauseButton.type = 'button';
+  pauseButton.textContent = 'Pause capture';
+  pauseButton.setAttribute('aria-pressed', 'false');
+  pauseButton.addEventListener('click', () => {
+    togglePauseCapture();
+  });
+  const captureFrameButton = document.createElement('button');
+  captureFrameButton.type = 'button';
+  captureFrameButton.textContent = 'Capture frame';
+  captureFrameButton.addEventListener('click', () => {
+    void grabCaptureFrame();
+  });
   const lockButton = document.createElement('button');
   lockButton.type = 'button';
   lockButton.textContent = 'Lock region';
@@ -567,7 +582,15 @@ function build(app: HTMLElement): void {
   captureCta.setAttribute('aria-describedby', captureExpectation.id);
   entryActions.append(chooseButton, captureCta, captureExpectation, openProjectButton);
   entryState.append(entryTitle, entryActions, hint);
-  captureRow.append(aspectButton, lockButton);
+  // Session verbs first, region toggles after (M14-EXT-33): stopping
+  // is the row's primary reach, and the locks pair at the end.
+  captureRow.append(
+    stopCaptureButton,
+    pauseButton,
+    captureFrameButton,
+    aspectButton,
+    lockButton,
+  );
   // The source section carries the cold entry only (M14-EXT-06/12):
   // the capture surfaces live in the Capture region section, mounted
   // in the settings panel for the duration of a session.
@@ -584,18 +607,37 @@ function build(app: HTMLElement): void {
   // from the first action onward.
   status.textContent = '';
 
-  // Preview: toolbar (zoom, fit, compare) + the keyboard-operable
-  // canvas host. The canvas itself is worker-owned. Collapsible like
-  // any region (M14-EXT-23) — its visibility composes "a frame
-  // exists" with the shell's say, both written in applyShell.
-  const previewSection = document.createElement('section');
+  // Preview: a real accordion section (M14-EXT-31, retiring the bar
+  // toggle) over the view strip and the keyboard-operable canvas
+  // host. The canvas itself is worker-owned. The collapse is the
+  // header's own — persisted like every other section disclosure —
+  // and the whole section appears with the first frame, exactly as
+  // the bare region did. Same anatomy as the settings sections: the
+  // panel is the named region landmark, so "Preview" is said once
+  // (the EXT-31 carry of audit A12's named-landmark rule).
+  const previewAccordion = createSection(document, {
+    id: 'preview-section',
+    title: 'Preview',
+    open: disclosureOpen('preview-section', true),
+    onToggle: (open) => {
+      setDisclosure('preview-section', open);
+      syncPreviewSticky();
+    },
+  });
+  const previewSection = previewAccordion.element;
   previewSection.id = 'preview-section';
   previewSection.hidden = true;
   /** True once any frame has processed; the preview means nothing before. */
   let frameExists = false;
-  // Named landmark (ui-spec §2, audit A12): regions a screen reader
-  // can navigate to by name, not anonymous <section>s.
-  previewSection.setAttribute('aria-label', 'Preview');
+  /**
+   * Sticky only while open (M14-EXT-31): a pinned bare heading is
+   * chrome without a job. The class flips on toggle — a user action,
+   * never scroll — so D103's no-scroll-input rule holds.
+   */
+  function syncPreviewSticky(): void {
+    previewSection.classList.toggle('preview-collapsed', !previewAccordion.isOpen());
+  }
+  syncPreviewSticky();
   const toolbar = document.createElement('div');
   toolbar.className = 'toolbar';
   const zoomLabel = document.createElement('span');
@@ -895,8 +937,10 @@ function build(app: HTMLElement): void {
   );
   // Stitch size (M14-EXT-20): the region↔design scale made visible —
   // a slider plus an exact readout, session-only (hidden without a
-  // capture session, a readout while aspect is locked). Lives with
-  // the Size fields so the S1 reparent (D101) carries it too.
+  // capture session, a readout while aspect is locked). Session
+  // machinery, so it lives in the Capture section (M14-EXT-34/A,
+  // retiring D101's S1 reparent — Size keeps one permanent home in
+  // Design; only this slider travels with the session).
   const stitchSizeField = document.createElement('div');
   stitchSizeField.className = 'field';
   stitchSizeField.hidden = true;
@@ -937,71 +981,86 @@ function build(app: HTMLElement): void {
       `Stitch size ${formatStitchSize(stitchSizePx)} source px — ` +
       `design ${patternSummary(scales.pattern)}${clampNote}.`;
   });
-  patternGroup.append(patternLegend, sizeRow, stitchSizeField);
+  patternGroup.append(patternLegend, sizeRow);
 
-  // Grid geometry lives with the view (M14-EXT-30): the on/off
-  // toggles moved to the strip at M14-EXT-11, and the geometry behind
-  // the reveal now follows them — mounted under the strip, out of the
-  // settings panel entirely. Grid lines are a *view* of the pattern,
-  // not the pattern. One owner per control, no duplicated affordance
-  // (the D90 rule); the 'grid-details' preference key is unchanged.
-  const gridDetails = document.createElement('details');
-  gridDetails.className = 'depth-reveal view-grid-reveal';
-  const gridDetailsSummary = document.createElement('summary');
-  gridDetailsSummary.textContent = 'Grid details';
-  const gridDetailsBody = document.createElement('div');
-  gridDetailsBody.className = 'depth-reveal-body';
-  gridDetailsBody.append(
-    numberField(
-      document,
-      'grid-minor',
-      'Minor interval',
-      { min: 1, max: 50, value: gridStyle.minorInterval },
-      (value) => {
-        gridStyle.minorInterval = value;
-        sendGridStyle();
+  // Grid options live in a modal opened from the view strip
+  // (M14-EXT-35, superseding EXT-30's under-strip reveal one look
+  // later): the full existing GridStyle surface — the Numbers toggle
+  // folds in from the strip, and the tick font size surfaces for the
+  // first time. Live-apply per §5.4 — the modal houses controls, it
+  // has no Apply, and Close is its only action. Bounded to what the
+  // worker and chart renderer already do (new rendering capability is
+  // M11's): identical settings produce identical chart bytes. The
+  // 'grid-details' disclosure preference retired with the reveal — a
+  // modal has no persisted open state; stale stored keys are ignored.
+  function openGridOptions(): Promise<void> {
+    return formModal(document, {
+      title: 'Grid options',
+      build: (body) => {
+        body.append(
+          numberField(
+            document,
+            'grid-minor',
+            'Minor interval',
+            { min: 1, max: 50, value: gridStyle.minorInterval },
+            (value) => {
+              gridStyle.minorInterval = value;
+              sendGridStyle();
+            },
+          ),
+          numberField(
+            document,
+            'grid-major',
+            'Major interval',
+            { min: 0, max: 100, value: gridStyle.majorInterval, helper: '0 hides major lines' },
+            (value) => {
+              gridStyle.majorInterval = value;
+              sendGridStyle();
+            },
+          ),
+          colorField(document, 'grid-color', 'Line colour', gridStyle.color, (value) => {
+            gridStyle.color = value;
+            sendGridStyle();
+          }),
+          numberField(
+            document,
+            'grid-minor-thickness',
+            'Minor thickness',
+            { min: 1, max: 4, value: gridStyle.minorThickness },
+            (value) => {
+              gridStyle.minorThickness = value;
+              sendGridStyle();
+            },
+          ),
+          numberField(
+            document,
+            'grid-major-thickness',
+            'Major thickness',
+            { min: 1, max: 6, value: gridStyle.majorThickness },
+            (value) => {
+              gridStyle.majorThickness = value;
+              sendGridStyle();
+            },
+          ),
+          toggleField(document, 'grid-ticks', 'Numbers', gridStyle.ticks, (on) => {
+            gridStyle.ticks = on;
+            sendGridStyle();
+          }).element,
+          numberField(
+            document,
+            'grid-tick-font',
+            'Number size',
+            { min: 6, max: 32, value: gridStyle.tickFontPx, helper: 'Pixels — the chart export uses it too' },
+            (value) => {
+              gridStyle.tickFontPx = value;
+              sendGridStyle();
+            },
+          ),
+        );
+        return body.querySelector<HTMLElement>('input');
       },
-    ),
-    numberField(
-      document,
-      'grid-major',
-      'Major interval',
-      { min: 0, max: 100, value: gridStyle.majorInterval, helper: '0 hides major lines' },
-      (value) => {
-        gridStyle.majorInterval = value;
-        sendGridStyle();
-      },
-    ),
-    colorField(document, 'grid-color', 'Line colour', gridStyle.color, (value) => {
-      gridStyle.color = value;
-      sendGridStyle();
-    }),
-    numberField(
-      document,
-      'grid-minor-thickness',
-      'Minor thickness',
-      { min: 1, max: 4, value: gridStyle.minorThickness },
-      (value) => {
-        gridStyle.minorThickness = value;
-        sendGridStyle();
-      },
-    ),
-    numberField(
-      document,
-      'grid-major-thickness',
-      'Major thickness',
-      { min: 1, max: 6, value: gridStyle.majorThickness },
-      (value) => {
-        gridStyle.majorThickness = value;
-        sendGridStyle();
-      },
-    ),
-  );
-  gridDetails.append(gridDetailsSummary, gridDetailsBody);
-  gridDetails.open = disclosureOpen('grid-details', false);
-  gridDetails.addEventListener('toggle', () => {
-    setDisclosure('grid-details', gridDetails.open);
-  });
+    });
+  }
 
   // The Dither group (M8-CTRL-01): preset + algorithm selectors and
   // the method-specific controls, all decided by the pure model in
@@ -1759,12 +1818,9 @@ function build(app: HTMLElement): void {
     ditherControls.update(config.dither, config.palette === null);
     palettePanel.update(panelState());
     gridToggle.setAttribute('aria-pressed', String(gridStyle.show));
-    numbersToggle.setAttribute('aria-pressed', String(gridStyle.ticks));
-    setFieldValue('grid-minor', String(gridStyle.minorInterval));
-    setFieldValue('grid-major', String(gridStyle.majorInterval));
-    setFieldValue('grid-color', gridStyle.color);
-    setFieldValue('grid-minor-thickness', String(gridStyle.minorThickness));
-    setFieldValue('grid-major-thickness', String(gridStyle.majorThickness));
+    // The Grid options fields need no sync here: the modal is
+    // transient and builds fresh from gridStyle on every open
+    // (M14-EXT-35) — and nothing can load a project while it is up.
     setFieldValue('export-scale', String(scales.export.cleanPxPerStitch));
     setFieldValue('export-background', exportState.background);
     setFieldValue('export-bg-color', exportState.color);
@@ -1974,7 +2030,9 @@ function build(app: HTMLElement): void {
 
   // The D98 never-silent colour-limit duty moved to the Stats section
   // (M14-EXT-21) before these fold lines flattened (M14-EXT-22).
-  const designSection = section('section-design', 'Design', true, patternGroup);
+  // Size lives here permanently (M14-EXT-34/A): the section is never
+  // an open heading over nothing, with or without a session.
+  section('section-design', 'Design', true, patternGroup);
   // Colour stands alone (M14-EXT-28): its own section directly after
   // Design, the group moved whole; Design keeps size and geometry.
   // Spec default closed — the default-8 conversion needs no colour
@@ -2017,23 +2075,14 @@ function build(app: HTMLElement): void {
     log.error('library', 'could not be opened', { message: describeError(error) });
   });
 
-  // Shell bar: the collapse controls, on a permanent surface at the
-  // top of the app. Each collapse button lives *outside* the region
-  // it collapses (otherwise it hides with it) — UI-STANDARDS →
-  // "User control and freedom": never trap a mode.
+  // Shell bar: the Source chooser on a permanent surface at the top
+  // of the app. The collapse toggles that shared it retired with
+  // their modes (M14-EXT-31/32): every region now collapses from its
+  // own accordion header, which survives its own collapse — the
+  // UI-STANDARDS "control lives outside the region" rule is satisfied
+  // by the header anatomy itself.
   const shellBar = document.createElement('div');
   shellBar.className = 'toolbar shell-bar';
-  const panelToggle = document.createElement('button');
-  panelToggle.type = 'button';
-  panelToggle.id = 'panel-toggle';
-  panelToggle.setAttribute('aria-controls', 'controls-panel');
-  // Preview collapse control (M14-EXT-23): outside the region it
-  // collapses, on the permanent bar — the shell rule. The Preview
-  // focus toggle that lived here retired with its mode (M14-EXT-24).
-  const previewToggle = document.createElement('button');
-  previewToggle.type = 'button';
-  previewToggle.id = 'preview-toggle';
-  previewToggle.setAttribute('aria-controls', 'preview-section');
   // Source chooser (M14-EXT-02): the returning user's switcher. The
   // cold-start entry state stays the first-run path; this button is
   // the permanent affordance once a source exists.
@@ -2042,23 +2091,15 @@ function build(app: HTMLElement): void {
   sourceButton.id = 'source-button';
   sourceButton.textContent = 'Source';
   sourceButton.addEventListener('click', () => {
-    // The session block leads while capturing (M14-EXT-25/A): Stop is
-    // the primary then, and Pause/Capture frame demote here from the
-    // retired inline row. The source choices stay below, so switching
-    // source never hides behind the same click that stops.
-    const sessionChoices =
-      capture === null
-        ? []
-        : [
-            { id: 'stop', label: 'Stop capture', primary: true },
-            { id: 'pause', label: capturePaused ? 'Resume capture' : 'Pause capture' },
-            { id: 'frame', label: 'Capture frame' },
-          ];
+    // Source choices only (M14-EXT-33, superseding D108's session
+    // block): the session verbs live inline in the Capture section,
+    // so this modal never mixes "switch source" with "stop the one
+    // running". During a session no choice is primary — the emphasis
+    // would read as a nudge to replace the live source.
     void choicesModal(document, {
       title: 'Source',
       note: sourceName === null ? 'No source yet.' : `Current: ${sourceName}`,
       choices: [
-        ...sessionChoices,
         { id: 'file', label: 'Choose an image', primary: capture === null },
         {
           id: 'capture',
@@ -2072,31 +2113,19 @@ function build(app: HTMLElement): void {
       if (choice === 'file') input.click();
       else if (choice === 'capture') void startScreenCapture();
       else if (choice === 'sample') loadSample();
-      else if (choice === 'stop') stopSession();
-      else if (choice === 'pause') togglePauseCapture();
-      else if (choice === 'frame') void grabCaptureFrame();
     });
   });
-  shellBar.append(sourceButton, previewToggle, panelToggle);
+  shellBar.append(sourceButton);
 
   /**
    * Push the shell state onto the DOM. One function, one source of
-   * truth: every `hidden` in the shell is written here and nowhere
-   * else, so the collapses cannot leave a region in a state neither
-   * of them intended.
+   * truth: every `hidden` the shell owns is written here and nowhere
+   * else. Since M14-EXT-31/32 the only transition is the one-way cold
+   * exit, so no focus rescue is needed for the regions it reveals —
+   * nothing can be focused inside a region that has never been shown.
    */
   function applyShell(): void {
     const show = visibility(shell);
-    // Move focus out before hiding its container, or the page loses
-    // the focus position entirely (WCAG 2.4.3).
-    if (!show.controls && controls.contains(document.activeElement)) panelToggle.focus();
-    if (
-      !show.preview &&
-      frameExists &&
-      previewSection.contains(document.activeElement)
-    ) {
-      previewToggle.focus();
-    }
     // The entry hides when a source lands (M14-EXT-06: the shell is
     // the one writer for the cold composition). If focus was on an
     // entry action, hand it to the chooser that replaces it — the bar
@@ -2107,13 +2136,13 @@ function build(app: HTMLElement): void {
     entryState.hidden = sourceExists;
     controls.hidden = !show.controls;
     importSection.hidden = !show.source;
-    // The preview shows once a frame exists AND the shell says so
-    // (M14-EXT-23) — one composed rule, one writer.
-    previewSection.hidden = !frameExists || !show.preview;
-    // The capture section lives in the content column (M14-FIX-01),
-    // so the panel toggles do not govern it; it is source machinery
-    // and follows the source region's visibility while mounted.
-    // Late-bound: the section is created after the first apply.
+    // The preview section shows once a frame exists (M14-EXT-31); its
+    // collapse belongs to its own header, so the shell has no say.
+    previewSection.hidden = !frameExists;
+    // The capture section lives in the content column (M14-FIX-01);
+    // it is source machinery and follows the source region's
+    // visibility while mounted. Late-bound: the section is created
+    // after the first apply.
     if (captureSectionElement !== null) captureSectionElement.hidden = !show.source;
     // The entry state IS the chooser while it shows (M14-EXT-05): a
     // bar button opening a modal that repeats the on-screen actions
@@ -2124,35 +2153,7 @@ function build(app: HTMLElement): void {
     if (debugPanel !== null) debugPanel.element.hidden = !show.debug;
     if (diagnostics !== null) diagnostics.element.hidden = !show.debug;
     status.hidden = !show.status;
-    panelToggle.hidden = !show.panelToggle;
-    previewToggle.hidden = !show.previewToggle;
-    panelToggle.textContent = panelToggleLabel(shell.panelCollapsed);
-    panelToggle.setAttribute('aria-expanded', String(!shell.panelCollapsed));
-    previewToggle.textContent = previewToggleLabel(shell.previewCollapsed);
-    previewToggle.setAttribute('aria-expanded', String(!shell.previewCollapsed));
-    document.body.classList.toggle('panel-collapsed', shell.panelCollapsed);
   }
-
-  panelToggle.addEventListener('click', () => {
-    shell = { ...shell, panelCollapsed: !shell.panelCollapsed };
-    preferences = { ...preferences, panelCollapsed: shell.panelCollapsed };
-    savePreferences(preferenceStore, preferences);
-    applyShell();
-    status.textContent = shell.panelCollapsed
-      ? 'Settings hidden — the preview has the space.'
-      : 'Settings shown.';
-    log.info('shell', shell.panelCollapsed ? 'settings collapsed' : 'settings expanded');
-  });
-  // Preview collapse (M14-EXT-23): session-only — a working gesture,
-  // not a preference — and re-expanded by a capture session start.
-  previewToggle.addEventListener('click', () => {
-    shell = { ...shell, previewCollapsed: !shell.previewCollapsed };
-    applyShell();
-    status.textContent = shell.previewCollapsed
-      ? 'Preview hidden — Show preview brings it back.'
-      : 'Preview shown.';
-    log.info('shell', shell.previewCollapsed ? 'preview collapsed' : 'preview expanded');
-  });
 
   // Split compare (§10): source (full-RGB resize) left of the
   // divider, reduced output right. Native range slider = keyboard
@@ -2197,12 +2198,12 @@ function build(app: HTMLElement): void {
     sendGridStyle();
   });
   gridToggle.setAttribute('aria-pressed', String(gridStyle.show));
-  const numbersToggle = toolbarButton('Numbers', () => {
-    gridStyle.ticks = !gridStyle.ticks;
-    numbersToggle.setAttribute('aria-pressed', String(gridStyle.ticks));
-    sendGridStyle();
+  // The Numbers toggle retired into the Grid options modal
+  // (M14-EXT-35); the trigger beside Grid is the strip's one other
+  // grid word — the cost of one owner per setting.
+  const gridOptionsButton = toolbarButton('Grid options', () => {
+    void openGridOptions();
   });
-  numbersToggle.setAttribute('aria-pressed', String(gridStyle.ticks));
   const viewReadouts = document.createElement('span');
   viewReadouts.className = 'meta view-readouts';
   viewReadouts.append(zoomLabel, dimensionsLabel);
@@ -2214,16 +2215,16 @@ function build(app: HTMLElement): void {
     compareToggle,
     splitWrap,
     gridToggle,
-    numbersToggle,
+    gridOptionsButton,
     viewReadouts,
   );
   // The strip and canvas dock together (M14-EXT-09) — "how I look at
   // it" belongs with the picture; the info panel and everything else
-  // scroll beneath and are appended at the content level below.
-  // The grid reveal rides between the strip and the canvas
-  // (M14-EXT-30, destination A): same concept, same home as the
-  // Grid/Numbers toggles above it.
-  previewSection.append(toolbar, gridDetails, host);
+  // scroll beneath and are appended at the content level below. All
+  // of it lives in the accordion panel (M14-EXT-31), under the
+  // section's own header; the grid geometry that rode between strip
+  // and canvas moved into the Grid options modal (M14-EXT-35).
+  previewAccordion.panel.append(toolbar, host);
 
   // Preview first in the DOM at every width (M6-NARROW-01). The
   // settings panel sits to its right when there is room, so the
@@ -2342,26 +2343,28 @@ function build(app: HTMLElement): void {
   const draftGovernor = new DraftGovernor();
   let draftMode = false;
 
-  // Capture region section (M14-EXT-12): the whole capture surface —
-  // thumb + crop overlay, session controls, draft badge — as a
-  // first-position accordion section, mounted only while a session
-  // runs. Open on first appearance; a collapse persists for later
-  // sessions. Supersedes D88's below-the-preview placement on the
-  // owner's own authority (D91). Collapsed it is its bare heading
-  // (M14-EXT-22).
+  // Capture section (M14-EXT-33 rename — the crop overlay keeps its
+  // own "Capture region" name, it names the rectangle): the whole
+  // capture surface — thumb + crop overlay, session controls, stitch
+  // size, draft badge — as an accordion section mounted only while a
+  // session runs. Every session starts expanded (memo 1, superseding
+  // D97's persisted collapse: a stored choice that only ever got
+  // overridden was a dead preference, so this section's disclosure is
+  // deliberately not persisted). The mid-session collapse still works
+  // and still hands the lead back (M14-FIX-01). Collapsed it is its
+  // bare heading (M14-EXT-22).
   const captureSection = createSection(document, {
     id: 'section-capture',
-    title: 'Capture region',
-    open: disclosureOpen('section-capture', true),
+    title: 'Capture',
+    open: true,
     onToggle: (open) => {
-      setDisclosure('section-capture', open);
       // Collapsing is the "done with the region" gesture (M14-FIX-01):
       // the preview takes the lead back. Instant scroll — reduced
       // motion by construction.
       if (!open) window.scrollTo(0, 0);
     },
   });
-  captureSection.panel.append(captureRow, captureMeta, thumbWrap, draftBadge);
+  captureSection.panel.append(captureRow, stitchSizeField, captureMeta, thumbWrap, draftBadge);
   sections.push(captureSection);
   captureSectionElement = captureSection.element;
 
@@ -2376,8 +2379,8 @@ function build(app: HTMLElement): void {
    */
   function showCaptureSection(): void {
     content.insertBefore(captureSection.element, previewSection);
-    // First appearance opens; thereafter the persisted choice wins.
-    captureSection.setOpen(disclosureOpen('section-capture', true));
+    // Expanded at every session start (M14-EXT-33, memo 1).
+    captureSection.setOpen(true);
     refreshSections();
   }
 
@@ -2490,25 +2493,18 @@ function build(app: HTMLElement): void {
     draftGovernor.reset();
     setDraftMode(false);
     capturePaused = false;
+    pauseButton.textContent = 'Pause capture';
+    pauseButton.setAttribute('aria-pressed', 'false');
     aspectButton.hidden = true;
     aspectLocked = false;
     aspectButton.setAttribute('aria-pressed', 'false');
     stitchSizePx = 0;
-    // S1 return leg: the size fields go home to Design, first slot,
-    // focus preserved across the reparent.
-    const sizeFocus = patternGroup.contains(document.activeElement)
-      ? (document.activeElement as HTMLElement)
-      : null;
-    designSection.panel.insertBefore(patternGroup, designSection.panel.firstElementChild);
-    sizeFocus?.focus();
     capture?.video.remove();
     capture = null;
     // After `capture` clears: the derived-state check reads it, and
     // running earlier would leave the Size fields disabled for good.
     syncSizeDerivedState();
     cropRect = null;
-    // The bar button hands the session role back (M14-EXT-25/A).
-    sourceButton.textContent = 'Source';
     lockButton.hidden = true;
     captureMeta.hidden = true;
     thumbWrap.hidden = true;
@@ -2591,9 +2587,9 @@ function build(app: HTMLElement): void {
       stopPump?.();
       stopPump = null;
       pumpGate.reset();
-      // The recovery route lives in the Source menu since M14-EXT-25
-      // moved Capture frame there — the copy points at it.
-      status.textContent = `Live update stopped (${message}). Capture is still running — use Capture frame in the Source menu.`;
+      // The recovery route lives in the Capture section since
+      // M14-EXT-33 moved Capture frame back — the copy points at it.
+      status.textContent = `Live update stopped (${message}). Capture is still running — use Capture frame in the Capture section.`;
       log.error('capture', 'pump grab failed', { message });
     }
   }
@@ -2604,24 +2600,18 @@ function build(app: HTMLElement): void {
       const session = await startCapture();
       capture = session;
       lockButton.hidden = false;
-      // The bar button carries the session (M14-EXT-25/A): its label
-      // — and with it the accessible name — says so, and its modal
-      // now leads with Stop / Pause / Capture frame.
-      sourceButton.textContent = 'Capturing — Source';
       // Each session starts unlocked — the M14-EXT-20 default,
       // superseding D101's follow-by-default; session-only, never
       // persisted.
       aspectLocked = false;
       aspectButton.setAttribute('aria-pressed', 'false');
       aspectButton.hidden = false;
-      // S1: the size fields join the capture surface for the session —
-      // one "what am I stitching" place; moved, never duplicated
-      // (D90 rule). Reparenting would drop focus, so it is restored.
-      const sizeFocus = patternGroup.contains(document.activeElement)
-        ? (document.activeElement as HTMLElement)
-        : null;
-      captureSection.panel.insertBefore(patternGroup, draftBadge);
-      sizeFocus?.focus();
+      // The Size fields stay home in Design (M14-EXT-34/A, retiring
+      // D101's S1 reparent): Stats already shows the design size
+      // beside the capture settings, and under the unlocked default
+      // the fields are disabled here anyway — reparenting disabled
+      // fields was noise, and it left Design an open heading over
+      // nothing for the whole session.
       captureMeta.hidden = false;
       captureMeta.textContent = `Capturing ${session.label}.`;
       // Mount the live thumbnail with the full frame selected; the
@@ -2630,9 +2620,13 @@ function build(app: HTMLElement): void {
       thumbWrap.prepend(session.video);
       thumbWrap.hidden = false;
       sourceName = `Screen capture (${session.label})`;
-      // A capture session re-opens a collapsed preview (M14-EXT-23):
-      // the session exists to watch the design update.
-      shell = { ...shell, previewCollapsed: false };
+      // A capture session re-opens a collapsed preview (the EXT-23
+      // rule, carried to the section header at M14-EXT-31): the
+      // session exists to watch the design update. Persisted, exactly
+      // as the header toggle would persist it.
+      previewAccordion.setOpen(true);
+      setDisclosure('preview-section', true);
+      syncPreviewSticky();
       updateSourceEntry();
       // Source replacement → auto-fit (M14-EXT-08).
       preview.resetView();
@@ -2691,7 +2685,7 @@ function build(app: HTMLElement): void {
     }
   }
 
-  /** End the session from the Source menu (M14-EXT-25/A). */
+  /** End the session from the section's own Stop (M14-EXT-33). */
   function stopSession(): void {
     capture?.stop();
     endCaptureUi('Screen capture stopped.');
@@ -2699,10 +2693,12 @@ function build(app: HTMLElement): void {
   }
 
   /** Freeze/resume the live pump — a named state, never silent. The
-   *  Source menu derives its Pause/Resume label from `capturePaused`. */
+   *  button's label and pressed state both carry it (M14-EXT-33). */
   function togglePauseCapture(): void {
     if (capture === null) return;
     capturePaused = !capturePaused;
+    pauseButton.textContent = capturePaused ? 'Resume capture' : 'Pause capture';
+    pauseButton.setAttribute('aria-pressed', String(capturePaused));
     if (capturePaused) {
       stopPumpNow();
       draftGovernor.reset();

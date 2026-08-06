@@ -1,11 +1,13 @@
 /**
- * Shell state (M6-PANEL-01; recut M14-EXT-23/24) and its persisted
- * half.
+ * Shell state (M6-PANEL-01; recut M14-EXT-23/24; reduced to the cold
+ * flag at M14-EXT-31/32) and its persisted half.
  *
  * The invariant is the composition rule: features that hide things
  * must not be able to leave a region in a state none of them intended.
- * Preview focus retired whole at M14-EXT-24; the preview instead
- * collapses like any region (M14-EXT-23), session-only.
+ * The collapse modes retired — preview focus at EXT-24, the preview
+ * bar toggle at EXT-31 (the section header owns the collapse), the
+ * whole-panel settings collapse at EXT-32 — so what is left to prove
+ * is the cold gate and the preference record's resilience.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -20,13 +22,7 @@ import {
   serializePreferences,
   type PreferenceStore,
 } from '../src/ui/preferences.ts';
-import {
-  defaultShellState,
-  panelToggleLabel,
-  previewToggleLabel,
-  visibility,
-  type ShellState,
-} from '../src/ui/shell.ts';
+import { defaultShellState, visibility } from '../src/ui/shell.ts';
 
 /** In-memory store; `fail` makes every operation throw, as a blocked
  *  localStorage does in private mode or over quota. */
@@ -49,7 +45,6 @@ describe('shell visibility', () => {
     const show = visibility(defaultShellState());
     expect(show).toEqual({
       controls: false,
-      preview: false,
       source: true,
       info: false,
       // Dev-only chrome is exempt from "entry only" — it is not
@@ -59,98 +54,32 @@ describe('shell visibility', () => {
       // The status live region stays in the DOM so the cold-exit
       // announcement fires from an existing region, never a new one.
       status: true,
-      panelToggle: false,
-      previewToggle: false,
     });
   });
 
-  it('cold overrides both collapses — they are meaningless before a source', () => {
-    for (const panelCollapsed of [false, true]) {
-      for (const previewCollapsed of [false, true]) {
-        expect(visibility({ panelCollapsed, previewCollapsed, cold: true })).toEqual(
-          visibility(defaultShellState()),
-        );
-      }
-    }
-  });
-
-  it('shows everything once populated', () => {
-    const show = visibility({ ...defaultShellState(), cold: false });
-    expect(show).toEqual({
+  it('shows everything once populated (M14-EXT-32: no panel collapse)', () => {
+    // The whole-panel collapse retired with its toggle: populated
+    // means every region shows, and any hiding is a section header's
+    // own business, not the shell's.
+    expect(visibility({ cold: false })).toEqual({
       controls: true,
-      preview: true,
       source: true,
       info: true,
       debug: true,
       status: true,
-      panelToggle: true,
-      previewToggle: true,
     });
   });
 
-  it('exits cold onto exactly the preferred panel state', () => {
-    // Leaving cold must land on the panel state the preference held —
-    // a collapsed preference stays collapsed, never forced open.
-    for (const panelCollapsed of [false, true]) {
-      const populated = visibility({ panelCollapsed, previewCollapsed: false, cold: false });
-      expect(populated.controls).toBe(!panelCollapsed);
-      expect(populated.panelToggle).toBe(true);
-    }
-  });
-
-  it('hides only the settings panel when collapsed', () => {
-    const show = visibility({ panelCollapsed: true, previewCollapsed: false, cold: false });
-    expect(show.controls).toBe(false);
-    expect(show.preview).toBe(true);
-    expect(show.source).toBe(true);
-    expect(show.info).toBe(true);
-    // The control that reveals it must survive its own collapse.
-    expect(show.panelToggle).toBe(true);
-  });
-
-  it('hides only the preview when it collapses (M14-EXT-23)', () => {
-    const show = visibility({ panelCollapsed: false, previewCollapsed: true, cold: false });
-    expect(show.preview).toBe(false);
-    expect(show.controls).toBe(true);
-    expect(show.info).toBe(true);
-    expect(show.status).toBe(true);
-    // The control that reveals it lives outside it and must survive.
-    expect(show.previewToggle).toBe(true);
-  });
-
-  it('the two collapses compose independently', () => {
-    // The regression this guards: one collapse leaking into the other
-    // through a shared branch — every combination must map exactly.
-    for (const panelCollapsed of [false, true]) {
-      for (const previewCollapsed of [false, true]) {
-        const show = visibility({ panelCollapsed, previewCollapsed, cold: false });
-        expect(show.controls).toBe(!panelCollapsed);
-        expect(show.preview).toBe(!previewCollapsed);
-        expect(show.status).toBe(true);
-      }
-    }
-  });
-
   it('is a pure function of the state', () => {
-    const state: ShellState = { panelCollapsed: true, previewCollapsed: false, cold: false };
-    expect(visibility(state)).toEqual(visibility(state));
-  });
-});
-
-describe('control labels', () => {
-  it('names the action and flips with the state', () => {
-    expect(panelToggleLabel(false)).toBe('Hide settings');
-    expect(panelToggleLabel(true)).toBe('Show settings');
-    expect(previewToggleLabel(false)).toBe('Hide preview');
-    expect(previewToggleLabel(true)).toBe('Show preview');
+    expect(visibility({ cold: true })).toEqual(visibility({ cold: true }));
+    expect(visibility({ cold: false })).toEqual(visibility({ cold: false }));
   });
 });
 
 describe('shell preferences', () => {
-  it('defaults to an open panel', () => {
+  it('defaults to the disclosure map alone (M14-EXT-32)', () => {
     expect(defaultPreferences()).toEqual({
       version: PREFERENCES_VERSION,
-      panelCollapsed: false,
       disclosures: {},
     });
   });
@@ -159,14 +88,12 @@ describe('shell preferences', () => {
     const store = fakeStore();
     savePreferences(store, {
       version: PREFERENCES_VERSION,
-      panelCollapsed: true,
-      disclosures: { 'section-export': true, 'grid-details': false },
+      disclosures: { 'section-export': true, 'preview-section': false },
     });
-    expect(loadPreferences(store).panelCollapsed).toBe(true);
-    // Disclosure state (M14-IMPL-03) rides the same record.
+    // Disclosure state (M14-IMPL-03; the preview joined at EXT-31).
     expect(loadPreferences(store).disclosures).toEqual({
       'section-export': true,
-      'grid-details': false,
+      'preview-section': false,
     });
   });
 
@@ -177,11 +104,24 @@ describe('shell preferences', () => {
       'not json',
       '[]',
       'null',
-      '{"version":999,"panelCollapsed":true}',
-      '{"version":1,"panelCollapsed":"yes"}',
+      '{"version":999,"disclosures":{}}',
+      '{"version":1,"disclosures":[1,2]}',
     ]) {
       expect(parsePreferences(raw)).toEqual(defaultPreferences());
     }
+  });
+
+  it('ignores the retired panelCollapsed field from older records (M14-EXT-32)', () => {
+    // A pre-EXT-32 record still parses — the user's disclosure
+    // choices survive the field's retirement — and the next write
+    // drops the field rather than bumping the version over it.
+    const stored = '{"version":1,"panelCollapsed":true,"disclosures":{"section-export":true}}';
+    const parsed = parsePreferences(stored);
+    expect(parsed).toEqual({
+      version: PREFERENCES_VERSION,
+      disclosures: { 'section-export': true },
+    });
+    expect(serializePreferences(parsed)).not.toContain('panelCollapsed');
   });
 
   it('survives a storage that throws', () => {
@@ -193,7 +133,6 @@ describe('shell preferences', () => {
     expect(() => {
       savePreferences(store, {
         version: PREFERENCES_VERSION,
-        panelCollapsed: true,
         disclosures: {},
       });
     }).not.toThrow();
@@ -207,20 +146,16 @@ describe('shell preferences', () => {
   });
 
   it('stamps the current version on write', () => {
-    const text = serializePreferences({ version: 0, panelCollapsed: true, disclosures: {} });
+    const text = serializePreferences({ version: 0, disclosures: {} });
     expect(JSON.parse(text)).toEqual({
       version: PREFERENCES_VERSION,
-      panelCollapsed: true,
       disclosures: {},
     });
   });
 
-  it('does not persist the preview collapse', () => {
-    // A working gesture, not a preference (M14-EXT-23): reopening into
-    // a hidden canvas with no memory of why is a bad first second, and
-    // cold (M14-EXT-06) is derived from what exists, never remembered.
+  it('does not persist the cold flag', () => {
+    // Cold (M14-EXT-06) is derived from what exists, never remembered.
     const text = serializePreferences(defaultPreferences());
-    expect(text).not.toContain('previewCollapsed');
     expect(text).not.toContain('cold');
   });
 });

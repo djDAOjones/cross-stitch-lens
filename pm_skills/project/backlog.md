@@ -27,62 +27,15 @@ byte-identical; no new runtime dependencies; no project-file schema
 change. Milestone docs land under `docs/` as they are produced:
 `ui-audit.md`, `ui-journeys.md`, `ui-spec.md`, `ui-evidence.md`.
 
-The third-look extension set (D91/D92 triage) shipped in full,
-2026-08-04/05: EXT-06..14, 17, 18 (D93–D100) and the owner-signed
-EXT-15 shape (D101). See trajectory + decision log.
-
-The first-pass review feedback (owner live session 2026-08-05, D102)
-shipped in full the same day: FIX-06+03 (D103), FIX-01 (D104),
-FIX-05/04/02 (D105).
-
-The fourth look (owner dictated feedback, repaired against the live
-UI labels and triaged 2026-08-06, D106) shipped whole the same day:
-EXT-19..24, 26..30 in one auto-jazz run (D107), and EXT-25 with the
-owner's option-A pick at its sign-off gate (D108). Memo items 14–16
-(colour and dithering profiles) route to M15, scoping-first at the
-owner's explicit ask.
-
-The fifth look (owner refinements on the shipped fourth-look
-surface, triaged 2026-08-06, D109) adds EXT-31..37 below in run
-order. Three items supersede same-day decisions on the owner's own
-authority, having seen them live: the bar preview toggle (D107 →
-EXT-31), option A's Source-carried session (D108 → EXT-33), and the
-grid reveal's strip placement (D107 → EXT-35).
-
-#### Extension — fifth look (D109)
-
-- [ ] **M14-EXT-31 Preview gets a header; the bar toggle retires** [detail] (2026-08-06)
-  Intent: memos 6+2 — the preview region gains a real accordion-style header ("Preview", bare heading collapsed) and collapses from it; the app bar's Hide/Show preview button (EXT-23) goes. One task: the header is the replacement route.
-  Done when: the preview collapses/expands from its own header only; capture start still re-expands; sticky and D103's nothing-scroll-linked rule hold; the bar button is gone.
-
-- [ ] **M14-EXT-32 The settings toggle retires** (2026-08-06)
-  Intent: memo 3 — Hide/Show settings leaves the app bar and the whole-panel collapse mode retires with it (M6-PANEL-01 sunset, the EXT-24 pattern): sections already collapse individually to bare headings. Sweep: shell model reduces toward `cold`-only (with EXT-31), `panelCollapsed` preference stops being written, `body.panel-collapsed` and dead branches go.
-  Done when: no settings toggle in the bar; no orphaned collapse state, styles, or preferences; the consequence is recorded — at wide layout the 16rem column always stands, reclaim-the-width dies with the mode.
-
-- [ ] **M14-EXT-33 Capture section recut: rename, always-open start, session controls return** [detail] (2026-08-06)
-  Intent: memos 1+4+5 — "Capture region" renames to "Capture"; the section starts every session expanded (supersedes D97's persisted collapse at mount); Stop/Pause/Capture frame move from the Source modal back into the section and the Source button reads "Source" at all times (supersedes D108's option A on the owner's authority — the bar-reachability fixed point is consciously given up).
-  Done when: the renamed section opens expanded at every session start with the session controls inline; the Source modal holds source choices only; one owner per control throughout.
-
-- [ ] **M14-EXT-34 The Design section is never empty** [detail] (2026-08-06)
-  Intent: memo 8 — diagnose and fix the empty Design section (EXT-28 took Colour out; D101's S1 reparents the remaining Size group into the capture section during sessions). Recommendation: retire the S1 reparent — Size lives in Design permanently, the Stitch size slider moves to the Capture section; options in the ticket.
-  Done when: Design is never an open heading over nothing, with or without a session; size editing keeps one home; the S1 supersession (if picked) is recorded.
-
-- [ ] **M14-EXT-35 Grid details becomes a modal; Numbers folds in** [detail] (2026-08-06)
-  Intent: memo 7 — the under-strip reveal (EXT-30 destination A) becomes a live-apply form modal opened from a strip button; the Numbers toggle retires into it; the modal surfaces the full existing GridStyle capability (incl. the never-exposed tick font size) — simple over exhaustive; new rendering capability stays M11's.
-  Done when: one strip toggle (Grid) plus one modal trigger; numbering and geometry edit live from the modal; identical settings still produce identical chart bytes; the 320 px two-row strip budget re-measured.
-
-- [ ] **M14-EXT-36 Look, feel, ergonomics & intuitiveness pass** [detail] (2026-08-06)
-  Intent: memo 9 — the EXT-05-pattern polish pass over the settled fifth-look surface: walk both postures and schemes, rank findings across look/feel/ergonomics/intuitiveness, fix the agent-executable ones with before/after evidence, park the rest with reasons.
-  Done when: the ranked list exists with every finding fixed or parked; gate green; residue named for ACCEPT-01.
-
-- [ ] **M14-EXT-37 Full Carbon conformance review** [detail] (2026-08-06)
-  Intent: memo 10 — a component-by-component conformance table against Carbon's productive spec (anatomy, tokens, type ramp, interaction states, both schemes); each deviation fixed or waived on record; sanctioned deviations (text buttons D50, AAA over AA) re-affirmed, not re-litigated. Runs after EXT-36 so conformance is checked on the final surface.
-  Done when: the table covers every component class; zero unexplained deviations; gate green.
+Five owner looks have shipped whole — third (D91–D101), first-pass
+fixes (D102–D105), fourth (D106–D108), fifth (D109–D110) — see
+trajectory + decision log. The gate below is the milestone's one
+remaining item.
 
 #### Phase 4 — Verification & end review
 
-- [ ] **M14-ACCEPT-01 Maintainer end review** [maintainer] [detail] [blocked: M14-EXT-31..37] (2026-07-23)
-  Intent: the reserved human gate — judge look, feel and taste over the review pack (changes, logged decisions, before/after evidence, waivers) and a live Photoshop companion session. The first pass (2026-08-05) produced six findings, all shipped (D103–D105); the fourth look shipped whole 2026-08-06 (D107/D108); the fifth look (D109) re-blocks the gate on EXT-31..37, and the formal pass/fail session follows the set. Named for the live session: the real region drag under the unlocked default, the recut in-session capture controls (EXT-33), the entire-screen picker hint, and the D105-copy tension EXT-19 leaves.
+- [ ] **M14-ACCEPT-01 Maintainer end review** [maintainer] [detail] (2026-07-23)
+  Intent: the reserved human gate — judge look, feel and taste over the review pack (changes, logged decisions, before/after evidence, waivers) and a live Photoshop companion session. Every triaged look through the fifth (D110) has shipped; the formal pass/fail session is all that remains. Named for the live session: the real region drag under the unlocked default, the recut in-session capture controls (EXT-33, incl. the consciously surrendered D108 bar-Stop fixed point), the always-open Capture start, the entire-screen picker hint, the D105-copy tension EXT-19 leaves, the EXT-37 chevron waiver, and the one-time uncaught-error pair on EXT-36's watch list.
   Done when: owner pass/fail notes are recorded; failures route to new M14 fix tasks, never silent rework.
 
 ### Next — M13 Visual processing performance (remainder)

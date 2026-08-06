@@ -106,3 +106,12 @@
 - [ ] 2026-08-06 UI-STANDARDS §Shell presentation modes — preview focus
   retired whole (M6-FOCUS-01 → EXT-24); the section's focus-mode rules
   (persistent exit control, focus-only status) are dead letters (source: D107)
+- [ ] 2026-08-07 UI-STANDARDS §Shell presentation modes — the section's
+  premise is gone: panel collapse and preview focus both retired
+  (EXT-24/32); the shell model is cold-only and the persisted state is
+  per-disclosure, so the "both compose through one model" and
+  reveal-control rules need recasting around accordion headers
+  (source: D110)
+- [ ] 2026-08-07 UI-STANDARDS §Layout model — the D107 "collapses like
+  any region (session-only)" line is superseded again: the preview
+  collapses from its own persisted accordion header (source: D110)

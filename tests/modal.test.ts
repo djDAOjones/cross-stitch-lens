@@ -42,6 +42,15 @@ describe('trapTarget (modal focus trap)', () => {
     expect(trapTarget(0, -1, false)).toBeNull();
     expect(trapTarget(0, 0, true)).toBeNull();
   });
+
+  it('wraps at the form-modal count (M14-EXT-35: seven fields + Close)', () => {
+    // The Grid options form modal is the largest focusable set a
+    // dialog carries; the arithmetic is count-generic, and this pins
+    // the edges at that size.
+    expect(trapTarget(8, 7, false)).toBe(0);
+    expect(trapTarget(8, 0, true)).toBe(7);
+    expect(trapTarget(8, 4, false)).toBeNull();
+  });
 });
 
 describe('describedby list arithmetic', () => {

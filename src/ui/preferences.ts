@@ -3,10 +3,14 @@
  *
  * Deliberately **not** in the project file. A project is creative data
  * that gets shared; a collaborator opening it should not have their
- * settings panel disappear because of how someone else likes to work.
- * The preview collapse (M14-EXT-23) is not persisted at all — it is a
- * transient working gesture, and reopening into a hidden canvas with
- * no memory of why is a bad first second.
+ * sections rearranged because of how someone else likes to work.
+ *
+ * Since M14-EXT-32 the record is the disclosure map alone: the
+ * whole-panel `panelCollapsed` flag retired with its mode (sections
+ * collapse individually), and a stored value from an older build is
+ * ignored on parse and dropped on the next write — no version bump,
+ * because bumping would discard the user's disclosure choices over a
+ * field that no longer matters.
  *
  * Storage is injected, so the parse/merge policy is pure and testable
  * without a browser. Corrupt, absent, or newer-versioned data all fall
@@ -23,7 +27,6 @@ export const PREFERENCES_VERSION = 1;
 /** The persisted shell preferences. */
 export interface ShellPreferences {
   version: number;
-  panelCollapsed: boolean;
   /**
    * Open/closed state per disclosure (accordion sections and inline
    * depth reveals), keyed by disclosure id (M14-IMPL-03). Ids absent
@@ -34,10 +37,10 @@ export interface ShellPreferences {
   disclosures: Record<string, boolean>;
 }
 
-/** First-run preferences: settings panel open, spec-default sections
- *  (only Design open — the ids live with the sections in main.ts). */
+/** First-run preferences: spec-default sections (the ids live with
+ *  the sections in main.ts). */
 export function defaultPreferences(): ShellPreferences {
-  return { version: PREFERENCES_VERSION, panelCollapsed: false, disclosures: {} };
+  return { version: PREFERENCES_VERSION, disclosures: {} };
 }
 
 /**
@@ -67,8 +70,6 @@ export function parsePreferences(raw: string | null): ShellPreferences {
   }
   return {
     version: PREFERENCES_VERSION,
-    panelCollapsed:
-      typeof record['panelCollapsed'] === 'boolean' ? record['panelCollapsed'] : false,
     disclosures,
   };
 }
@@ -77,7 +78,6 @@ export function parsePreferences(raw: string | null): ShellPreferences {
 export function serializePreferences(preferences: ShellPreferences): string {
   return JSON.stringify({
     version: PREFERENCES_VERSION,
-    panelCollapsed: preferences.panelCollapsed,
     disclosures: preferences.disclosures,
   });
 }

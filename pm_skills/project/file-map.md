@@ -154,13 +154,13 @@
 - `src/ui/dither-panel.ts` — mounts the Dither group: preset/algorithm selects + method-specific controls, rebuilt only on algorithm change
 - `src/ui/import.ts` — import routes → decode: filter (pure) + blob→PixelBuffer
 - `src/ui/info-panel.ts` — stats info panel: pure row model + thin DOM half
-- `src/ui/modal.ts` — Carbon modal (text prompt + danger confirm): trap arithmetic pure, focus restore, Escape/backdrop cancel
+- `src/ui/modal.ts` — Carbon modals (text prompt, choices, danger confirm, live-apply form): trap arithmetic pure, focus restore, Escape/backdrop cancel
 - `src/ui/palette-panel.ts` — Colour panel: brands, source, inventory, count, per-thread rules; pure model + thin DOM half
-- `src/ui/preferences.ts` — Shell preferences (panel collapsed) in localStorage; parse falls back to defaults for anything unreadable. Never project data.
+- `src/ui/preferences.ts` — Shell preferences (per-disclosure open state) in localStorage; parse falls back to defaults for anything unreadable. Never project data.
 - `src/ui/preview.ts` — preview controller: toolbar, wheel/drag/keys → worker
 - `src/ui/sample.ts` — deterministic drawn test-card for "Try a sample"; feeds the normal source path
 - `src/ui/scales.ts` — The four resolutions kept apart — pattern/capture/preview/export — with unit-named fields, reference-sharing updaters, and the visible label set.
-- `src/ui/shell.ts` — One shell-state model for panel collapse + preview focus; `visibility()` is the single composition rule for what is hidden.
+- `src/ui/shell.ts` — Shell state reduced to the cold flag (M14-EXT-31/32); `visibility()` is the single composition rule for what the cold surface hides.
 - `src/ui/styles/base.css` — element layer: reset, [hidden] contract, focus ring, type ramp, generic fields/buttons/toggle/tables
 - `src/ui/styles/shell.css` — shell chrome: header, columns, preview host, focus-mode chain, capture surfaces, panel containers
 - `src/ui/styles/tokens.css` — design tokens: project + Carbon-convention systems, both schemes, @pair contrast contract (D80)

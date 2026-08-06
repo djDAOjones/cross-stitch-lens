@@ -19,6 +19,19 @@
 
 ## M14 — UI/UX excellence (in progress — agent half complete, ACCEPT-01 open)
 
+- M14-EXT-31..37 (2026-08-07) — the fifth look lands in one auto-jazz
+  run: the preview becomes a real accordion section (bar toggle
+  retired, disclosure persisted, collapsed heading unpinned); the
+  settings toggle and whole-panel collapse retire (shell model =
+  cold alone); the Capture section renames, opens every session, and
+  takes the session controls back inline (Source reads "Source"
+  always — D108's fixed point consciously surrendered); Size keeps
+  one permanent home in Design (S1 retired); Grid options becomes a
+  live-apply form modal (Numbers folded in, tick font size surfaced);
+  the EXT-36 polish pass fixes the focus-obscuration reserve and
+  parks three named residues; the EXT-37 Carbon table closes with
+  zero unexplained deviations (one new chevron waiver). See
+  decision-log D110.
 - M14-EXT-25 (2026-08-06) — owner picked option A at the sign-off
   gate: the Source button carries the session ("Capturing — Source";
   Stop/Pause/Capture frame lead its modal, primary Stop), the inline

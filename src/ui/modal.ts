@@ -241,6 +241,48 @@ export function choicesModal(
   );
 }
 
+/** Options for {@link formModal}. */
+export interface FormModalOptions {
+  /** Dialog heading (also the accessible name). */
+  title: string;
+  /**
+   * Fill the body with live-apply fields: every control applies on
+   * change, so the dialog needs no Apply and Close is its only
+   * action. Return the element to focus first, or null to focus the
+   * Close button.
+   */
+  build: (body: HTMLElement) => HTMLElement | null;
+}
+
+/**
+ * Carbon form modal (M14-EXT-35): a titled dialog of live-apply
+ * fields — the Grid options shape. Close, Escape and the backdrop
+ * all just close (there is nothing to cancel: changes applied as
+ * they were made, per §5.4); focus returns to the invoker.
+ */
+export function formModal(doc: Document, options: FormModalOptions): Promise<void> {
+  return runModal<undefined>(
+    doc,
+    options.title,
+    (body, close) => {
+      const first = options.build(body);
+      const actions = doc.createElement('div');
+      actions.className = 'modal-actions';
+      const closeButton = doc.createElement('button');
+      closeButton.type = 'button';
+      closeButton.className = 'modal-primary';
+      closeButton.textContent = 'Close';
+      closeButton.addEventListener('click', () => {
+        close(undefined);
+      });
+      actions.append(closeButton);
+      body.append(actions);
+      return first ?? closeButton;
+    },
+    undefined,
+  );
+}
+
 /** Carbon danger modal; resolves true only on explicit confirmation. */
 export function confirmDangerModal(
   doc: Document,

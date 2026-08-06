@@ -33,10 +33,10 @@ main {
   margin: 0;
 }
 
-/* Shell bar: source and the two collapse controls live on a permanent
-  surface, so the way out of a collapse is always in one place. Hugs
-  the right edge at wide widths; wraps as a tidy left-aligned row at
-  companion widths (M14-EXT-05). */
+/* Shell bar: the Source chooser on a permanent surface (the collapse
+  toggles retired at M14-EXT-31/32 — sections collapse from their own
+  headers). Hugs the right edge at wide widths; wraps as a tidy
+  left-aligned row at companion widths (M14-EXT-05). */
 .shell-bar {
   margin: 0;
   flex: 0 1 auto;
@@ -273,16 +273,32 @@ main {
   white-space: nowrap;
 }
 
-/* The preview unit (strip + canvas) stays in view while the settings
-  scroll (M14-EXT-09): sticky in both layouts, above the content that
-  slides beneath it. No height animation — the dock swap is instant,
-  which is both the reduced-motion answer and the refit-thrash guard
-  (one ResizeObserver refit per transition, not one per frame). */
-.content > section[aria-label='Preview'] {
+/* The preview unit (header + strip + canvas) stays in view while the
+  settings scroll (M14-EXT-09; the header joined at M14-EXT-31):
+  sticky in both layouts, above the content that slides beneath it.
+  No height animation — the dock swap is instant, which is both the
+  reduced-motion answer and the refit-thrash guard (one
+  ResizeObserver refit per transition, not one per frame). */
+#preview-section {
   position: sticky;
   top: 0;
   z-index: 2;
   background: var(--csl-background);
+}
+
+/* Collapsed, only the bare heading remains and it takes normal flow
+  (M14-EXT-31): a pinned dead heading is chrome. The class flips on
+  the header toggle — a user action, never scroll — so the D103
+  no-scroll-input rule holds. */
+#preview-section.preview-collapsed {
+  position: static;
+}
+
+/* The preview panel drops the accordion inset: the canvas is the
+  product, and at companion widths every horizontal pixel is canvas
+  width. The strip above it keeps its own rhythm. */
+#preview-section > .accordion-panel {
+  padding: 0 0 var(--csl-spacing-03);
 }
 
 @media (max-width: 60rem) {
@@ -304,10 +320,15 @@ main {
 
   /* Keyboard focus must never land beneath the pinned preview
     (UI-STANDARDS → Operable, focus non-obscuration): reserve its
-    worst-case hugged height (the 40dvh narrow cap + strip rows)
-    ahead of any programmatic scroll-to-focus. */
+    worst-case hugged height ahead of any programmatic
+    scroll-to-focus. Since M14-EXT-31 the unit carries its own
+    header, and at the 320 px floor the strip wraps to three lines
+    (measured, M14-EXT-36) — 40dvh cap + header + three strip rows
+    needs 12rem, re-measured from the live unit (427 px at 380 × 700
+    against the old 8rem's 408). Over-reserving only scrolls a
+    focused control lower; under-reserving hides it. */
   html {
-    scroll-padding-top: calc(40dvh + 8rem);
+    scroll-padding-top: calc(40dvh + 12rem);
   }
 }
 
@@ -320,8 +341,8 @@ main {
 
 /* Preview focus retired whole at M14-EXT-24 (its button was the
   mode's only entry): the flex chain, the compact status, and the
-  hug override went with it. The preview now collapses like any
-  region (M14-EXT-23), via [hidden]. */
+  hug override went with it. The preview now collapses from its own
+  accordion header (M14-EXT-31), panel-[hidden] like every section. */
 
 /* Info panel: the colours-by-usage table. Swatch colours are
   content (thread colours), never UI tokens. Wide tables scroll inside
@@ -556,16 +577,8 @@ main {
   margin-top: var(--csl-spacing-02);
 }
 
-/* Grid-geometry reveal under the strip (M14-EXT-30): part of the
-  sticky preview unit — opening it grows the unit on a user action,
-  never on scroll (D103 holds). */
-.view-grid-reveal {
-  margin: 0 0 var(--csl-spacing-02);
-}
-
-.view-grid-reveal > .depth-reveal-body {
-  padding-bottom: var(--csl-spacing-03);
-}
+/* The under-strip grid reveal retired at M14-EXT-35 — the geometry
+  lives in the Grid options modal, opened from the strip. */
 
 /* View strip (M14-EXT-11, retiring the M14-EXT-03/05 fold): one
   quiet permanent row — ghost text buttons, readouts at the row end.
@@ -579,9 +592,12 @@ main {
 
 .view-strip button {
   border-color: transparent;
-  /* Tighter padding than panel buttons: six controls plus readouts
-    must wrap ≤ 2 rows at 320 px. Minimum target size still binds
-    through the base min-width/min-height. */
+  /* Tighter padding than panel buttons: the six controls hold two
+    rows down to the 320 px floor; the readouts share row two from
+    380 px and take their own third line only at the floor
+    (re-measured at M14-EXT-35/36 — identical with the retired
+    Numbers label, so the swap was net-zero). Minimum target size
+    still binds through the base min-width/min-height. */
   padding: 0 var(--csl-spacing-03);
 }
 

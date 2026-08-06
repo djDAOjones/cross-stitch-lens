@@ -2505,3 +2505,63 @@ ticket for the gate.
 **Link:** backlog → M14 "Extension — fifth look (D109)"; tickets
 M14-EXT-31/33/34/35/36/37 (EXT-32 is line-only); ACCEPT-01
 re-blocked on EXT-31..37. Nothing implemented in this triage.
+
+## D110 — M14-EXT-31..37: the fifth look lands in one auto-jazz run (2026-08-07)
+
+**Decision:** all seven fifth-look tasks shipped as one gateless run
+(auto-jazz, the owner's "autojazz the backlog until the colour/dither
+profile editors" instruction — the run stops exactly at M15-SCOPE-01/
+02, which are owner-collaboration by design). Conservative picks at
+every skipped gate: EXT-31 — the preview accordion reuses
+`createSection` with the settings-section anatomy exactly (outer
+section unnamed, the panel is the named region, so "Preview" is said
+once); the disclosure joins the persisted store (`preview-section`),
+capture-start re-expand persists too; a collapsed heading is not
+sticky (class flips on toggle, never scroll — D103 re-proven live).
+EXT-32 — `ShellState` reduces to `cold`; the `panelCollapsed`
+preference is dropped without a version bump (a bump would discard
+disclosure records over a dead field; old records parse, the field
+drops on next write — unit-pinned); the recorded consequence: the
+16 rem column always stands at wide. EXT-33 — ticket order Stop ·
+Pause · Frame · Lock aspect · Lock region; Pause keeps the shipped
+label-flip + aria-pressed pair; no primary among source choices
+during a session (emphasis would nudge replacing the live source);
+the session verbs skip the per-session hidden dance (the section
+mount is the visibility gate). EXT-34 — option A as recommended: S1
+retired (D101's lock/derive halves stand), only the Stitch size
+slider travels with the session. EXT-35 — trigger label "Grid
+options" (the Export "… options" idiom; "details" was the retired
+`<details>` species); modal field order = old reveal order with the
+numbering block appended; Number size bounds 6–32 px; `formModal`
+resolves void — Close/Escape/backdrop are one path because live-apply
+leaves nothing to cancel. EXT-36 — two fixes (scroll-padding reserve
+408→`40dvh + 12rem` against the measured 427 px unit — a real
+focus-obscuration risk; the stale two-row strip comment corrected to
+measured reality), five checked-no-change, three parks (floor-width
+readout line — pre-existing and contract-shaped; logger console
+stringification — dev chrome; one unreproducible uncaught-error pair
+— ACCEPT-01 watch). EXT-37 — ten-row conformance table, zero
+unexplained deviations: D50 text-buttons and AAA-over-AA re-affirmed;
+one new waiver (accordion chevron ▸/▾ over Carbon's ▾/▴ — one
+disclosure language with native details, D83).
+
+**Supersessions land as triaged (D109):** D107's bar preview toggle →
+the header; D108's option A whole (the bar-reachability fixed point
+consciously given up — named for ACCEPT-01); D97's persisted capture
+collapse → always-open, unpersisted; D101's S1 → retired; D107's
+under-strip reveal + D95's strip Numbers → the modal.
+
+**Verified:** typecheck/lint/contrast/build/docs/secrets green; 953
+tests serialised (parallel runs tripped 5 s timeouts on heavy engine
+suites — rig contention (another session's dev server + synced I/O),
+every file green in isolation, no engine code in the diff); live
+sweep on this session's own server at 1280 and 380/320 × 700, both
+schemes, error-catcher armed: evidence tables in `docs/ui-evidence.md`.
+The in-session capture legs ride getDisplayMedia (not driveable in this
+rig, D101's limitation) — named for ACCEPT-01's live checklist.
+
+**Link:** backlog → fifth-look section removed, ACCEPT-01 unblocked
+(the milestone's one remaining item, the owner's); tickets
+M14-EXT-31/33/34/35/36/37 deleted on ship; ui-spec §2/§5/§7/§9
+amended; UI-STANDARDS deltas ledgered in `doc-deltas.md`, never
+auto-edited.

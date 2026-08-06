@@ -638,3 +638,52 @@ companion 380×700):
 | all | companion posture | 380 × 700: zero horizontal overflow (scrollWidth 380), canvas hugged to 282 px (the 40dvh cap), strip wraps to two rows |
 | all | console | zero app errors across the full sequence (the one uncaught error was this rig's own failed eval, confirmed by re-running every leg with a listener attached) |
 | EXT-25 (option A, D108) | Source carries the session | no-session modal unchanged (three choices, current-source note, "Source" label); the in-session block (Stop primary · Pause/Resume · Capture frame) and the "Capturing — Source" label ride code paths the headless pane cannot drive — named for ACCEPT-01's live session |
+
+## Fifth look — M14-EXT-31..35 (D110, 2026-08-06/07)
+
+Automated: typecheck 0 · ESLint 0 · 953 tests green serialised
+(shell/preferences suites rewritten to the reduced model — approved
+behaviour change, not weakening; modal trap pinned at the form-modal
+count) · build · contrast · docs · secrets all green. The parallel
+vitest run tripped 5 s timeouts on heavy engine suites under this
+rig's load (another session's dev server + cloud-synced I/O); every
+"failing" file passes in isolation and serialised, and the diff
+touches no engine code — recorded as rig contention, not regression.
+Live (this session's own dev server, drop-fed 120×80 source, desktop
+1280×800/720 and companion 380/320 × 700, both schemes):
+
+| Task | Check | Evidence |
+| --- | --- | --- |
+| EXT-31 | header anatomy | "Preview" h2-wrapped toggle, chevron right, panel role=region named by the header — the settings-section anatomy exactly |
+| EXT-31 | collapse | header click → bare heading, strip+canvas out of layout and tab order; re-expand restores; stored record `{"disclosures":{"preview-section":false}}` |
+| EXT-31 | sticky | 6-position scroll sweep at 380 × 700: ONE height (427 px), pinned at 0, zero oscillation — D103 holds with the header aboard; collapsed heading takes normal flow (class flips on toggle only) |
+| EXT-32 | bar | shell bar renders Source alone; no Hide/Show settings or preview in the DOM; preference record carries `version` + `disclosures` only, a stored `panelCollapsed:true` from an old record parses and drops on next write (unit-pinned) |
+| EXT-33 | Source modal | three source choices only, current-source note, "Choose an image" primary without a session and no primary during one (code path); session block gone |
+| EXT-33/34 | session legs | inline Stop/Pause(aria-pressed)/Frame beside the locks, always-open start, constant "Source" label, slider in the Capture panel, S1 legs deleted — code-verified + gated; getDisplayMedia is not driveable in this rig (D101's limitation), named for ACCEPT-01's live session |
+| EXT-34 | Design | holds Size at rest and (by S1 deletion) during sessions; never an open heading over nothing |
+| EXT-35 | modal | Grid options: 7 fields (intervals, colour, thicknesses, Numbers toggle, Number size 6–32 px), first-field initial focus, live-apply proven behind the backdrop (major 10→40 lines re-spaced, Numbers off removed numbering, no reprocess), Escape/Close/backdrop close, focus returns to the strip trigger |
+| EXT-35 | strip budget | Grid + Grid options; two control rows to the 320 floor; readouts take a third line at 320 — measured identical with the retired Numbers label (net-zero swap); zero horizontal overflow (scrollWidth 320) |
+| EXT-35 | bytes | no engine/worker/chart code touched; `tickFontPx` was already in GridStyle and the project file — surfacing it adds no field; ui-baseline tripwire green |
+| EXT-36 | fixes | scroll-padding reserve raised to `40dvh + 12rem` (old 8 rem = 408 px < the measured 427 px unit — focus could hide beneath the pin); stale strip-budget comment corrected to measured reality |
+| EXT-36 | checked, no change | accordion hover/active inherited from base button rules; dark parity across header/modal/strip; field borders measured identical (a suspected mismatch was rendering); Compare/split, export leg ("Exported design-200x200.png."), Debug menu all clean |
+| EXT-36 | parked | floor-width readout line (pre-existing, a §1-contract question, ACCEPT-01 taste); logger console mirror prints unexpanded objects in text consoles (dev chrome); one pair of uncaught errors seen once, not reproducible across a full armed replay — on ACCEPT-01's watch list |
+| all | console | zero errors across both walked sessions with an error/rejection catcher installed |
+
+### EXT-37 — Carbon conformance table (2026-08-07)
+
+Verdicts: **conforms** / **waived (recorded)**. Zero unexplained
+deviations; fixes needed: none (the EXT-36 pass had already landed
+the two styling corrections above).
+
+| Surface | Carbon reference | Verdict |
+| --- | --- | --- |
+| Accordion sections (settings + Preview + Capture) | Accordion | Conforms — h2-wrapped full-width toggle, `aria-expanded`/`aria-controls`, panel region, right-aligned chevron, hover/active/focus states. **Waived:** chevron glyph pair ▸ closed / ▾ open where Carbon rotates ▾ → ▴ — one disclosure language app-wide with the native `<details>` reveals (D83 lineage); owner re-judges at ACCEPT-01 |
+| Toggles | Toggle | Conforms — 48 × 24 track, 16 px thumb, On/Off state text, disabled opacity; AAA 44 px hit area via pseudo-element without inflating Carbon's proportions (recorded adaptation) |
+| Buttons | Button | Conforms — primary fill, secondary outline, strip ghosts (border on hover), `aria-pressed` inverse fill for toggles. **Re-affirmed:** text buttons over icon buttons (D50); 44 px floor over Carbon's 32/40/48 (AAA hard rule). **Waived:** danger = 2 px error-red outline + explicit verb, not Carbon's filled danger — white on #da1e28 is ~4.5:1 and fails the AAA 7:1 bar; the outline is the AAA adaptation |
+| Number/text/search/select fields | Text input / Select | Conforms — label above, linked helper below, snap-back correction announced in a linked status, `aria-invalid` at the moment of correction, strong 3:1 field borders (recorded AAA adaptation over Carbon's subtle) |
+| Sliders | Slider | Conforms as project-coded analog — native range + label + stable-width exact readout (Stitch size), lockstep number twin (Colours), ≥ 44 px rows; native track over custom anatomy recorded at D98 |
+| Modals | Modal | Conforms — title/body/actions, actions right-aligned with primary rightmost, Escape + backdrop cancel, focus trap (unit-pinned arithmetic) and restore-to-invoker, danger focuses the safe action. Form variant = live-apply fields + Close only (§5.4 no-Apply house rule, recorded at EXT-35); no close X (D50 re-affirmed) |
+| Menu/disclosure (Debug, depth reveals) | Overflow menu / Accordion | Conforms — labelled summary trigger, right-aligned floating list; reveals use native `<details>` with the platform marker convention |
+| Data tables (colours by usage, thread rows) | Data table | Conforms — real header row, 44 px rows, per-row accessible names, in-panel horizontal scroll (Reflow), zebra omitted (optional in Carbon) |
+| Type & spacing | Type ramp / spacing scale | Conforms — productive ramp + spacing-01..09 tokens (D80); layout literals recorded in ui-spec §9 incl. the new 12 rem reserve; heading structure h1 → section h2s |
+| Interaction states | States | Conforms — hover/active/focus-visible/disabled on every interactive class via base rules, both schemes AAA (`check:contrast` green, @pair contract) |

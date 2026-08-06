@@ -39,6 +39,12 @@ A rehearsal sheet in the pack, M13-style, covering:
 - Taste: type, spacing, density, colour temperature of the chrome —
   the genuinely subjective residue.
 - The waiver list, read and ruled on.
+- Fifth-look legs (D110): the recut in-session capture row (Stop no
+  longer bar-reachable — the surrendered D108 fixed point), the
+  always-open Capture start, the preview header collapse under real
+  use, the Grid options modal mid-capture, the EXT-37 chevron waiver,
+  and the EXT-36 watch item (a one-time unreproducible uncaught-error
+  pair — watch the console during the live session).
 
 ## Verdict handling
 

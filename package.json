@@ -11,6 +11,7 @@
     "bench": "BENCH=1 vitest run tests/benchmark.test.ts",
     "bench:browser": "vite build && vite preview",
     "bench:auto": "node scripts/bench-auto.mjs",
+    "bench:crosscheck": "node scripts/bench-cross-check.mjs",
     "audit": "AUDIT=1 vitest run tests/audits",
     "matrix": "MATRIX_FULL=1 vitest run tests/acceptance-matrix.test.ts",
     "matrix:write": "node scripts/write-acceptance-matrix.mjs",

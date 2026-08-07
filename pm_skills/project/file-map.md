@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 232 file(s) across 11 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 235 file(s) across 11 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 12 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
@@ -24,9 +24,9 @@
 - `crates` — 4 file(s)
 - `docs` — 12 file(s)
 - `public` — 1 file(s)
-- `scripts` — 12 file(s)
+- `scripts` — 14 file(s)
 - `src` — 92 file(s)
-- `tests` — 95 file(s)
+- `tests` — 96 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -93,6 +93,8 @@
 - `scripts/bench-auto-validate.d.mts` — types for the validation module (kept plain-JS for the node launcher)
 - `scripts/bench-auto-validate.mjs` — bv2 report validation for the automated owner-session legs (pure; shared launcher/test)
 - `scripts/bench-auto.mjs` — one-command automated owner-session legs: build, serve, flagged dedicated Chrome ×2, collect + validate reports
+- `scripts/bench-cross-check.d.mts` — types for the cross-check comparison (plain-JS CLI, typed for the test suite)
+- `scripts/bench-cross-check.mjs` — Part-A′ arithmetic: manual vs automated capture rows side by side, same-build guarded (verdict stays human)
 - `scripts/build-palette.mjs` — derives `dmc.json` from the owner CSV
 - `scripts/check-contrast.mjs` — gate step: WCAG AAA proof of every tokens.css @pair, both schemes
 - `scripts/check-docs.mjs` — docs gate: backticked path/link validation
@@ -217,6 +219,7 @@
 - `tests/bench-auto-lib.test.ts` — quiet-run logic: idle parsing, valid-only canonical naming, never-retry-structural gate
 - `tests/bench-auto-validate.test.ts` — automated-run validation: tainted/hidden/incomplete reports must fail, complete ones pass
 - `tests/bench-counters.test.ts` — capture-counter ledger: interval deltas, conservation violations, meta flattening
+- `tests/bench-cross-check.test.ts` — cross-check comparison: ratios, same-build + tainted guards, missing rows never invented
 - `tests/bench-edit-classes.test.ts` — edit-class geometry: seed determinism, per-class ops, bounds, stroke continuity
 - `tests/bench-matrix.test.ts` — workload-matrix invariants: dither ID tokens, unique/derived IDs, core + method blocks, axis coverage
 - `tests/bench-memory.test.ts` — retention verdicts: plateau/no-reading/lazy-GC/real-retention branches + threshold boundary

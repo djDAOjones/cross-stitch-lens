@@ -436,10 +436,14 @@ shared window at least partially visible.
 
 **Part A′ — one-time cross-check of the automated capture leg.**
 Button 4 → 5 (share the *source* window) → 6 (300², 30 s) → 6b
-(200², 30 s) → 7 → 8, exactly the old Part A. Compare the canonical
-rows against the automated `…-capture.json` on the same build; record
-the comparison in the decision log. After it holds once, this part
-retires — rerun it only when a Chrome update changes flag behaviour.
+(200², 30 s) → 7 → 8, exactly the old Part A. Then let the script do
+the arithmetic —
+`npm run bench:crosscheck -- <downloaded manual report.json>` prints
+the canonical rows side by side against the automated capture report
+(same-build guarded) — and make the call yourself; the next agent
+session records it in the decision log. After it holds once, this
+part retires — rerun it only when a Chrome update changes flag
+behaviour.
 
 **Part B — Photoshop content (stays human by policy).** Button 5,
 share the Photoshop window, rerun 6 and 6b while performing in order:

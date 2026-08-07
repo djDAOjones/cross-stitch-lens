@@ -100,6 +100,10 @@ function defaultProject(config: PipelineConfig): ProjectFile {
       resizeMode: config.resizeMode,
       metric: config.metric,
       dither: config.dither,
+      // The default no-dither config structurally matches the "None"
+      // built-in (D117's dissolved legacy state), so the stated
+      // default carries its reference.
+      ditherProfileRef: { id: 'builtin:none', revision: 0 },
     },
     palette: {
       profileRef: { id: 'builtin:dmc', revision: 0 },

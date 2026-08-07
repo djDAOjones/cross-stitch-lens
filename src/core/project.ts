@@ -64,6 +64,14 @@ export interface ProjectPipeline {
    * exist only where the algorithm defines them.
    */
   dither: DitherConfig;
+  /**
+   * The design's link to a named dither profile (M15-DITH-01,
+   * additive in v5): the resolved `dither` above stays the
+   * authoritative snapshot half (D55); null = unreferenced — the
+   * honest unnamed state. Older files attach a built-in at load when
+   * the config structurally matches one, and otherwise stay null.
+   */
+  ditherProfileRef: { id: string; revision: number } | null;
 }
 
 /**
@@ -253,6 +261,13 @@ export function serializeProject(file: ProjectFile): string {
       resizeMode: file.pipeline.resizeMode,
       metric: file.pipeline.metric,
       dither: canonicalDither(file.pipeline.dither),
+      ditherProfileRef:
+        file.pipeline.ditherProfileRef === null
+          ? null
+          : {
+              id: file.pipeline.ditherProfileRef.id,
+              revision: file.pipeline.ditherProfileRef.revision,
+            },
     },
     palette: file.palette === null ? null : canonicalPalette(file.palette),
     gridStyle: {
@@ -475,6 +490,21 @@ function parsePalette(value: unknown): ProjectPalette | null {
   };
 }
 
+/** Validate the optional dither profile reference (absent = null). */
+function parseDitherRef(value: unknown): { id: string; revision: number } | null {
+  if (value === null || value === undefined) return null;
+  const raw = asRecord(value, 'pipeline.ditherProfileRef');
+  return {
+    id: asString(raw['id'], 'pipeline.ditherProfileRef.id'),
+    revision: asInt(
+      raw['revision'],
+      'pipeline.ditherProfileRef.revision',
+      0,
+      Number.MAX_SAFE_INTEGER,
+    ),
+  };
+}
+
 /**
  * Validate the v4 dither union. Strength bounds are per-family: a
  * diffusion strength is a fraction of the error (0–1), a threshold
@@ -668,6 +698,7 @@ export function parseProject(json: string): ProjectFile {
       ]),
       metric: asOneOf(pipeline['metric'], 'pipeline.metric', ['rgb', 'lab']),
       dither: parseDither(pipeline['dither']),
+      ditherProfileRef: parseDitherRef(pipeline['ditherProfileRef']),
     },
     palette: parsePalette(doc['palette']),
     gridStyle: {

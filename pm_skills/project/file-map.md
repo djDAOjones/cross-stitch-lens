@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 220 file(s) across 11 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 221 file(s) across 11 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 12 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
@@ -25,7 +25,7 @@
 - `docs` — 12 file(s)
 - `public` — 1 file(s)
 - `scripts` — 7 file(s)
-- `src` — 89 file(s)
+- `src` — 90 file(s)
 - `tests` — 91 file(s)
 <!-- /file-map-index -->
 
@@ -134,6 +134,7 @@
 - `src/core/palettes/thread-map-proposed.csv` — proposed cross-reference schema, no data yet (protected)
 - `src/core/pipeline/adjust.ts` — adjust hook stage: identity until §9 ops land
 - `src/core/pipeline/config.ts` — PipelineConfig → stage list; §7 presets; full-RGB twin
+- `src/core/pipeline/dither-presets.ts` — canonical dither presets + structural equality + built-in matching (M15-DITH-01; moved from ui)
 - `src/core/pipeline/dither.ts` — Floyd–Steinberg dither: exact errors, serpentine
 - `src/core/pipeline/identity.ts` — identity stage: hello-world purity demo
 - `src/core/pipeline/index.ts` — pipeline executor: backend pick + ts fallback
@@ -160,13 +161,13 @@
 - `src/ui/debug-panel.ts` — dev-only profiling panel: rolling timing window (pure) + disclosure DOM
 - `src/ui/diagnostics-button.ts` — the "Copy diagnostics" control + announced status line
 - `src/ui/dither-model.ts` — pure Dither-controls model: algorithm options, per-family strength, evidence-bearing presets, session memory
-- `src/ui/dither-panel.ts` — mounts the Dither group: preset/algorithm selects + method-specific controls, rebuilt only on algorithm change
 - `src/ui/import.ts` — import routes → decode: filter (pure) + blob→PixelBuffer
 - `src/ui/info-panel.ts` — "Colours used" table content: pure row model + thin DOM half, hosted by a section (M14-EXT-41)
 - `src/ui/modal.ts` — Carbon modals (text prompt, choices, danger confirm, live-apply form): trap arithmetic pure, focus restore, Escape/backdrop cancel
 - `src/ui/preferences.ts` — Shell preferences (per-disclosure open state) in localStorage; parse falls back to defaults for anything unreadable. Never project data.
 - `src/ui/preview.ts` — preview controller: toolbar, wheel/drag/keys → worker
 - `src/ui/profile-editor-colour.ts` — colour profile kind: libraries, pins, ranges, custom colours, fingerprinted readout; pure halves exported
+- `src/ui/profile-editor-dither.ts` — dither profile kind: three-field form, basis lines, palette-context line; mounts the shared shell unchanged (M15-DITH-02)
 - `src/ui/profile-editor-preview.ts` — kind-generic judgement preview: slots, offline states, test card, ÷1/÷4/÷16 grid, debounced real-pipeline renders
 - `src/ui/profile-editor.ts` — kind-agnostic takeover editor shell: switcher + verbs, draft-then-Save, D117 Save contract, no frame-facing API
 - `src/ui/sample.ts` — deterministic drawn test-card for "Try a sample"; feeds the normal source path

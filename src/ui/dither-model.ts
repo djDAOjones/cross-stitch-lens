@@ -71,72 +71,19 @@ export function percentToStrength(percent: number): number {
  * (M8-CTRL-01). Membership comes from the D61 evidence, not invented
  * labels; `basis` records the evidence line so the label stays honest.
  */
-export interface DitherPreset {
-  id: string;
-  label: string;
-  config: DitherConfig;
-  /** The D61 evidence line this preset stands on. */
-  basis: string;
-}
-
-/** The shipped presets, in display order. */
-export const DITHER_PRESETS: readonly DitherPreset[] = [
-  {
-    id: 'none',
-    label: 'None',
-    config: { algorithm: 'none' },
-    basis: 'the mandatory comparison state',
-  },
-  {
-    id: 'subtle',
-    label: 'Subtle',
-    config: { algorithm: 'atkinson', serpentine: true, strength: 0.5 },
-    basis: 'Atkinson at half strength: calmest texture, fewest isolated stitches',
-  },
-  {
-    id: 'balanced',
-    label: 'Balanced',
-    config: { algorithm: 'floyd-steinberg', serpentine: true, strength: 1 },
-    basis: 'the pre-M8 default: best general tone fidelity',
-  },
-  {
-    id: 'strong',
-    label: 'Strong',
-    config: { algorithm: 'blue-noise', strength: 1.75 },
-    basis: 'blue-noise past its base amplitude: pronounced grain everywhere',
-  },
-  {
-    id: 'photograph',
-    label: 'Photograph',
-    config: { algorithm: 'jarvis', serpentine: true, strength: 1 },
-    basis: 'Jarvis: smoothest tone on organic content, fewer isolated stitches than FS',
-  },
-  {
-    id: 'graphic',
-    label: 'Graphic',
-    config: { algorithm: 'ordered', strength: 1 },
-    basis: 'ordered leaves flat and near-palette areas untouched (isolation 2.3% vs FS 18.5%)',
-  },
-  {
-    id: 'limited-palette',
-    label: 'Very limited palette',
-    config: { algorithm: 'floyd-steinberg', serpentine: true, strength: 0.6 },
-    basis: 'damped diffusion improves tiny-palette tone (FS 27.9 → 23.9 tone ΔE at p8)',
-  },
-];
+// The canonical preset list and structural equality moved to core
+// (M15-DITH-01): the profile layer and load-time matching are
+// core-side concerns, and src/core cannot import from ui. Re-exported
+// here so existing consumers keep compiling.
+export {
+  DITHER_PRESETS,
+  sameDither,
+  type DitherPreset,
+} from '../core/pipeline/dither-presets.ts';
+import { DITHER_PRESETS, sameDither } from '../core/pipeline/dither-presets.ts';
 
 /** Sentinel selector value for a configuration matching no preset. */
 export const CUSTOM_PRESET = 'custom';
-
-/** Structural equality over the discriminated union. */
-export function sameDither(a: DitherConfig, b: DitherConfig): boolean {
-  if (a.algorithm !== b.algorithm) return false;
-  if (a.algorithm === 'none' || b.algorithm === 'none') return true;
-  if (a.strength !== b.strength) return false;
-  const aSerp = 'serpentine' in a ? a.serpentine : null;
-  const bSerp = 'serpentine' in b ? b.serpentine : null;
-  return aSerp === bSerp;
-}
 
 /**
  * The preset a configuration currently matches, or {@link CUSTOM_PRESET}.

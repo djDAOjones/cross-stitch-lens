@@ -43,6 +43,7 @@ import {
 import {
   DEFAULT_DITHER,
   fullRgbVariant,
+  type DitherConfig,
   type PipelineConfig,
 } from './core/pipeline/config.ts';
 import {
@@ -51,7 +52,7 @@ import {
   paletteToProfile,
   type ColorProfileRecipe,
 } from './core/color-profile.ts';
-import { nonThreadLabel, userColor } from './core/color-sources.ts';
+import { generateColorMap, nonThreadLabel, userColor } from './core/color-sources.ts';
 import type { CountMode, PaletteConflict } from './core/palette-policy.ts';
 import { paletteOf } from './core/palette.ts';
 import { resolveProfilePalette } from './core/palette-resolve.ts';
@@ -108,7 +109,12 @@ import {
 } from './export/png.ts';
 import { createDebugPanel } from './ui/debug-panel.ts';
 import { createDiagnosticsControl } from './ui/diagnostics-button.ts';
-import { createDitherControls } from './ui/dither-panel.ts';
+import {
+  DITHER_PRESETS,
+  matchBuiltInDither,
+  sameDither,
+} from './core/pipeline/dither-presets.ts';
+import { asDitherConfig, createDitherKindAdapter } from './ui/profile-editor-dither.ts';
 import { decodeImageBlob, imageFiles } from './ui/import.ts';
 import { createInfoPanel } from './ui/info-panel.ts';
 import { createSection, type AccordionSection } from './ui/accordion.ts';
@@ -1096,26 +1102,123 @@ function build(app: HTMLElement): void {
     });
   }
 
-  // The Dither group (M8-CTRL-01): preset + algorithm selectors and
-  // the method-specific controls, all decided by the pure model in
-  // src/ui/dither-model.ts. Session memory of each method's last
-  // settings lives inside the controls; the project file stores only
-  // the one canonical active configuration.
-  const ditherControls = createDitherControls(
-    document,
-    config.dither,
-    (next) => {
-      config.dither = next;
-      refreshSections();
-      reprocess();
+  // The Processing section's dither surface (M15-DITH-03, D116): a
+  // "Dithering profile" select plus Edit profiles… — the Dither
+  // style select and details reveal retired (the editor absorbs
+  // depth). No inline tuning: divergence arises only from load-time
+  // unmatched configs and later library edits, both rendered
+  // honestly through the never-lying Custom entry. The section keeps
+  // the name "Processing" — renaming to "Dithering" is the owner's
+  // call (D117 seam 5: EXT-30 named it on their authority).
+  let ditherRef: { id: string; revision: number } | null =
+    matchBuiltInDither(config.dither) === null
+      ? null
+      : { id: matchBuiltInDither(config.dither) ?? '', revision: 0 };
+  let ditherProfiles: { id: string; name: string; builtin: boolean; revision: number }[] = [];
+  const ditherConfigs = new Map<string, DitherConfig>();
+
+  async function refreshDitherProfiles(): Promise<void> {
+    ditherConfigs.clear();
+    for (const preset of DITHER_PRESETS) {
+      ditherConfigs.set(`builtin:${preset.id}`, preset.config);
+    }
+    let stored: ProfileRecord[] = [];
+    try {
+      stored = await library.listProfiles('dither');
+    } catch (error) {
+      log.error('library', 'could not list dither profiles', {
+        message: describeError(error),
+      });
+    }
+    for (const r of stored) ditherConfigs.set(r.id, asDitherConfig(r.payload));
+    ditherProfiles = [
+      ...DITHER_PRESETS.map((p) => ({
+        id: `builtin:${p.id}`,
+        name: p.label,
+        builtin: true,
+        revision: 0,
+      })),
+      ...stored.map((r) => ({ id: r.id, name: r.name, builtin: false, revision: r.revision })),
+    ];
+  }
+
+  const ditherGroupEl = document.createElement('fieldset');
+  const ditherField = document.createElement('div');
+  ditherField.className = 'field';
+  const ditherLabel = document.createElement('label');
+  ditherLabel.htmlFor = 'dither-profile';
+  ditherLabel.textContent = 'Dithering profile';
+  const ditherSelect = document.createElement('select');
+  ditherSelect.id = 'dither-profile';
+  ditherField.append(ditherLabel, ditherSelect);
+  const ditherEditButton = document.createElement('button');
+  ditherEditButton.type = 'button';
+  ditherEditButton.textContent = 'Edit profiles…';
+  ditherEditButton.addEventListener('click', () => {
+    void openProfileEditor('dither', ditherRef?.id);
+  });
+  const ditherRow = document.createElement('div');
+  ditherRow.className = 'toolbar profile-row';
+  ditherRow.append(ditherField, ditherEditButton);
+  // Full-RGB conduct (D117 seam 4): disabled with the A9 sentence,
+  // never silent inertness.
+  const ditherModeNote = document.createElement('p');
+  ditherModeNote.className = 'helper';
+  ditherModeNote.id = 'dither-profile-helper';
+  ditherSelect.setAttribute('aria-describedby', ditherModeNote.id);
+  ditherGroupEl.append(ditherRow, ditherModeNote);
+
+  /** The never-lying Custom sentinel: config matches no profile. */
+  const DITHER_CUSTOM = 'custom:design';
+
+  function syncDitherSection(): void {
+    const options: [string, string][] = ditherProfiles.map((p) => [
+      p.id,
+      p.builtin ? `${p.name} (built-in)` : p.name,
+    ]);
+    const matched =
+      ditherRef !== null && ditherConfigs.has(ditherRef.id)
+        ? sameDither(ditherConfigs.get(ditherRef.id) ?? { algorithm: 'none' }, config.dither)
+        : false;
+    if (!matched) {
+      options.unshift([DITHER_CUSTOM, 'Custom (this design)']);
+    }
+    ditherSelect.replaceChildren();
+    for (const [value, label] of options) {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = label;
+      ditherSelect.append(option);
+    }
+    ditherSelect.value = matched && ditherRef !== null ? ditherRef.id : DITHER_CUSTOM;
+    const fullRgb = config.palette === null;
+    ditherSelect.disabled = fullRgb;
+    ditherEditButton.disabled = fullRgb;
+    ditherModeNote.textContent = fullRgb ? 'Dithering applies to thread palettes.' : '';
+  }
+
+  ditherSelect.addEventListener('change', () => {
+    const id = ditherSelect.value;
+    if (id === DITHER_CUSTOM) return;
+    const chosen = ditherConfigs.get(id);
+    if (chosen === undefined) return;
+    config.dither = structuredClone(chosen);
+    const view = ditherProfiles.find((p) => p.id === id);
+    ditherRef = { id, revision: view?.revision ?? 0 };
+    status.textContent = `Dithering profile "${view?.name ?? id}" applied.`;
+    syncDitherSection();
+    refreshSections();
+    reprocess();
+  });
+
+  /** The old ditherControls surface, kept as a shim for call sites:
+   *  the profile select re-syncs wherever the panel once updated. */
+  const ditherControls = {
+    element: ditherGroupEl,
+    update: (): void => {
+      syncDitherSection();
     },
-    {
-      open: disclosureOpen('dither-details', false),
-      onToggle: (open) => {
-        setDisclosure('dither-details', open);
-      },
-    },
-  );
+  };
 
   /** The section's view of the design's colour state (M15-UI-01). */
   function sectionState(): ColourSectionState {
@@ -1137,7 +1240,7 @@ function build(app: HTMLElement): void {
     ensureSelectionSource();
     resolvePalette();
     // Dithering only applies when reducing to a palette.
-    ditherControls.update(config.dither, config.palette === null);
+    ditherControls.update();
     colourSection.update(sectionState());
     refreshSections();
     reprocess();
@@ -1281,7 +1384,7 @@ function build(app: HTMLElement): void {
       applyColour();
     },
     openEditor: () => {
-      void openProfileEditor(profileRef?.id);
+      void openProfileEditor('colour', profileRef?.id);
     },
     browseRows: (query) => browseRowsFor(CATALOGUE, [...userColorsMap.values()], null, query),
     labelFor: labelForId,
@@ -1820,6 +1923,7 @@ function build(app: HTMLElement): void {
         resizeMode: config.resizeMode,
         metric: config.metric,
         dither: config.dither,
+        ditherProfileRef: ditherRef,
       },
       // The design's recipe copy *and* the exact threads that
       // rendered it (schema v5, M15-PERSIST-01): reopening must
@@ -1886,7 +1990,7 @@ function build(app: HTMLElement): void {
     setFieldValue('pattern-height', String(scales.pattern.heightStitches));
     // The Threadify switch mirrors paletteMode inside
     // colourSection.update below — no field write needed here.
-    ditherControls.update(config.dither, config.palette === null);
+    ditherControls.update();
     colourSection.update(sectionState());
     gridToggle.setAttribute('aria-pressed', String(gridStyle.show));
     // The Grid options fields need no sync here: the modal is
@@ -1974,6 +2078,15 @@ function build(app: HTMLElement): void {
       applyLoadedPalette(file.palette);
       config.metric = file.pipeline.metric;
       config.dither = file.pipeline.dither;
+      // Adopt the saved reference, or match a built-in structurally
+      // (M15-DITH-01): an old file whose config equals a preset
+      // attaches that profile; anything else stays honestly
+      // unreferenced as Custom.
+      ditherRef =
+        file.pipeline.ditherProfileRef ??
+        (matchBuiltInDither(config.dither) === null
+          ? null
+          : { id: matchBuiltInDither(config.dither) ?? '', revision: 0 });
       Object.assign(gridStyle, file.gridStyle);
       scales = withPattern(scales, {
         widthStitches: file.pipeline.grid.width,
@@ -2206,6 +2319,8 @@ function build(app: HTMLElement): void {
       }),
     );
     await refreshProfilesCache();
+    await refreshDitherProfiles();
+    syncDitherSection();
     log.info('library', 'opened', {
       persistent: library.persistent,
       owned: owned.size,
@@ -2399,20 +2514,102 @@ function build(app: HTMLElement): void {
   editorHost.className = 'editor-host';
   editorHost.hidden = true;
   let profileEditor: import('./ui/profile-editor.ts').ProfileEditor | null = null;
+  let ditherEditor: import('./ui/profile-editor.ts').ProfileEditor | null = null;
+  let openEditorKind: 'colour' | 'dither' = 'colour';
 
   function closeProfileEditor(): void {
     editorHost.hidden = true;
     layout.hidden = false;
     // Focus returns to the section's own entry (the invoker).
-    document.getElementById('colour-profile')?.focus();
+    document
+      .getElementById(openEditorKind === 'colour' ? 'colour-profile' : 'dither-profile')
+      ?.focus();
     status.textContent = 'Back to the design.';
     // Library edits made inside the editor surface immediately.
     void refreshProfilesCache().then(() => {
       applyColour();
     });
+    void refreshDitherProfiles().then(() => {
+      syncDitherSection();
+    });
   }
 
-  async function openProfileEditor(profileId?: string): Promise<void> {
+  async function openProfileEditor(
+    kind: 'colour' | 'dither' = 'colour',
+    profileId?: string,
+  ): Promise<void> {
+    openEditorKind = kind;
+    if (kind === 'dither') {
+      if (ditherEditor === null) {
+        const ditherKind = createDitherKindAdapter(document, {
+          store: () => library,
+          paletteContextLine: () =>
+            config.palette === null
+              ? 'Demonstration palette — Retro 16 (the design is full-RGB)'
+              : `the design's palette (${config.palette.name})`,
+        });
+        ditherEditor = createProfileEditor(document, {
+          adapter: {
+            ...ditherKind,
+            mountPreview: (container) => {
+              const rig = createEditorPreview(document, {
+                render: (buffer, previewConfig) =>
+                  client.exportFrame(
+                    {
+                      width: buffer.width,
+                      height: buffer.height,
+                      data: new Uint8ClampedArray(buffer.data),
+                    },
+                    previewConfig,
+                  ),
+                designStill: () => masterImage,
+                baseConfig: () => ({ ...config }),
+                // The kind contract (D116): the pipeline with a
+                // draft-overridden dither stage; a resolved palette is
+                // required, so full-RGB borrows the named demo palette.
+                overrideConfig: (draft, base) => ({
+                  ...base,
+                  palette:
+                    base.palette ??
+                    paletteOf(
+                      'Demonstration palette — Retro 16',
+                      generateColorMap('retro16').entries,
+                    ),
+                  dither: ditherKind.resolveDraftConfig(draft),
+                }),
+                loadSlot: (file) => fetchSlot(file, decodeImageBlob),
+              });
+              container.append(rig.element);
+              return rig;
+            },
+          },
+          design: {
+            activeProfileId: () => ditherRef?.id ?? null,
+            onActiveProfileSaved: (id, draft) => {
+              config.dither = asDitherConfig(draft);
+              void refreshDitherProfiles().then(() => {
+                const view = ditherProfiles.find((p) => p.id === id);
+                if (view !== undefined) ditherRef = { id, revision: view.revision };
+                syncDitherSection();
+                refreshSections();
+                reprocess();
+              });
+            },
+          },
+          announce: (text) => {
+            status.textContent = text;
+          },
+          onClose: closeProfileEditor,
+        });
+        editorHost.append(ditherEditor.element);
+      }
+      layout.hidden = true;
+      editorHost.hidden = false;
+      profileEditor?.element.setAttribute('hidden', '');
+      ditherEditor.element.removeAttribute('hidden');
+      await ditherEditor.open(profileId);
+      return;
+    }
     if (profileEditor === null) {
       const colourKind = createColourKindAdapter(document, {
         catalogue: CATALOGUE,
@@ -2474,6 +2671,8 @@ function build(app: HTMLElement): void {
     }
     layout.hidden = true;
     editorHost.hidden = false;
+    ditherEditor?.element.setAttribute('hidden', '');
+    profileEditor.element.removeAttribute('hidden');
     await profileEditor.open(profileId);
   }
   const header = document.createElement('header');

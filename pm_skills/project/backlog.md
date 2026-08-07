@@ -118,23 +118,7 @@ against the M13 remainder is the owner's call at pick time.
 
 #### Dither half (D116) — after the colour half ships (owner order)
 
-- [ ] **M15-DITH-01 Dither profile model and store** [detail] [blocked: M15-PERSIST-01] (2026-08-07)
-  Intent: the DitherProfile entity (a complete `DitherConfig` + name + revision), the seven presets seeded as read-only built-ins with basis lines kept, the PERSIST-01 store pattern reused under a dither kind, `ditherProfileRef` with load-time built-in matching; schema bump under the D114 waiver. Model and matching rules in the ticket.
-  Done when: save→load→save byte-identical; old projects attach the right built-in or stay honestly unreferenced (tests over both); built-in immutability pinned at the store level.
-
-- [ ] **M15-DITH-02 Dither editor on the shared shell** [detail] [blocked: M15-UI-02, M15-UI-04, M15-DITH-01] (2026-08-07)
-  Intent: mount the dither kind in the takeover shell — built-in/user profile list, the three-field form with per-family strength semantics and basis lines, duplicate-to-edit, the UI-04 rig with the design's palette (a named demonstration palette under full-RGB), dev-only entry until DITH-03. Anatomy and the cut line are in the ticket.
-  Done when: draft edits preview live without rebuilding controls (EXT-43 test extended to this kind); full-RGB shows the labelled demo palette; keyboard-clean per the shell anatomy; any shell change the second kind forced is recorded (the UI-02 goal is none).
-
-- [ ] **M15-DITH-03 Processing section cutover** [detail] [blocked: M15-DITH-02] (2026-08-07)
-  Intent: the atomic cutover mirroring UI-01 — a "Dithering profile" select plus Edit profiles… replace the Dither style select and the Dither details reveal; honest unmatched/drifted states; the full-RGB disabled conduct and the Processing → Dithering rename gate per D117. Conducts in the ticket.
-  Done when: select and editor are the only dither surface; the honest-state renderings are in place, including the full-RGB disabled state; the section is shorter than today's at both postures.
-
-- [ ] **M15-DITH-04 Automated dither-profile acceptance** [blocked: M15-DITH-03] (2026-08-07)
-  Intent: the machine half — store/round-trip suites, the no-rebuild regression on the dither kind, and byte-identity: an unchanged config through the profile layer produces identical engine output.
-  Done when: `npm run check` green; byte-identity pinned by test; acceptance-matrix rows updated where the config path moved.
-
-- [ ] **M15-DITH-05 Dither acceptance session (absorbs M8-ACCEPT-01)** [maintainer] [detail] [blocked: M15-DITH-04] (2026-08-07)
+- [ ] **M15-DITH-05 Dither acceptance session (absorbs M8-ACCEPT-01)** [maintainer] [detail] (2026-08-07)
   Intent: the human half — the absorbed M8 visual-quality session (gallery, live capture, comprehension, exports, fallback, access) run once on the final profile surface, judging the five methods and whether profiles and their names predict what the eye sees; the session protocol (incl. the M8-GOLD-01 rider) is in the ticket.
   Done when: owner pass/fail notes per method and per built-in profile are recorded; failures route per the ticket (a method failure reopens D61), never silent rework.
 

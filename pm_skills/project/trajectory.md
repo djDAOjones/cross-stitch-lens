@@ -17,7 +17,15 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
-## M15 — Colour & dithering profiles (in build — colour half complete, dither half queued)
+## M15 — Colour & dithering profiles (agent work complete — the two acceptance sessions remain)
+
+- M15-DITH-01, M15-DITH-02, M15-DITH-03, M15-DITH-04 (2026-08-07) —
+  the dither half ships on the shared shell with zero shell changes:
+  presets + structural matching move to core, ditherProfileRef joins
+  v5 additively, the dither kind mounts in the takeover editor with
+  basis lines and the demo-palette context, and Processing recuts to
+  a profile select with the never-lying Custom state and the
+  full-RGB sentence. See decision-log D125.
 
 - M15-PERSIST-01, M15-UI-02, M15-UI-03, M15-UI-04, M15-UI-01,
   M15-ACCEPT-01 (2026-08-07) — the colour half ships whole: the

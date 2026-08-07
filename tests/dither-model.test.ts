@@ -25,6 +25,7 @@ import {
   strengthToPercent,
   type DitherMemory,
 } from '../src/ui/dither-model.ts';
+import { matchBuiltInDither } from '../src/core/pipeline/dither-presets.ts';
 
 describe('control families (D61 control surface)', () => {
   it('maps every selector choice to the family that owns its controls', () => {
@@ -178,5 +179,38 @@ describe('per-method session memory', () => {
     const restored = configForChoice('jarvis', memory);
     expect(restored).toEqual(stored);
     expect(restored).not.toBe(stored);
+  });
+});
+
+describe('built-in dither matching (M15-DITH-01/04)', () => {
+  it('attaches the right built-in on structural equality', () => {
+    // Every shipped preset matches itself — the load-time attach.
+    for (const preset of DITHER_PRESETS) {
+      expect(matchBuiltInDither(preset.config)).toBe(`builtin:${preset.id}`);
+    }
+    // A no-dither project matches the "None" built-in — D117's
+    // dissolved legacy state.
+    expect(matchBuiltInDither({ algorithm: 'none' })).toBe('builtin:none');
+  });
+
+  it('leaves a tweaked config honestly unreferenced', () => {
+    expect(
+      matchBuiltInDither({ algorithm: 'atkinson', serpentine: true, strength: 0.51 }),
+    ).toBeNull();
+    expect(
+      matchBuiltInDither({ algorithm: 'floyd-steinberg', serpentine: false, strength: 1 }),
+    ).toBeNull();
+  });
+
+  it('an unchanged config through the profile layer is the identical config', () => {
+    // The dither half's byte-identity leg (M15-DITH-04): adopting a
+    // built-in hands the engine a config deep-equal to the preset's
+    // own — same config, same stages, identical output by identity.
+    const balanced = DITHER_PRESETS.find((p) => p.id === 'balanced');
+    expect(balanced).toBeDefined();
+    if (balanced === undefined) return;
+    const adopted = structuredClone(balanced.config);
+    expect(adopted).toEqual(balanced.config);
+    expect(sameDither(adopted, balanced.config)).toBe(true);
   });
 });

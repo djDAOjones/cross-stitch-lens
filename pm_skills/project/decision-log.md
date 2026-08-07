@@ -991,3 +991,49 @@ migrate with the visible note (code path proven, node-pinned).
 complete; GALLERY-01 owner-paced and ACCEPT-02 maintainer remain);
 tickets M15-PERSIST-01/M15-UI-01 deleted; file-map regenerated;
 wish-list gains the resolver-cleanup line.
+
+## D125 — M15-DITH-01..04: the dither half ships on the shared shell (2026-08-07)
+
+**Decision:** the dither half lands whole, closing M15's agent work.
+DITH-01 — the canonical presets and `sameDither` moved to
+`src/core/pipeline/dither-presets.ts` (core cannot import ui;
+`dither-model.ts` re-exports so consumers hold), with
+`matchBuiltInDither` as the load-time attach; `ditherProfileRef`
+joins schema v5 additively (the same unreleased cycle as D124, so no
+v6 — the baseline project hash re-pinned once more under the same
+waiver); the resolved `DitherConfig` stays the authoritative
+snapshot half (D55). The kind-aware store carries dither profiles
+with no store change — the PERSIST-01 kind-awareness paying off
+exactly as D117 intended. DITH-02 — `profile-editor-dither.ts`
+mounts the dither kind in the takeover shell with **zero shell
+changes** (the D116 design goal, verified live): the three-field
+form (method select, per-family strength with its semantics in the
+helper, serpentine only where the method scans), built-ins carrying
+their D61 basis lines as "Why:", the UI-04 rig inherited whole with
+the D116 palette-context line — the design's palette by name, or
+"Demonstration palette — Retro 16" when the design is full-RGB.
+DITH-03 — the Processing section recuts to a "Dithering profile"
+select + Edit profiles…; the Dither style select and details reveal
+retire (`dither-panel.ts` deleted; the pure `dither-model.ts`
+survives as the form's vocabulary); adopting a profile applies its
+complete config live (no inline tuning — D116); the never-lying
+Custom entry appears exactly when the config matches no profile;
+full-RGB disables the surface with the A9 sentence ("Dithering
+applies to thread palettes."); the section keeps the name
+"Processing" — the rename to "Dithering" stays the owner's call
+(D117 seam 5). DITH-04 — matching pinned over every preset (incl.
+the None built-in for no-dither projects — D117's dissolved legacy
+state), tweaked configs stay honestly unreferenced, and the
+byte-identity leg holds by identity: an adopted built-in hands the
+engine a config deep-equal to the preset's own.
+
+**Verified live:** seven built-ins list in Processing; Graphic
+adopts and renders; the editor opens on the design's active profile
+read-only with its basis line; duplicate → strength edit → Save
+lands on the copy and **not** the design (the D117 contract
+observed); Back restores the section with the user profile listed.
+Full suite 996 green; no shell file touched by the second kind.
+
+**Link:** backlog → DITH-01..04 removed; M15-DITH-05 unblocked (the
+absorbed M8 acceptance session, the owner's); tickets
+M15-DITH-01/02/03 deleted; file-map regenerated.

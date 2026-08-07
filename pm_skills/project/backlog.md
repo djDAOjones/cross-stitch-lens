@@ -141,12 +141,17 @@ presets retire into read-only built-in profiles. Outputs change and
 persistence extends here — the M14 constraints lift by design.
 Schema bumps run under the owner's compatibility waiver (D114:
 never crash, snapshot renders, semantics best-effort with a visible
-note). No new runtime deps; Carbon hand-built; AAA. Run order:
-CORE-01 → CORE-02 → CORE-03 → PERSIST-01 → UI-01 → UI-02 → UI-03 →
-UI-04 → ACCEPT-01 → ACCEPT-02; UI-01 lands on the section M14's
+note). No new runtime deps; Carbon hand-built; AAA. Run order
+(D115): CORE-01 → CORE-02 → CORE-03 → PERSIST-01 → UI-02 → UI-03 →
+UI-04 → UI-01 → ACCEPT-01 → ACCEPT-02 — the editor completes first
+behind a dev-only entry, and UI-01's section cutover lands last,
+atomic and wired to a finished editor, on the section M14's
 EXT-41/42 leave behind (M14 completes first). SCOPE-02 stays
-scoping-first and inherits UI-02's kind-agnostic shell. Ordering
-against the M13 remainder is the owner's call at pick time.
+scoping-first, ideally before UI-02 starts so the kind-agnostic
+shell is designed against both known kinds (dither scoping in
+progress 2026-08-07); failing that, UI-02 builds colour-first and
+generalises at the dither build. Ordering against the M13
+remainder is the owner's call at pick time.
 
 - [ ] **M15-CORE-01 Colour sources: maps, namespaces, names** [detail] (2026-08-07)
   Intent: synthetic identity namespaces (`map:`, `user:`) that can never collide with threads (D55/D56); the six generated colour maps (D114 list); the embedded CSS/X11 name table; provenance-honest display labels usable by lists and export keys. Pure core, no UI.
@@ -161,12 +166,8 @@ against the M13 remainder is the owner's call at pick time.
   Done when: selection honours distance together with count and explains when they conflict; Must-use seats guaranteed; prefer gone from core with tests updated, not weakened.
 
 - [ ] **M15-PERSIST-01 Profiles persist: store, project file, migration** (2026-08-07)
-  Intent: profiles in IndexedDB with revisions plus import/export (the records.ts pattern generalised); the project file's policy half becomes the design's recipe copy plus a profileRef `{id, revision}`; schema bump with best-effort migration under the D114 waiver (visible note, never a crash, snapshot authoritative).
-  Done when: save→load→save byte-identical on the new schema; old fixtures load and render via snapshot with the note; library round-trip tests green.
-
-- [ ] **M15-UI-01 Colour section recut: profile select and the (edited) state** (2026-08-07)
-  Intent: the section becomes profile select (+ Edit profiles…, "(edited)" badge, Update profile / Save as new / Revert) + count + minimum distance + Must-use chips + Colours used with a Remove-from-profile row action that lands on the design's copy; fills the slot EXT-42 protects.
-  Done when: every path announces; chips keyboard-operable; no shared-library mutation without an explicit Update/Save as new; the section is materially no taller than EXT-42's result.
+  Intent: profiles in IndexedDB with revisions plus import/export (the records.ts pattern generalised); the project file's policy half becomes the design's recipe copy plus a profileRef `{id, revision}`; schema bump with best-effort migration under the D114 waiver (visible note, never a crash, snapshot authoritative); existing saved palettes convert 1:1 into explicit-membership profiles (order preserved — D46 identity), never silently dropped; custom `user:` colours persist in the global My-colours library, available to every profile (D115).
+  Done when: save→load→save byte-identical on the new schema; old fixtures load and render via snapshot with the note; a pre-existing saved palette reappears as a profile with its order intact; library round-trip tests green.
 
 - [ ] **M15-UI-02 Takeover editor shell (shared)** (2026-08-07)
   Intent: the shell view swap (not a dialog): header with profile switcher and New/Duplicate/Rename/Delete, draft model with Save/Cancel/Back, focus and a11y anatomy, a capture session surviving underneath; built profile-kind-agnostic for SCOPE-02.
@@ -180,6 +181,10 @@ against the M13 remainder is the owner's call at pick time.
   Intent: the preview strip — default view is the design's last still, four photo slots in a `profile-demo` folder under the Vite public root (created by this task) with honest offline states, the generated test card; the three-resolution grid at equal display size; draft-labelled renders through the real pipeline, debounced, never starving a live session.
   Done when: slots and grid render against the draft recipe; offline states name the missing file and folder; live-session cadence unaffected, measured.
 
+- [ ] **M15-UI-01 Colour section recut: profile select and the (edited) state** (2026-08-07)
+  Intent: the cutover task, last before acceptance (D115) — the section becomes profile select (+ Edit profiles… into the finished editor, "(edited)" badge, Update profile / Save as new / Revert) + count + minimum distance + Must-use chips with a search-to-add field (a guaranteed colour need not be in use yet) + Colours used with a Remove-from-profile row action landing on the design's copy; the old controls swap out only here; fills the slot EXT-42 protects.
+  Done when: every path announces; chips keyboard-operable including add-by-search; non-thread entries render honestly in Colours used (CORE-01 labels); no shared-library mutation without an explicit Update/Save as new; no dead controls at any point of the milestone; the section is materially no taller than EXT-42's result.
+
 - [ ] **M15-ACCEPT-01 Automated acceptance** (2026-08-07)
   Intent: the machine half — suites over resolver/selection/persistence, the golden and LUT-fingerprint strategy revisited where profiles feed reduction, export keys with non-thread labels, quality gate green.
   Done when: `npm run check` green; export byte-identity re-proven for thread-only profiles; non-thread export-key labelling pinned by test.
@@ -187,6 +192,10 @@ against the M13 remainder is the owner's call at pick time.
 - [ ] **M15-ACCEPT-02 Maintainer acceptance session** [maintainer] (2026-08-07)
   Intent: the human half — a live session over the editor: build a profile from scratch, judge the style built-ins, the test preview's usefulness, and the (edited) flow's legibility.
   Done when: owner pass/fail notes recorded; failures route to fix tasks, never silent rework.
+
+- [ ] **M15-GALLERY-01 Profile gallery: culture & nature** [sign-off] [detail] [blocked: M15-CORE-02] (2026-08-07)
+  Intent: owner ask (second look, D115) — create lots of useful and interesting built-in profiles drawn from across culture and nature (absorbs ICE-PRESET-01 and the D114 placeholder list); agent drafts rule- or membership-based candidates in batches with test-image evidence, the owner curates names and membership per batch; shipped names style-descriptive, never trademarks; nothing placeholder ships in the UI.
+  Done when: each shipped batch has owner-signed membership or rules and honest naming, distinguished from user profiles; the candidate list lives in the ticket, never the select.
 
 - [ ] **M15-SCOPE-02 Dithering profiles & editor — joint scoping** [maintainer] [sign-off] [detail] (2026-08-06)
   Intent: scope "Dithering profiles" with the owner — the Processing section reduced to profile selection (EXT-30 lands the rename first), a full-surface editor over the five methods and seven evidence-based presets, and how much editor machinery it shares with UI-02's kind-agnostic shell.
@@ -240,11 +249,6 @@ passed, cut or shipped:
   Intent: ingest owner-reviewed thread equivalences so "nearest equivalent" answers from published conversions rather than colour distance alone. The engine half shipped with M7 (`thread-equivalents.ts` already takes a curated map and prefers it); this is data plus a generator.
   Done when: curated equivalences load, override the computed answer, and are visibly labelled as published rather than computed — with the computed path still filling the gaps.
   Blocked twice over: `thread-map-proposed.csv` has a header and zero data rows, and nothing in the UI surfaces equivalents yet — ICE-EXPLORER-01 is its natural first consumer. Reactivate when the owner supplies groupings; the recommended shape is long/tidy (`group_id,brand,code`), not the current wide one-column-pair-per-brand form (D56).
-
-- [ ] **ICE-PRESET-01 Style-profile curation** [maintainer] (2026-07-21)
-  Intent: re-scoped by D114 (presets retire into built-in profiles) — curate the shipped style built-ins (Sepia, Pastels, Classic cross stitch) and work up the next wave from the placeholder list (Memphis, Rave, Mondrian, Bauhaus, Art nouveau, Warhol, Monet, cosy pixel farm); shipped names style-descriptive, never trademarks; nothing placeholder ships in the UI.
-  Done when: each curated style profile has owner-signed membership or rules and honest naming, distinguished from user profiles.
-  Blocked on owner taste input, not on code (D55, D114).
 
 - [ ] **ICE-EXPLORER-01 Colour explorer** [detail] (2026-07-21)
   Intent: a dedicated view over the 3,338-thread catalogue for browsing rather than converting — filter and sort by brand, hue/lightness/chroma, ownership; inspect one thread and see its nearest equivalents in every other brand side by side. The engine half already exists (`thread-equivalents.ts`); this is the view. Owner-flagged as a later nicety, not MVP.

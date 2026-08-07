@@ -1012,3 +1012,44 @@ M15-PERSIST-01, M15-UI-01..04, M15-ACCEPT-01/02 (SCOPE-01 ships;
 its ticket is superseded by tickets CORE-01/CORE-02/UI-03/UI-04);
 ICE-PRESET-01 re-scoped; M14-EXT-42's protected slot is UI-01's
 landing site.
+
+## D115 — M15 second look: run order inverts, three contract gaps closed, the profile gallery becomes a task (2026-08-07)
+
+**Decision:** an owner-asked second look over the D114 breakdown
+lands seven adjustments, all backlog/ticket-level; D114 itself
+stands as written. (1) The UI run order inverts to UI-02 → UI-03
+→ UI-04 → UI-01: the editor completes first behind a dev-only
+entry and the section cutover lands last, atomic and wired to a
+finished editor — the drafted order shipped a dead "Edit
+profiles…" button and a half-migrated section. (2) SCOPE-02
+ideally runs before UI-02 so the kind-agnostic shell is designed
+against both known kinds (dither scoping already in progress in a
+parallel session); failing that, UI-02 builds colour-first and
+generalises at the dither build. (3) `ownedOnly` binds to
+thread-library content only — `map:` and `user:` entries are not
+ownable, and without the carve-out a profile with a map and
+owned-only enabled empties silently (CORE-02 contract). (4)
+Existing saved palettes convert 1:1 into explicit-membership
+profiles, order preserved — the D114 waiver covers semantics,
+never library data (PERSIST-01). (5) Custom `user:` colours
+persist in the global My-colours library, available to every
+profile, not trapped in the one that pinned them (PERSIST-01 /
+UI-03). (6) "Classic cross stitch" ships as an initial, honest
+agent-chosen subset, not a placeholder — the no-placeholder rule
+applies to built-ins too (CORE-02). (7) M14-EXT-42's ticket now
+names what M15-UI-01 deletes wholesale (brand helper lines,
+library buttons), capping compression there at cheap wins.
+M15-UI-01 additionally gains the Must-use search-to-add affordance
+and non-thread Colours-used rendering in its acceptance.
+
+**The gallery:** the owner upgrades the curation ask — "lots of
+useful and interesting profiles from across culture and nature" —
+so ICE-PRESET-01 is absorbed into **M15-GALLERY-01** [sign-off]
+[blocked: M15-CORE-02]: agent-drafted candidate batches (6–10 a
+batch, rule- or membership-based, test-image evidence), owner-
+curated names and membership per batch, style-descriptive naming,
+the candidate list living in the ticket and never the select.
+
+**Link:** backlog → M15 reordered, M15-GALLERY-01 added,
+ICE-PRESET-01 removed (absorbed); tickets M15-CORE-02, M15-UI-03,
+M15-GALLERY-01 (new), M14-EXT-42.

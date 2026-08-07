@@ -864,3 +864,69 @@ acceptance-matrix suites untouched and green.
 
 **Link:** backlog → CORE-01..03 removed; tickets M15-CORE-01/02
 deleted on ship; file-map roles added.
+
+## D123 — M15-PERSIST-01 (store half) + M15-UI-02/03/04: the profile editor lands behind its dev entry (2026-08-07)
+
+**Decision:** the persistence store and the whole takeover editor
+ship in the continuing auto-jazz run. PERSIST-01's store half —
+`records.ts` gains the generic, kind-opaque profile file format
+(one shape for every kind, payloads bounded and uninterpreted — the
+D116 generic-or-absent line honoured) plus the My-colours format;
+`store.ts` gains kind-aware profile and user-colour stores
+(IndexedDB v3, keyPath `[kind, id]`; a dev-session v2 intermediate
+is healed by the idempotent upgrade), with built-in immutability
+pinned at the store level (a `builtin:` put rejects — D116) and at
+import. **The schema half of PERSIST-01 deliberately rides the
+UI-01 cutover** (stated assumption): bumping the project file while
+the app still thinks in policy would demand a reverse recipe→policy
+adapter — the dual model D117 warns against — so the file format
+pivots atomically with the surface, the D115 atomicity principle
+applied to persistence. UI-02 — `profile-editor.ts`, the
+kind-agnostic takeover shell: view swap over the app layout (header
+and the one status region stay; a capture session keeps running
+underneath), switcher + New/Duplicate/Rename/Delete, draft-then-Save
+with a JSON-snapshot dirty model, discard guarded by a danger modal,
+Escape = Back, focus to the view heading on open and back to the
+invoker on close; the D117 editor-Save contract is wired in the Save
+path (active-profile saves update the design through the host link —
+the link itself activates at UI-01, when a design can carry an
+active profile); the EXT-43 contract holds **by construction** — the
+shell exposes no frame-facing API at all, so no frame can rebuild
+it (proven live: element identity across a source replacement and
+its frames). UI-03 — `profile-editor-colour.ts` + the extracted
+shared `browse-table.ts` (D117 seam 3: the editor never imports
+from `palette-panel.ts`, which UI-01 deletes; the old panel keeps
+its own copy until then rather than churning a dying file): the
+libraries column (8 brands with mapped-only provenance marks, 6
+maps with counts, My threads), per-library Browse scoping into the
+shared capped table with disjoint Pin in/Pin out row toggles
+(M7-MIX-01 conduct), ownedOnly, one two-pole H/S/B rule with
+slider + numeric pairs (hue wraps; full-span start), hex-search
+custom add into the global My-colours library (D115) pinned as
+`user:` identity, and the resulting-colours readout (count +
+conflict sentences + capped swatch grid) refreshed on EXT-43-style
+fingerprints. UI-04 — `profile-editor-preview.ts`: design-still
+default, four photo slots under `public/profile-demo/` with honest
+"Image offline — add the file" states (a content-type guard tells
+Vite's index.html fallback from a real image), the generated test
+card, and the ÷1/÷4/÷16 grid (floor 8); renders run the real
+pipeline via the worker export route, debounced 150 ms and
+latest-wins, draft-labelled (the M4 rule). Dev-only entry: a
+"Profiles (dev)" shell-bar button, dev builds only (D115 — the real
+entry ships with UI-01).
+
+**Verified live** (this session's dev server): nine built-ins list
+and resolve (DMC 489); duplicate → edit → Save → reload →
+IndexedDB round-trip intact (491 with the added map); range rule
+narrows live (491 → 198); custom `#00ff88` lands as "Custom —
+`#00ff88`" pinned in; offline slot states render with the real path;
+grid mode renders 6 cells through the pipeline; editor control
+identity preserved across a source drop and its frames; Back with
+a dirty draft guards, discard returns to the design with focus and
+a status line. 13 new pure tests (browse rows, hex parsing,
+fingerprints, grid divisors, the absent-vs-broken slot guard) +
+the store/records suite from the same phase; full suite green.
+
+**Link:** backlog → UI-02/03/04 removed, PERSIST-01 annotated
+(store half shipped, schema half rides UI-01); tickets
+M15-UI-02/03/04 deleted on ship; file-map roles added.

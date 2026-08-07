@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 214 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 221 file(s) across 11 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 12 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
@@ -23,9 +23,10 @@
 - `.windsurf` — 1 file(s)
 - `crates` — 4 file(s)
 - `docs` — 12 file(s)
+- `public` — 1 file(s)
 - `scripts` — 7 file(s)
-- `src` — 85 file(s)
-- `tests` — 90 file(s)
+- `src` — 89 file(s)
+- `tests` — 92 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -80,6 +81,10 @@
 - `docs/ui-evidence.md` — M14 implementation evidence: per-task matrix runs, deviations, before/after notes
 - `docs/ui-journeys.md` — M14-AUDIT-02 record: five journey step tables, depth measurements, control-tier inventory
 - `docs/ui-spec.md` — M14-SPEC-01: tier/reach contract, 5-section architecture, control table, terminology map, keyboard model
+
+## public
+
+- `public/profile-demo/README.md` — names the four owner-supplied preview photos the editor rig looks for (M15-UI-04)
 
 ## scripts
 
@@ -149,6 +154,7 @@
 - `src/library/store.ts` — Cross-project library storage behind one interface; IndexedDB impl + memory fallback that announces itself
 - `src/main.ts` — app entry: M2 shell — import, control panel, preview, info panel
 - `src/ui/accordion.ts` — Carbon accordion section: h2-wrapped toggle, hidden panel, derived closed-state summary
+- `src/ui/browse-table.ts` — shared capped search table (the 60-row pattern extracted; D117 seam 3)
 - `src/ui/controls.ts` — Carbon-style field builders: toggle/number/colour/select + clampInt
 - `src/ui/debug-panel.ts` — dev-only profiling panel: rolling timing window (pure) + disclosure DOM
 - `src/ui/diagnostics-button.ts` — the "Copy diagnostics" control + announced status line
@@ -160,6 +166,9 @@
 - `src/ui/palette-panel.ts` — Colour panel: brands, source, inventory, count, per-thread rules; pure model + thin DOM half; structure-fingerprint no-rebuild contract (M14-EXT-43)
 - `src/ui/preferences.ts` — Shell preferences (per-disclosure open state) in localStorage; parse falls back to defaults for anything unreadable. Never project data.
 - `src/ui/preview.ts` — preview controller: toolbar, wheel/drag/keys → worker
+- `src/ui/profile-editor-colour.ts` — colour profile kind: libraries, pins, ranges, custom colours, fingerprinted readout; pure halves exported
+- `src/ui/profile-editor-preview.ts` — kind-generic judgement preview: slots, offline states, test card, ÷1/÷4/÷16 grid, debounced real-pipeline renders
+- `src/ui/profile-editor.ts` — kind-agnostic takeover editor shell: switcher + verbs, draft-then-Save, D117 Save contract, no frame-facing API
 - `src/ui/sample.ts` — deterministic drawn test-card for "Try a sample"; feeds the normal source path
 - `src/ui/scales.ts` — The four resolutions kept apart — pattern/capture/preview/export — with unit-named fields, reference-sharing updaters, and the visible label set.
 - `src/ui/shell.ts` — Shell state reduced to the cold flag (M14-EXT-31/32); `visibility()` is the single composition rule for what the cold surface hides.
@@ -248,6 +257,8 @@
 - `tests/palette.test.ts` — DMC load invariants (533, unique, hex↔rgb)
 - `tests/pipeline-config.test.ts` — preset order, full-RGB, dither-replaces-reduce
 - `tests/pipeline-hello.test.ts` — M0 acceptance: identity golden + purity invariants
+- `tests/profile-editor.test.ts` — editor pure halves: browse rows, hex parsing, readout fingerprints, grid divisors, absent-vs-broken slots
+- `tests/profile-store.test.ts` — kind-aware store contract, generic profiles file round-trip, builtin rejection, My colours, paletteToProfile
 - `tests/project.test.ts` — project file: byte-identical round trip, validation errors, version refusal
 - `tests/reduce.test.ts` — reduce golden + invariants (membership, fixed point, LUT↔exact)
 - `tests/resize.test.ts` — resize golden + geometry/average/bounds invariants

@@ -381,6 +381,29 @@ export function builtInProfiles(catalogue: ThreadCatalogue): ColorProfile[] {
  * owns the visible note. Locks stay a design-layer concern
  * (M15-CORE-03) — they are not membership and do not map here.
  */
+/**
+ * Convert a saved library palette 1:1 into an explicit-membership
+ * profile (M15-PERSIST-01, D115): same id, name and revision, order
+ * preserved (order is identity — D46), provenance recorded. The D114
+ * waiver covers policy semantics, never library data — a palette the
+ * user built converts whole.
+ */
+export function paletteToProfile(palette: {
+  id: string;
+  name: string;
+  revision: number;
+  threadIds: readonly string[];
+}): ColorProfile {
+  return {
+    id: palette.id,
+    name: palette.name,
+    revision: palette.revision,
+    builtin: false,
+    createdFrom: `palette:${palette.id}`,
+    recipe: { ...emptyRecipe(), include: [...palette.threadIds] },
+  };
+}
+
 export function policyToRecipe(policy: PalettePolicy, inputs: PolicyInputs): ColorProfileRecipe {
   const recipe = emptyRecipe();
   recipe.ownedOnly = policy.ownedOnly;

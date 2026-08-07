@@ -635,3 +635,139 @@ main {
   margin-left: auto;
   align-self: center;
 }
+
+/* Takeover profile editor (M15-UI-02..04): a view swap over the app
+  layout — the header (and its status region) stays. Two columns at
+  wide, one at companion widths; every region scrolls in the page,
+  nothing sticky. */
+.profile-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--csl-spacing-05);
+}
+
+.profile-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--csl-spacing-05);
+}
+
+.profile-editor-header h2 {
+  margin: 0;
+}
+
+.profile-editor-row {
+  margin: 0;
+  align-items: flex-end;
+}
+
+.profile-switcher {
+  flex: 0 1 18rem;
+  margin-bottom: 0;
+}
+
+.editor-columns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--csl-spacing-06);
+  align-items: flex-start;
+}
+
+.editor-libraries {
+  flex: 1 1 20rem;
+  min-width: 0;
+}
+
+.editor-readout {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.browse-rows {
+  max-height: 20rem;
+  overflow-y: auto;
+  border: 1px solid var(--csl-border-subtle);
+}
+
+.browse-row {
+  display: flex;
+  align-items: center;
+  gap: var(--csl-spacing-03);
+  min-height: var(--csl-target-min);
+  padding: 0 var(--csl-spacing-03);
+}
+
+.browse-row .thread-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.browse-row button[aria-pressed='true'] {
+  /* The pressed pin keeps the app-wide inverse fill (base.css). */
+}
+
+.pole-number {
+  width: 4.5rem;
+}
+
+.range-block {
+  border-left: 2px solid var(--csl-border-subtle);
+  padding-left: var(--csl-spacing-04);
+}
+
+.pin-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--csl-spacing-03);
+}
+
+.pin-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--csl-spacing-03);
+  border: 1px solid var(--csl-border-strong);
+  padding-left: var(--csl-spacing-03);
+}
+
+.readout-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-top: var(--csl-spacing-03);
+}
+
+.readout-swatch {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.editor-preview-rig .toolbar {
+  margin-top: 0;
+}
+
+.editor-preview-stage {
+  min-height: 8rem;
+}
+
+.preview-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--csl-spacing-05);
+}
+
+.preview-cell {
+  margin: 0;
+  flex: 0 1 14rem;
+}
+
+.preview-cell-canvas {
+  width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  border: 1px solid var(--csl-border-subtle);
+  background: var(--csl-layer-01);
+}

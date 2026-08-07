@@ -52,8 +52,12 @@ import {
   type PolicyInputs,
 } from './core/palette-policy.ts';
 import { findPreset, resolvePreset } from './core/palette-presets.ts';
+import { paletteOf } from './core/palette.ts';
 import { resolveProjectPalette } from './core/palette-resolve.ts';
 import { loadCatalogue } from './core/thread-catalogue.ts';
+import { createProfileEditor } from './ui/profile-editor.ts';
+import { createColourKindAdapter } from './ui/profile-editor-colour.ts';
+import { createEditorPreview, fetchSlot } from './ui/profile-editor-preview.ts';
 import {
   parseProject,
   projectFilename,
@@ -2164,6 +2168,19 @@ function build(app: HTMLElement): void {
   });
   shellBar.append(sourceButton);
 
+  // The profile editor's dev-only entry (M15-UI-02, D115): the
+  // takeover completes behind this button and the real entry ships
+  // with the M15-UI-01 section cutover. Dev builds only — a
+  // production user never sees a surface the section does not own.
+  const devEditProfilesButton = document.createElement('button');
+  devEditProfilesButton.type = 'button';
+  devEditProfilesButton.textContent = 'Profiles (dev)';
+  devEditProfilesButton.hidden = !import.meta.env.DEV;
+  devEditProfilesButton.addEventListener('click', () => {
+    void openProfileEditor();
+  });
+  if (import.meta.env.DEV) shellBar.append(devEditProfilesButton);
+
   /**
    * Push the shell state onto the DOM. One function, one source of
    * truth: every `hidden` the shell owns is written here and nowhere
@@ -2291,6 +2308,73 @@ function build(app: HTMLElement): void {
   const layout = document.createElement('div');
   layout.className = 'app-layout';
   layout.append(content, controls);
+
+  // The takeover editor host (M15-UI-02): a view swap, not a dialog —
+  // opening hides the app layout and mounts the editor in its place;
+  // the header (and the app's one status region) stays, and a capture
+  // session keeps running underneath. Built lazily on first open.
+  const editorHost = document.createElement('div');
+  editorHost.className = 'editor-host';
+  editorHost.hidden = true;
+  let profileEditor: import('./ui/profile-editor.ts').ProfileEditor | null = null;
+
+  function closeProfileEditor(): void {
+    editorHost.hidden = true;
+    layout.hidden = false;
+    devEditProfilesButton.focus();
+    status.textContent = 'Back to the design.';
+  }
+
+  async function openProfileEditor(): Promise<void> {
+    if (profileEditor === null) {
+      const colourKind = createColourKindAdapter(document, {
+        catalogue: CATALOGUE,
+        store: () => library,
+        owned: () => owned,
+      });
+      profileEditor = createProfileEditor(document, {
+        adapter: {
+          ...colourKind,
+          mountPreview: (container) => {
+            const rig = createEditorPreview(document, {
+              render: (buffer, previewConfig) =>
+                client.exportFrame(
+                  {
+                    width: buffer.width,
+                    height: buffer.height,
+                    data: new Uint8ClampedArray(buffer.data),
+                  },
+                  previewConfig,
+                ),
+              designStill: () => masterImage,
+              baseConfig: () => ({ ...config }),
+              overrideConfig: (draft, base) => {
+                const entries = colourKind.resolveDraft(draft);
+                return {
+                  ...base,
+                  palette: entries.length === 0 ? null : paletteOf('Draft profile', entries),
+                };
+              },
+              loadSlot: (file) => fetchSlot(file, decodeImageBlob),
+            });
+            container.append(rig.element);
+            return rig;
+          },
+        },
+        // The D117 design link activates at the M15-UI-01 cutover,
+        // when a design carries an active profile to update.
+        design: undefined,
+        announce: (text) => {
+          status.textContent = text;
+        },
+        onClose: closeProfileEditor,
+      });
+      editorHost.append(profileEditor.element);
+    }
+    layout.hidden = true;
+    editorHost.hidden = false;
+    await profileEditor.open();
+  }
   const header = document.createElement('header');
   header.className = 'app-header';
   // Build identity returns to the chrome as quiet meta text — the
@@ -2305,7 +2389,7 @@ function build(app: HTMLElement): void {
   headerId.append(version, status);
   header.append(heading, headerId, shellBar);
   if (diagnostics !== null) header.append(diagnostics.element);
-  app.replaceChildren(header, layout);
+  app.replaceChildren(header, layout, editorHost);
   applyShell();
   preview.initSurface();
 

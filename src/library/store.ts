@@ -17,7 +17,7 @@
  */
 
 import { log } from '../diagnostics/log.ts';
-import type { LibraryPalette } from './records.ts';
+import type { LibraryPalette, ProfileRecord, UserColorRecord } from './records.ts';
 
 /** The storage surface the app needs. All async: IndexedDB is. */
 export interface LibraryStore {
@@ -28,6 +28,22 @@ export interface LibraryStore {
   listPalettes(): Promise<LibraryPalette[]>;
   putPalette(palette: LibraryPalette): Promise<void>;
   deletePalette(id: string): Promise<void>;
+  /** Profiles of one kind, kind-opaque payloads (M15-PERSIST-01). */
+  listProfiles(kind: string): Promise<ProfileRecord[]>;
+  /** Rejects `builtin:` ids — immutability pinned at the store level. */
+  putProfile(record: ProfileRecord): Promise<void>;
+  deleteProfile(kind: string, id: string): Promise<void>;
+  /** The global My-colours library (D115). */
+  listUserColors(): Promise<UserColorRecord[]>;
+  putUserColor(record: UserColorRecord): Promise<void>;
+  deleteUserColor(id: string): Promise<void>;
+}
+
+/** The one gate every write path shares: built-ins never persist. */
+function rejectBuiltin(id: string): Error | null {
+  return id.startsWith('builtin:')
+    ? new Error('Built-in profiles are read-only — duplicate one to edit it.')
+    : null;
 }
 
 /** In-memory store: tests, and the fallback when IndexedDB is refused. */
@@ -60,13 +76,57 @@ export class MemoryStore implements LibraryStore {
     this.palettes.delete(id);
     return Promise.resolve();
   }
+
+  private readonly profiles = new Map<string, ProfileRecord>();
+  private readonly userColors = new Map<string, UserColorRecord>();
+
+  listProfiles(kind: string): Promise<ProfileRecord[]> {
+    return Promise.resolve(
+      [...this.profiles.values()]
+        .filter((p) => p.kind === kind)
+        .sort((a, b) => (a.id < b.id ? -1 : 1)),
+    );
+  }
+
+  putProfile(record: ProfileRecord): Promise<void> {
+    const rejected = rejectBuiltin(record.id);
+    if (rejected !== null) return Promise.reject(rejected);
+    this.profiles.set(`${record.kind}:${record.id}`, { ...record });
+    return Promise.resolve();
+  }
+
+  deleteProfile(kind: string, id: string): Promise<void> {
+    this.profiles.delete(`${kind}:${id}`);
+    return Promise.resolve();
+  }
+
+  listUserColors(): Promise<UserColorRecord[]> {
+    return Promise.resolve(
+      [...this.userColors.values()].sort((a, b) => (a.id < b.id ? -1 : 1)),
+    );
+  }
+
+  putUserColor(record: UserColorRecord): Promise<void> {
+    this.userColors.set(record.id, { ...record, rgb: [...record.rgb] });
+    return Promise.resolve();
+  }
+
+  deleteUserColor(id: string): Promise<void> {
+    this.userColors.delete(id);
+    return Promise.resolve();
+  }
 }
 
 /** Database and store names. Bump `DB_VERSION` with an upgrade step. */
 const DB_NAME = 'cross-stitch-lens';
-const DB_VERSION = 1;
+/** v3 (M15-PERSIST-01): the kind-aware profiles store + My colours.
+ *  (v2 existed only as a dev-session intermediate; the idempotent
+ *  upgrade below heals any database that saw it.) */
+const DB_VERSION = 3;
 const OWNED_STORE = 'inventory';
 const PALETTE_STORE = 'palettes';
+const PROFILE_STORE = 'profiles';
+const USER_COLOR_STORE = 'user-colors';
 /** Single-row key in the inventory store; the set is written whole. */
 const OWNED_KEY = 'owned';
 
@@ -105,6 +165,14 @@ export class IdbStore implements LibraryStore {
         if (!db.objectStoreNames.contains(OWNED_STORE)) db.createObjectStore(OWNED_STORE);
         if (!db.objectStoreNames.contains(PALETTE_STORE)) {
           db.createObjectStore(PALETTE_STORE, { keyPath: 'id' });
+        }
+        // v2 (M15-PERSIST-01): kind-aware profiles + the My-colours
+        // library. Additive — existing stores and data untouched.
+        if (!db.objectStoreNames.contains(PROFILE_STORE)) {
+          db.createObjectStore(PROFILE_STORE, { keyPath: ['kind', 'id'] });
+        }
+        if (!db.objectStoreNames.contains(USER_COLOR_STORE)) {
+          db.createObjectStore(USER_COLOR_STORE, { keyPath: 'id' });
         }
       };
       req.onblocked = () => {
@@ -155,6 +223,64 @@ export class IdbStore implements LibraryStore {
     const tx = this.db.transaction(PALETTE_STORE, 'readwrite');
     await request(tx.objectStore(PALETTE_STORE).delete(id));
   }
+
+  async listProfiles(kind: string): Promise<ProfileRecord[]> {
+    const tx = this.db.transaction(PROFILE_STORE, 'readonly');
+    const all = await request<unknown[]>(tx.objectStore(PROFILE_STORE).getAll());
+    return all
+      .filter((p): p is ProfileRecord => isProfileRecord(p))
+      .filter((p) => p.kind === kind)
+      .sort((a, b) => (a.id < b.id ? -1 : 1));
+  }
+
+  async putProfile(record: ProfileRecord): Promise<void> {
+    const rejected = rejectBuiltin(record.id);
+    if (rejected !== null) throw rejected;
+    const tx = this.db.transaction(PROFILE_STORE, 'readwrite');
+    await request(tx.objectStore(PROFILE_STORE).put(record));
+  }
+
+  async deleteProfile(kind: string, id: string): Promise<void> {
+    const tx = this.db.transaction(PROFILE_STORE, 'readwrite');
+    await request(tx.objectStore(PROFILE_STORE).delete([kind, id]));
+  }
+
+  async listUserColors(): Promise<UserColorRecord[]> {
+    const tx = this.db.transaction(USER_COLOR_STORE, 'readonly');
+    const all = await request<unknown[]>(tx.objectStore(USER_COLOR_STORE).getAll());
+    return all
+      .filter((c): c is UserColorRecord => isUserColor(c))
+      .sort((a, b) => (a.id < b.id ? -1 : 1));
+  }
+
+  async putUserColor(record: UserColorRecord): Promise<void> {
+    const tx = this.db.transaction(USER_COLOR_STORE, 'readwrite');
+    await request(tx.objectStore(USER_COLOR_STORE).put(record));
+  }
+
+  async deleteUserColor(id: string): Promise<void> {
+    const tx = this.db.transaction(USER_COLOR_STORE, 'readwrite');
+    await request(tx.objectStore(USER_COLOR_STORE).delete(id));
+  }
+}
+
+/** Shape guard for a profile record read back out of IndexedDB. */
+function isProfileRecord(value: unknown): value is ProfileRecord {
+  if (typeof value !== 'object' || value === null) return false;
+  const raw = value as Record<string, unknown>;
+  return (
+    typeof raw['kind'] === 'string' &&
+    typeof raw['id'] === 'string' &&
+    typeof raw['name'] === 'string' &&
+    typeof raw['revision'] === 'number'
+  );
+}
+
+/** Shape guard for a user colour read back out of IndexedDB. */
+function isUserColor(value: unknown): value is UserColorRecord {
+  if (typeof value !== 'object' || value === null) return false;
+  const raw = value as Record<string, unknown>;
+  return typeof raw['id'] === 'string' && Array.isArray(raw['rgb']) && raw['rgb'].length === 3;
 }
 
 /** Shape guard for a record read back out of IndexedDB. */

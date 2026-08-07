@@ -254,3 +254,197 @@ export function withFreshId(palette: LibraryPalette, taken: ReadonlySet<string>)
   }
   return { ...palette, id, name: `${palette.name} (imported)` };
 }
+
+// --- profiles (M15-PERSIST-01) --------------------------------------
+// The palette pattern generalised, kind-aware from the start (D117):
+// the store and the file format treat a profile's payload as opaque —
+// the colour kind stores a recipe, the dither kind a complete config
+// (M15-DITH-01) — so a second kind mounts with no format change. This
+// is the generic import/export the D116 cut line demands: one shape
+// for every kind, or none at all.
+
+/** Ceiling on one serialised payload, checked before storing. */
+export const MAX_PAYLOAD_JSON = 65536;
+
+/** A stored profile of any kind. Payload meaning belongs to the kind. */
+export interface ProfileRecord {
+  /** Profile kind, e.g. `"colour"` or `"dither"`. */
+  kind: string;
+  /** Stable id; `builtin:` ids never reach a store. */
+  id: string;
+  name: string;
+  /** Incremented on every committed edit (the palette revision rule). */
+  revision: number;
+  /** Provenance note, e.g. `"palette:pal-3"` or `"copy:p-2"`. */
+  createdFrom: string;
+  /** Kind-opaque content (a recipe, a config). Validated by size and
+   *  JSON-serialisability here; by meaning in the kind's own layer. */
+  payload: unknown;
+}
+
+/** An exported profile file — one kind per file, payloads opaque. */
+export interface ProfilesFile {
+  schemaVersion: number;
+  kind: 'profiles';
+  profileKind: string;
+  profiles: ProfileRecord[];
+}
+
+/** Canonical field order for one profile record. */
+function canonicalProfile(record: ProfileRecord): ProfileRecord {
+  return {
+    kind: record.kind,
+    id: record.id,
+    name: record.name,
+    revision: record.revision,
+    createdFrom: record.createdFrom,
+    payload: record.payload,
+  };
+}
+
+/** Validate one profile record (payload bounded, not interpreted). */
+function asProfileRecord(value: unknown, path: string, profileKind: string): ProfileRecord {
+  const raw = asRecord(value, path);
+  const revision = raw['revision'];
+  const payload: unknown = raw['payload'] ?? {};
+  let payloadJson: string;
+  try {
+    payloadJson = JSON.stringify(payload);
+  } catch {
+    fail(`${path}.payload`, 'JSON-serialisable content');
+  }
+  if (payloadJson.length > MAX_PAYLOAD_JSON) {
+    fail(`${path}.payload`, `at most ${String(MAX_PAYLOAD_JSON)} serialised characters`);
+  }
+  const id = asBoundedString(raw['id'], `${path}.id`);
+  if (id.startsWith('builtin:')) {
+    fail(`${path}.id`, 'a user profile id — built-ins are read-only and never imported');
+  }
+  return {
+    kind: profileKind,
+    id,
+    name: asBoundedString(raw['name'], `${path}.name`),
+    revision:
+      typeof revision === 'number' && Number.isInteger(revision) && revision >= 0 ? revision : 1,
+    createdFrom: typeof raw['createdFrom'] === 'string' ? raw['createdFrom'] : 'import',
+    payload,
+  };
+}
+
+/** Serialise profiles of one kind to canonical JSON, ordered by id. */
+export function serializeProfiles(
+  profileKind: string,
+  profiles: readonly ProfileRecord[],
+): string {
+  const file: ProfilesFile = {
+    schemaVersion: LIBRARY_SCHEMA_VERSION,
+    kind: 'profiles',
+    profileKind,
+    profiles: [...profiles]
+      .filter((p) => p.kind === profileKind && !p.id.startsWith('builtin:'))
+      .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+      .map(canonicalProfile),
+  };
+  return `${JSON.stringify(file, null, 2)}\n`;
+}
+
+/** Parse and validate a profiles file. Throws with the failing path. */
+export function parseProfiles(json: string): ProfilesFile {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(json);
+  } catch {
+    throw new Error('not valid JSON');
+  }
+  const root = asRecord(raw, 'profiles');
+  if (root['kind'] !== 'profiles') {
+    fail('profiles.kind', '"profiles" — this looks like a different kind of file');
+  }
+  const profileKind = asBoundedString(root['profileKind'], 'profiles.profileKind');
+  const list = root['profiles'];
+  if (!Array.isArray(list)) fail('profiles.profiles', 'an array of profiles');
+  if (list.length > MAX_LIBRARY_ENTRIES) {
+    fail('profiles.profiles', `at most ${String(MAX_LIBRARY_ENTRIES)} profiles`);
+  }
+  return {
+    schemaVersion: LIBRARY_SCHEMA_VERSION,
+    kind: 'profiles',
+    profileKind,
+    profiles: list.map((entry, i) =>
+      asProfileRecord(entry, `profiles.profiles[${String(i)}]`, profileKind),
+    ),
+  };
+}
+
+// --- My colours (M15-PERSIST-01, D115) ------------------------------
+// Custom `user:` colours are a global library, available to every
+// profile — never trapped in the one that pinned them.
+
+/** One custom colour. Identity is the id; RGB is display data (D55). */
+export interface UserColorRecord {
+  /** Bare id — the profile pin references it as `user:<id>`. */
+  id: string;
+  /** 0–255 sRGB. */
+  rgb: [number, number, number];
+}
+
+/** An exported My-colours file. */
+export interface UserColorsFile {
+  schemaVersion: number;
+  kind: 'user-colors';
+  colors: UserColorRecord[];
+}
+
+/** Validate one user colour. */
+function asUserColor(value: unknown, path: string): UserColorRecord {
+  const raw = asRecord(value, path);
+  const rgb = raw['rgb'];
+  if (
+    !Array.isArray(rgb) ||
+    rgb.length !== 3 ||
+    rgb.some((v) => typeof v !== 'number' || !Number.isInteger(v) || v < 0 || v > 255)
+  ) {
+    fail(`${path}.rgb`, 'three 0–255 integers');
+  }
+  const channels = rgb as number[];
+  return {
+    id: asBoundedString(raw['id'], `${path}.id`),
+    rgb: [channels[0] ?? 0, channels[1] ?? 0, channels[2] ?? 0],
+  };
+}
+
+/** Serialise the My-colours library to canonical JSON, ordered by id. */
+export function serializeUserColors(colors: readonly UserColorRecord[]): string {
+  const file: UserColorsFile = {
+    schemaVersion: LIBRARY_SCHEMA_VERSION,
+    kind: 'user-colors',
+    colors: [...colors]
+      .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+      .map((c) => ({ id: c.id, rgb: [c.rgb[0], c.rgb[1], c.rgb[2]] as [number, number, number] })),
+  };
+  return `${JSON.stringify(file, null, 2)}\n`;
+}
+
+/** Parse and validate a My-colours file. */
+export function parseUserColors(json: string): UserColorsFile {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(json);
+  } catch {
+    throw new Error('not valid JSON');
+  }
+  const root = asRecord(raw, 'user-colors');
+  if (root['kind'] !== 'user-colors') {
+    fail('user-colors.kind', '"user-colors" — this looks like a different kind of file');
+  }
+  const list = root['colors'];
+  if (!Array.isArray(list)) fail('user-colors.colors', 'an array of colours');
+  if (list.length > MAX_LIBRARY_ENTRIES) {
+    fail('user-colors.colors', `at most ${String(MAX_LIBRARY_ENTRIES)} colours`);
+  }
+  return {
+    schemaVersion: LIBRARY_SCHEMA_VERSION,
+    kind: 'user-colors',
+    colors: list.map((entry, i) => asUserColor(entry, `user-colors.colors[${String(i)}]`)),
+  };
+}

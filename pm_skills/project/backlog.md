@@ -108,21 +108,10 @@ the section M14's EXT-41/42 leave behind (M14 completes first). The
 DITH tasks run after the colour half ships (owner order); ordering
 against the M13 remainder is the owner's call at pick time.
 
-- [ ] **M15-PERSIST-01 Profiles persist: store, project file, migration** [detail] (2026-08-07)
+- [~] **M15-PERSIST-01 Profiles persist: store, project file, migration** [detail] (2026-08-07)
   Intent: profiles in IndexedDB with revisions (the records.ts pattern generalised, kind-aware from the start — D117); the project file carries the design's recipe copy plus a profileRef; schema bump under the D114 waiver; saved palettes convert 1:1 into explicit-membership profiles; custom `user:` colours live in the global My-colours library (D115). Full scope in the ticket.
   Done when: save→load→save byte-identical on the new schema; old fixtures load and render via snapshot with the note; a pre-existing saved palette reappears as a profile with its order intact; library round-trip tests green.
-
-- [ ] **M15-UI-02 Takeover editor shell (shared)** [detail] (2026-08-07)
-  Intent: the shell view swap (not a dialog) — profile switcher, New/Duplicate/Rename/Delete, draft model with Save/Cancel/Back, focus and a11y anatomy, a capture session surviving underneath; profile-kind-agnostic per the D116 shell contract; the D117 editor-Save contract governs (Save on the design's active profile updates the design's copy; saving any other profile never touches the design).
-  Done when: open→edit→Save/Cancel/Back all keyboard-clean with focus returned; frame results never rebuild editor controls (regression test — the EXT-43 contract); a second profile kind could mount without shell change.
-
-- [ ] **M15-UI-03 Editor content: libraries, pins, ranges, readout** [detail] (2026-08-07)
-  Intent: the libraries column (brands, maps, My threads; browse via the shared capped search table), ownedOnly modifier, per-colour pins, two-pole H/S/B sliders with numeric fields, custom RGB add via hex/code search, and the resulting-colours readout carrying every explanation. Anatomy in the ticket.
-  Done when: draft edits update readout and preview live with every narrowing named; all controls AAA-operable; custom colours appear under `user:` identity with honest labels.
-
-- [ ] **M15-UI-04 Editor test preview** [detail] (2026-08-07)
-  Intent: the preview strip — the design's last still by default, four photo slots in a `profile-demo` folder with honest offline states, the generated test card, the three-resolution grid; draft-labelled renders through the real pipeline, debounced, never starving a live session. Kind-generic rig (D116).
-  Done when: slots and grid render against the draft recipe; offline states name the missing file and folder; live-session cadence unaffected, measured.
+  Status 2026-08-07: store half shipped (D123 — kind-aware IndexedDB store, generic file format, My colours); the project-file schema half lands with M15-UI-01's atomic cutover.
 
 - [ ] **M15-UI-01 Colour section recut: profile select and the (edited) state** [detail] (2026-08-07)
   Intent: the cutover task, last before acceptance (D115) — profile select + Edit profiles… + the "(edited)" flow (Update profile / Save as new / Revert) + count + minimum distance + Must-use chips with search-to-add + Colours used with a Remove-from-profile row action; the old controls swap out only here, filling the slot EXT-42 protects. Control census in the ticket.

@@ -1127,3 +1127,40 @@ PERSIST-01 pattern provides it generically.
 M15-SCOPE-02 ships (ticket superseded, deleted); M8-ACCEPT-01
 absorbed into M15-DITH-05 (icebox line removed); M15-UI-02's
 backlog line and M15-UI-04's ticket carry the kind pointer.
+
+## D117 — Combined M15 review: seven seam fixes ahead of development (2026-08-07)
+
+**Decision:** with both halves signed (D114–D116), an owner-asked
+combined review checked the joined queue against the code and the
+cross-half seams. The halves join cleanly — UI-02/UI-04 design
+against both signed kinds, and the feared unnamed legacy state
+dissolved in code: the seven dither presets include `none`, so a
+no-dither project matches a named built-in at load. Seven seam
+fixes land, all backlog/ticket-level. (1) PERSIST-01 is kind-aware
+from the start — DITH-01 mounts a second kind on it without
+rework; import/export generic or absent (the D116 cut line). (2)
+The editor-Save contract is settled on UI-02: Save on the design's
+active profile updates the design's copy in the same act; saving
+any other profile never touches the design — DITH-02's Use
+question inherits the answer. (3) UI-03 extracts the capped browse
+table to a shared module rather than borrowing from
+`palette-panel.ts`, which UI-01 deletes later in the run order.
+(4) DITH-03 carries the shipped full-RGB conduct forward by name —
+the profile select disables with "Dithering applies to thread
+palettes." (the A9 sentence), never silent inertness. (5) DITH-03
+gains a rename gate: Processing → Dithering once the select is the
+section's only content is the owner's call — EXT-30 named it
+Processing on the owner's own authority, so no silent re-rename.
+(6) GALLERY-01 batches are owner-paced and interleave freely with
+the dither half — they never block it. (7) M8-GOLD-01 rides
+DITH-05's session as an agenda line; the owner is already judging
+the five methods there. Explicitly unchanged, so a development
+session does not "fix" them: the divergence asymmetry between the
+halves (colour's three section verbs vs dither's no inline tuning)
+is D116's signed pick, and DITH-01's [blocked: M15-PERSIST-01]
+stays formally weaker than the owner's colour-first prose order,
+which governs at pick time.
+
+**Link:** backlog M15-PERSIST-01 / M15-UI-02 / M15-DITH-03 /
+M15-GALLERY-01 lines + the M8-GOLD-01 icebox line; tickets
+M15-UI-03, M15-DITH-05.

@@ -49,6 +49,11 @@ Then:
 7. **Access** — keyboard-only pass over the section and the
    editor; 200 % zoom; screen-reader labels on the select and the
    form fields.
+8. **M8-GOLD-01 rider (D117)** — with the five methods freshly
+   judged, settle the standing golden-fixture decision (icebox,
+   since 2026-07-22): approve fixtures for the four new methods or
+   decline, recording either. Approval routes to a follow-up task —
+   golden regeneration keeps its owner-approval rule regardless.
 
 Record pass/fail notes with inputs, settings, app/build identity,
 browser/macOS, and display scaling. A/B between profiles uses

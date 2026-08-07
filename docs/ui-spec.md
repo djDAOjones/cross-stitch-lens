@@ -510,6 +510,32 @@ no colour-only state.
   palette-panel fingerprint suite — the contract M15's editor
   inherits by name (D114).
 
+### M15 amendments (D122–D125 — the profile world)
+
+- **Colour section census** (M15-UI-01): Threadify colours · Colour
+  profile select (+ Edit profiles…) · the (edited) verbs Update
+  profile / Save as new / Revert · Constrain + count cluster ·
+  Minimum distance · Must-use chips with search-to-add · the
+  conflicts list · the My-threads inventory reveal (ownership stayed
+  its own concern). The Threads-to-choose-from select, brand
+  checkboxes, per-thread rule selects, preset mode, saved-palette
+  editor and library buttons all retired with `palette-panel.ts`.
+  An unlinked design (a migrated old file) names itself "This
+  design's colours" — the never-lying sentinel, both kinds.
+- **Processing census** (M15-DITH-03): Dithering profile select
+  (+ Edit profiles…) only; the Dither style select and details
+  reveal retired — the editor absorbs depth. Full-RGB disables the
+  surface with "Dithering applies to thread palettes." The section
+  name stays "Processing"; the rename is the owner's gate (D117).
+- **The takeover editor** (M15-UI-02..04): a view swap over the app
+  layout — header and status region stay; switcher + New / Duplicate
+  / Rename / Delete; draft-then-Save (the recorded §5.4 exception,
+  D114) with a guarded discard; built-ins read-only with
+  duplicate-to-edit; the judgement preview renders the real pipeline
+  draft-labelled (design still, photo slots with honest offline
+  states, test card, ÷1/÷4/÷16 grid). Ids are kind-prefixed — both
+  kinds' editors stay mounted once opened.
+
 ## 6. Keyboard model
 
 - Tab order = DOM order = visual order (unchanged rule; no positive

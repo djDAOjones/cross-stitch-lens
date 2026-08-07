@@ -1360,7 +1360,7 @@ function build(app: HTMLElement): void {
       if (base === undefined) return;
       designRecipe = structuredClone(base);
       designEdited = false;
-      status.textContent = 'Reverted to the profile\u2019s own colours.';
+      status.textContent = 'Reverted to the profile’s own colours.';
       applyColour();
     },
     setCount: (mode, n) => {
@@ -2041,9 +2041,19 @@ function build(app: HTMLElement): void {
       colourSection.update(sectionState());
     });
     if (loaded.snapshot.length > 0) {
-      config.palette = { name: paletteName(), entries: loaded.snapshot };
+      const snapshotPalette = { name: paletteName(), entries: loaded.snapshot };
+      config.palette = snapshotPalette;
       eligibleCount = loaded.snapshot.length;
       paletteConflicts = driftConflicts(loaded.snapshot);
+      // The display name resolves properly once the profiles cache
+      // lands; refresh it only if nothing has replaced the loaded
+      // palette meanwhile (review of D124, punch item 3).
+      void refreshProfilesCache().then(() => {
+        if (config.palette === snapshotPalette) {
+          config.palette = { ...snapshotPalette, name: paletteName() };
+          colourSection.update(sectionState());
+        }
+      });
     } else {
       // A file that never ran carries no snapshot; resolving from the
       // recipe is the only option, and exactly what it meant.
@@ -2553,6 +2563,7 @@ function build(app: HTMLElement): void {
             ...ditherKind,
             mountPreview: (container) => {
               const rig = createEditorPreview(document, {
+                idPrefix: 'dither',
                 render: (buffer, previewConfig) =>
                   client.exportFrame(
                     {
@@ -2621,6 +2632,7 @@ function build(app: HTMLElement): void {
           ...colourKind,
           mountPreview: (container) => {
             const rig = createEditorPreview(document, {
+              idPrefix: 'colour',
               render: (buffer, previewConfig) =>
                 client.exportFrame(
                   {

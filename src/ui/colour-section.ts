@@ -67,6 +67,12 @@ export interface ColourSection {
   update(state: ColourSectionState): void;
 }
 
+/** Sentinel select value for a design linked to no profile — the
+ *  never-lying state the dither select established (review of D124,
+ *  punch item 2): a migrated old file must not wear a built-in's
+ *  name. */
+export const UNLINKED_DESIGN = 'custom:design';
+
 /** Build the recut Colour section. */
 export function createColourSection(
   doc: Document,
@@ -90,6 +96,9 @@ export function createColourSection(
   const profileSelect = doc.createElement('select');
   profileSelect.id = 'colour-profile';
   profileSelect.addEventListener('change', () => {
+    // Picking the sentinel is a no-op: it names the current state,
+    // it is not an adoptable profile.
+    if (profileSelect.value === UNLINKED_DESIGN) return;
     actions.selectProfile(profileSelect.value);
   });
   profileField.append(profileLabel, profileSelect);
@@ -110,6 +119,12 @@ export function createColourSection(
   const editedNote = doc.createElement('p');
   editedNote.className = 'meta';
   editedNote.textContent = 'This design has its own edits to the profile.';
+  const builtinReason = doc.createElement('p');
+  builtinReason.className = 'helper';
+  builtinReason.id = 'update-profile-reason';
+  builtinReason.textContent =
+    'The linked profile is built-in and read-only — Save as new keeps these edits.';
+  builtinReason.hidden = true;
   const verb = (text: string, onClick: () => void): HTMLButtonElement => {
     const b = doc.createElement('button');
     b.type = 'button';
@@ -120,13 +135,14 @@ export function createColourSection(
   const updateButton = verb('Update profile', () => {
     actions.updateProfile();
   });
+  updateButton.setAttribute('aria-describedby', builtinReason.id);
   const saveAsNewButton = verb('Save as new', () => {
     actions.saveAsNew();
   });
   const revertButton = verb('Revert', () => {
     actions.revert();
   });
-  editedRow.append(editedNote, updateButton, saveAsNewButton, revertButton);
+  editedRow.append(editedNote, updateButton, saveAsNewButton, revertButton, builtinReason);
 
   // --- count + minimum distance ------------------------------------
   const limitToggle = toggleField(
@@ -312,6 +328,15 @@ export function createColourSection(
     if (optionsFp !== lastOptionsFp) {
       lastOptionsFp = optionsFp;
       profileSelect.replaceChildren();
+      if (next.profileRef === null) {
+        // An unlinked design (a migrated old file, or a deleted
+        // profile's orphan) names itself honestly rather than
+        // wearing the first option's name.
+        const option = doc.createElement('option');
+        option.value = UNLINKED_DESIGN;
+        option.textContent = 'This design’s colours';
+        profileSelect.append(option);
+      }
       for (const profile of next.profiles) {
         const option = doc.createElement('option');
         option.value = profile.id;
@@ -324,7 +349,7 @@ export function createColourSection(
         option.textContent = `${profile.name}${suffix}`;
         profileSelect.append(option);
       }
-      if (next.profileRef !== null) profileSelect.value = next.profileRef;
+      profileSelect.value = next.profileRef ?? UNLINKED_DESIGN;
     }
     editedRow.hidden = !next.edited;
     // Updating a built-in in place is impossible — the store refuses;
@@ -332,9 +357,10 @@ export function createColourSection(
     const builtinLinked =
       next.profiles.find((p) => p.id === next.profileRef)?.builtin ?? false;
     updateButton.disabled = builtinLinked;
-    updateButton.title = builtinLinked
-      ? 'Built-in profiles are read-only — use Save as new.'
-      : '';
+    // The reason is a visible sentence, not a hover-only title
+    // (review of D124, punch item 5): disabled controls still owe
+    // their explanation to keyboard and AT users.
+    builtinReason.hidden = !(builtinLinked && next.edited);
 
     const limited = next.count.mode !== 'all';
     limitToggle.input.checked = limited;

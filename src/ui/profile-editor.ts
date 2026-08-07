@@ -121,10 +121,13 @@ export function createProfileEditor(
   const switcherField = doc.createElement('div');
   switcherField.className = 'field profile-switcher';
   const switcherLabel = doc.createElement('label');
-  switcherLabel.htmlFor = 'profile-switcher';
+  // Ids are kind-prefixed: both kinds' editors stay mounted in the
+  // host once opened, and a hidden twin must not duplicate an id or
+  // steal a label's association (review of D123, punch item 1).
+  switcherLabel.htmlFor = `${adapter.kind}-profile-switcher`;
   switcherLabel.textContent = 'Profile';
   const switcher = doc.createElement('select');
-  switcher.id = 'profile-switcher';
+  switcher.id = `${adapter.kind}-profile-switcher`;
   switcherField.append(switcherLabel, switcher);
   const verb = (text: string): HTMLButtonElement => {
     const b = doc.createElement('button');

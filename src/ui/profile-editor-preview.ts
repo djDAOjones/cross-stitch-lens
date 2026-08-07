@@ -42,6 +42,8 @@ export function dividedGrid(
 
 /** What the rig needs from the host. */
 export interface EditorPreviewDeps {
+  /** Unique id prefix per mounted rig (both kinds stay in the DOM). */
+  idPrefix: string;
   /** One full-quality render through the real pipeline (worker route). */
   render(buffer: PixelBuffer, config: PipelineConfig): Promise<PixelBuffer>;
   /** The design's last processed still, or null before any source. */
@@ -89,10 +91,10 @@ export function createEditorPreview(doc: Document, deps: EditorPreviewDeps): Edi
   const viewField = doc.createElement('div');
   viewField.className = 'field';
   const viewLabel = doc.createElement('label');
-  viewLabel.htmlFor = 'preview-view';
+  viewLabel.htmlFor = `${deps.idPrefix}-preview-view`;
   viewLabel.textContent = 'Preview';
   const viewSelect = doc.createElement('select');
-  viewSelect.id = 'preview-view';
+  viewSelect.id = `${deps.idPrefix}-preview-view`;
   const options: [string, string][] = [
     ['design', 'The design'],
     ...PHOTO_SLOTS.map((s): [string, string] => [s.id, s.label]),

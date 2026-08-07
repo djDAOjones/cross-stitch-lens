@@ -1037,3 +1037,34 @@ Full suite 996 green; no shell file touched by the second kind.
 **Link:** backlog → DITH-01..04 removed; M15-DITH-05 unblocked (the
 absorbed M8 acceptance session, the owner's); tickets
 M15-DITH-01/02/03 deleted; file-map regenerated.
+
+## D126 — Review follow-ups: editor id uniqueness, the unlinked sentinel, three small honesties (2026-08-07)
+
+**Decision:** the punch list from the D121–D125 review runs as its
+own fix task (review.md rule: approved fixes are a task, not review
+edits). (1) Editor ids are kind-prefixed — both kinds' editors stay
+mounted in the host once opened, and the hidden twin duplicated
+`#profile-switcher` and `#preview-view`, breaking id uniqueness and
+label association; the shell derives its switcher id from
+`adapter.kind` and the preview rig takes an `idPrefix` dep (proven
+live: zero duplicate ids with both editors mounted). (2) The colour
+select gains the `UNLINKED_DESIGN` sentinel — "This design's
+colours" — so a migrated old file with no profile link never wears
+the first option's name; picking the sentinel is a no-op (it names
+a state, it is not adoptable); the dither select's never-lying
+conduct, mirrored (proven live over a synthesised v4 library-source
+file). (3) The loaded-snapshot palette display name refreshes once
+the profiles cache lands, guarded by object identity so a
+faster-fingered edit is never overwritten. (4) The built-in-linked
+Update button's reason is a visible helper sentence wired by
+aria-describedby, not a hover-only title. (5) The `\\u2019` escape
+becomes a literal. ui-spec §5 gains the M15 amendment block (Colour
+and Processing censuses, the takeover editor). Left deliberately for
+the acceptance walk: re-capturing the browser-side baseline project
+fixture (it needs the capture protocol's reference environment).
+
+**Verified:** typecheck, lint, 996 tests, docs green; live — zero
+duplicate ids with both editors mounted; the migrated file renders
+the sentinel selected.
+
+**Link:** the D124 review (session report); ui-spec §5 amended.

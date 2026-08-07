@@ -99,9 +99,19 @@ export function resolveProjectPalette(request: PaletteRequest): ResolvedPalette 
   }
 
   const distribution = buildDistribution(source);
-  const selection = selectThreads(permitted, target, distribution);
+  const minDistance = policy.minDistance ?? 0;
+  const selection = selectThreads(permitted, target, distribution, minDistance);
 
-  if (
+  if (selection.distanceLimited) {
+    // Count and distance both held; distance won the conflict — the
+    // sentence names both dials (M15-CORE-03).
+    conflicts.push({
+      kind: 'distance-limits-count',
+      severity: 'warning',
+      ids: [],
+      message: `You asked for ${String(target)} colours at a minimum distance of ${String(minDistance)}; only ${String(selection.threads.length)} threads fit that far apart. Lower the distance or the colour count to change the balance.`,
+    });
+  } else if (
     policy.count.mode === 'exact' &&
     selection.threads.length < target &&
     target <= eligibleCount &&

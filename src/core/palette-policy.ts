@@ -55,6 +55,13 @@ export interface PalettePolicy {
   /** Restrict conversion to threads the user owns. */
   ownedOnly: boolean;
   count: { mode: CountMode; n: number };
+  /**
+   * Minimum perceptual distance (ΔE76) between chosen threads —
+   * a rule about the chosen few, beside count where it belongs
+   * (M15-CORE-03, D114). Absent or 0 = off. Must-use seats (locks)
+   * are exempt: a hard promise beats a spacing preference.
+   */
+  minDistance?: number;
   /** Hard inclusions — thread ids. */
   locked: string[];
   /** Soft preferences — thread ids. */
@@ -83,7 +90,9 @@ export function defaultPolicy(): PalettePolicy {
   };
 }
 
-/** Every distinguishable way a policy can fail or need explaining. */
+/** Every distinguishable way a policy can fail or need explaining.
+ *  The `M15` block is the profile resolver's vocabulary
+ *  (`color-profile.ts`) — same machinery, same sentence duty. */
 export type ConflictKind =
   | 'no-brands-enabled'
   | 'unknown-brand'
@@ -97,7 +106,17 @@ export type ConflictKind =
   | 'empty-permitted-set'
   | 'locks-exceed-count'
   | 'count-exceeds-eligible'
-  | 'duplicate-display-colour';
+  | 'duplicate-display-colour'
+  // M15 profile resolution (M15-CORE-02):
+  | 'unknown-library'
+  | 'no-libraries-enabled'
+  | 'owned-only-passes-synthetic'
+  | 'include-and-exclude'
+  | 'include-unresolved'
+  | 'range-empty'
+  | 'profile-empty'
+  // M15 selection (M15-CORE-03):
+  | 'distance-limits-count';
 
 /**
  * One explained problem. `severity: 'error'` means no valid palette

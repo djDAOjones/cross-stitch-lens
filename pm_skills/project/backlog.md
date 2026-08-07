@@ -108,18 +108,6 @@ the section M14's EXT-41/42 leave behind (M14 completes first). The
 DITH tasks run after the colour half ships (owner order); ordering
 against the M13 remainder is the owner's call at pick time.
 
-- [ ] **M15-CORE-01 Colour sources: maps, namespaces, names** [detail] (2026-08-07)
-  Intent: synthetic identity namespaces (`map:`, `user:`) that can never collide with threads (D55/D56); the six generated colour maps; the embedded CSS/X11 name table; provenance-honest display labels usable by lists and export keys. Pure core, no UI.
-  Done when: maps generate deterministically with tests pinning identity, count and ordering; exact-match names render and hex stands otherwise; a non-thread entry carries a label exports can use.
-
-- [ ] **M15-CORE-02 Profile model and resolver** [detail] (2026-08-07)
-  Intent: the ColourProfile recipe and its resolver to the effective ordered table with typed explanations; deterministic composition order (the D46 LUT fingerprint reads it); the built-in profiles; absorbs palette-policy with prefer retired. Recipe shape, resolution order and the cutover map are in the ticket.
-  Done when: resolver tests cover every narrowing step with its sentence; ordering contract pinned; built-ins resolve non-empty; core stays pure and consumers compile against the new layer.
-
-- [ ] **M15-CORE-03 Selection recut: count, minimum distance, Must use** (2026-08-07)
-  Intent: palette-selection keeps count, gains a minimum perceptual distance (Lab) rule over the chosen set, keeps locks as guaranteed Must-use seats; prefer weighting removed.
-  Done when: selection honours distance together with count and explains when they conflict; Must-use seats guaranteed; prefer gone from core with tests updated, not weakened.
-
 - [ ] **M15-PERSIST-01 Profiles persist: store, project file, migration** [detail] (2026-08-07)
   Intent: profiles in IndexedDB with revisions (the records.ts pattern generalised, kind-aware from the start — D117); the project file carries the design's recipe copy plus a profileRef; schema bump under the D114 waiver; saved palettes convert 1:1 into explicit-membership profiles; custom `user:` colours live in the global My-colours library (D115). Full scope in the ticket.
   Done when: save→load→save byte-identical on the new schema; old fixtures load and render via snapshot with the note; a pre-existing saved palette reappears as a profile with its order intact; library round-trip tests green.

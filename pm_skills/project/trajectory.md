@@ -17,7 +17,15 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
-## M15 — Colour & dithering profiles (scoped — both halves signed, build not started)
+## M15 — Colour & dithering profiles (in build — colour core shipped)
+
+- M15-CORE-01, M15-CORE-02, M15-CORE-03 (2026-08-07) — the colour
+  core lands: six generated colour maps under the `map:`/`user:`
+  namespaces with exact-match CSS naming and honest labels; the
+  profile recipe + five-step resolver with a sentence per narrowing
+  and nine non-empty built-ins (Classic cross stitch ships real);
+  selection gains the minimum-distance rule with guaranteed Must-use
+  seats and the prefer machinery removed. See decision-log D122.
 
 - M15-SCOPE-02 (2026-08-07) — the dither half signs: a dithering
   profile is a complete named `DitherConfig`; the seven presets

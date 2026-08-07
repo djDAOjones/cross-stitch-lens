@@ -808,3 +808,59 @@ session mount) ride getDisplayMedia — not driveable in this rig
 M14-EXT-40/41/42/43/44 deleted on ship (38/39 were line-only);
 ui-spec §2/§5 amended; ui-evidence extended; AGENTS/UI-STANDARDS
 deltas ledgered in `doc-deltas.md`, never auto-edited.
+
+## D122 — M15-CORE-01..03: the colour core lands — sources, resolver, selection recut (2026-08-07)
+
+**Decision:** the three pure-core tasks of the M15 colour half ship
+in the continuing auto-jazz run (the owner's "autojazz M14 and M15").
+CORE-01 — `src/core/color-sources.ts`: the six generated maps
+(2/4/8/16/64/216 entries, deterministic, R-major where computed;
+Retro 16 is the HTML4/VGA named set in VGA index order) as
+Thread-shaped records under `map:<mapId>:<code>` (`brandId` carries
+`map:<mapId>`, so the D55 id grammar holds unchanged); codes are
+corner/CSS names where a map defines them, uppercase hex otherwise;
+the ~140-entry CSS name table embeds as a constant with alias pairs
+collapsed one-per-value (cyan and magenta win; grey spelt UK-style
+for display, CSS spellings kept as identity codes); naming is exact
+match only — `#00ff00` is "Lime", never a guess. CORE-02 —
+`src/core/color-profile.ts`: the recipe (`libraries` incl. `mine`,
+`ownedOnly`, include/exclude pins, union-of-bands two-pole H/S/B
+ranges with hue wrap), the five-step resolution order pinned by
+test with a sentence per narrowing (new ConflictKinds extend the M7
+machinery); include wins over ranges (library position kept),
+exclude wins over everything (M7-MIX-01 conduct on contradiction);
+ownedOnly passes `map:`/`user:` entries through with the D115
+sentence; nine built-ins resolve non-empty, "Classic cross stitch"
+shipping as a real 25-thread DMC starter (honest, never
+placeholder); `policyToRecipe` is the shared PERSIST-01/UI-01
+bridge (strict presets and saved palettes become explicit
+membership; a prefer-mode preset keeps its open universe and loses
+only its retired steering half). CORE-03 — selection keeps count,
+gains `minDistance` (ΔE76, squared-compare in the hot loop): every
+auto-filled pick clears every seat already chosen, locks are exempt
+(a hard promise beats a spacing preference) and guaranteed as the
+Must-use seats; the take-everything shortcut is guarded so an
+over-generous target still spaces its picks; `distanceLimited`
+surfaces as the `distance-limits-count` sentence naming both dials.
+The prefer machinery (PREFERENCE_DISCOUNT, preferredUsed) is
+deleted from selection.
+
+**Sequencing assumption (stated at the skipped gate):** the live
+policy path is not rewired at CORE-02 — `resolvePermitted` keeps its
+exact shipped semantics and the panel keeps driving it until the
+UI-01 cutover later this run, where the surface and the model swap
+together. Same end state as the ticket's cutover note, no interim
+behaviour change to a surface UI-01 deletes; `policyToRecipe` exists
+from today. Interim honesty note: with prefer removed from
+selection, the panel's Prefer role stops steering until UI-01
+retires the control — acceptable only because both land in this same
+run. `PalettePolicy.minDistance` is optional and unset anywhere
+until UI-01, so project files are byte-stable until PERSIST-01 bumps
+the schema deliberately.
+
+**Verified:** full suite 1002 green (47 new tests across
+color-sources / color-profile / selection); policy, panel and
+acceptance-matrix suites untouched and green.
+
+**Link:** backlog → CORE-01..03 removed; tickets M15-CORE-01/02
+deleted on ship; file-map roles added.

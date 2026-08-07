@@ -1,6 +1,7 @@
 /**
- * Count-constrained palette selection (M7-COUNT-01) and the auto-fill
- * half of lock / prefer / exclude (M7-MIX-01).
+ * Count-constrained palette selection (M7-COUNT-01) with guaranteed
+ * Must-use seats and a minimum perceptual distance rule
+ * (M15-CORE-03).
  *
  * This is **constrained quantisation over a fixed catalogue**, not "run
  * the full palette and keep the N most-used colours". The difference
@@ -13,6 +14,11 @@
  * Every thread considered is a **real permitted thread**, never a
  * representative RGB value a quantiser invented — a colour you cannot
  * buy is not a cross-stitch answer.
+ *
+ * The prefer rule retired at M15-CORE-03 (D114): its taste half is
+ * profile membership, its steering half was a weak lock. Locks are the
+ * design's Must-use seats — guaranteed, never displaced, exempt from
+ * the distance rule (a hard promise beats a spacing preference).
  *
  * The whole module is pure and deterministic: no randomness, and every
  * tie broken by permitted-set order.
@@ -38,18 +44,6 @@ const BIN_BITS = 4;
  * what is dropped is always the rarest colour in the design.
  */
 const MAX_BINS = 512;
-
-/**
- * How much a preferred thread's cost is discounted during auto-fill.
- *
- * 0.9 means "a preferred thread wins whenever it lands within 10 % of
- * the best residual error" — a real nudge that still cannot drag in a
- * thread that would visibly damage the image. It is a product
- * constant, not a tuning knob: it is named here, its effect is
- * reported in {@link SelectionResult.preferredUsed}, and changing it is
- * a decision-log matter (M7-MIX-01).
- */
-export const PREFERENCE_DISCOUNT = 0.9;
 
 /**
  * A weighted summary of the colours actually present in the design,
@@ -129,17 +123,22 @@ export function buildDistribution(buffer: PixelBuffer): ColorDistribution {
 export interface SelectionResult {
   /** The chosen threads, in permitted-set order. */
   threads: Thread[];
-  /** How many came from locks. */
+  /** How many came from locks (the Must-use seats). */
   lockedCount: number;
   /** How many the auto-fill chose. */
   autoFilledCount: number;
-  /** How many auto-filled threads were on the preferred list. */
-  preferredUsed: number;
   /**
    * True when fewer threads were selected than requested because the
    * permitted set ran out — the caller turns this into the explanation.
    */
   shortOfTarget: boolean;
+  /**
+   * True when the minimum-distance rule is what stopped the fill
+   * short: eligible threads remained, but every one sat closer than
+   * the rule allows to a thread already chosen (M15-CORE-03). The
+   * caller owns the sentence.
+   */
+  distanceLimited: boolean;
 }
 
 /** Squared ΔE76 between two Lab triples held in flat arrays. */
@@ -166,7 +165,14 @@ function distSq(
  *
  * Locks seed the selection and are never displaced, even when the
  * source contains nothing near them: a locked thread is a hard promise
- * (M7-MIX-01). Auto-fill then supplies `target - locks` more.
+ * (M7-MIX-01) — the design's Must-use seats. Auto-fill then supplies
+ * `target - locks` more.
+ *
+ * `minDistance` (ΔE76, 0 = off) demands every auto-filled thread sit
+ * at least that far from every thread already chosen. Locks are
+ * exempt — a hard promise beats a spacing preference — and when the
+ * rule is what stops the fill short, {@link
+ * SelectionResult.distanceLimited} says so.
  *
  * The greedy result is not a global optimum, and is not claimed to be —
  * a fast deterministic answer whose limits are stated beats an
@@ -176,6 +182,7 @@ export function selectThreads(
   permitted: PermittedSet,
   target: number,
   distribution: ColorDistribution,
+  minDistance = 0,
 ): SelectionResult {
   const eligible = permitted.eligible;
   const locks = permitted.locks;
@@ -187,17 +194,19 @@ export function selectThreads(
       threads: [...locks],
       lockedCount: locks.length,
       autoFilledCount: 0,
-      preferredUsed: 0,
       shortOfTarget: false,
+      distanceLimited: false,
     };
   }
-  if (target >= eligible.length) {
+  // The take-everything shortcut only holds without a distance rule:
+  // with one, even an over-generous target must space its picks.
+  if (target >= eligible.length && minDistance <= 0) {
     return {
       threads: [...eligible],
       lockedCount: locks.length,
       autoFilledCount: eligible.length - locks.length,
-      preferredUsed: [...permitted.preferred].length,
       shortOfTarget: target > eligible.length,
+      distanceLimited: false,
     };
   }
 
@@ -222,9 +231,13 @@ export function selectThreads(
   const chosen = new Uint8Array(nEligible);
   const best = new Float32Array(bins).fill(Number.POSITIVE_INFINITY);
   const indexById = new Map(eligible.map((t, i) => [t.id, i]));
+  // Chosen-thread Lab triples, for the distance rule. Locks join it
+  // too: an auto-filled pick must clear every seat, hard or chosen.
+  const chosenLab: number[] = [];
 
   const applyThread = (t: number): void => {
     chosen[t] = 1;
+    chosenLab.push(threadLab[t * 3] ?? 0, threadLab[t * 3 + 1] ?? 0, threadLab[t * 3 + 2] ?? 0);
     const base = t * bins;
     for (let b = 0; b < bins; b++) {
       const d = dist[base + b] ?? 0;
@@ -237,20 +250,34 @@ export function selectThreads(
     if (t !== undefined) applyThread(t);
   }
 
-  const preferredIndex = new Set<number>();
-  for (const id of permitted.preferred) {
-    const t = indexById.get(id);
-    if (t !== undefined) preferredIndex.add(t);
-  }
+  const minDistSq = minDistance > 0 ? minDistance * minDistance : 0;
+  const clearsDistance = (t: number): boolean => {
+    if (minDistSq <= 0) return true;
+    const tl = threadLab[t * 3] ?? 0;
+    const ta = threadLab[t * 3 + 1] ?? 0;
+    const tb = threadLab[t * 3 + 2] ?? 0;
+    for (let c = 0; c < chosenLab.length; c += 3) {
+      const dl = tl - (chosenLab[c] ?? 0);
+      const da = ta - (chosenLab[c + 1] ?? 0);
+      const db = tb - (chosenLab[c + 2] ?? 0);
+      if (dl * dl + da * da + db * db < minDistSq) return false;
+    }
+    return true;
+  };
 
-  let preferredUsed = 0;
   let autoFilled = 0;
+  let distanceLimited = false;
   const wanted = target - locks.length;
   for (let pick = 0; pick < wanted; pick++) {
     let bestThread = -1;
     let bestCost = Number.POSITIVE_INFINITY;
+    let skippedForDistance = false;
     for (let t = 0; t < nEligible; t++) {
       if (chosen[t] === 1) continue;
+      if (!clearsDistance(t)) {
+        skippedForDistance = true;
+        continue;
+      }
       const base = t * bins;
       let cost = 0;
       for (let b = 0; b < bins; b++) {
@@ -258,7 +285,6 @@ export function selectThreads(
         const d = dist[base + b] ?? 0;
         cost += (distribution.weight[b] ?? 0) * (d < current ? d : current);
       }
-      if (preferredIndex.has(t)) cost *= PREFERENCE_DISCOUNT;
       // Strict `<` keeps the earliest permitted-set index on a tie, so
       // the same policy and image always give the same palette.
       if (cost < bestCost) {
@@ -266,8 +292,12 @@ export function selectThreads(
         bestThread = t;
       }
     }
-    if (bestThread === -1) break;
-    if (preferredIndex.has(bestThread)) preferredUsed++;
+    if (bestThread === -1) {
+      // Eligible threads remained but none cleared the rule: the
+      // distance, not the catalogue, is what capped the palette.
+      distanceLimited = skippedForDistance;
+      break;
+    }
     applyThread(bestThread);
     autoFilled++;
   }
@@ -280,8 +310,8 @@ export function selectThreads(
     threads,
     lockedCount: locks.length,
     autoFilledCount: autoFilled,
-    preferredUsed,
     shortOfTarget: threads.length < target,
+    distanceLimited,
   };
 }
 
@@ -297,7 +327,8 @@ export function selectPalette(
   target: number,
   distribution: ColorDistribution,
   name: string,
+  minDistance = 0,
 ): SelectedPalette {
-  const selection = selectThreads(permitted, target, distribution);
+  const selection = selectThreads(permitted, target, distribution, minDistance);
   return { palette: paletteOf(name, selection.threads), selection };
 }

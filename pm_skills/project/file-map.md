@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 210 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 214 file(s) across 10 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 12 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
@@ -24,8 +24,8 @@
 - `crates` — 4 file(s)
 - `docs` — 12 file(s)
 - `scripts` — 7 file(s)
-- `src` — 83 file(s)
-- `tests` — 88 file(s)
+- `src` — 85 file(s)
+- `tests` — 90 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -112,6 +112,8 @@
 - `src/capture/draft.ts` — draft-quality governor: pure hysteresis over frame times
 - `src/capture/pump.ts` — frame pump: rVFC subscription + pure latest-wins grab gate
 - `src/capture/session.ts` — getDisplayMedia session: start/grab/stop + pure error/label helpers
+- `src/core/color-profile.ts` — colour-profile recipe + resolver to the effective ordered table, every narrowing explained; built-ins; policy→recipe bridge (M15)
+- `src/core/color-sources.ts` — generated colour maps, map:/user: identity namespaces, CSS name table, provenance-honest labels (M15)
 - `src/core/color/candidates.ts` — per-bin candidate pruning for exact Lab matching: conservative Lab bounding box per 15-bit bin, witness-radius exclusion. An exclusion proof, not an approximation — returns the identical index to a full scan
 - `src/core/color/convert.ts` — sRGB↔linear↔Lab conversions (D65, CIE 1976)
 - `src/core/color/lut.ts` — 15-bit RGB→palette-index LUT builder + exact nearest
@@ -207,6 +209,8 @@
 - `tests/capture-pump.test.ts` — pump gate policy: busy/pending/drop/reset transitions
 - `tests/capture-session.test.ts` — capture pure half: error messages, surface labels
 - `tests/color-convert.test.ts` — golden: Lab reference values + round-trips
+- `tests/color-profile.test.ts` — profile resolver: every narrowing step + sentence, ordering contract, built-ins non-empty, policy→recipe bridge
+- `tests/color-sources.test.ts` — map identity/count/ordering pins, exact-match naming incl. lime/green, namespace collision guard
 - `tests/controls.test.ts` — number-input clamping (pure half of controls)
 - `tests/debug-menu.test.ts` — Debug-menu pure halves: mailto redaction boundary, announced outcomes (M14-EXT-26)
 - `tests/debug-panel.test.ts` — timing-window aggregation, cap, stage-change reset, ms formatting

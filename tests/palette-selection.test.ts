@@ -15,11 +15,8 @@ import {
   type PalettePolicy,
 } from '../src/core/palette-policy.ts';
 import { resolveProjectPalette } from '../src/core/palette-resolve.ts';
-import {
-  buildDistribution,
-  PREFERENCE_DISCOUNT,
-  selectThreads,
-} from '../src/core/palette-selection.ts';
+import { buildDistribution, selectThreads } from '../src/core/palette-selection.ts';
+import { srgbToLab } from '../src/core/color/convert.ts';
 import { loadCatalogue } from '../src/core/thread-catalogue.ts';
 import type { PixelBuffer } from '../src/core/types.ts';
 
@@ -137,23 +134,64 @@ describe('selectThreads', () => {
     expect(result.shortOfTarget).toBe(true);
   });
 
-  it('gives preferred threads an advantage without guaranteeing them', () => {
-    const preferred = permitted.eligible.slice(200, 260).map((t) => t.id);
-    const withPrefs = resolvePermitted(
-      policy({ source: { kind: 'preset', presetId: 'p', mode: 'prefer' } }),
-      { catalogue, preset: { name: 'P', threadIds: preferred, mode: 'prefer' } },
+  it('spaces auto-filled threads by the minimum distance (M15-CORE-03)', () => {
+    // ΔE between every chosen pair must clear the rule when no locks
+    // are involved. 12 is a strong demand against a photographic
+    // distribution — strong enough that spacing visibly binds.
+    const result = selectThreads(permitted, 12, distribution, 12);
+    const lab = new Float32Array(result.threads.length * 3);
+    result.threads.forEach((t, i) => {
+      srgbToLab(t.rgb[0], t.rgb[1], t.rgb[2], lab, i * 3);
+    });
+    for (let a = 0; a < result.threads.length; a++) {
+      for (let b = a + 1; b < result.threads.length; b++) {
+        const dl = (lab[a * 3] ?? 0) - (lab[b * 3] ?? 0);
+        const da = (lab[a * 3 + 1] ?? 0) - (lab[b * 3 + 1] ?? 0);
+        const db = (lab[a * 3 + 2] ?? 0) - (lab[b * 3 + 2] ?? 0);
+        expect(Math.sqrt(dl * dl + da * da + db * db)).toBeGreaterThanOrEqual(12);
+      }
+    }
+  });
+
+  it('reports distanceLimited when spacing is what stops the fill', () => {
+    // An absurd distance over a rich permitted set: threads remain,
+    // none fit — the flag must name the distance, not the catalogue.
+    const result = selectThreads(permitted, 12, distribution, 150);
+    expect(result.threads.length).toBeLessThan(12);
+    expect(result.shortOfTarget).toBe(true);
+    expect(result.distanceLimited).toBe(true);
+  });
+
+  it('keeps Must-use seats even when they violate the distance', () => {
+    // Two near-identical greys locked: both stay — a hard promise
+    // beats a spacing preference — and auto-fill still spaces itself.
+    const locked = resolvePermitted(
+      policy({ locked: ['dmc:762', 'dmc:415'] }),
+      { catalogue },
     );
-    const plain = selectThreads(permitted, 12, distribution);
-    const nudged = selectThreads(withPrefs, 12, distribution);
-    const preferredSet = new Set(preferred);
-    const plainHits = plain.threads.filter((t) => preferredSet.has(t.id)).length;
-    const nudgedHits = nudged.threads.filter((t) => preferredSet.has(t.id)).length;
-    expect(nudgedHits).toBeGreaterThanOrEqual(plainHits);
-    expect(nudged.preferredUsed).toBe(nudgedHits);
-    // A discount, not an override: the constant is a stated product
-    // decision, and a preference cannot take the whole palette.
-    expect(PREFERENCE_DISCOUNT).toBeLessThan(1);
-    expect(nudgedHits).toBeLessThan(12);
+    const result = selectThreads(locked, 8, distribution, 20);
+    const ids = result.threads.map((t) => t.id);
+    expect(ids).toContain('dmc:762');
+    expect(ids).toContain('dmc:415');
+    expect(result.lockedCount).toBe(2);
+  });
+
+  it('applies the distance even when the target exceeds the eligible set', () => {
+    // The take-everything shortcut must not bypass the rule.
+    const small = resolvePermitted(
+      policy({ ownedOnly: true }),
+      { catalogue, owned: new Set(['dmc:762', 'dmc:415', 'dmc:310']) },
+    );
+    const spaced = selectThreads(small, 10, distribution, 20);
+    // 762 and 415 are near-identical greys: only one clears the rule.
+    expect(spaced.threads.length).toBeLessThan(3);
+    expect(spaced.distanceLimited).toBe(true);
+  });
+
+  it('selection stays deterministic with the distance rule active', () => {
+    const a = selectThreads(permitted, 10, distribution, 15);
+    const b = selectThreads(permitted, 10, distribution, 15);
+    expect(a.threads.map((t) => t.id)).toEqual(b.threads.map((t) => t.id));
   });
 });
 
@@ -244,5 +282,21 @@ describe('resolveProjectPalette applies the count limit last', () => {
     expect(resolved.ok).toBe(false);
     expect(resolved.palette.entries).toEqual([]);
     expect(resolved.conflicts.some((c) => c.severity === 'error')).toBe(true);
+  });
+
+  it('explains a distance-capped palette with both dials named', () => {
+    // Count and distance in genuine conflict: the sentence must give
+    // the user both ways out (M15-CORE-03).
+    const resolved = resolveProjectPalette({
+      policy: policy({ count: { mode: 'max', n: 12 }, minDistance: 150 }),
+      inputs: { catalogue },
+      source,
+      name: 'test',
+    });
+    expect(resolved.ok).toBe(true);
+    const conflict = resolved.conflicts.find((c) => c.kind === 'distance-limits-count');
+    expect(conflict?.severity).toBe('warning');
+    expect(conflict?.message).toContain('minimum distance of 150');
+    expect(conflict?.message).toContain('Lower the distance or the colour count');
   });
 });

@@ -45,6 +45,7 @@ Package manager: **npm** (Node LTS).
 | `matrix:write` | `node scripts/write-acceptance-matrix.mjs` | Regenerate `docs/acceptance-matrix.md`, the matrix coverage table | After a matrix row change — `check` fails if the committed copy drifts (staleness gate) |
 | `bench:auto` | `node scripts/bench-auto.mjs` | Automated owner-session legs: flag-granted capture + forced-GC memory reports via a dedicated Chrome (M13-MEAS-03) | Refreshing the browser capture/memory evidence — awake desktop, hands off, never CI; `-- --when-quiet` arms it to fire in the next user-idle gap |
 | `bench:crosscheck` | `node scripts/bench-cross-check.mjs` | Part-A′ arithmetic: manual capture report vs the automated canonical one, side by side (same-build guarded) | Once, after the owner's manual Part-A′ run — the verdict stays human and is recorded in the decision log |
+| `bench:auto -- --crosscheck` | (mode of `bench:auto`) | The whole Part A′ in one command: flag-granted leg, then a picker-granted leg (real picker; scripted tile+Share click via System Events when Accessibility allows, else one human click), then the comparison table | The zero-or-one-click Part A′ — same build guaranteed by construction |
 | `check` | 7 non-mutating steps: types, lint, wasm, test, build, docs, secrets | **Quality gate** | Before calling a task done |
 | `lint:fix` | `eslint . --fix` | Auto-fix (separate from the gate) | Cleanup, never the CI pass/fail |
 

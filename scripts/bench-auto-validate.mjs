@@ -90,6 +90,28 @@ export function validateCaptureReport(report) {
 }
 
 /**
+ * Validate a **picker-granted** capture report (the Part-A′ cross-check
+ * leg): the three canonical rows on a visible, untainted run. Edit
+ * classes are deliberately not required — the cross-check compares the
+ * canonical rows only, so the picker leg stays short.
+ */
+export function validatePickerCaptureReport(report) {
+  const failures = coreFailures(report);
+  if (failures.length > 0 && failures[0].startsWith('not a bv2')) return failures;
+  const base = 'capture.g300.p64.lab.fs-s100-serp';
+  requireMeasured(report, failures, base, 'preview-update', 'live window 300²');
+  requireMeasured(
+    report,
+    failures,
+    'capture.g200.p64.lab.fs-s100-serp',
+    'preview-update',
+    'live window 200²',
+  );
+  requireMeasured(report, failures, base, 'interaction', 'interaction run');
+  return failures;
+}
+
+/**
  * Validate the mem report: the plateau row carries a numeric forced-GC
  * reading (the whole point of the flagged launch) and the export
  * isolation re-proof held.

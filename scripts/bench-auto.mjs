@@ -65,7 +65,12 @@ import {
   parseIdleSeconds,
   reportPaths,
 } from './bench-auto-lib.mjs';
-import { validateCaptureReport, validateMemReport } from './bench-auto-validate.mjs';
+import {
+  validateCaptureReport,
+  validateMemReport,
+  validatePickerCaptureReport,
+} from './bench-auto-validate.mjs';
+import { compareReports, formatComparison } from './bench-cross-check.mjs';
 
 const PORT = Number(process.env.BENCH_PORT ?? 4173);
 const CHROME =
@@ -77,6 +82,7 @@ const SOURCE_TITLE = 'controlled capture source';
 const RUN_TIMEOUT_MS = 10 * 60 * 1000;
 const WHEN_QUIET =
   process.argv.includes('--when-quiet') || process.env.BENCH_WHEN_QUIET === '1';
+const CROSSCHECK = process.argv.includes('--crosscheck');
 const IDLE_SECS = Number(process.env.BENCH_IDLE_SECS ?? 60);
 const ATTEMPTS = Number(process.env.BENCH_ATTEMPTS ?? (WHEN_QUIET ? 3 : 1));
 
@@ -240,8 +246,13 @@ function startCollector() {
   });
 }
 
-/** Launch a dedicated, flagged Chrome at `url`; returns a kill fn. */
-function launchChrome(url) {
+/**
+ * Launch a dedicated Chrome at `url`; returns `{ kill, pid }`.
+ * `flagged: false` (the picker-granted cross-check leg) omits the
+ * auto-select flag — the real picker appears — and forces renderer
+ * accessibility so the picker is scriptable via System Events.
+ */
+function launchChrome(url, { flagged = true } = {}) {
   const profile = mkdtempSync(join(tmpdir(), 'csl-bench-chrome-'));
   const child = spawn(
     CHROME,
@@ -250,7 +261,9 @@ function launchChrome(url) {
       '--no-first-run',
       '--no-default-browser-check',
       '--disable-popup-blocking',
-      `--auto-select-window-capture-source-by-title=${SOURCE_TITLE}`,
+      ...(flagged
+        ? [`--auto-select-window-capture-source-by-title=${SOURCE_TITLE}`]
+        : ['--force-renderer-accessibility']),
       '--js-flags=--expose-gc',
       // Prominent enough that ordinary desktop activity is unlikely to
       // fully occlude it — macOS Chrome marks a fully-covered window
@@ -273,20 +286,86 @@ function launchChrome(url) {
     }
   };
   cleanups.push(kill);
-  return kill;
+  return { kill, pid: child.pid };
 }
 
-/** One flagged-Chrome page load → one parsed, stamped, validated
- * report; valid legs are additionally copied to the canonical name. */
-async function runLeg(collector, name, autoTokens, validate, stamp) {
-  console.log(`\n=== ${name}: launching flagged Chrome (leave the machine alone) ===`);
+// --------------------------------------- picker clicking (crosscheck)
+
+/** One osascript invocation; returns true on success, false on any
+ * error (no assistive access, element not found, dialog not up yet). */
+function osascript(script) {
+  try {
+    execFileSync('osascript', ['-e', script], { stdio: 'pipe' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Best-effort zero-click driver for Chrome's share picker on the
+ * picker-granted leg: find the tile whose name carries the controlled
+ * source's title, click it, click Share — scoped to our dedicated
+ * instance by unix process id, so the daily browser can never be
+ * touched. Requires the app hosting this process to be enabled under
+ * System Settings → Privacy & Security → Accessibility; without that
+ * (or if Chrome's picker exposes a different tree) every attempt
+ * fails harmlessly and a human click finishes the dialog — the run
+ * itself continues either way, so automation degrades to one manual
+ * click, never to a broken run.
+ */
+async function clickPickerWhenUp(pid, timeoutMs = 30_000) {
+  const inProcess = (body) =>
+    [
+      'tell application "System Events"',
+      `  tell (first process whose unix id is ${String(pid)})`,
+      ...body.map((line) => `    ${line}`),
+      '  end tell',
+      'end tell',
+    ].join('\n');
+  const inspectable = () => osascript(inProcess(['get name of window 1']));
+  const attempt = () =>
+    osascript(
+      inProcess([
+        'set frontmost to true',
+        `click (first UI element of window 1 whose name contains "${SOURCE_TITLE}")`,
+        'delay 0.4',
+        'click (first button of window 1 whose name is "Share")',
+      ]),
+    );
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    await delay(2000);
+    if (!inspectable()) continue; // dialog not up yet, or no assistive access
+    if (attempt()) {
+      console.log('picker: clicked the controlled-source tile and Share.');
+      return true;
+    }
+  }
+  console.log(
+    'picker: could not click it myself (no assistive access, or an unexpected dialog ' +
+      'shape) — if a share picker is on screen, click the "controlled capture source" ' +
+      'tile and Share; the run continues either way.',
+  );
+  return false;
+}
+
+/** One dedicated-Chrome page load → one parsed, stamped, validated
+ * report; valid legs are additionally copied to the canonical name.
+ * `options.flagged: false` runs the picker-granted variant and
+ * `options.driver(pid)` runs concurrently with the report wait (the
+ * picker clicker — its failure never blocks the run). */
+async function runLeg(collector, name, autoTokens, validate, stamp, options = {}) {
+  console.log(`\n=== ${name}: launching dedicated Chrome (leave the machine alone) ===`);
   const post = `http://127.0.0.1:${String(collector.port)}/report`;
   const url =
     `http://localhost:${String(PORT)}/bench.html` +
     `?auto=${autoTokens}&post=${encodeURIComponent(post)}`;
-  const kill = launchChrome(url);
+  const { kill, pid } = launchChrome(url, { flagged: options.flagged ?? true });
   try {
-    const body = await collector.nextReport(RUN_TIMEOUT_MS);
+    const reportPromise = collector.nextReport(RUN_TIMEOUT_MS);
+    if (options.driver !== undefined) void options.driver(pid);
+    const body = await reportPromise;
     const report = JSON.parse(body);
     mkdirSync('bench-reports', { recursive: true });
     const paths = reportPaths(report.build?.buildId ?? 'unknown-build', name, stamp);
@@ -365,17 +444,31 @@ async function main() {
     const release = holdAwake();
     const stamp = formatStamp(new Date());
     let capture;
-    let mem;
+    let second;
     try {
       capture = await runLeg(collector, 'capture', 'capture,editclasses', validateCaptureReport, stamp);
-      mem = await runLeg(collector, 'mem', 'mem', validateMemReport, stamp);
+      // Crosscheck mode (Part A′): instead of the mem leg, rerun just
+      // the canonical capture legs picker-granted — same build, same
+      // serve — then print the comparison. The verdict stays human.
+      second = CROSSCHECK
+        ? await runLeg(collector, 'picker', 'capture', validatePickerCaptureReport, stamp, {
+            flagged: false,
+            driver: clickPickerWhenUp,
+          })
+        : await runLeg(collector, 'mem', 'mem', validateMemReport, stamp);
     } finally {
       release();
     }
-    printSummary(capture, mem);
+    if (CROSSCHECK) {
+      console.log('\n=== Part A′ cross-check (picker-granted vs flag-granted) ===');
+      console.log(formatComparison(compareReports(second.report, capture.report), 'picker'));
+    } else {
+      printSummary(capture, second);
+    }
+    const secondName = CROSSCHECK ? 'picker' : 'mem';
     const failures = [
       ...capture.failures.map((f) => `capture: ${f}`),
-      ...mem.failures.map((f) => `mem: ${f}`),
+      ...second.failures.map((f) => `${secondName}: ${f}`),
     ];
     if (failures.length === 0) {
       console.log(

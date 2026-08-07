@@ -89,6 +89,29 @@ function fmt(side) {
   );
 }
 
+/**
+ * Human-readable comparison block, one string — shared by this CLI
+ * and the launcher's `--crosscheck` mode so both print identically.
+ * `manualName` names the picker-granted side ("manual" or "picker").
+ */
+export function formatComparison(result, manualName = 'manual') {
+  const lines = [];
+  for (const row of result.rows) {
+    lines.push(row.name);
+    lines.push(`  ${manualName}:`.padEnd(13) + fmt(row.manual));
+    lines.push('  automated: ' + fmt(row.automated));
+    if (row.ratio !== null) {
+      lines.push(`  ${manualName}/automated median ratio: ${row.ratio.toFixed(2)}×`);
+    }
+  }
+  lines.push(
+    '\nThe call is yours: similar medians and the same updates/sec story means the\n' +
+      'flag-granted rows hold. Tell the next agent session your verdict — it records\n' +
+      'the cross-check in the decision log and the automated rows become canon.',
+  );
+  return lines.join('\n');
+}
+
 function main() {
   const manualPath = process.argv[2];
   if (manualPath === undefined) {
@@ -120,19 +143,7 @@ function main() {
     return;
   }
   console.log('');
-  for (const row of result.rows) {
-    console.log(`${row.name}`);
-    console.log(`  manual:    ${fmt(row.manual)}`);
-    console.log(`  automated: ${fmt(row.automated)}`);
-    if (row.ratio !== null) {
-      console.log(`  manual/automated median ratio: ${row.ratio.toFixed(2)}×`);
-    }
-  }
-  console.log(
-    '\nThe call is yours: similar medians and the same updates/sec story means the\n' +
-      'flag-granted rows hold. Tell the next agent session your verdict — it records\n' +
-      'the cross-check in the decision log and the automated rows become canon.',
-  );
+  console.log(formatComparison(result));
 }
 
 // CLI entry only — the test suite imports compareReports without

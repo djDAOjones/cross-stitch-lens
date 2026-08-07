@@ -12,4 +12,5 @@ export interface ReportLike {
 
 export declare const EXPECTED_EDIT_CLASSES: readonly string[];
 export declare function validateCaptureReport(report: unknown): string[];
+export declare function validatePickerCaptureReport(report: unknown): string[];
 export declare function validateMemReport(report: unknown): string[];

@@ -435,15 +435,17 @@ What `bench:auto` cannot do is what remains. One sitting; keep every
 shared window at least partially visible.
 
 **Part A′ — one-time cross-check of the automated capture leg.**
-Button 4 → 5 (share the *source* window) → 6 (300², 30 s) → 6b
-(200², 30 s) → 7 → 8, exactly the old Part A. Then let the script do
-the arithmetic —
-`npm run bench:crosscheck -- <downloaded manual report.json>` prints
-the canonical rows side by side against the automated capture report
-(same-build guarded) — and make the call yourself; the next agent
-session records it in the decision log. After it holds once, this
-part retires — rerun it only when a Chrome update changes flag
-behaviour.
+One command runs the whole thing on one build:
+`npm run bench:auto -- --crosscheck` — the flag-granted leg, then a
+**picker-granted** leg in an unflagged Chrome (the real picker
+appears; the launcher clicks the controlled-source tile and Share
+itself via System Events where Accessibility allows, and otherwise
+asks for that one human click), then the side-by-side comparison
+table. Make the call yourself; the next agent session records it in
+the decision log. The clicked-buttons manual path (4 → 5 → 6 → 6b →
+7 → 8, then `npm run bench:crosscheck -- <downloaded report.json>`)
+remains equivalent. After the cross-check holds once, this part
+retires — rerun it only when a Chrome update changes flag behaviour.
 
 **Part B — Photoshop content (stays human by policy).** Button 5,
 share the Photoshop window, rerun 6 and 6b while performing in order:

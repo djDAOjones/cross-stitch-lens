@@ -25,3 +25,4 @@ export interface CrossCheckResult {
 }
 
 export declare function compareReports(manual: unknown, automated: unknown): CrossCheckResult;
+export declare function formatComparison(result: CrossCheckResult, manualName?: string): string;

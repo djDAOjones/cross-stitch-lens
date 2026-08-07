@@ -19,15 +19,19 @@ refusal is the gate working, not a defect.
    quoted in `docs/performance-evidence.md` → D129 section. Re-runs
    any time via `npm run bench:auto -- --when-quiet` (canonical
    names stay valid-only; stamped files carry every attempt).
-2. **Owner Part-A′ cross-check** (shrunk sheet,
-   `docs/browser-measurement.md`): one manual Part-A run compared
-   against the automated capture report on the same build, recorded
-   in the decision log. Only after it holds do automated capture
-   rows enter canon. Watch item for that comparison: the automated
+2. **Owner Part-A′ cross-check** — now one command:
+   `npm run bench:auto -- --crosscheck` runs the flag-granted leg
+   plus a picker-granted leg on the same build and prints the
+   comparison; the picker click is scripted via System Events where
+   Accessibility allows (the grant needs a full Claude quit+reopen
+   to reach this process tree), else it is the run's single human
+   click. The holds/doesn't-hold call stays the owner's; the next
+   session records it in the decision log — only then do automated
+   capture rows enter canon. Watch item for the comparison: the
    interaction run counts protocol misses (a captured frame can
    beat the source's double-rAF paint reply; the then-static
-   surface presents nothing until the next change) — expect a
-   misses-counted row, not 8/8.
+   surface presents nothing until the next change) — expect
+   misses-counted rows on both sides, not 8/8.
 
 ## Probed flag semantics (Chrome 151.0.7922.77, 2026-08-07)
 

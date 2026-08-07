@@ -10,6 +10,7 @@ import {
   EXPECTED_EDIT_CLASSES,
   validateCaptureReport,
   validateMemReport,
+  validatePickerCaptureReport,
 } from '../scripts/bench-auto-validate.mjs';
 
 const BASE = 'capture.g300.p64.lab.fs-s100-serp';
@@ -123,6 +124,22 @@ describe('capture report validation', () => {
   it('rejects a non-report without throwing (boundary)', () => {
     expect(validateCaptureReport(null)[0]).toContain('not a bv2 report');
     expect(validateCaptureReport({ rows: 'nope' })[0]).toContain('not a bv2 report');
+  });
+});
+
+describe('picker report validation (the A′ cross-check leg)', () => {
+  it('passes the canonical rows without requiring edit classes (happy path)', () => {
+    const report = validCaptureReport();
+    report.rows = report.rows.filter((row) => !row.workloadId.includes('.edit-'));
+    expect(validatePickerCaptureReport(report)).toEqual([]);
+  });
+
+  it('still fails a missing canonical row (boundary)', () => {
+    const report = validCaptureReport();
+    report.rows = report.rows.filter((row) => row.boundary !== 'interaction');
+    expect(
+      validatePickerCaptureReport(report).some((f: string) => f.includes('interaction')),
+    ).toBe(true);
   });
 });
 

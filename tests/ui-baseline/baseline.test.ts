@@ -101,7 +101,12 @@ function defaultProject(config: PipelineConfig): ProjectFile {
       metric: config.metric,
       dither: config.dither,
     },
-    palette: { policy: auditTimePolicy(), snapshot: config.palette?.entries ?? [] },
+    palette: {
+      profileRef: { id: 'builtin:dmc', revision: 0 },
+      recipe: { libraries: ['dmc'], ownedOnly: false, include: [], exclude: [], ranges: [] },
+      design: { count: { mode: 'max', n: 8 }, minDistance: 0, mustUse: [] },
+      snapshot: config.palette?.entries ?? [],
+    },
     gridStyle: {
       show: true,
       minorInterval: 1,

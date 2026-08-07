@@ -930,3 +930,64 @@ the store/records suite from the same phase; full suite green.
 **Link:** backlog → UI-02/03/04 removed, PERSIST-01 annotated
 (store half shipped, schema half rides UI-01); tickets
 M15-UI-02/03/04 deleted on ship; file-map roles added.
+
+## D124 — M15-UI-01 + PERSIST-01 schema half + ACCEPT-01: the colour half ships whole (2026-08-07)
+
+**Decision:** the atomic cutover lands, completing the M15 colour
+half's agent work. Schema v5 (PERSIST-01's deferred half, on the
+D115 atomicity principle): the palette block becomes `profileRef` +
+the design's `recipe` copy + `design` rules (count, minDistance,
+mustUse) + the authoritative snapshot; v4 → v5 migrates under the
+D114 waiver — brands policies map straight, library and
+strict-preset sources become explicit membership **from the
+snapshot** (exactly what rendered; the brands universe when the file
+never ran), prefer's steering half retires, locks become Must-use
+seats — and `parseProject` reports `migratedFrom` so the load status
+carries the visible note; save → load → save is byte-identical at v5
+(pinned, incl. a migrated-then-saved file). The default project's
+baseline hash re-pinned for the schema change (the recorded
+exception the waiver sanctions — pixel and export hashes stayed
+green untouched). UI-01: `colour-section.ts` replaces
+`palette-panel.ts` (deleted with its suite — its no-rebuild contract
+lives on in the editor and section fingerprints): profile select
+with "(edited)" on the linked option + Edit profiles… into the
+finished editor; Update profile / Save as new / Revert (Update
+disabled with its reason on a built-in link); count cluster +
+Minimum distance beside it; Must-use chips with browse-table
+search-to-add; the conflicts list; and the My-threads inventory
+reveal (ownership stayed its own concern — Own boxes, import/export
+survive there). Colours used gains the Remove-from-profile row
+action, landing an exclude on the design's copy — no shared-library
+mutation without an explicit Update/Save as new (proven live: a
+built-in edit renders "(edited)" and the built-in stays whole).
+Saved palettes convert 1:1 into explicit-membership profiles at
+library open (idempotent by id, order intact); custom colours load
+into the resolver's inputs; the D117 editor-Save design link is
+live (active-profile saves update the design's copy in the same
+act). The PDF key keeps provenance-honest labels for non-thread
+entries via `nonThreadLabel` — "Web-safe Lime #00ff00", never a raw
+namespace (`keyLabel` extracted and pinned). ACCEPT-01's machine
+half closes with this entry: resolver/selection/persistence suites
+green (1,067 tests), export byte-identity for thread-only profiles
+re-proven by the untouched ui-baseline pixel pins, and the D46 LUT
+strategy needed no revisit — profile membership materialises as
+ordered Thread entries, which the content fingerprint already keys.
+
+**Retained, ticketed as cleanup:** the policy-world resolver
+(`resolvePermitted`, `resolveProjectPalette`) and the LCh presets
+stay in core as tested migration-era substrate this release; nothing
+in src consumes them post-cutover — a wish-list line marks the
+removal pass.
+
+**Verified live:** the recut section renders the census exactly (no
+old control anywhere); Retro 16 adopt → 16 available; the
+remove-row action → "Retro 16 (edited)" + edited verbs + 15;
+Revert restores; distance at 25/30 spaces the selection (used 7
+of limit 8) with the sentence path node-pinned; a v5 save → Open
+round-trip reopens on the same profile, distance intact; v4 loads
+migrate with the visible note (code path proven, node-pinned).
+
+**Link:** backlog → PERSIST-01/UI-01/ACCEPT-01 removed (colour half
+complete; GALLERY-01 owner-paced and ACCEPT-02 maintainer remain);
+tickets M15-PERSIST-01/M15-UI-01 deleted; file-map regenerated;
+wish-list gains the resolver-cleanup line.

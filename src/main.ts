@@ -46,17 +46,26 @@ import {
   type PipelineConfig,
 } from './core/pipeline/config.ts';
 import {
-  defaultPolicy,
-  type PaletteConflict,
-  type PalettePolicy,
-  type PolicyInputs,
-} from './core/palette-policy.ts';
-import { findPreset, resolvePreset } from './core/palette-presets.ts';
+  builtInProfiles,
+  emptyRecipe,
+  paletteToProfile,
+  type ColorProfileRecipe,
+} from './core/color-profile.ts';
+import { nonThreadLabel, userColor } from './core/color-sources.ts';
+import type { CountMode, PaletteConflict } from './core/palette-policy.ts';
 import { paletteOf } from './core/palette.ts';
-import { resolveProjectPalette } from './core/palette-resolve.ts';
+import { resolveProfilePalette } from './core/palette-resolve.ts';
+import type { ProfileInputs } from './core/color-profile.ts';
 import { loadCatalogue } from './core/thread-catalogue.ts';
+import { createColourSection, type ColourSectionState } from './ui/colour-section.ts';
+import { createBrowseTable } from './ui/browse-table.ts';
 import { createProfileEditor } from './ui/profile-editor.ts';
-import { createColourKindAdapter } from './ui/profile-editor-colour.ts';
+import {
+  browseRowsFor,
+  browseUniverse,
+  createColourKindAdapter,
+  entryLabel,
+} from './ui/profile-editor-colour.ts';
 import { createEditorPreview, fetchSlot } from './ui/profile-editor-preview.ts';
 import {
   parseProject,
@@ -71,15 +80,10 @@ import {
   mergeOwned,
   parseInventory,
   serializeInventory,
-  serializePalettes,
   type LibraryPalette,
+  type ProfileRecord,
 } from './library/records.ts';
 import { openLibrary, MemoryStore, type LibraryStore } from './library/store.ts';
-import {
-  createPalettePanel,
-  moveEntry,
-  type PalettePanelState,
-} from './ui/palette-panel.ts';
 import {
   colorField,
   numberField,
@@ -209,20 +213,30 @@ function build(app: HTMLElement): void {
   };
   let masterImage: PixelBuffer | null = null;
 
-  // --- M7 palette policy state -------------------------------------
-  // `policy` is intent; `config.palette` is the resolved result. They
-  // are kept separate because every M7 feature (brands, inventory,
-  // presets, counts, locks) edits intent, and exactly one function —
-  // `resolvePalette` — turns intent into the ordered palette the
-  // pipeline runs against.
-  let policy: PalettePolicy = defaultPolicy();
+  // --- M15 profile-world colour state (M15-UI-01, D114) ------------
+  // The design carries its OWN recipe copy plus a link to a named
+  // profile — the (edited)-copy pattern: design-context edits land on
+  // the copy, never the shared library. `config.palette` is the
+  // resolved result; exactly one function — `resolvePalette` — turns
+  // the recipe + design rules into the ordered palette the pipeline
+  // runs against.
+  let designRecipe: ColorProfileRecipe = { ...emptyRecipe(), libraries: ['dmc'] };
+  let profileRef: { id: string; revision: number } | null = { id: 'builtin:dmc', revision: 0 };
+  let designEdited = false;
+  let designRules: { count: { mode: CountMode; n: number }; minDistance: number; mustUse: string[] } = {
+    count: { mode: 'max', n: 8 },
+    minDistance: 0,
+    mustUse: [],
+  };
   let paletteMode = true;
   let paletteConflicts: PaletteConflict[] = [];
   let eligibleCount = 0;
   let owned = new Set<string>();
   let libraryPalettes: LibraryPalette[] = [];
-  /** Last palette deleted this session — the undo route's only copy. */
-  let deletedPalette: LibraryPalette | null = null;
+  let userColorsMap = new Map<string, Thread>();
+  /** Built-ins + stored profiles, for the select and the copies. */
+  let colourProfiles: { id: string; name: string; builtin: boolean; revision: number }[] = [];
+  const profileRecipes = new Map<string, ColorProfileRecipe>();
   let library: LibraryStore = new MemoryStore();
   /**
    * The resized, **un-reduced** grid buffer that colour-count selection
@@ -256,23 +270,8 @@ function build(app: HTMLElement): void {
   }
 
   /** Assemble the resolver's inputs from the current library state. */
-  function policyInputs(): PolicyInputs {
-    const inputs: PolicyInputs = { catalogue: CATALOGUE, owned };
-    // Bound to a const first: `policy` is mutable, so a narrowing on
-    // `policy.source` does not survive into the callbacks below.
-    const source = policy.source;
-    if (source.kind === 'library') {
-      const found = libraryPalettes.find((p) => p.id === source.paletteId);
-      if (found !== undefined) {
-        inputs.libraryPalette = { name: found.name, threadIds: found.threadIds };
-      }
-    } else if (source.kind === 'preset') {
-      const preset = findPreset(source.presetId);
-      if (preset !== undefined) {
-        inputs.preset = resolvePreset(preset, CATALOGUE, policy.brands, source.mode);
-      }
-    }
-    return inputs;
+  function profileInputs(): ProfileInputs {
+    return { catalogue: CATALOGUE, owned, userColors: userColorsMap };
   }
 
   /**
@@ -297,9 +296,10 @@ function build(app: HTMLElement): void {
       paletteConflicts = [];
       eligibleCount = 0;
     } else {
-      const resolved = resolveProjectPalette({
-        policy,
-        inputs: policyInputs(),
+      const resolved = resolveProfilePalette({
+        recipe: designRecipe,
+        design: designRules,
+        inputs: profileInputs(),
         source: selectionSource ?? undefined,
         name: paletteName(),
       });
@@ -340,7 +340,7 @@ function build(app: HTMLElement): void {
    * the policy changes.
    */
   function ensureSelectionSource(): void {
-    if (masterImage === null || !paletteMode || policy.count.mode === 'all') return;
+    if (masterImage === null || !paletteMode || designRules.count.mode === 'all') return;
     const wanted = selectionGeometryKey();
     if (selectionPending || (selectionSource !== null && selectionGeometry === wanted)) return;
     selectionPending = true;
@@ -355,7 +355,7 @@ function build(app: HTMLElement): void {
         selectionSource = buffer;
         selectionGeometry = wanted;
         resolvePalette();
-        palettePanel.update(panelState());
+        colourSection.update(sectionState());
         reprocess();
       },
       (error: unknown) => {
@@ -367,16 +367,12 @@ function build(app: HTMLElement): void {
     );
   }
 
-  /** A display name for the resolved palette, from its source. */
+  /** A display name for the resolved palette, from its profile. */
   function paletteName(): string {
-    const source = policy.source;
-    if (source.kind === 'library') {
-      return libraryPalettes.find((p) => p.id === source.paletteId)?.name ?? 'Palette';
-    }
-    if (source.kind === 'preset') {
-      return findPreset(source.presetId)?.name ?? 'Preset';
-    }
-    return policy.brands.map((id) => BRAND_NAMES.get(id) ?? id).join(' + ') || 'Threads';
+    if (profileRef === null) return 'This design';
+    const linked = colourProfiles.find((p) => p.id === profileRef?.id);
+    const base = linked?.name ?? 'Profile';
+    return designEdited ? `${base} (edited)` : base;
   }
 
   // Import controls: labelled native file input; drop and paste are
@@ -695,6 +691,15 @@ function build(app: HTMLElement): void {
           selection === null
             ? 'Highlight cleared.'
             : `${selection.label} — ${selection.count.toLocaleString('en-GB')} stitches highlighted.`;
+      },
+      // Remove-from-profile (M15-UI-01): the exclusion lands on the
+      // design's copy — the shared library is never touched from here.
+      onRemove: (index, label) => {
+        const id = config.palette?.entries[index]?.id;
+        if (id === undefined) return;
+        if (!designRecipe.exclude.includes(id)) designRecipe.exclude.push(id);
+        status.textContent = `${label} removed from this design's colours.`;
+        designRecipeEdited();
       },
     },
   );
@@ -1112,111 +1117,266 @@ function build(app: HTMLElement): void {
     },
   );
 
-  /** The panel's view of the current policy, library, and resolution.
-   *  Selected/used/limit figures are Stats' numbers, not the panel's
-   *  (M14-EXT-42) — only availability travels here. */
-  function panelState(): PalettePanelState {
+  /** The section's view of the design's colour state (M15-UI-01). */
+  function sectionState(): ColourSectionState {
     return {
-      policy,
       paletteMode,
+      profiles: colourProfiles,
+      profileRef: profileRef?.id ?? null,
+      edited: designEdited,
+      count: designRules.count,
+      minDistance: designRules.minDistance,
+      mustUse: designRules.mustUse,
       conflicts: paletteConflicts,
       eligibleCount,
-      owned,
-      library: libraryPalettes,
-      selectedIds: new Set(config.palette?.entries.map((t) => t.id) ?? []),
-      libraryPersistent: library.persistent,
-      deletedPalette,
     };
   }
 
-  /** Re-resolve, refresh the panel, and run the pipeline once. */
-  function applyPolicy(): void {
+  /** Re-resolve, refresh the section, and run the pipeline once. */
+  function applyColour(): void {
     ensureSelectionSource();
     resolvePalette();
     // Dithering only applies when reducing to a palette.
     ditherControls.update(config.dither, config.palette === null);
-    palettePanel.update(panelState());
+    colourSection.update(sectionState());
     refreshSections();
     reprocess();
   }
 
-  const palettePanel = createPalettePanel(document, CATALOGUE, panelState(), {
+  /** Rebuild the profiles cache from built-ins + the store. */
+  async function refreshProfilesCache(): Promise<void> {
+    profileRecipes.clear();
+    const builtins = builtInProfiles(CATALOGUE);
+    for (const b of builtins) profileRecipes.set(b.id, b.recipe);
+    let stored: ProfileRecord[] = [];
+    try {
+      stored = await library.listProfiles('colour');
+    } catch (error) {
+      log.error('library', 'could not list profiles', { message: describeError(error) });
+    }
+    for (const r of stored) {
+      const payload = r.payload as Partial<ColorProfileRecipe> | null;
+      profileRecipes.set(r.id, {
+        ...emptyRecipe(),
+        ...(typeof payload === 'object' && payload !== null ? payload : {}),
+      });
+    }
+    colourProfiles = [
+      ...builtins.map((b) => ({ id: b.id, name: b.name, builtin: true, revision: b.revision })),
+      ...stored.map((r) => ({ id: r.id, name: r.name, builtin: false, revision: r.revision })),
+    ];
+    // A linked design re-derives its edited flag against the live
+    // library (drift is reported by the flag, never repaired — D55).
+    if (profileRef !== null) {
+      const base = profileRecipes.get(profileRef.id);
+      designEdited = base === undefined || JSON.stringify(base) !== JSON.stringify(designRecipe);
+    }
+  }
+
+  /** A design-context edit landed on the copy (the D114 pattern). */
+  function designRecipeEdited(): void {
+    designEdited = profileRef !== null;
+    applyColour();
+  }
+
+  const colourSection = createColourSection(document, {
+    paletteMode,
+    profiles: colourProfiles,
+    profileRef: profileRef?.id ?? null,
+    edited: designEdited,
+    count: designRules.count,
+    minDistance: designRules.minDistance,
+    mustUse: designRules.mustUse,
+    conflicts: paletteConflicts,
+    eligibleCount,
+  }, {
     setPaletteMode: (on) => {
       paletteMode = on;
-      applyPolicy();
+      applyColour();
     },
-    setPolicy: (next) => {
-      policy = next;
-      applyPolicy();
+    selectProfile: (id) => {
+      const recipe = profileRecipes.get(id);
+      if (recipe === undefined) return;
+      const view = colourProfiles.find((p) => p.id === id);
+      designRecipe = structuredClone(recipe);
+      profileRef = { id, revision: view?.revision ?? 0 };
+      designEdited = false;
+      status.textContent = `Profile "${view?.name ?? id}" applied.`;
+      applyColour();
     },
-    setOwned: (id, isOwned) => {
-      if (isOwned) owned.add(id);
-      else owned.delete(id);
-      persistOwned();
-      applyPolicy();
+    updateProfile: () => {
+      void (async () => {
+        if (profileRef === null) return;
+        const view = colourProfiles.find((p) => p.id === profileRef?.id);
+        if (view === undefined || view.builtin) return;
+        const stored = (await library.listProfiles('colour')).find(
+          (r) => r.id === profileRef?.id,
+        );
+        if (stored === undefined || profileRef === null) return;
+        const record: ProfileRecord = {
+          ...stored,
+          revision: stored.revision + 1,
+          payload: structuredClone(designRecipe),
+        };
+        await library.putProfile(record);
+        await refreshProfilesCache();
+        profileRef = { id: record.id, revision: record.revision };
+        designEdited = false;
+        status.textContent = `Updated "${record.name}" — every design using it follows.`;
+        applyColour();
+      })();
     },
-    setOwnedBulk: (ids, isOwned) => {
-      for (const id of ids) {
-        if (isOwned) owned.add(id);
-        else owned.delete(id);
-      }
-      persistOwned();
-      status.textContent = isOwned
-        ? `Marked ${String(ids.length)} thread(s) as owned.`
-        : `Removed ${String(ids.length)} thread(s) from your inventory.`;
-      applyPolicy();
+    saveAsNew: () => {
+      void (async () => {
+        const name = await textPromptModal(document, {
+          title: 'Save as new profile',
+          label: 'Profile name',
+          initial: '',
+          confirmLabel: 'Save',
+        });
+        if (name === null || name.trim() === '') return;
+        const record: ProfileRecord = {
+          kind: 'colour',
+          id: `p-${Date.now().toString(36)}-${String(colourProfiles.length)}`,
+          name: name.trim(),
+          revision: 1,
+          createdFrom: profileRef === null ? 'design' : `copy:${profileRef.id}`,
+          payload: structuredClone(designRecipe),
+        };
+        await library.putProfile(record);
+        await refreshProfilesCache();
+        profileRef = { id: record.id, revision: 1 };
+        designEdited = false;
+        status.textContent = `Saved "${record.name}" as a new profile.`;
+        applyColour();
+      })();
     },
-    savePaletteToLibrary: () => {
-      void saveCurrentPalette();
+    revert: () => {
+      if (profileRef === null) return;
+      const base = profileRecipes.get(profileRef.id);
+      if (base === undefined) return;
+      designRecipe = structuredClone(base);
+      designEdited = false;
+      status.textContent = 'Reverted to the profile\u2019s own colours.';
+      applyColour();
     },
-    movePaletteEntry: (paletteId, index, delta) => {
-      void editPalette(paletteId, (ids) => moveEntry(ids, index, delta), 'Reordered');
+    setCount: (mode, n) => {
+      designRules.count = { mode, n };
+      // A count change re-selects against the source distribution.
+      invalidateSelectionSource();
+      applyColour();
     },
-    removePaletteEntry: (paletteId, index) => {
-      void editPalette(
-        paletteId,
-        (ids) => ids.filter((_, i) => i !== index),
-        'Removed a thread from',
-      );
+    setMinDistance: (value) => {
+      designRules.minDistance = value;
+      applyColour();
     },
-    deletePalette: (paletteId) => {
-      void removePalette(paletteId);
+    addMustUse: (id) => {
+      if (!designRules.mustUse.includes(id)) designRules.mustUse.push(id);
+      status.textContent = `${labelForId(id)} will always be in the palette.`;
+      applyColour();
     },
-    undoDeletePalette: () => {
-      void restoreDeletedPalette();
+    removeMustUse: (id) => {
+      designRules.mustUse = designRules.mustUse.filter((m) => m !== id);
+      status.textContent = `${labelForId(id)} is no longer guaranteed.`;
+      applyColour();
     },
-    exportInventory: () => {
+    openEditor: () => {
+      void openProfileEditor(profileRef?.id);
+    },
+    browseRows: (query) => browseRowsFor(CATALOGUE, [...userColorsMap.values()], null, query),
+    labelFor: labelForId,
+    mountInventory: (container) => {
+      mountInventoryUi(container);
+    },
+  });
+  const colourGroup = colourSection.element;
+
+  /** Display label for any id — thread, map entry or custom colour. */
+  function labelForId(id: string): string {
+    const entry =
+      CATALOGUE.byId.get(id) ??
+      userColorsMap.get(id) ??
+      browseUniverse(CATALOGUE, [], null).find((e) => e.id === id);
+    return entry === undefined ? id : entryLabel(entry, CATALOGUE);
+  }
+
+  /** The My-threads inventory manager (ownership stays its own
+   *  concern — the UI-03 rule; this is its post-cutover home). */
+  function mountInventoryUi(container: HTMLElement): void {
+    const note = document.createElement('p');
+    note.className = 'meta';
+    note.textContent = library.persistent
+      ? 'Your inventory is stored in this browser. Export it to keep a copy.'
+      : 'Browser storage is unavailable, so your inventory lasts only until you reload. Export it to keep it.';
+    const table = createBrowseTable(document, {
+      searchId: 'inventory-search',
+      searchLabel: 'Find a thread',
+      rowsFor: (query) => {
+        const q = query.trim().toLowerCase();
+        const matches = CATALOGUE.threads.filter(
+          (t) => q === '' || entryLabel(t, CATALOGUE).toLowerCase().includes(q),
+        );
+        return {
+          rows: matches.slice(0, 60).map((t) => ({
+            id: t.id,
+            label: entryLabel(t, CATALOGUE),
+            hex: t.hex,
+          })),
+          total: matches.length,
+        };
+      },
+      rowActions: (row) => {
+        const box = document.createElement('input');
+        box.type = 'checkbox';
+        box.checked = owned.has(row.id);
+        box.setAttribute('aria-label', `Own ${row.label}`);
+        box.addEventListener('change', () => {
+          if (box.checked) owned.add(row.id);
+          else owned.delete(row.id);
+          persistOwned();
+          applyColour();
+        });
+        const label = document.createElement('span');
+        label.className = 'meta';
+        label.textContent = 'Own';
+        label.setAttribute('aria-hidden', 'true');
+        return [box, label];
+      },
+      emptyText: 'No threads here.',
+    });
+    const actionRow = document.createElement('div');
+    actionRow.className = 'toolbar';
+    const exportButton = document.createElement('button');
+    exportButton.type = 'button';
+    exportButton.textContent = 'Export inventory';
+    exportButton.addEventListener('click', () => {
       downloadBlob(
         document,
-        new Blob([serializeInventory(owned, 'thread-list')], {
-          type: 'application/json',
-        }),
+        new Blob([serializeInventory(owned, 'thread-list')], { type: 'application/json' }),
         'thread-inventory.json',
       );
       status.textContent = `Exported ${String(owned.size)} owned threads.`;
-    },
-    importInventory: () => {
+    });
+    const importButton = document.createElement('button');
+    importButton.type = 'button';
+    importButton.textContent = 'Import inventory';
+    importButton.addEventListener('click', () => {
       inventoryInput.click();
-    },
-    exportPalettes: () => {
-      downloadBlob(
-        document,
-        new Blob([serializePalettes(libraryPalettes)], { type: 'application/json' }),
-        'thread-palettes.json',
-      );
-      status.textContent = `Exported ${String(libraryPalettes.length)} saved palettes.`;
-    },
-  }, {
-    open: disclosureOpen('thread-library', false),
-    onToggle: (open) => {
-      setDisclosure('thread-library', open);
-    },
-  });
-  const colourGroup = palettePanel.element;
-  // Resolve once up front so the panel opens showing a real palette
+    });
+    actionRow.append(exportButton, importButton);
+    container.append(table.element, actionRow, note);
+  }
+
+  // Resolve once up front so the section opens showing a real palette
   // rather than an empty one that only fills in after the library
   // loads asynchronously.
-  applyPolicy();
+  refreshProfilesCache()
+    .then(() => {
+      applyColour();
+    })
+    .catch(() => {
+      applyColour();
+    });
 
   // Inventory import is a file input rather than a bare button so the
   // native picker (and its keyboard route) does the work; it is merged
@@ -1248,7 +1408,7 @@ function build(app: HTMLElement): void {
         (unknown > 0
           ? `. ${String(unknown)} are not in this build's catalogue and are kept but unusable.`
           : '.');
-      applyPolicy();
+      applyColour();
     } catch (error) {
       const message = describeError(error);
       status.textContent = `Could not read that inventory file (${message}).`;
@@ -1264,135 +1424,10 @@ function build(app: HTMLElement): void {
     });
   }
 
-  /**
-   * Apply an edit to a saved palette's ordered thread ids.
-   *
-   * Every edit commits once and bumps `revision`, which is what lets a
-   * reopened project detect that the library palette it named has moved
-   * on (D55). The live design changes immediately — the policy resolves
-   * against the library record, and order is the nearest-match
-   * tie-break (D46) — while projects already saved keep their own
-   * snapshot until explicitly refreshed.
-   */
-  async function editPalette(
-    paletteId: string,
-    edit: (ids: string[]) => string[],
-    verb: string,
-  ): Promise<void> {
-    const existing = libraryPalettes.find((p) => p.id === paletteId);
-    if (existing === undefined) return;
-    const next: LibraryPalette = {
-      ...existing,
-      revision: existing.revision + 1,
-      threadIds: edit([...existing.threadIds]),
-    };
-    if (next.threadIds.length === 0) {
-      status.textContent =
-        'A palette needs at least one thread — remove the palette itself if you no longer want it.';
-      return;
-    }
-    try {
-      await library.putPalette(next);
-      libraryPalettes = await library.listPalettes();
-      status.textContent = `${verb} "${next.name}" (revision ${String(next.revision)}).`;
-      applyPolicy();
-    } catch (error) {
-      const message = describeError(error);
-      status.textContent = `Could not save that palette change (${message}).`;
-      log.error('library', 'palette edit failed', { message });
-    }
-  }
-
-  /**
-   * Delete a saved palette, keeping it in memory for an undo.
-   *
-   * No confirmation dialog: the undo is the recovery route
-   * (UI-STANDARDS → destructive actions need confirmation *or* reliable
-   * undo), and it is the honest one here because deletion cannot damage
-   * a saved project at all — those carry their own snapshot (D55).
-   */
-  async function removePalette(paletteId: string): Promise<void> {
-    const existing = libraryPalettes.find((p) => p.id === paletteId);
-    if (existing === undefined) return;
-    try {
-      await library.deletePalette(paletteId);
-      libraryPalettes = await library.listPalettes();
-      deletedPalette = existing;
-      // Fall back to the whole enabled-brand set rather than leaving the
-      // policy pointing at a palette that no longer exists.
-      if (policy.source.kind === 'library' && policy.source.paletteId === paletteId) {
-        policy = { ...policy, source: { kind: 'brands' } };
-      }
-      status.textContent = `Deleted "${existing.name}". Saved projects that used it are unaffected — you can undo this until you reload.`;
-      applyPolicy();
-    } catch (error) {
-      const message = describeError(error);
-      status.textContent = `Could not delete that palette (${message}).`;
-      log.error('library', 'palette delete failed', { message });
-    }
-  }
-
-  /** Put the last deleted palette back, exactly as it was. */
-  async function restoreDeletedPalette(): Promise<void> {
-    const restoring = deletedPalette;
-    if (restoring === null) return;
-    try {
-      await library.putPalette(restoring);
-      libraryPalettes = await library.listPalettes();
-      deletedPalette = null;
-      policy = { ...policy, source: { kind: 'library', paletteId: restoring.id } };
-      status.textContent = `Restored "${restoring.name}".`;
-      applyPolicy();
-    } catch (error) {
-      const message = describeError(error);
-      status.textContent = `Could not restore that palette (${message}).`;
-      log.error('library', 'palette restore failed', { message });
-    }
-  }
-
-  /** Freeze the resolved palette as a new named library palette. */
-  async function saveCurrentPalette(): Promise<void> {
-    const entries = config.palette?.entries ?? [];
-    if (entries.length === 0) {
-      status.textContent = 'There is no resolved palette to save yet.';
-      return;
-    }
-    const name = await textPromptModal(document, {
-      title: 'Save as palette',
-      label: 'Palette name',
-      initial: paletteName(),
-      confirmLabel: 'Save palette',
-    });
-    if (name === null || name.trim() === '') return;
-    const palette: LibraryPalette = {
-      id: `pal-${String(Date.now())}`,
-      name: name.trim(),
-      revision: 1,
-      createdFrom: sourceProvenance(),
-      threadIds: entries.map((t) => t.id),
-    };
-    try {
-      await library.putPalette(palette);
-      libraryPalettes = await library.listPalettes();
-      // Switch to the saved palette so what is on screen is what was
-      // saved — copying then silently staying on the preset is the
-      // kind of divergence M7-PRESET-01 calls out.
-      policy = { ...policy, source: { kind: 'library', paletteId: palette.id } };
-      status.textContent = `Saved palette "${palette.name}" (${String(entries.length)} threads).`;
-      applyPolicy();
-    } catch (error) {
-      const message = describeError(error);
-      status.textContent = `Could not save that palette (${message}).`;
-      log.error('library', 'palette save failed', { message });
-    }
-  }
-
-  /** Where a saved palette came from, recorded on the library record. */
-  function sourceProvenance(): string {
-    if (policy.source.kind === 'preset') return `preset:${policy.source.presetId}`;
-    if (policy.source.kind === 'library') return `copy:${policy.source.paletteId}`;
-    return policy.ownedOnly ? 'inventory' : 'brands';
-  }
+  // The saved-palette editor retired with the policy world
+  // (M15-UI-01): palettes convert 1:1 into explicit-membership
+  // profiles at library open (PERSIST-01/D115), and every edit route
+  // is the profile editor's.
 
   const ditherGroup = ditherControls.element;
 
@@ -1691,16 +1726,23 @@ function build(app: HTMLElement): void {
       const entries: KeyEntry[] =
         config.palette === null
           ? []
-          : computeStats(frame, config.palette).perColor.map((c) => ({
-              hex: c.hex,
-              rgb: c.rgb,
-              ...(c.thread === undefined
-                ? {}
-                : {
-                    brand: BRAND_NAMES.get(c.thread.brandId) ?? c.thread.brandId,
-                    reference: c.thread.reference,
-                  }),
-            }));
+          : computeStats(frame, config.palette).perColor.map((c) => {
+              if (c.thread === undefined) return { hex: c.hex, rgb: c.rgb };
+              // Non-thread entries keep provenance-honest labels in
+              // the export key (D114): a chart row with nothing to
+              // buy says so — "Web-safe Lime", "Custom — Crimson" —
+              // never a raw namespace id.
+              const synthetic = nonThreadLabel(c.thread);
+              if (synthetic !== null) {
+                return { hex: c.hex, rgb: c.rgb, brand: synthetic, reference: '' };
+              }
+              return {
+                hex: c.hex,
+                rgb: c.rgb,
+                brand: BRAND_NAMES.get(c.thread.brandId) ?? c.thread.brandId,
+                reference: c.thread.reference,
+              };
+            });
       const bytes = await buildChartPdf(chartPng, chartL.width, chartL.height, entries, {
         ...pdfOptions,
       });
@@ -1779,11 +1821,17 @@ function build(app: HTMLElement): void {
         metric: config.metric,
         dither: config.dither,
       },
-      // Intent *and* the exact threads that rendered it: reopening
-      // must reproduce this design even if the library palette it came
-      // from is later edited or deleted (M7-PAL-01).
+      // The design's recipe copy *and* the exact threads that
+      // rendered it (schema v5, M15-PERSIST-01): reopening must
+      // reproduce this design even if the profile it links has been
+      // edited or deleted (D55 carried into the profile world).
       palette: paletteMode
-        ? { policy, snapshot: config.palette?.entries ?? [] }
+        ? {
+            profileRef,
+            recipe: designRecipe,
+            design: designRules,
+            snapshot: config.palette?.entries ?? [],
+          }
         : null,
       gridStyle: {
         show: gridStyle.show,
@@ -1836,10 +1884,10 @@ function build(app: HTMLElement): void {
   function syncControls(): void {
     setFieldValue('pattern-width', String(scales.pattern.widthStitches));
     setFieldValue('pattern-height', String(scales.pattern.heightStitches));
-    // The Threadify switch (M14-EXT-29) mirrors paletteMode inside
-    // palettePanel.update below — no field write needed here.
+    // The Threadify switch mirrors paletteMode inside
+    // colourSection.update below — no field write needed here.
     ditherControls.update(config.dither, config.palette === null);
-    palettePanel.update(panelState());
+    colourSection.update(sectionState());
     gridToggle.setAttribute('aria-pressed', String(gridStyle.show));
     // The Grid options fields need no sync here: the modal is
     // transient and builds fresh from gridStyle on every open
@@ -1868,21 +1916,33 @@ function build(app: HTMLElement): void {
   function applyLoadedPalette(loaded: ProjectFile['palette']): void {
     if (loaded === null) {
       paletteMode = false;
-      policy = defaultPolicy();
+      designRecipe = { ...emptyRecipe(), libraries: ['dmc'] };
+      profileRef = { id: 'builtin:dmc', revision: 0 };
+      designEdited = false;
       config.palette = null;
       paletteConflicts = [];
       return;
     }
     paletteMode = true;
-    policy = loaded.policy;
+    designRecipe = structuredClone(loaded.recipe);
+    profileRef = loaded.profileRef === null ? null : { ...loaded.profileRef };
+    designRules = {
+      count: { ...loaded.design.count },
+      minDistance: loaded.design.minDistance,
+      mustUse: [...loaded.design.mustUse],
+    };
+    // The edited flag re-derives against the live library; drift is
+    // reported by the flag, never repaired (D55).
+    void refreshProfilesCache().then(() => {
+      colourSection.update(sectionState());
+    });
     if (loaded.snapshot.length > 0) {
       config.palette = { name: paletteName(), entries: loaded.snapshot };
       eligibleCount = loaded.snapshot.length;
       paletteConflicts = driftConflicts(loaded.snapshot);
     } else {
-      // A migrated v2 file carries no snapshot — there was nothing to
-      // save. Resolving from the policy is the only option, and it is
-      // exactly what the v2 file meant.
+      // A file that never ran carries no snapshot; resolving from the
+      // recipe is the only option, and exactly what it meant.
       resolvePalette();
     }
   }
@@ -1958,10 +2018,16 @@ function build(app: HTMLElement): void {
         config.preset === 'reduce-first'
           ? ' This project uses the retired “match colours first” order — kept as saved.'
           : '';
+      // The D114 waiver's visible note: an older file's colour
+      // settings migrated best-effort; the snapshot renders.
+      const migrateTail =
+        file.migratedFrom !== undefined && file.migratedFrom < 5 && file.palette !== null
+          ? ' Colour settings were migrated from an older format — the design renders from its saved colours.'
+          : '';
       status.textContent =
         masterImage === null
-          ? `Loaded ${fileBlob.name} — import an image to see it applied.${orderTail}`
-          : `Loaded ${fileBlob.name}.${orderTail}`;
+          ? `Loaded ${fileBlob.name} — import an image to see it applied.${orderTail}${migrateTail}`
+          : `Loaded ${fileBlob.name}.${orderTail}${migrateTail}`;
       log.info('project', 'loaded', { filename: fileBlob.name });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -2047,7 +2113,7 @@ function build(app: HTMLElement): void {
     if (lastColorCount === null) return 'none yet';
     const used = String(lastColorCount);
     if (!paletteMode) return `${used} · unlimited`;
-    if (policy.count.mode !== 'all') return `${used} · limit ${String(policy.count.n)}`;
+    if (designRules.count.mode !== 'all') return `${used} · limit ${String(designRules.count.n)}`;
     return used;
   }
 
@@ -2082,7 +2148,7 @@ function build(app: HTMLElement): void {
   // Colour stands alone (M14-EXT-28): its own section, the group
   // moved whole. Spec default closed — the default-8 conversion needs
   // no colour decision first, and Stats carries the count.
-  const colourSection = section('section-colour', 'Colour', false, colourGroup, inventoryInput);
+  const colourAccordion = section('section-colour', 'Colour', false, colourGroup, inventoryInput);
   // "Processing" (M14-EXT-30): the Appearance rename, reduced to the
   // Dither group — the grid geometry moved to the view strip's
   // reveal. The stored open/closed preference migrates by fallback:
@@ -2116,12 +2182,37 @@ function build(app: HTMLElement): void {
     );
     owned = await library.loadOwned();
     libraryPalettes = await library.listPalettes();
+    // Saved palettes convert 1:1 into explicit-membership profiles
+    // (PERSIST-01, D115) — idempotent by id, order intact (D46); the
+    // palette records stay untouched as the user's own data.
+    const existing = new Set((await library.listProfiles('colour')).map((r) => r.id));
+    for (const palette of libraryPalettes) {
+      if (existing.has(palette.id)) continue;
+      const profile = paletteToProfile(palette);
+      await library.putProfile({
+        kind: 'colour',
+        id: profile.id,
+        name: profile.name,
+        revision: profile.revision,
+        createdFrom: profile.createdFrom,
+        payload: profile.recipe,
+      });
+    }
+    const storedColors = await library.listUserColors();
+    userColorsMap = new Map(
+      storedColors.map((c) => {
+        const entry = userColor(c.id, c.rgb);
+        return [entry.id, entry];
+      }),
+    );
+    await refreshProfilesCache();
     log.info('library', 'opened', {
       persistent: library.persistent,
       owned: owned.size,
       palettes: libraryPalettes.length,
+      profiles: colourProfiles.length,
     });
-    applyPolicy();
+    applyColour();
   })().catch((error: unknown) => {
     log.error('library', 'could not be opened', { message: describeError(error) });
   });
@@ -2168,18 +2259,9 @@ function build(app: HTMLElement): void {
   });
   shellBar.append(sourceButton);
 
-  // The profile editor's dev-only entry (M15-UI-02, D115): the
-  // takeover completes behind this button and the real entry ships
-  // with the M15-UI-01 section cutover. Dev builds only — a
-  // production user never sees a surface the section does not own.
-  const devEditProfilesButton = document.createElement('button');
-  devEditProfilesButton.type = 'button';
-  devEditProfilesButton.textContent = 'Profiles (dev)';
-  devEditProfilesButton.hidden = !import.meta.env.DEV;
-  devEditProfilesButton.addEventListener('click', () => {
-    void openProfileEditor();
-  });
-  if (import.meta.env.DEV) shellBar.append(devEditProfilesButton);
+  // The profile editor's entry is the Colour section's Edit
+  // profiles… button (M15-UI-01 — the dev-only bar entry retired
+  // with the cutover, D115's staging complete).
 
   /**
    * Push the shell state onto the DOM. One function, one source of
@@ -2321,11 +2403,16 @@ function build(app: HTMLElement): void {
   function closeProfileEditor(): void {
     editorHost.hidden = true;
     layout.hidden = false;
-    devEditProfilesButton.focus();
+    // Focus returns to the section's own entry (the invoker).
+    document.getElementById('colour-profile')?.focus();
     status.textContent = 'Back to the design.';
+    // Library edits made inside the editor surface immediately.
+    void refreshProfilesCache().then(() => {
+      applyColour();
+    });
   }
 
-  async function openProfileEditor(): Promise<void> {
+  async function openProfileEditor(profileId?: string): Promise<void> {
     if (profileEditor === null) {
       const colourKind = createColourKindAdapter(document, {
         catalogue: CATALOGUE,
@@ -2361,9 +2448,23 @@ function build(app: HTMLElement): void {
             return rig;
           },
         },
-        // The D117 design link activates at the M15-UI-01 cutover,
-        // when a design carries an active profile to update.
-        design: undefined,
+        // The D117 editor-Save contract: Save on the design's active
+        // profile updates the design's copy in the same act; saving
+        // any other profile never touches the design.
+        design: {
+          activeProfileId: () => profileRef?.id ?? null,
+          onActiveProfileSaved: (id, draft) => {
+            designRecipe = structuredClone(draft) as ColorProfileRecipe;
+            designEdited = false;
+            void refreshProfilesCache().then(() => {
+              const view = colourProfiles.find((p) => p.id === id);
+              if (profileRef !== null && view !== undefined) {
+                profileRef = { id, revision: view.revision };
+              }
+              applyColour();
+            });
+          },
+        },
         announce: (text) => {
           status.textContent = text;
         },
@@ -2373,7 +2474,7 @@ function build(app: HTMLElement): void {
     }
     layout.hidden = true;
     editorHost.hidden = false;
-    await profileEditor.open();
+    await profileEditor.open(profileId);
   }
   const header = document.createElement('header');
   header.className = 'app-header';
@@ -2415,7 +2516,7 @@ function build(app: HTMLElement): void {
     for (const timing of frame.timings) activeBackends[timing.stage] = timing.backend;
     lastColorCount = stats.colorCount;
     lastEmptyCount = stats.emptyCount;
-    palettePanel.update(panelState());
+    colourSection.update(sectionState());
     refreshStats();
     status.textContent = 'Preview updated.';
     log.info('pipeline', 'frame processed', {
@@ -2515,7 +2616,7 @@ function build(app: HTMLElement): void {
   sections.push(captureSection);
   captureSectionElement = captureSection.element;
   // Design's old slot: directly after Stats, ahead of Colour.
-  controls.insertBefore(captureSection.element, colourSection.element);
+  controls.insertBefore(captureSection.element, colourAccordion.element);
   sectionsReady = true;
   refreshSections();
   // First paint of the size/zoom conducts (M14-EXT-40): the fields
@@ -2549,7 +2650,7 @@ function build(app: HTMLElement): void {
    *  focus to body, so a contains() check here sees nothing. */
   function hideCaptureSection(): void {
     captureRow.hidden = true;
-    controls.insertBefore(captureSection.element, colourSection.element);
+    controls.insertBefore(captureSection.element, colourAccordion.element);
   }
 
   // First paint of the source area: cold start shows the entry state

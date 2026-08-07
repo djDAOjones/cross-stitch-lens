@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildChartPdf,
+  keyLabel,
   MM_TO_PT,
   pdfFilename,
   pdfLayout,
@@ -119,5 +120,19 @@ describe('buildChartPdf', () => {
 describe('pdfFilename', () => {
   it('names by stitch size', () => {
     expect(pdfFilename(200, 150)).toBe('chart-200x150.pdf');
+  });
+});
+
+describe('key labels (M15-ACCEPT-01, D114)', () => {
+  it('labels threads by identity and synthetics by their honest label', () => {
+    expect(
+      keyLabel({ hex: '#000000', rgb: [0, 0, 0], brand: 'DMC', reference: '310' }),
+    ).toBe('DMC 310 #000000');
+    // The assembly passes nonThreadLabel() as brand + empty reference
+    // for map:/user: entries — the raw namespace never reaches paper.
+    expect(
+      keyLabel({ hex: '#00ff00', rgb: [0, 255, 0], brand: 'Web-safe Lime', reference: '' }),
+    ).toBe('Web-safe Lime #00ff00');
+    expect(keyLabel({ hex: '#123456', rgb: [18, 52, 86] })).toBe('#123456');
   });
 });

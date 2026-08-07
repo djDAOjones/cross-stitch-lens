@@ -17,13 +17,14 @@
  */
 
 import type { ColorMetric } from './color/metrics.ts';
-import type { CountMode, PalettePolicy, PresetMode } from './palette-policy.ts';
+import type { ColorProfileRecipe, HsbRangeRule } from './color-profile.ts';
+import type { CountMode } from './palette-policy.ts';
 import type { DitherConfig, OrderPreset } from './pipeline/config.ts';
 import type { ResizeMode } from './pipeline/resize.ts';
 import type { Provenance, Thread, ThreadStatus } from './types.ts';
 
 /** Current project-file schema version. Bump with a forward migration. */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 /**
  * Hard ceiling on a persisted palette snapshot.
@@ -66,22 +67,27 @@ export interface ProjectPipeline {
 }
 
 /**
- * The palette block (schema v3). Two halves, deliberately:
+ * The palette block (schema v5, M15-PERSIST-01/D114). The D55
+ * intent+snapshot pair, recut for profiles:
  *
- * - `policy` is the user's **intent** — enabled brands, chosen source,
- *   inventory restriction, count request, locks. It is what the UI
- *   shows and what a "refresh" recomputes from.
- * - `snapshot` is the exact ordered thread data that **rendered** this
- *   project. It is authoritative on reopen.
- *
- * Storing only the policy would mean a project's output changed when
- * the catalogue shipped a new colour, or when the user edited the
- * library palette it names. Storing only the snapshot would lose the
- * intent, so nothing could ever be recomputed. Both, and reopen is
- * reproducible *and* explicable (M7-INV-01, M7-PAL-01).
+ * - `profileRef` links the design to a named profile (`{id,
+ *   revision}`), or null when the design stands alone.
+ * - `recipe` is the design's **own copy** of the composition recipe —
+ *   what a refresh re-resolves from, and where design-context edits
+ *   land (the (edited)-copy pattern) without touching the library.
+ * - `design` carries the design-layer rules beside the recipe:
+ *   count, minimum distance, Must-use seats (M15-CORE-03).
+ * - `snapshot` is the exact ordered thread data that **rendered**
+ *   this project. It is authoritative on reopen.
  */
 export interface ProjectPalette {
-  policy: PalettePolicy;
+  profileRef: { id: string; revision: number } | null;
+  recipe: ColorProfileRecipe;
+  design: {
+    count: { mode: CountMode; n: number };
+    minDistance: number;
+    mustUse: string[];
+  };
   /** Ordered threads exactly as rendered. Empty means "not yet run". */
   snapshot: Thread[];
 }
@@ -144,9 +150,15 @@ export interface ProjectExport {
   };
 }
 
-/** The full project file. This shape is schema v3, verbatim. */
+/** The full project file. This shape is schema v5, verbatim. */
 export interface ProjectFile {
   schemaVersion: typeof SCHEMA_VERSION;
+  /**
+   * Set by {@link parseProject} when the document was migrated from
+   * an older schema — the caller owes the D114 visible note. Never
+   * serialised; save → load → save stays byte-identical.
+   */
+  migratedFrom?: number;
   pipeline: ProjectPipeline;
   /** `null` = full-RGB mode: no colour reduction, no dithering (§5.1). */
   palette: ProjectPalette | null;
@@ -185,26 +197,35 @@ function canonicalThread(thread: Thread): Thread {
   };
 }
 
-/** Canonical field order for the palette source union, per kind. */
-function canonicalSource(source: PalettePolicy['source']): PalettePolicy['source'] {
-  if (source.kind === 'library') return { kind: 'library', paletteId: source.paletteId };
-  if (source.kind === 'preset') {
-    return { kind: 'preset', presetId: source.presetId, mode: source.mode };
+/** Canonical field order for one range rule (only present poles). */
+function canonicalRange(rule: HsbRangeRule): HsbRangeRule {
+  const out: HsbRangeRule = {};
+  if (rule.hue !== undefined) out.hue = [rule.hue[0], rule.hue[1]];
+  if (rule.saturation !== undefined) out.saturation = [rule.saturation[0], rule.saturation[1]];
+  if (rule.brightness !== undefined) {
+    out.brightness = [rule.brightness[0], rule.brightness[1]];
   }
-  return { kind: 'brands' };
+  return out;
 }
 
-/** Canonical field order for the palette block. */
+/** Canonical field order for the palette block (schema v5). */
 function canonicalPalette(palette: ProjectPalette): ProjectPalette {
   return {
-    policy: {
-      brands: [...palette.policy.brands],
-      source: canonicalSource(palette.policy.source),
-      ownedOnly: palette.policy.ownedOnly,
-      count: { mode: palette.policy.count.mode, n: palette.policy.count.n },
-      locked: [...palette.policy.locked],
-      preferred: [...palette.policy.preferred],
-      excluded: [...palette.policy.excluded],
+    profileRef:
+      palette.profileRef === null
+        ? null
+        : { id: palette.profileRef.id, revision: palette.profileRef.revision },
+    recipe: {
+      libraries: [...palette.recipe.libraries],
+      ownedOnly: palette.recipe.ownedOnly,
+      include: [...palette.recipe.include],
+      exclude: [...palette.recipe.exclude],
+      ranges: palette.recipe.ranges.map(canonicalRange),
+    },
+    design: {
+      count: { mode: palette.design.count.mode, n: palette.design.count.n },
+      minDistance: palette.design.minDistance,
+      mustUse: [...palette.design.mustUse],
     },
     snapshot: palette.snapshot.map(canonicalThread),
   };
@@ -369,22 +390,47 @@ function asThread(value: unknown, path: string): Thread {
   };
 }
 
-/** Validate the palette source union. */
-function asSource(value: unknown, path: string): PalettePolicy['source'] {
+/** Validate one optional two-pole range pair. */
+function asPole(
+  value: unknown,
+  path: string,
+  max: number,
+): [number, number] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.length !== 2) fail(path, 'a two-number range');
+  return [asNumber(value[0], `${path}[0]`, 0, max), asNumber(value[1], `${path}[1]`, 0, max)];
+}
+
+/** Validate one H/S/B range rule. */
+function asRangeRule(value: unknown, path: string): HsbRangeRule {
   const raw = asRecord(value, path);
-  const kind = asOneOf(raw['kind'], `${path}.kind`, ['brands', 'library', 'preset']);
-  if (kind === 'library') {
-    return { kind, paletteId: asString(raw['paletteId'], `${path}.paletteId`) };
-  }
-  if (kind === 'preset') {
-    const mode: PresetMode = asOneOf(raw['mode'], `${path}.mode`, ['strict', 'prefer']);
-    return { kind, presetId: asString(raw['presetId'], `${path}.presetId`), mode };
-  }
-  return { kind };
+  const rule: HsbRangeRule = {};
+  const hue = asPole(raw['hue'], `${path}.hue`, 360);
+  const saturation = asPole(raw['saturation'], `${path}.saturation`, 100);
+  const brightness = asPole(raw['brightness'], `${path}.brightness`, 100);
+  if (hue !== undefined) rule.hue = hue;
+  if (saturation !== undefined) rule.saturation = saturation;
+  if (brightness !== undefined) rule.brightness = brightness;
+  return rule;
+}
+
+/** Validate the v5 recipe block. */
+function asRecipe(value: unknown, path: string): ColorProfileRecipe {
+  const raw = asRecord(value, path);
+  const ranges = raw['ranges'];
+  if (!Array.isArray(ranges)) fail(`${path}.ranges`, 'an array of range rules');
+  if (ranges.length > 64) fail(`${path}.ranges`, 'at most 64 range rules');
+  return {
+    libraries: asIdList(raw['libraries'], `${path}.libraries`),
+    ownedOnly: asBool(raw['ownedOnly'], `${path}.ownedOnly`),
+    include: asIdList(raw['include'], `${path}.include`),
+    exclude: asIdList(raw['exclude'], `${path}.exclude`),
+    ranges: ranges.map((rule, i) => asRangeRule(rule, `${path}.ranges[${String(i)}]`)),
+  };
 }
 
 /**
- * Validate the v3 palette block. `null` is full-RGB mode.
+ * Validate the v5 palette block. `null` is full-RGB mode.
  *
  * Every list is length-checked before its elements are walked, because
  * a project file arrives from a download folder, not from this app
@@ -393,9 +439,18 @@ function asSource(value: unknown, path: string): PalettePolicy['source'] {
 function parsePalette(value: unknown): ProjectPalette | null {
   if (value === null || value === undefined) return null;
   const raw = asRecord(value, 'palette');
-  const policyRaw = asRecord(raw['policy'], 'palette.policy');
-  const countRaw = asRecord(policyRaw['count'], 'palette.policy.count');
-  const mode: CountMode = asOneOf(countRaw['mode'], 'palette.policy.count.mode', [
+  const refRaw = raw['profileRef'];
+  let profileRef: { id: string; revision: number } | null = null;
+  if (refRaw !== null && refRaw !== undefined) {
+    const ref = asRecord(refRaw, 'palette.profileRef');
+    profileRef = {
+      id: asString(ref['id'], 'palette.profileRef.id'),
+      revision: asInt(ref['revision'], 'palette.profileRef.revision', 0, Number.MAX_SAFE_INTEGER),
+    };
+  }
+  const designRaw = asRecord(raw['design'], 'palette.design');
+  const countRaw = asRecord(designRaw['count'], 'palette.design.count');
+  const mode: CountMode = asOneOf(countRaw['mode'], 'palette.design.count.mode', [
     'all',
     'max',
     'exact',
@@ -406,14 +461,15 @@ function parsePalette(value: unknown): ProjectPalette | null {
     fail('palette.snapshot', `at most ${String(MAX_PALETTE_ENTRIES)} entries`);
   }
   return {
-    policy: {
-      brands: asIdList(policyRaw['brands'], 'palette.policy.brands'),
-      source: asSource(policyRaw['source'], 'palette.policy.source'),
-      ownedOnly: asBool(policyRaw['ownedOnly'], 'palette.policy.ownedOnly'),
-      count: { mode, n: asInt(countRaw['n'], 'palette.policy.count.n', 1, MAX_PALETTE_ENTRIES) },
-      locked: asIdList(policyRaw['locked'], 'palette.policy.locked'),
-      preferred: asIdList(policyRaw['preferred'], 'palette.policy.preferred'),
-      excluded: asIdList(policyRaw['excluded'], 'palette.policy.excluded'),
+    profileRef,
+    recipe: asRecipe(raw['recipe'], 'palette.recipe'),
+    design: {
+      count: {
+        mode,
+        n: asInt(countRaw['n'], 'palette.design.count.n', 1, MAX_PALETTE_ENTRIES),
+      },
+      minDistance: asNumber(designRaw['minDistance'], 'palette.design.minDistance', 0, 200),
+      mustUse: asIdList(designRaw['mustUse'], 'palette.design.mustUse'),
     },
     snapshot: snapshotRaw.map((entry, i) => asThread(entry, `palette.snapshot[${String(i)}]`)),
   };
@@ -476,9 +532,57 @@ function migrateProject(raw: Record<string, unknown>, version: number): Record<s
     // unchanged. `false` becomes 'none'; its stored serpentine had no
     // effect and is dropped.
     if (at === 4) doc = migrateV3Dither(doc);
+    // v4 → v5: the policy half becomes the design's recipe copy plus
+    // design-layer rules (M15-PERSIST-01, under the D114 waiver:
+    // semantics best-effort, snapshot authoritative, caller shows the
+    // note). Brands-sourced policies map straight across; library and
+    // strict-preset sources become explicit membership from the
+    // snapshot — exactly what rendered — falling back to the enabled
+    // brands when the file never ran; a prefer-mode preset keeps its
+    // open universe (the steering half retired with the prefer rule).
+    if (at === 5) doc = migrateV4Palette(doc);
     doc = { ...doc, schemaVersion: at };
   }
   return doc;
+}
+
+/** Lift the v4 policy palette block into the v5 recipe shape. */
+function migrateV4Palette(doc: Record<string, unknown>): Record<string, unknown> {
+  const paletteRaw = doc['palette'];
+  if (paletteRaw === null || paletteRaw === undefined) return doc;
+  const raw = asRecord(paletteRaw, 'palette');
+  const policy = asRecord(raw['policy'], 'palette.policy');
+  const count = asRecord(policy['count'], 'palette.policy.count');
+  const source = asRecord(policy['source'], 'palette.policy.source');
+  const kind = source['kind'];
+  const snapshot = Array.isArray(raw['snapshot']) ? raw['snapshot'] : [];
+  const snapshotIds = snapshot
+    .map((t) => (typeof t === 'object' && t !== null ? (t as { id?: unknown }).id : undefined))
+    .filter((id): id is string => typeof id === 'string');
+  const brands = Array.isArray(policy['brands']) ? (policy['brands'] as string[]) : [];
+  const explicit =
+    (kind === 'library' || (kind === 'preset' && source['mode'] === 'strict')) &&
+    snapshotIds.length > 0;
+  const recipe = {
+    libraries: explicit ? [] : [...brands],
+    ownedOnly: policy['ownedOnly'] === true,
+    include: explicit ? snapshotIds : [],
+    exclude: Array.isArray(policy['excluded']) ? [...(policy['excluded'] as string[])] : [],
+    ranges: [],
+  };
+  return {
+    ...doc,
+    palette: {
+      profileRef: null,
+      recipe,
+      design: {
+        count: { mode: count['mode'], n: count['n'] },
+        minDistance: 0,
+        mustUse: Array.isArray(policy['locked']) ? [...(policy['locked'] as string[])] : [],
+      },
+      snapshot,
+    },
+  };
 }
 
 /** Lift the v3 Boolean dither + serpentine pair into the v4 union. */
@@ -538,6 +642,7 @@ export function parseProject(json: string): ProjectFile {
     );
   }
   const doc = migrateProject(root, version);
+  const migratedFrom = version < SCHEMA_VERSION ? version : undefined;
 
   const pipeline = asRecord(doc['pipeline'], 'pipeline');
   const grid = asRecord(pipeline['grid'], 'pipeline.grid');
@@ -548,6 +653,7 @@ export function parseProject(json: string): ProjectFile {
 
   return {
     schemaVersion: SCHEMA_VERSION,
+    ...(migratedFrom === undefined ? {} : { migratedFrom }),
     pipeline: {
       preset: asOneOf(pipeline['preset'], 'pipeline.preset', ['resize-first', 'reduce-first']),
       grid: {

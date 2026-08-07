@@ -46,6 +46,18 @@ export interface KeyEntry {
   reference?: string;
 }
 
+/**
+ * One key line: "DMC 310 #000000", or the entry's own honest label
+ * for non-thread colours ("Web-safe Lime #00ff00" — the assembly
+ * passes the provenance label as `brand` with an empty reference,
+ * D114/M15-ACCEPT-01), or bare hex when nothing identified it.
+ * Whitespace is normalised so an empty part never leaves a gap.
+ */
+export function keyLabel(entry: KeyEntry): string {
+  if (entry.reference === undefined) return entry.hex;
+  return `${entry.brand ?? ''} ${entry.reference} ${entry.hex}`.replace(/\s+/g, ' ').trim();
+}
+
 export interface PdfOptions {
   pageSize: 'a4' | 'letter';
   orientation: 'portrait' | 'landscape';
@@ -201,11 +213,7 @@ export async function buildChartPdf(
       borderColor: INK,
       borderWidth: 0.5,
     });
-    const label =
-      cell.entry.reference === undefined
-        ? cell.entry.hex
-        : `${cell.entry.brand ?? ''} ${cell.entry.reference} ${cell.entry.hex}`.trim();
-    page.drawText(toWinAnsi(label), {
+    page.drawText(toWinAnsi(keyLabel(cell.entry)), {
       x: cell.x + KEY_SWATCH + 4,
       y: cell.y + 1,
       size: KEY_TEXT_PT,

@@ -108,19 +108,6 @@ the section M14's EXT-41/42 leave behind (M14 completes first). The
 DITH tasks run after the colour half ships (owner order); ordering
 against the M13 remainder is the owner's call at pick time.
 
-- [~] **M15-PERSIST-01 Profiles persist: store, project file, migration** [detail] (2026-08-07)
-  Intent: profiles in IndexedDB with revisions (the records.ts pattern generalised, kind-aware from the start — D117); the project file carries the design's recipe copy plus a profileRef; schema bump under the D114 waiver; saved palettes convert 1:1 into explicit-membership profiles; custom `user:` colours live in the global My-colours library (D115). Full scope in the ticket.
-  Done when: save→load→save byte-identical on the new schema; old fixtures load and render via snapshot with the note; a pre-existing saved palette reappears as a profile with its order intact; library round-trip tests green.
-  Status 2026-08-07: store half shipped (D123 — kind-aware IndexedDB store, generic file format, My colours); the project-file schema half lands with M15-UI-01's atomic cutover.
-
-- [ ] **M15-UI-01 Colour section recut: profile select and the (edited) state** [detail] (2026-08-07)
-  Intent: the cutover task, last before acceptance (D115) — profile select + Edit profiles… + the "(edited)" flow (Update profile / Save as new / Revert) + count + minimum distance + Must-use chips with search-to-add + Colours used with a Remove-from-profile row action; the old controls swap out only here, filling the slot EXT-42 protects. Control census in the ticket.
-  Done when: every path announces; chips keyboard-operable including add-by-search; non-thread entries render honestly (CORE-01 labels); no shared-library mutation without an explicit Update/Save as new; no dead controls at any point; the section materially no taller than EXT-42's result.
-
-- [ ] **M15-ACCEPT-01 Automated acceptance** (2026-08-07)
-  Intent: the machine half — suites over resolver/selection/persistence, the golden and LUT-fingerprint strategy revisited where profiles feed reduction, export keys with non-thread labels, quality gate green.
-  Done when: `npm run check` green; export byte-identity re-proven for thread-only profiles; non-thread export-key labelling pinned by test.
-
 - [ ] **M15-ACCEPT-02 Maintainer acceptance session** [maintainer] (2026-08-07)
   Intent: the human half — a live session over the editor: build a profile from scratch, judge the style built-ins, the test preview's usefulness, and the (edited) flow's legibility.
   Done when: owner pass/fail notes recorded; failures route to fix tasks, never silent rework.

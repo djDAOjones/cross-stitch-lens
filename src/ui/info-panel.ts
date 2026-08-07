@@ -130,6 +130,12 @@ export interface InfoPanelHighlightOptions {
   indexFor(usage: ColorUsage): number | null;
   /** Selection changed (null = cleared). */
   onChange(selection: HighlightSelection | null): void;
+  /**
+   * Remove this colour from the design's profile copy (M15-UI-01) —
+   * lands on the copy, never the shared library. Omit to hide the
+   * action column.
+   */
+  onRemove?(index: number, label: string): void;
 }
 
 /**
@@ -176,6 +182,15 @@ export function createInfoPanel(
     if (text !== 'Colour') th.className = 'num';
     headRow.append(th);
   }
+  if (highlight?.onRemove !== undefined) {
+    const th = doc.createElement('th');
+    th.scope = 'col';
+    const hidden = doc.createElement('span');
+    hidden.className = 'visually-hidden';
+    hidden.textContent = 'Remove from profile';
+    th.append(hidden);
+    headRow.append(th);
+  }
   thead.append(headRow);
   const tbody = doc.createElement('tbody');
   table.append(caption, thead, tbody);
@@ -211,7 +226,7 @@ export function createInfoPanel(
 
   function update(stats: DesignStats): void {
     const { rows, overflow } = buildRows(stats.perColor, { brandNames });
-    const columns = highlight === undefined ? 3 : 4;
+    const columns = highlight === undefined ? 3 : highlight.onRemove === undefined ? 4 : 5;
     tbody.replaceChildren();
     highlightButtons.clear();
     rows.forEach((row, i) => {
@@ -258,6 +273,23 @@ export function createInfoPanel(
       percent.className = 'num';
       percent.textContent = row.percentText;
       tr.append(colour, count, percent);
+      if (highlight?.onRemove !== undefined) {
+        const cell = doc.createElement('td');
+        const raw = stats.perColor[i];
+        const index = raw === undefined ? null : highlight.indexFor(raw);
+        if (index !== null) {
+          const plainLabel = row.label.split(' · #')[0] ?? row.label;
+          const remove = doc.createElement('button');
+          remove.type = 'button';
+          remove.textContent = 'Remove';
+          remove.setAttribute('aria-label', `Remove ${plainLabel} from the profile`);
+          remove.addEventListener('click', () => {
+            highlight.onRemove?.(index, plainLabel);
+          });
+          cell.append(remove);
+        }
+        tr.append(cell);
+      }
       tbody.append(tr);
     });
     if (overflow !== null) {

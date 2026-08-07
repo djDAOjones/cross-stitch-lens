@@ -9,10 +9,16 @@
  */
 
 import {
+  resolveProfileMembership,
+  type ColorProfileRecipe,
+  type ProfileInputs,
+} from './color-profile.ts';
+import {
   duplicateDisplayColours,
   resolvePermitted,
   type PaletteConflict,
   type PalettePolicy,
+  type PermittedSet,
   type PolicyInputs,
   type ResolvedPalette,
 } from './palette-policy.ts';
@@ -144,4 +150,141 @@ export function worstSeverity(
 ): 'error' | 'warning' | 'none' {
   if (conflicts.some((c) => c.severity === 'error')) return 'error';
   return conflicts.length > 0 ? 'warning' : 'none';
+}
+
+// --- profile-world resolution (M15-UI-01) ---------------------------
+
+/** Everything one profile-world resolution needs. */
+export interface ProfilePaletteRequest {
+  /** The design's recipe copy (the (edited)-copy pattern, D114). */
+  recipe: ColorProfileRecipe;
+  /** Design-layer rules beside the recipe (M15-CORE-03). */
+  design: {
+    count: { mode: 'all' | 'max' | 'exact'; n: number };
+    minDistance: number;
+    mustUse: readonly string[];
+  };
+  inputs: ProfileInputs;
+  /** Grid-sized source for count selection; omit before the first frame. */
+  source?: PixelBuffer | undefined;
+  name: string;
+}
+
+/**
+ * Resolve a design's recipe + rules to the palette the pipeline runs
+ * against — the profile-world successor of the policy resolver. The
+ * count limit still applies last, so it can never widen membership
+ * (the M7-ACCEPT-01 invariant), and Must-use seats are guaranteed
+ * wherever membership contains them; a seat outside membership is
+ * kept and explained, never silently substituted.
+ */
+export function resolveProfilePalette(request: ProfilePaletteRequest): ResolvedPalette {
+  const { recipe, design, inputs, name } = request;
+  const membership = resolveProfileMembership(recipe, inputs);
+  const conflicts: PaletteConflict[] = [...membership.conflicts];
+
+  if (!membership.ok) {
+    return {
+      palette: paletteOf(name, []),
+      unresolved: [],
+      conflicts,
+      eligibleCount: 0,
+      selectedCount: 0,
+      lockedCount: 0,
+      ok: false,
+    };
+  }
+
+  const eligible = membership.entries;
+  const eligibleIds = new Set(eligible.map((t) => t.id));
+  const locks = eligible.filter((t) => design.mustUse.includes(t.id));
+  const missingSeats = design.mustUse.filter((id) => !eligibleIds.has(id));
+  if (missingSeats.length > 0) {
+    conflicts.push({
+      kind: 'locked-not-permitted',
+      severity: 'warning',
+      ids: [...missingSeats],
+      message: `${missingSeats.join(', ')} is set to Must use but is not in this profile's colours. The seat is kept for when it returns; no substitute was chosen.`,
+    });
+  }
+
+  const eligibleCount = eligible.length;
+  const source = design.count.mode === 'all' ? undefined : request.source;
+  const permitted: PermittedSet = {
+    eligible,
+    locks,
+    preferred: new Set<string>(),
+    unresolved: [],
+    conflicts: [],
+    ok: true,
+  };
+
+  if (source === undefined) {
+    conflicts.push(...duplicateDisplayColours(eligible));
+    return {
+      palette: paletteOf(name, eligible),
+      unresolved: [],
+      conflicts,
+      eligibleCount,
+      selectedCount: eligibleCount,
+      lockedCount: locks.length,
+      ok: true,
+    };
+  }
+
+  const target = design.count.n;
+  if (locks.length > target) {
+    conflicts.push({
+      kind: 'locks-exceed-count',
+      severity: 'warning',
+      ids: locks.map((t) => t.id),
+      message: `You have ${String(locks.length)} Must-use colours but asked for ${String(target)}. Every seat is being kept, so the palette has ${String(locks.length)} colours — remove a Must use, or raise the limit.`,
+    });
+  }
+  if (target > eligibleCount) {
+    const threads = eligibleCount === 1 ? 'colour is' : 'colours are';
+    const all = eligibleCount === 1 ? 'it is' : `all ${String(eligibleCount)} are`;
+    conflicts.push({
+      kind: 'count-exceeds-eligible',
+      severity: 'warning',
+      ids: [],
+      message: `You asked for ${String(target)} colours but this profile resolves ${String(eligibleCount)} ${threads}, so ${all} being used.`,
+    });
+  }
+
+  const distribution = buildDistribution(source);
+  const selection = selectThreads(permitted, target, distribution, design.minDistance);
+
+  if (selection.distanceLimited) {
+    conflicts.push({
+      kind: 'distance-limits-count',
+      severity: 'warning',
+      ids: [],
+      message: `You asked for ${String(target)} colours at a minimum distance of ${String(design.minDistance)}; only ${String(selection.threads.length)} fit that far apart. Lower the distance or the colour count to change the balance.`,
+    });
+  } else if (
+    design.count.mode === 'exact' &&
+    selection.threads.length < target &&
+    target <= eligibleCount &&
+    locks.length <= target
+  ) {
+    conflicts.push({
+      kind: 'count-exceeds-eligible',
+      severity: 'warning',
+      ids: [],
+      message: `You asked for exactly ${String(target)} colours; ${String(selection.threads.length)} were selected because the design does not contain enough distinguishable colours to justify more.`,
+    });
+  }
+
+  conflicts.push(...duplicateDisplayColours(selection.threads));
+
+  return {
+    palette: paletteOf(name, selection.threads),
+    unresolved: [],
+    conflicts,
+    eligibleCount,
+    selectedCount: selection.threads.length,
+    lockedCount: selection.lockedCount,
+    ok: true,
+  };
 }

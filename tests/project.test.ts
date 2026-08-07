@@ -19,7 +19,6 @@ import {
 import { buildStages, type PipelineConfig } from '../src/core/pipeline/config.ts';
 import { runPipeline } from '../src/core/pipeline/index.ts';
 import { loadDmcPalette } from '../src/core/palette.ts';
-import { defaultPolicy } from '../src/core/palette-policy.ts';
 import type { PixelBuffer } from '../src/core/types.ts';
 
 /** A representative, fully-populated current-schema project. */
@@ -34,14 +33,18 @@ function sampleProject(): ProjectFile {
       dither: { algorithm: 'floyd-steinberg', serpentine: true, strength: 1 },
     },
     palette: {
-      policy: {
-        ...defaultPolicy(),
-        brands: ['dmc', 'anchor'],
+      profileRef: { id: 'builtin:dmc', revision: 0 },
+      recipe: {
+        libraries: ['dmc', 'anchor'],
         ownedOnly: true,
+        include: ['map:bw:black'],
+        exclude: ['dmc:B5200'],
+        ranges: [{ hue: [20, 50], saturation: [10, 55] }],
+      },
+      design: {
         count: { mode: 'max', n: 20 },
-        locked: ['dmc:310'],
-        preferred: ['anchor:403'],
-        excluded: ['dmc:B5200'],
+        minDistance: 12,
+        mustUse: ['dmc:310'],
       },
       snapshot: loadDmcPalette().entries.slice(0, 3),
     },
@@ -308,6 +311,19 @@ describe('migration from schema v3 dither', () => {
     const pipeline = doc['pipeline'] as Record<string, unknown>;
     pipeline['dither'] = dither;
     pipeline['serpentine'] = serpentine;
+    // A real v3 palette block: the policy world, as v3 wrote it.
+    doc['palette'] = {
+      policy: {
+        brands: ['dmc'],
+        source: { kind: 'brands' },
+        ownedOnly: false,
+        count: { mode: 'max', n: 20 },
+        locked: [],
+        preferred: [],
+        excluded: [],
+      },
+      snapshot: [],
+    };
     doc['schemaVersion'] = 3;
     return JSON.stringify(doc);
   }
@@ -400,7 +416,9 @@ describe('a saved project reopens with identical output', () => {
 
   /** The whole DMC palette, as a saved snapshot. */
   const DMC_SNAPSHOT: ProjectFile['palette'] = {
-    policy: defaultPolicy(),
+    profileRef: { id: 'builtin:dmc', revision: 0 },
+    recipe: { libraries: ['dmc'], ownedOnly: false, include: [], exclude: [], ranges: [] },
+    design: { count: { mode: 'all', n: 20 }, minDistance: 0, mustUse: [] },
     snapshot: DMC.entries,
   };
 
@@ -466,7 +484,18 @@ describe('a saved project reopens with identical output', () => {
       // The snapshot is what makes a reopen reproducible: this project
       // renders three threads whatever the catalogue or the library
       // later says (M7-PAL-01).
-      palette: { policy: defaultPolicy(), snapshot: DMC.entries.slice(0, 3) },
+      palette: {
+        profileRef: null,
+        recipe: {
+          libraries: [],
+          ownedOnly: false,
+          include: DMC.entries.slice(0, 3).map((t) => t.id),
+          exclude: [],
+          ranges: [],
+        },
+        design: { count: { mode: 'all', n: 20 }, minDistance: 0, mustUse: [] },
+        snapshot: DMC.entries.slice(0, 3),
+      },
     },
     {
       name: 'atkinson at half strength',
@@ -510,5 +539,69 @@ describe('a saved project reopens with identical output', () => {
       render(configFrom({ ...sampleProject(), pipeline, palette }), source).join(','),
     );
     expect(new Set(rendered).size).toBe(CASES.length);
+  });
+});
+
+describe('migration from schema v4 palette (M15-PERSIST-01, D114 waiver)', () => {
+  function v4Document(policy: Record<string, unknown>, snapshot: unknown[]): string {
+    const doc = JSON.parse(serializeProject(sampleProject())) as Record<string, unknown>;
+    doc['palette'] = { policy, snapshot };
+    doc['schemaVersion'] = 4;
+    return JSON.stringify(doc);
+  }
+  const basePolicy = {
+    brands: ['dmc', 'anchor'],
+    source: { kind: 'brands' },
+    ownedOnly: true,
+    count: { mode: 'max', n: 12 },
+    locked: ['dmc:310'],
+    preferred: ['anchor:403'],
+    excluded: ['dmc:B5200'],
+  };
+
+  it('maps a brands policy straight onto the recipe', () => {
+    const file = parseProject(v4Document(basePolicy, []));
+    expect(file.migratedFrom).toBe(4);
+    expect(file.palette?.profileRef).toBeNull();
+    expect(file.palette?.recipe.libraries).toEqual(['dmc', 'anchor']);
+    expect(file.palette?.recipe.ownedOnly).toBe(true);
+    expect(file.palette?.recipe.exclude).toEqual(['dmc:B5200']);
+    // Locks become Must-use seats; prefer retires with nothing kept.
+    expect(file.palette?.design.mustUse).toEqual(['dmc:310']);
+    expect(file.palette?.design.count).toEqual({ mode: 'max', n: 12 });
+    expect(file.palette?.design.minDistance).toBe(0);
+  });
+
+  it('turns a library source into explicit membership from the snapshot', () => {
+    const snapshot = loadDmcPalette().entries.slice(0, 2);
+    const file = parseProject(
+      v4Document(
+        { ...basePolicy, source: { kind: 'library', paletteId: 'pal-1' } },
+        JSON.parse(JSON.stringify(snapshot)) as unknown[],
+      ),
+    );
+    expect(file.palette?.recipe.libraries).toEqual([]);
+    expect(file.palette?.recipe.include).toEqual(snapshot.map((t) => t.id));
+    // The snapshot itself still renders — authoritative on reopen.
+    expect(file.palette?.snapshot).toHaveLength(2);
+  });
+
+  it('keeps a prefer-mode preset open — the steering half retired', () => {
+    const file = parseProject(
+      v4Document(
+        { ...basePolicy, source: { kind: 'preset', presetId: 'pastel', mode: 'prefer' } },
+        [],
+      ),
+    );
+    expect(file.palette?.recipe.libraries).toEqual(['dmc', 'anchor']);
+    expect(file.palette?.recipe.include).toEqual([]);
+  });
+
+  it('re-saves a migrated v4 file byte-stable at v5', () => {
+    const migrated = serializeProject(parseProject(v4Document(basePolicy, [])));
+    expect(serializeProject(parseProject(migrated))).toBe(migrated);
+    expect(migrated).toContain('"schemaVersion": 5');
+    // migratedFrom is transient metadata, never serialised.
+    expect(migrated).not.toContain('migratedFrom');
   });
 });

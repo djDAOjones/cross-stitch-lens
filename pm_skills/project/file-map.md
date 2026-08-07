@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 221 file(s) across 11 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 220 file(s) across 11 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 12 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
@@ -26,7 +26,7 @@
 - `public` — 1 file(s)
 - `scripts` — 7 file(s)
 - `src` — 89 file(s)
-- `tests` — 92 file(s)
+- `tests` — 91 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -155,6 +155,7 @@
 - `src/main.ts` — app entry: M2 shell — import, control panel, preview, info panel
 - `src/ui/accordion.ts` — Carbon accordion section: h2-wrapped toggle, hidden panel, derived closed-state summary
 - `src/ui/browse-table.ts` — shared capped search table (the 60-row pattern extracted; D117 seam 3)
+- `src/ui/colour-section.ts` — recut Colour section: profile select + (edited) verbs, count + minimum distance, Must-use chips, inventory reveal (M15-UI-01)
 - `src/ui/controls.ts` — Carbon-style field builders: toggle/number/colour/select + clampInt
 - `src/ui/debug-panel.ts` — dev-only profiling panel: rolling timing window (pure) + disclosure DOM
 - `src/ui/diagnostics-button.ts` — the "Copy diagnostics" control + announced status line
@@ -163,7 +164,6 @@
 - `src/ui/import.ts` — import routes → decode: filter (pure) + blob→PixelBuffer
 - `src/ui/info-panel.ts` — "Colours used" table content: pure row model + thin DOM half, hosted by a section (M14-EXT-41)
 - `src/ui/modal.ts` — Carbon modals (text prompt, choices, danger confirm, live-apply form): trap arithmetic pure, focus restore, Escape/backdrop cancel
-- `src/ui/palette-panel.ts` — Colour panel: brands, source, inventory, count, per-thread rules; pure model + thin DOM half; structure-fingerprint no-rebuild contract (M14-EXT-43)
 - `src/ui/preferences.ts` — Shell preferences (per-disclosure open state) in localStorage; parse falls back to defaults for anything unreadable. Never project data.
 - `src/ui/preview.ts` — preview controller: toolbar, wheel/drag/keys → worker
 - `src/ui/profile-editor-colour.ts` — colour profile kind: libraries, pins, ranges, custom colours, fingerprinted readout; pure halves exported
@@ -250,7 +250,6 @@
 - `tests/lut-cache.test.ts` — cache identity by palette content, LRU bound, GPU-LUT sanity rejection
 - `tests/matrix/rows.ts` — the correctness matrix: row definitions with `proves` text, adversarial palettes, seeded sources
 - `tests/modal.test.ts` — pure halves: focus-trap decisions + aria-describedby list arithmetic
-- `tests/palette-panel.test.ts` — Panel model: disjoint per-thread roles, source round trip, row filtering, count summary
 - `tests/palette-policy.test.ts` — Policy resolution: brands/source/inventory/exclusions and every explained conflict
 - `tests/palette-presets.test.ts` — Preset semantics: real references, enabled-brand only, visible degradation, stated rules
 - `tests/palette-selection.test.ts` — Count limits and auto-fill, incl. the canonical "lock 5, request 15 → 10 filled"

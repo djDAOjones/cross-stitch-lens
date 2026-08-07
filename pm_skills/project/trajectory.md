@@ -17,7 +17,17 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
-## M15 — Colour & dithering profiles (in build — colour core shipped)
+## M15 — Colour & dithering profiles (in build — colour half complete, dither half queued)
+
+- M15-PERSIST-01, M15-UI-02, M15-UI-03, M15-UI-04, M15-UI-01,
+  M15-ACCEPT-01 (2026-08-07) — the colour half ships whole: the
+  kind-aware profile store + generic file format + My colours; the
+  kind-agnostic takeover editor (shell, colour form, judgement
+  preview) behind, then replacing, its dev entry; schema v5 with
+  best-effort migration under the D114 waiver; the Colour section
+  recut to profile select + (edited) verbs + count/distance +
+  Must-use chips; honest non-thread export keys. See decision-log
+  D123/D124.
 
 - M15-CORE-01, M15-CORE-02, M15-CORE-03 (2026-08-07) — the colour
   core lands: six generated colour maps under the `map:`/`user:`

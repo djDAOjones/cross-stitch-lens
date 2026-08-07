@@ -1,0 +1,58 @@
+# M15-CORE-02 — Profile model and resolver
+
+Scope parent: D114. The central core task: the recipe type, its
+resolution to the effective colour table, and the built-ins. Absorbs
+`palette-policy.ts`; `src/core/` purity holds throughout.
+
+## Recipe shape (serialisable)
+
+- `libraries` — on/off over brand ids + map ids + `mine` (the
+  inventory as a library).
+- `ownedOnly` — modifier intersecting with the inventory.
+- `pins` — explicit per-colour include/exclude by id. Include wins
+  over a range rule; exclude wins over everything.
+- `ranges` — optional two-pole H/S/B rules, applied to library
+  content, not to explicit includes.
+- `name`, `id`, `revision`, `builtin` flag, `createdFrom`
+  provenance — the LibraryPalette pattern (records.ts) generalised.
+
+## Resolution order (the contract)
+
+1. Union the enabled libraries — brands in catalogue order, then
+   maps in declared order, then user entries; within a library,
+   catalogue/generator order.
+2. `ownedOnly` intersects.
+3. Ranges filter library content.
+4. Exclude pins remove.
+5. Include pins add back (or append if absent).
+
+Deterministic; the LUT fingerprint (D46) reads the resolved order.
+Every step emits its explanation sentence through the conflicts
+machinery; nothing throws.
+
+## Built-ins (read-only, duplicate-to-edit)
+
+DMC (default), All threads, My threads, Black & white, Retro 16,
+Web-safe, Sepia (range rule), Pastels (range rule), Classic cross
+stitch (curated DMC subset — placeholder membership until
+ICE-PRESET-01 curates it).
+
+## Policy absorption map
+
+| Old policy field | New home |
+| --- | --- |
+| `brands[]` | `libraries` |
+| `ownedOnly` | `ownedOnly` modifier |
+| `source` (brands/preset/library) | `libraries`/`pins`, best-effort under the D114 waiver (visible note) |
+| `excluded[]` | `pins` exclude |
+| `locked[]` | design layer — Must use (M15-CORE-03) |
+| `preferred[]` | retired |
+| `count` | design layer, untouched here |
+
+## Done when (expanded)
+
+- Resolver tests per step including the explanation sentences;
+  ordering contract pinned; empty results explained, never thrown.
+- Built-ins resolve non-empty against the shipped catalogue.
+- All palette-policy consumers compile against the new layer;
+  prefer gone; tests updated, never weakened.

@@ -17,6 +17,19 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
+## M15 — Colour & dithering profiles (scoping — colour half signed, build not started)
+
+- M15-SCOPE-01 (2026-08-07) — the joint scoping session signs the
+  colour-profile scope: profile = composition recipe (libraries,
+  owned modifier, per-colour pins, H/S/B ranges) resolving to the
+  available colour table; takeover-view editor with draft-then-Save;
+  exclude dissolves into membership, Must use stays per-design,
+  Prefer retires; ranges in profile, minimum distance beside count;
+  the (edited)-copy pattern links designs to named profiles; presets
+  retire into read-only built-in profiles. Build broken into
+  M15-CORE-01..03, M15-PERSIST-01, M15-UI-01..04, M15-ACCEPT-01/02.
+  See decision-log D114.
+
 ## M14 — UI/UX excellence (in progress — agent half complete, ACCEPT-01 open)
 
 - M14-EXT-31..37 (2026-08-07) — the fifth look lands in one auto-jazz

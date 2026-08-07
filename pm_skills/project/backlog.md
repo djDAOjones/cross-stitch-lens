@@ -128,26 +128,69 @@ Conditional: activated, merged or cut by M13-SYNTH-01.
   Intent: the human half — real-browser live Photoshop capture at typical grids, visual review wherever M13 could alter appearance, editing feel against the ≥ 4 updates/sec promise.
   Done when: owner pass/fail notes recorded (failure routes to the synthesis); live editing usable across dither methods and backends.
 
-### Next — M15 Colour & dithering profiles (owner-collaboration scoping first)
+### Next — M15 Colour & dithering profiles
 
-The fourth look's memo items 14–16 concentrate here (D106): "Colour
-profile" as the one selector replacing `Colour mode` + `Threads to
-choose from`, a full-surface profile editor (colour libraries, tech
-colour maps, user thread collections, test-image preview), and
-"Dithering profiles" with their own editor. Out of M14 by constraint,
-not preference: profiles change which colours are available (outputs
-not byte-identical) and user libraries add persistence — M14 forbids
-both. Scoping is deliberately a joint owner+agent session per the
-owner's ask; nothing is built before the signed scope. Ordering
+Colour half signed 2026-08-07 (D114) — the joint session the fourth
+look asked for. Profile = composition recipe (libraries, owned
+modifier, per-colour pins, H/S/B ranges) resolving to the available
+colour table, every narrowing explained; takeover-view editor with
+draft-then-Save; exclude dissolves into membership, Must use stays
+per-design beside count (+ a new minimum-distance rule), Prefer
+retires; the (edited)-copy pattern links designs to named profiles;
+presets retire into read-only built-in profiles. Outputs change and
+persistence extends here — the M14 constraints lift by design.
+Schema bumps run under the owner's compatibility waiver (D114:
+never crash, snapshot renders, semantics best-effort with a visible
+note). No new runtime deps; Carbon hand-built; AAA. Run order:
+CORE-01 → CORE-02 → CORE-03 → PERSIST-01 → UI-01 → UI-02 → UI-03 →
+UI-04 → ACCEPT-01 → ACCEPT-02; UI-01 lands on the section M14's
+EXT-41/42 leave behind (M14 completes first). SCOPE-02 stays
+scoping-first and inherits UI-02's kind-agnostic shell. Ordering
 against the M13 remainder is the owner's call at pick time.
 
-- [ ] **M15-SCOPE-01 Colour profiles & editor — joint scoping** [maintainer] [sign-off] [detail] (2026-08-06)
-  Intent: scope the colour-profile concept with the owner — profile = editable preset of the available colour table; the section anatomy ("Colour profile" select, "Colours in use"), the editor surface (libraries incl. brands and tech colour maps, user collections with code/hex search and custom RGB, the five-image test preview with offline placeholders), and where the advanced constraints (minimum colour distance, hue/saturation/brightness ranges) live — the owner explicitly wants that placement discussed.
-  Done when: a signed scope and option pick are recorded (decision log) and the build is broken into agent-executable tasks; no code before that.
+- [ ] **M15-CORE-01 Colour sources: maps, namespaces, names** [detail] (2026-08-07)
+  Intent: synthetic identity namespaces (`map:`, `user:`) that can never collide with threads (D55/D56); the six generated colour maps (D114 list); the embedded CSS/X11 name table; provenance-honest display labels usable by lists and export keys. Pure core, no UI.
+  Done when: maps generate deterministically with tests pinning identity, count and ordering; exact-match names render and hex stands otherwise; a non-thread entry carries a label exports can use.
+
+- [ ] **M15-CORE-02 Profile model and resolver** [detail] (2026-08-07)
+  Intent: the ColourProfile recipe (libraries on/off, ownedOnly, per-colour in/out pins, H/S/B ranges) and its resolver to the effective ordered table with typed explanations; deterministic composition order (the D46 LUT fingerprint reads it); the built-in profiles incl. Sepia/Pastels/Classic cross stitch; absorbs palette-policy with prefer retired.
+  Done when: resolver tests cover every narrowing step with its sentence; ordering contract pinned; built-ins resolve non-empty; core stays pure and consumers compile against the new layer.
+
+- [ ] **M15-CORE-03 Selection recut: count, minimum distance, Must use** (2026-08-07)
+  Intent: palette-selection keeps count, gains a minimum perceptual distance (Lab) rule over the chosen set, keeps locks as guaranteed Must-use seats; prefer weighting removed.
+  Done when: selection honours distance together with count and explains when they conflict; Must-use seats guaranteed; prefer gone from core with tests updated, not weakened.
+
+- [ ] **M15-PERSIST-01 Profiles persist: store, project file, migration** (2026-08-07)
+  Intent: profiles in IndexedDB with revisions plus import/export (the records.ts pattern generalised); the project file's policy half becomes the design's recipe copy plus a profileRef `{id, revision}`; schema bump with best-effort migration under the D114 waiver (visible note, never a crash, snapshot authoritative).
+  Done when: save→load→save byte-identical on the new schema; old fixtures load and render via snapshot with the note; library round-trip tests green.
+
+- [ ] **M15-UI-01 Colour section recut: profile select and the (edited) state** (2026-08-07)
+  Intent: the section becomes profile select (+ Edit profiles…, "(edited)" badge, Update profile / Save as new / Revert) + count + minimum distance + Must-use chips + Colours used with a Remove-from-profile row action that lands on the design's copy; fills the slot EXT-42 protects.
+  Done when: every path announces; chips keyboard-operable; no shared-library mutation without an explicit Update/Save as new; the section is materially no taller than EXT-42's result.
+
+- [ ] **M15-UI-02 Takeover editor shell (shared)** (2026-08-07)
+  Intent: the shell view swap (not a dialog): header with profile switcher and New/Duplicate/Rename/Delete, draft model with Save/Cancel/Back, focus and a11y anatomy, a capture session surviving underneath; built profile-kind-agnostic for SCOPE-02.
+  Done when: open→edit→Save/Cancel/Back all keyboard-clean with focus returned; frame results never rebuild editor controls (regression test — the EXT-43 contract); a second profile kind could mount without shell change.
+
+- [ ] **M15-UI-03 Editor content: libraries, pins, ranges, readout** [detail] (2026-08-07)
+  Intent: the libraries column (brands with provenance, maps with counts, My threads; browse reusing the capped search table), ownedOnly modifier, per-colour pins, two-pole H/S/B sliders with numeric fields, custom RGB add via hex/code search with name lookup, and the resulting-colours readout carrying every explanation.
+  Done when: draft edits update readout and preview live with every narrowing named; all controls AAA-operable; custom colours appear under `user:` identity with honest labels.
+
+- [ ] **M15-UI-04 Editor test preview** [detail] (2026-08-07)
+  Intent: the preview strip — default view is the design's last still, four photo slots in a `profile-demo` folder under the Vite public root (created by this task) with honest offline states, the generated test card; the three-resolution grid at equal display size; draft-labelled renders through the real pipeline, debounced, never starving a live session.
+  Done when: slots and grid render against the draft recipe; offline states name the missing file and folder; live-session cadence unaffected, measured.
+
+- [ ] **M15-ACCEPT-01 Automated acceptance** (2026-08-07)
+  Intent: the machine half — suites over resolver/selection/persistence, the golden and LUT-fingerprint strategy revisited where profiles feed reduction, export keys with non-thread labels, quality gate green.
+  Done when: `npm run check` green; export byte-identity re-proven for thread-only profiles; non-thread export-key labelling pinned by test.
+
+- [ ] **M15-ACCEPT-02 Maintainer acceptance session** [maintainer] (2026-08-07)
+  Intent: the human half — a live session over the editor: build a profile from scratch, judge the style built-ins, the test preview's usefulness, and the (edited) flow's legibility.
+  Done when: owner pass/fail notes recorded; failures route to fix tasks, never silent rework.
 
 - [ ] **M15-SCOPE-02 Dithering profiles & editor — joint scoping** [maintainer] [sign-off] [detail] (2026-08-06)
-  Intent: scope "Dithering profiles" with the owner — the Processing section reduced to profile selection (EXT-30 lands the rename first), a full-surface editor over the five methods and seven evidence-based presets, and how much editor machinery it shares with M15-SCOPE-01's.
-  Done when: same bar as M15-SCOPE-01.
+  Intent: scope "Dithering profiles" with the owner — the Processing section reduced to profile selection (EXT-30 lands the rename first), a full-surface editor over the five methods and seven evidence-based presets, and how much editor machinery it shares with UI-02's kind-agnostic shell.
+  Done when: a signed scope and option pick are recorded (decision log) and the build is broken into agent-executable tasks; no code before that.
 
 ### Icebox
 
@@ -198,10 +241,10 @@ passed, cut or shipped:
   Done when: curated equivalences load, override the computed answer, and are visibly labelled as published rather than computed — with the computed path still filling the gaps.
   Blocked twice over: `thread-map-proposed.csv` has a header and zero data rows, and nothing in the UI surfaces equivalents yet — ICE-EXPLORER-01 is its natural first consumer. Reactivate when the owner supplies groupings; the recommended shape is long/tidy (`group_id,brand,code`), not the current wide one-column-pair-per-brand form (D56).
 
-- [ ] **ICE-PRESET-01 Curated colour-scheme presets** [maintainer] (2026-07-21)
-  Intent: replace or supplement the four shipped algorithmic LCh presets with owner-reviewed membership lists, so "Pastels" means what a stitcher expects rather than what a chroma threshold selects. The resolver already supports it — a curated preset is a rule returning a fixed set.
-  Done when: each curated preset has owner-signed membership and the UI distinguishes curated from algorithmic.
-  Blocked on owner taste input, not on code (D55).
+- [ ] **ICE-PRESET-01 Style-profile curation** [maintainer] (2026-07-21)
+  Intent: re-scoped by D114 (presets retire into built-in profiles) — curate the shipped style built-ins (Sepia, Pastels, Classic cross stitch) and work up the next wave from the placeholder list (Memphis, Rave, Mondrian, Bauhaus, Art nouveau, Warhol, Monet, cosy pixel farm); shipped names style-descriptive, never trademarks; nothing placeholder ships in the UI.
+  Done when: each curated style profile has owner-signed membership or rules and honest naming, distinguished from user profiles.
+  Blocked on owner taste input, not on code (D55, D114).
 
 - [ ] **ICE-EXPLORER-01 Colour explorer** [detail] (2026-07-21)
   Intent: a dedicated view over the 3,338-thread catalogue for browsing rather than converting — filter and sort by brand, hue/lightness/chroma, ownership; inspect one thread and see its nearest equivalents in every other brand side by side. The engine half already exists (`thread-equivalents.ts`); this is the view. Owner-flagged as a later nicety, not MVP.

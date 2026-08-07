@@ -911,3 +911,104 @@ splits proven by diff against the intact originals before each swap;
 environment preflight clean, OneDrive sync paused for the surgery.
 file-map.md untouched on record: its generator maps the source tree
 only, so archive/INDEX.md remains the archive's map.
+
+## D114 — M15-SCOPE-01: colour-profile scope signed — recipe model, takeover editor, rules split by meaning (2026-08-07)
+
+**Decision:** the joint scoping session the fourth look asked for
+(D106) ran 2026-08-07 and signs the colour-profile scope. A
+**profile is a composition recipe, never a flat list**: which colour
+libraries are enabled (thread brands; generated colour maps; "My
+threads" — the inventory), an "only colours I own" modifier,
+per-colour in/out pins, and hue/saturation/brightness **range
+rules** — resolved on demand to the effective ordered colour table
+with every narrowing explained (the M7 conflicts machinery
+extends). Profiles absorb the brand toggles, `ownedOnly` and the
+source select whole. The editor is an **in-app takeover view** (a
+shell view swap, not a dialog — D53's evidence against real windows
+stands), editing a **draft committed by explicit Save** — a
+deliberate, recorded exception to §5.4 live-apply, because a saved
+profile edit ripples into every design that uses it; the editor's
+own test preview does apply live, and frame results never rebuild
+editor controls (the EXT-43 contract, pinned by test).
+
+**Owner picks at the gate (all three on the recommendation):**
+
+- **Rules split by meaning.** Exclude dissolves into profile
+  membership (a colour is in the recipe or it is not — no second
+  exclusion mechanism); lock survives per-design as **Must use**
+  chips beside the count; **Prefer retires** (its taste half is
+  membership, its steering half a weak lock). Supersedes the
+  three-disjoint-rules anatomy (M7's surface, recut in D92/D107)
+  at build time; the disjointness invariant survives trivially
+  with one rule remaining.
+- **Ranges live in the profile; minimum distance lives with the
+  design.** A style profile wants to be rule-based ("Rave" over
+  whatever libraries are on, recomposing when brands change), so
+  H/S/B two-pole ranges are recipe content. Minimum perceptual
+  distance is a rule about the *chosen few*, not membership — it
+  sits beside count in the Colour section and extends
+  palette-selection as a pure rule.
+- **The (edited)-copy pattern** reconciles profile-side membership
+  with per-design reachability: the project file's policy half
+  becomes the design's own recipe copy plus an `{id, revision}`
+  link to a named profile; edits from design context land on the
+  copy — the select shows "(edited)", actions Update profile /
+  Save as new / Revert — so a one-off "kill that green" never
+  mutates the shared library and never forces fork clutter. This
+  extends D55's policy+snapshot pair, not forks it.
+
+**Identity and data:** synthetic namespaces `map:<mapId>:<code>`
+and `user:<id>` for non-thread colours — Thread-shaped records,
+never merged with real threads (D55/D56 upheld), provenance-honest
+labels everywhere including export keys (a chart row with nothing
+to buy says so). Maps v1, all generated in code, no data files:
+black & white (2), greys (4), 1-bit RGB (8), retro 16,
+2-bit/channel (64), web-safe (216); 4-bit/channel (4,096)
+deliberately skipped. A ~150-entry CSS/X11 colour-name table
+embeds as a code constant (public-standard data, no dependency,
+not an owner-protected file): exact matches display names,
+otherwise hex stands.
+
+**Presets end as a concept.** The four algorithmic LCh presets
+retire; shipped taste returns as **read-only built-in profiles**
+(duplicate-to-edit): DMC (default), All threads, My threads, Black
+& white, Retro 16, Web-safe, and three buildable styles — Sepia,
+Pastels, Classic cross stitch. ICE-PRESET-01 is re-scoped to
+style-profile curation and carries the placeholder list (Memphis,
+Rave, Mondrian, Bauhaus, Art nouveau, Warhol, Monet, cosy pixel
+farm — shipped names style-descriptive, never trademarks). Nothing
+placeholder ships in the UI: a "coming soon" select entry is a
+dead control.
+
+**Test preview:** five slots — four owner-supplied photos under
+`public/profile-demo/` (folder created with the feature; per-slot
+"image offline" states name the missing file; the owner adds the
+files later) plus the generated test card, with the **live design
+(last still) as the default view**; the three-row grid renders
+every populated slot at equal display size with the stitch grid
+divided (÷1/÷4/÷16 — divisor settled at build). Renders go through
+the real pipeline, draft-labelled, debounced, and must not starve
+a live session.
+
+**The owner's compatibility waiver, scoped:** "backwards
+compatibility is irrelevant" (owner, at the constraints gate) is
+recorded as: loaders still never crash and the D55 snapshot keeps
+any old design rendering byte-identical, but old policy semantics
+— preset strict/prefer modes, exact count, the prefer rule —
+migrate best-effort or reset **with a visible note**, and no
+effort is spent preserving them. Round-trip integrity of the new
+schema stays a hard rule.
+
+**Cut line:** v1 intent is the full model + persistence + section
+recut + editor (libraries, pins, ranges, readout, custom RGB) +
+preview slots/grid; nearest-thread hints and custom-colour naming
+wait. Recorded as intent with adaptive licence (owner grant), not
+a fence. The dithering-profile editor (M15-SCOPE-02, still
+scoping-first) inherits the takeover shell — UI-02 builds it
+kind-agnostic.
+
+**Link:** backlog → M15 build tasks M15-CORE-01..03,
+M15-PERSIST-01, M15-UI-01..04, M15-ACCEPT-01/02 (SCOPE-01 ships;
+its ticket is superseded by tickets CORE-01/CORE-02/UI-03/UI-04);
+ICE-PRESET-01 re-scoped; M14-EXT-42's protected slot is UI-01's
+landing site.

@@ -59,3 +59,18 @@ notes say pass and `check` is green on the final tree.
 Read D73, both verify sections of `ui-evidence.md`, and the M14
 decision-log entries. Assemble the pack, then hand the rehearsal
 sheet to the owner — the session itself is theirs.
+
+## Sixth-look additions (D111/D112 — appended 2026-08-07)
+
+Further live-session legs the sixth-look triage named for this gate
+(carried here from the backlog line at the D119 refactor):
+
+- The real region drag under the unlocked default (D107's aspect-off
+  shape — unit-tested geometry, never yet owner-driven).
+- The entire-screen picker hint (EXT-19) and the D105-copy tension
+  EXT-19 leaves (choose-a-window expectation copy vs the monitor
+  hint).
+- The sixth look's named trades, once EXT-38..44 ship:
+  recovery-without-Capture-frame (EXT-38), off-viewport status at
+  narrow (EXT-39), and the Zoom naming beside the preview's zoom
+  (EXT-40).

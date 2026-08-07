@@ -17,27 +17,20 @@ line passes and `check` is green. Requirements references are to
 
 ### Current — M14 UI/UX excellence
 
-Novice-first default surface with full control depth deliberately
-placed; Carbon productive language, WCAG 2.2 AAA and the Nielsen hard
-rules per `UI-STANDARDS.md`. Every task is agent-executable without
-maintainer gates: design decisions are recorded (decision log +
-`ui-evidence.md`) and judged once at M14-ACCEPT-01 (D73).
-UI-only milestone: engine, worker and export outputs stay
-byte-identical; no new runtime dependencies; no project-file schema
-change. Milestone docs land under `docs/` as they are produced:
+Novice-first default surface, Carbon productive language, WCAG 2.2
+AAA and the Nielsen hard rules per `UI-STANDARDS.md`; design
+decisions are recorded (decision log + `ui-evidence.md`) and judged
+once at M14-ACCEPT-01 (D73). UI-only milestone: engine, worker and
+export outputs stay byte-identical; no new runtime dependencies; no
+project-file schema change. Milestone docs under `docs/`:
 `ui-audit.md`, `ui-journeys.md`, `ui-spec.md`, `ui-evidence.md`.
+Looks one to five have shipped whole (see trajectory + decision log
+D91–D110). The sixth look (D111 memos 1–5, D112 memos 6–8) adds
+EXT-38..44; several supersede fifth-look decisions on the owner's
+own authority, having seen them live. Run order:
+38 → 39 → 43 → 40 → 42 → 44 → 41.
 
-Five owner looks have shipped whole — third (D91–D101), first-pass
-fixes (D102–D105), fourth (D106–D108), fifth (D109–D110) — see
-trajectory + decision log. The sixth look (owner typed memos on the
-shipped fifth-look surface, triaged 2026-08-07 in two batches — D111
-memos 1–5, D112 memos 6–8) adds EXT-38..44 below; several supersede
-fifth-look decisions on the owner's own authority, having seen them
-live (the restored Capture frame button, EXT-34/A's permanent Design
-home for Size). Run order: 38 → 39 → 43 (defect before restructure)
-→ 40 → 42 → 44 → 41 (the hierarchy pass lands on the final census).
-
-#### Extension — sixth look (D111)
+#### Extension — sixth look (D111/D112)
 
 - [ ] **M14-EXT-38 Capture row trims: Capture frame retires, Pause becomes Freeze** (2026-08-07)
   Intent: memos 1+2 — the Capture frame button goes (the owner now names the cut D108 declined for want of exactly that); the pump-death recovery copy re-points at the freeze toggle (unfreeze restarts the pump — verify that leg). "Pause capture" renames to "Freeze"; settle at the gate whether the label flips (Freeze/Unfreeze) or stays constant under aria-pressed, and sweep the paused-state copy for the rename.
@@ -48,29 +41,29 @@ home for Size). Run order: 38 → 39 → 43 (defect before restructure)
   Done when: status renders under the build id at both postures with no header overflow at 320 px; the content column no longer reserves a status row; the trade is recorded.
 
 - [ ] **M14-EXT-40 Design dissolves into Capture; Stitch size becomes Zoom; Stats gains the row** [detail] (2026-08-07)
-  Intent: memo 5 — the Design section is removed; the width × height fields move to the Capture section beside the slider; "Stitch size" renames to **"Zoom"** with a zoom factor; Stats gains a stitch-size readout row. Supersedes D110's EXT-34/A (Size's permanent Design home) on the owner's authority. The ticket carries the three gate questions: the no-session home (the Capture section currently mounts only during sessions), the factor's definition and direction, and the naming collision with the preview's zoom (D52 terminology contract).
+  Intent: memo 5 — the Design section is removed; the width × height fields move to the Capture section; "Stitch size" renames to "Zoom"; Stats gains a stitch-size readout. Supersedes D110's EXT-34/A on the owner's authority. The three gate questions are in the ticket (no-session home, factor definition, the D52 zoom-naming collision).
   Done when: no Design section; size and zoom edit in one place with or without a session; Stats reads the stitch size; the supersession and the zoom-vocabulary decision are recorded.
 
 - [ ] **M14-EXT-42 Colour section: compress the redundancy** [detail] (2026-08-07)
-  Intent: memo 6 — the Colour section spends seven elements on one integer (count switch + slider + number + two steppers + helper + status regions), eight near-identical per-brand helper lines, a summary line overlapping Stats' count row, and six standing library buttons. Rank the redundancies, compress with a design gate (candidates in the ticket); one flagged reversal — the steppers were the owner's own EXT-29 ask. Must not foreclose M15's Colour-profile slot (the source select is its future home).
+  Intent: memo 6 — seven elements for one integer, eight near-identical brand helper lines, a summary overlapping Stats, six standing library buttons: rank and compress with a design gate (census + candidates in the ticket; one flagged owner-ask reversal — the EXT-29 steppers). Must not foreclose M15's Colour-profile slot.
   Done when: the section's default surface is materially shorter at both postures with no lost capability, before/after evidence recorded; any owner-ask reversal named.
 
 - [ ] **M14-EXT-43 Threads dropdown snaps shut — diagnose and fix** [detail] (2026-08-07)
-  Intent: memo 7 (a defect) — "Threads to choose from" (and likely every select in the Colour panel) closes before a choice can be made; the dither selects are fine. Hypothesis recorded: `palettePanel.update()` runs on every processed frame and rebuilds controls under the open popup — the dither panel is rebuilt only on algorithm change, which is why it survives. Fix shape: never rebuild an open/focused control; diff-update option lists on a fingerprint instead of wholesale.
+  Intent: memo 7 (a defect) — selects in the Colour panel close before a choice can be made; the dither selects are fine. Hypothesis and fix shape in the ticket (per-frame `update()` rebuilds under the open popup; never rebuild an open/focused control, diff-update on a fingerprint).
   Done when: a select stays open and selectable during live capture and across frame results; a regression test pins the no-rebuild-when-unchanged contract; the fix is evidence-backed live.
 
 - [ ] **M14-EXT-44 Processing order retires; Advanced sunsets** [detail] (2026-08-07)
-  Intent: memo 8 — the Processing order select goes and the Advanced section (its only occupant) retires with it (the EXT-32 sunset pattern). Core keeps the `reduce-first` capability for loaded files — the EXT-29 precedent; the recommended conduct (honour + a visible one-line note while a loaded reduce-first project renders) reconciles reopen-identical with honest state; options and the recorded pros/cons in the ticket.
+  Intent: memo 8 — the Processing order select goes and the Advanced section (its only occupant) retires with it (the EXT-32 sunset pattern). Core keeps `reduce-first` for loaded files; the recommended conduct (honour + a visible note) and the recorded pros/cons are in the ticket.
   Done when: no Processing order control, no Advanced section, no orphaned keys; a loaded reduce-first project still reopens byte-identical and says what it is doing; save round-trip unchanged.
 
 - [ ] **M14-EXT-41 Colours used: rename and one section hierarchy everywhere** [detail] (2026-08-07)
-  Intent: memo 3 — "Colours by usage" renames to **"Colours used"** and becomes a real accordion section with the same anatomy as Capture and Preview; Stats, Colour and the rest read at the same hierarchy level (the ticket's options: anatomy-only vs flattening the aside's boxed panel treatment; the two-column companion layout itself is load-bearing and stays). Runs after EXT-40 so the equalisation lands on the final section census.
+  Intent: memo 3 — "Colours by usage" renames to "Colours used" and becomes a real accordion section; every region reads at the same hierarchy level (options in the ticket: anatomy-only vs flattening the aside's box; the two-column companion layout itself stays). Runs after EXT-40 so the equalisation lands on the final section census.
   Done when: one section treatment across every region at both postures; the renamed section collapses to a bare heading with its disclosure persisted (old key seeded by fallback); highlight rows keep reach 2.
 
 #### Phase 4 — Verification & end review
 
 - [ ] **M14-ACCEPT-01 Maintainer end review** [maintainer] [detail] [blocked: M14-EXT-38..44] (2026-07-23)
-  Intent: the reserved human gate — judge look, feel and taste over the review pack (changes, logged decisions, before/after evidence, waivers) and a live Photoshop companion session. Every triaged look through the fifth (D110) has shipped; the sixth (D111) re-blocks the gate on EXT-38..41. Named for the live session: the real region drag under the unlocked default, the recut in-session capture controls (EXT-33, incl. the consciously surrendered D108 bar-Stop fixed point), the always-open Capture start, the entire-screen picker hint, the D105-copy tension EXT-19 leaves, the EXT-37 chevron waiver, the one-time uncaught-error pair on EXT-36's watch list, and the sixth look's named trades (recovery-without-Capture-frame, off-viewport status at narrow, the Zoom naming beside the preview's zoom).
+  Intent: the reserved human gate — judge look, feel and taste over the review pack (changes, logged decisions, before/after evidence, waivers) and a live Photoshop companion session. Every look through the fifth (D110) has shipped; the sixth (D111/D112) re-blocks the gate on EXT-38..44. The named live-session legs and watch items are listed in the ticket.
   Done when: owner pass/fail notes are recorded; failures route to new M14 fix tasks, never silent rework.
 
 ### Next — M13 Visual processing performance (remainder)
@@ -130,62 +123,55 @@ Conditional: activated, merged or cut by M13-SYNTH-01.
 
 ### Next — M15 Colour & dithering profiles
 
-Colour half signed 2026-08-07 (D114) — the joint session the fourth
-look asked for. Profile = composition recipe (libraries, owned
-modifier, per-colour pins, H/S/B ranges) resolving to the available
-colour table, every narrowing explained; takeover-view editor with
-draft-then-Save; exclude dissolves into membership, Must use stays
-per-design beside count (+ a new minimum-distance rule), Prefer
-retires; the (edited)-copy pattern links designs to named profiles;
-presets retire into read-only built-in profiles. Outputs change and
-persistence extends here — the M14 constraints lift by design.
-Schema bumps run under the owner's compatibility waiver (D114:
-never crash, snapshot renders, semantics best-effort with a visible
+Both halves signed 2026-08-07: colour at the joint session (D114);
+run order, contract gaps and the gallery task at the second look
+(D115); dither (D116); a combined review sealing seven seam fixes
+(D117). A profile is a composition recipe resolving to the available
+colour table, every narrowing explained; a takeover-view editor with
+draft-then-Save; the (edited)-copy pattern links designs to named
+profiles; presets retire into read-only built-in profiles. Outputs
+change and persistence extends here — the M14 constraints lift by
+design; schema bumps run under the owner's D114 compatibility waiver
+(never crash, snapshot renders, semantics best-effort with a visible
 note). No new runtime deps; Carbon hand-built; AAA. Run order
 (D115): CORE-01 → CORE-02 → CORE-03 → PERSIST-01 → UI-02 → UI-03 →
 UI-04 → UI-01 → ACCEPT-01 → ACCEPT-02 — the editor completes first
-behind a dev-only entry, and UI-01's section cutover lands last,
-atomic and wired to a finished editor, on the section M14's
-EXT-41/42 leave behind (M14 completes first). Dither half signed
-2026-08-07 (D116), before UI-02 as D115 hoped: a dithering profile
-is a complete named `DitherConfig`; the seven presets become
-read-only built-ins; the dither kind mounts in the same shell and
-rig (kind contract in D116); Processing recuts to select + Edit
-profiles. The DITH tasks run **after the colour half ships** —
-owner order, colour first then dither. Ordering against the M13
-remainder is the owner's call at pick time.
+behind a dev-only entry, and UI-01's section cutover lands last, on
+the section M14's EXT-41/42 leave behind (M14 completes first). The
+DITH tasks run after the colour half ships (owner order); ordering
+against the M13 remainder is the owner's call at pick time.
 
 - [ ] **M15-CORE-01 Colour sources: maps, namespaces, names** [detail] (2026-08-07)
-  Intent: synthetic identity namespaces (`map:`, `user:`) that can never collide with threads (D55/D56); the six generated colour maps (D114 list); the embedded CSS/X11 name table; provenance-honest display labels usable by lists and export keys. Pure core, no UI.
+  Intent: synthetic identity namespaces (`map:`, `user:`) that can never collide with threads (D55/D56); the six generated colour maps; the embedded CSS/X11 name table; provenance-honest display labels usable by lists and export keys. Pure core, no UI.
   Done when: maps generate deterministically with tests pinning identity, count and ordering; exact-match names render and hex stands otherwise; a non-thread entry carries a label exports can use.
 
 - [ ] **M15-CORE-02 Profile model and resolver** [detail] (2026-08-07)
-  Intent: the ColourProfile recipe (libraries on/off, ownedOnly, per-colour in/out pins, H/S/B ranges) and its resolver to the effective ordered table with typed explanations; deterministic composition order (the D46 LUT fingerprint reads it); the built-in profiles incl. Sepia/Pastels/Classic cross stitch; absorbs palette-policy with prefer retired.
+  Intent: the ColourProfile recipe and its resolver to the effective ordered table with typed explanations; deterministic composition order (the D46 LUT fingerprint reads it); the built-in profiles; absorbs palette-policy with prefer retired. Recipe shape, resolution order and the cutover map are in the ticket.
   Done when: resolver tests cover every narrowing step with its sentence; ordering contract pinned; built-ins resolve non-empty; core stays pure and consumers compile against the new layer.
 
 - [ ] **M15-CORE-03 Selection recut: count, minimum distance, Must use** (2026-08-07)
   Intent: palette-selection keeps count, gains a minimum perceptual distance (Lab) rule over the chosen set, keeps locks as guaranteed Must-use seats; prefer weighting removed.
   Done when: selection honours distance together with count and explains when they conflict; Must-use seats guaranteed; prefer gone from core with tests updated, not weakened.
 
-- [ ] **M15-PERSIST-01 Profiles persist: store, project file, migration** (2026-08-07)
-  Intent: profiles in IndexedDB with revisions plus import/export (the records.ts pattern generalised); the project file's policy half becomes the design's recipe copy plus a profileRef `{id, revision}`; schema bump with best-effort migration under the D114 waiver (visible note, never a crash, snapshot authoritative); existing saved palettes convert 1:1 into explicit-membership profiles (order preserved — D46 identity), never silently dropped; custom `user:` colours persist in the global My-colours library, available to every profile (D115); the store pattern is kind-aware from the start — DITH-01 mounts a second kind on it without rework, and import/export is designed generically or not at all (D116 cut line; D117).
+- [ ] **M15-PERSIST-01 Profiles persist: store, project file, migration** [detail] (2026-08-07)
+  Intent: profiles in IndexedDB with revisions (the records.ts pattern generalised, kind-aware from the start — D117); the project file carries the design's recipe copy plus a profileRef; schema bump under the D114 waiver; saved palettes convert 1:1 into explicit-membership profiles; custom `user:` colours live in the global My-colours library (D115). Full scope in the ticket.
   Done when: save→load→save byte-identical on the new schema; old fixtures load and render via snapshot with the note; a pre-existing saved palette reappears as a profile with its order intact; library round-trip tests green.
 
-- [ ] **M15-UI-02 Takeover editor shell (shared)** (2026-08-07)
-  Intent: the shell view swap (not a dialog): header with profile switcher and New/Duplicate/Rename/Delete, draft model with Save/Cancel/Back, focus and a11y anatomy, a capture session surviving underneath; built profile-kind-agnostic — the dither kind's shell contract is signed in D116 (draft opaque to the shell; each kind supplies its form and stage-override mapping); Save on the design's active profile updates the design's copy in the same act, and saving any other profile never touches the design (D117 — DITH-02's Use question inherits this settled answer).
+- [ ] **M15-UI-02 Takeover editor shell (shared)** [detail] (2026-08-07)
+  Intent: the shell view swap (not a dialog) — profile switcher, New/Duplicate/Rename/Delete, draft model with Save/Cancel/Back, focus and a11y anatomy, a capture session surviving underneath; profile-kind-agnostic per the D116 shell contract; the D117 editor-Save contract governs (Save on the design's active profile updates the design's copy; saving any other profile never touches the design).
   Done when: open→edit→Save/Cancel/Back all keyboard-clean with focus returned; frame results never rebuild editor controls (regression test — the EXT-43 contract); a second profile kind could mount without shell change.
 
 - [ ] **M15-UI-03 Editor content: libraries, pins, ranges, readout** [detail] (2026-08-07)
-  Intent: the libraries column (brands with provenance, maps with counts, My threads; browse reusing the capped search table), ownedOnly modifier, per-colour pins, two-pole H/S/B sliders with numeric fields, custom RGB add via hex/code search with name lookup, and the resulting-colours readout carrying every explanation.
+  Intent: the libraries column (brands, maps, My threads; browse via the shared capped search table), ownedOnly modifier, per-colour pins, two-pole H/S/B sliders with numeric fields, custom RGB add via hex/code search, and the resulting-colours readout carrying every explanation. Anatomy in the ticket.
   Done when: draft edits update readout and preview live with every narrowing named; all controls AAA-operable; custom colours appear under `user:` identity with honest labels.
 
 - [ ] **M15-UI-04 Editor test preview** [detail] (2026-08-07)
-  Intent: the preview strip — default view is the design's last still, four photo slots in a `profile-demo` folder under the Vite public root (created by this task) with honest offline states, the generated test card; the three-resolution grid at equal display size; draft-labelled renders through the real pipeline, debounced, never starving a live session.
+  Intent: the preview strip — the design's last still by default, four photo slots in a `profile-demo` folder with honest offline states, the generated test card, the three-resolution grid; draft-labelled renders through the real pipeline, debounced, never starving a live session. Kind-generic rig (D116).
   Done when: slots and grid render against the draft recipe; offline states name the missing file and folder; live-session cadence unaffected, measured.
 
-- [ ] **M15-UI-01 Colour section recut: profile select and the (edited) state** (2026-08-07)
-  Intent: the cutover task, last before acceptance (D115) — the section becomes profile select (+ Edit profiles… into the finished editor, "(edited)" badge, Update profile / Save as new / Revert) + count + minimum distance + Must-use chips with a search-to-add field (a guaranteed colour need not be in use yet) + Colours used with a Remove-from-profile row action landing on the design's copy; the old controls swap out only here; fills the slot EXT-42 protects.
-  Done when: every path announces; chips keyboard-operable including add-by-search; non-thread entries render honestly in Colours used (CORE-01 labels); no shared-library mutation without an explicit Update/Save as new; no dead controls at any point of the milestone; the section is materially no taller than EXT-42's result.
+- [ ] **M15-UI-01 Colour section recut: profile select and the (edited) state** [detail] (2026-08-07)
+  Intent: the cutover task, last before acceptance (D115) — profile select + Edit profiles… + the "(edited)" flow (Update profile / Save as new / Revert) + count + minimum distance + Must-use chips with search-to-add + Colours used with a Remove-from-profile row action; the old controls swap out only here, filling the slot EXT-42 protects. Control census in the ticket.
+  Done when: every path announces; chips keyboard-operable including add-by-search; non-thread entries render honestly (CORE-01 labels); no shared-library mutation without an explicit Update/Save as new; no dead controls at any point; the section materially no taller than EXT-42's result.
 
 - [ ] **M15-ACCEPT-01 Automated acceptance** (2026-08-07)
   Intent: the machine half — suites over resolver/selection/persistence, the golden and LUT-fingerprint strategy revisited where profiles feed reduction, export keys with non-thread labels, quality gate green.
@@ -196,21 +182,21 @@ remainder is the owner's call at pick time.
   Done when: owner pass/fail notes recorded; failures route to fix tasks, never silent rework.
 
 - [ ] **M15-GALLERY-01 Profile gallery: culture & nature** [sign-off] [detail] [blocked: M15-CORE-02] (2026-08-07)
-  Intent: owner ask (second look, D115) — create lots of useful and interesting built-in profiles drawn from across culture and nature (absorbs ICE-PRESET-01 and the D114 placeholder list); agent drafts rule- or membership-based candidates in batches with test-image evidence, the owner curates names and membership per batch; shipped names style-descriptive, never trademarks; nothing placeholder ships in the UI; batches are owner-paced and interleave freely with the dither half — they never block it (D117).
+  Intent: owner ask (D115) — many useful and interesting built-in profiles from across culture and nature (absorbs ICE-PRESET-01); agent drafts rule- or membership-based candidates in batches with test-image evidence, the owner curates names and membership per batch; shipped names style-descriptive, never trademarks; batches are owner-paced and interleave freely with the dither half — they never block it (D117). Candidate list in the ticket.
   Done when: each shipped batch has owner-signed membership or rules and honest naming, distinguished from user profiles; the candidate list lives in the ticket, never the select.
 
 #### Dither half (D116) — after the colour half ships (owner order)
 
 - [ ] **M15-DITH-01 Dither profile model and store** [detail] [blocked: M15-PERSIST-01] (2026-08-07)
-  Intent: the DitherProfile entity (complete `DitherConfig` + name + revision), the seven presets seeded as read-only built-ins with basis lines kept, the PERSIST-01 store pattern reused under a dither kind, `ditherProfileRef {id, revision}` beside the already-persisted config with load-time built-in matching; schema bump under the D114 waiver.
+  Intent: the DitherProfile entity (a complete `DitherConfig` + name + revision), the seven presets seeded as read-only built-ins with basis lines kept, the PERSIST-01 store pattern reused under a dither kind, `ditherProfileRef` with load-time built-in matching; schema bump under the D114 waiver. Model and matching rules in the ticket.
   Done when: save→load→save byte-identical; old projects attach the right built-in or stay honestly unreferenced (tests over both); built-in immutability pinned at the store level.
 
 - [ ] **M15-DITH-02 Dither editor on the shared shell** [detail] [blocked: M15-UI-02, M15-UI-04, M15-DITH-01] (2026-08-07)
-  Intent: mount the dither kind in the takeover shell — built-in/user profile list, the three-field form with per-family strength semantics and basis lines, duplicate-to-edit, the UI-04 rig rendering the draft config with the design's palette (a named demonstration palette under full-RGB), dev-only entry until DITH-03.
+  Intent: mount the dither kind in the takeover shell — built-in/user profile list, the three-field form with per-family strength semantics and basis lines, duplicate-to-edit, the UI-04 rig with the design's palette (a named demonstration palette under full-RGB), dev-only entry until DITH-03. Anatomy and the cut line are in the ticket.
   Done when: draft edits preview live without rebuilding controls (EXT-43 test extended to this kind); full-RGB shows the labelled demo palette; keyboard-clean per the shell anatomy; any shell change the second kind forced is recorded (the UI-02 goal is none).
 
-- [ ] **M15-DITH-03 Processing section cutover** [blocked: M15-DITH-02] (2026-08-07)
-  Intent: the atomic cutover mirroring UI-01 — a "Dithering profile" select plus Edit profiles… replace the Dither style select and the Dither details reveal; unmatched or drifted configs name themselves honestly; no dead controls at any point; under full-RGB the select disables with the shipped sentence "Dithering applies to thread palettes." (the A9 conduct carried forward — D117); whether the section renames (Processing → Dithering) once the select is its only content is the owner's call at the gate — EXT-30 named it Processing on the owner's own authority (D117).
+- [ ] **M15-DITH-03 Processing section cutover** [detail] [blocked: M15-DITH-02] (2026-08-07)
+  Intent: the atomic cutover mirroring UI-01 — a "Dithering profile" select plus Edit profiles… replace the Dither style select and the Dither details reveal; honest unmatched/drifted states; the full-RGB disabled conduct and the Processing → Dithering rename gate per D117. Conducts in the ticket.
   Done when: select and editor are the only dither surface; the honest-state renderings are in place, including the full-RGB disabled state; the section is shorter than today's at both postures.
 
 - [ ] **M15-DITH-04 Automated dither-profile acceptance** [blocked: M15-DITH-03] (2026-08-07)
@@ -218,7 +204,7 @@ remainder is the owner's call at pick time.
   Done when: `npm run check` green; byte-identity pinned by test; acceptance-matrix rows updated where the config path moved.
 
 - [ ] **M15-DITH-05 Dither acceptance session (absorbs M8-ACCEPT-01)** [maintainer] [detail] [blocked: M15-DITH-04] (2026-08-07)
-  Intent: the human half — the absorbed M8 visual-quality session (gallery, live capture, comprehension, exports, fallback, access) run once on the final profile surface, judging the five methods and whether profiles and their names predict what the eye sees.
+  Intent: the human half — the absorbed M8 visual-quality session (gallery, live capture, comprehension, exports, fallback, access) run once on the final profile surface, judging the five methods and whether profiles and their names predict what the eye sees; the session protocol (incl. the M8-GOLD-01 rider) is in the ticket.
   Done when: owner pass/fail notes per method and per built-in profile are recorded; failures route per the ticket (a method failure reopens D61), never silent rework.
 
 ### Icebox
@@ -261,16 +247,15 @@ passed, cut or shipped:
   change.
 
 - [ ] **ICE-XREF-01 Curated cross-reference ingestion** [blocked: owner data] [detail] (2026-07-21)
-  Intent: ingest owner-reviewed thread equivalences so "nearest equivalent" answers from published conversions rather than colour distance alone. The engine half shipped with M7 (`thread-equivalents.ts` already takes a curated map and prefers it); this is data plus a generator.
+  Intent: ingest owner-reviewed thread equivalences so "nearest equivalent" answers from published conversions rather than colour distance alone; the engine half shipped with M7 (`thread-equivalents.ts` prefers a curated map) — this is data plus a generator. Blocked twice over (no data rows, no UI consumer yet — ICE-EXPLORER-01 is the natural first one); the recommended long/tidy data shape and the baseline are in the ticket (D56).
   Done when: curated equivalences load, override the computed answer, and are visibly labelled as published rather than computed — with the computed path still filling the gaps.
-  Blocked twice over: `thread-map-proposed.csv` has a header and zero data rows, and nothing in the UI surfaces equivalents yet — ICE-EXPLORER-01 is its natural first consumer. Reactivate when the owner supplies groupings; the recommended shape is long/tidy (`group_id,brand,code`), not the current wide one-column-pair-per-brand form (D56).
 
 - [ ] **ICE-EXPLORER-01 Colour explorer** [detail] (2026-07-21)
-  Intent: a dedicated view over the 3,338-thread catalogue for browsing rather than converting — filter and sort by brand, hue/lightness/chroma, ownership; inspect one thread and see its nearest equivalents in every other brand side by side. The engine half already exists (`thread-equivalents.ts`); this is the view. Owner-flagged as a later nicety, not MVP.
+  Intent: a dedicated browse view over the 3,338-thread catalogue — filter and sort by brand, hue/lightness/chroma, ownership; inspect one thread and see its nearest cross-brand equivalents with provenance. The engine half exists (`thread-equivalents.ts`); this is the view. Owner-flagged as a later nicety, not MVP.
   Done when: a thread can be found by eye or by search, and its cross-brand equivalents are readable with their provenance and distance.
 
 - [ ] **ICE-WORKSPACE-01 Automated Photoshop companion workspace** [detail] (2026-07-20)
-  Intent: one-button side-by-side arrangement of Photoshop and Cross Stitch Lens. M6-WIN-01 settled the browser half: window placement is parked (D53 — `resizeTo` ignored without error, window-management denied, popups blocked even from a trusted gesture), so this now depends entirely on ICE-TAURI-01 packaging.
+  Intent: one-button side-by-side arrangement of Photoshop and Cross Stitch Lens. Browser window placement is parked (D53 — `resizeTo` ignored, window-management denied, popups blocked), so this depends entirely on ICE-TAURI-01 packaging; tiers and safety rules in the ticket.
   Done when: the user can select a display and preferred split, arrange both applications predictably, continue live capture, and restore the previous workspace without losing state.
 
 - [ ] **ICE-TAURI-01 Tauri desktop packaging feasibility** [spike] [detail] (2026-07-20)
@@ -299,7 +284,7 @@ passed, cut or shipped:
 
 <!-- Optional detail file: when an item needs more context than its line
      can hold (research, options explored, acceptance detail, links),
-     put it in pm_skills/project/tickets/<ID>.md and add the [detail] flag
+     put it in pm_skills/project/tickets/<ITEM-ID>.md and add the [detail] flag
      to the item. Cold tier — agents read it ONLY when that item is the
      active task, so Active stays terse. Working context only; the "why"
      still goes to decision-log.md on ship. The file is deleted when the

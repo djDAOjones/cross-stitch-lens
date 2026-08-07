@@ -1192,3 +1192,30 @@ delta deferred; all ten ticked in the ledger.
 
 **Link:** `pm_skills/project/doc-deltas.md` (all open lines ticked);
 sources D43/D44, D61/D62, D107, D110.
+
+## D119 — Roadmap refactor: backlog Active compressed, detail moved to tickets (2026-08-07)
+
+**Decision:** Active stood at 4,196 words / 43 open items against the
+1,500-word budget — verbosity, not structural drift (no done-work, no
+stale rounds, tickets 1:1). The repair: milestone preambles compressed
+to constraint-plus-pointer form (the shipped-look narration and the
+M15 scope summary live in D91–D117, not the queue); four overlong
+un-ticketed items gained ticket files carrying their full intent
+(M15-PERSIST-01, M15-UI-02, M15-UI-01, M15-DITH-03 — all now
+[detail]); the other [detail] lines compressed to the ticket grammar
+after verifying each ticket carries the detail — one gap found and
+fixed first (M14-ACCEPT-01's ticket lacked the region-drag,
+picker-hint, EXT-19-tension and sixth-look-trade session legs; they
+were appended before the line compressed). No item added, cut, merged
+or reordered; all 43 IDs, flags, dates and dependencies verified
+identical before/after. Active lands at 3,705 words. The residual
+overrun is accepted and item-count-driven: three scoped milestones in
+flight (M13 remainder with live status lines, M14 tail, M15 both
+halves) plus an 11-item icebox put the grammar floor near 2,600, and
+the two next-up items (EXT-38/39) keep full lines as their own
+working spec. Relief is structural — M14's close removes eight items;
+revisit then rather than gutting signed scope now.
+
+**Link:** `pm_skills/project/backlog.md` (Active); new tickets
+M15-PERSIST-01 / M15-UI-02 / M15-UI-01 / M15-DITH-03; M14-ACCEPT-01
+ticket appended.

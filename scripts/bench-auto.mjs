@@ -365,7 +365,22 @@ async function runLeg(collector, name, autoTokens, validate, stamp, options = {}
   try {
     const reportPromise = collector.nextReport(RUN_TIMEOUT_MS);
     if (options.driver !== undefined) void options.driver(pid);
-    const body = await reportPromise;
+    let body;
+    try {
+      body = await reportPromise;
+    } catch {
+      // A leg that never reports (an unclicked picker, a crashed page)
+      // is a failed leg, never a crashed launcher — the other leg's
+      // artefacts must survive it.
+      return {
+        report: null,
+        failures: [
+          'no report arrived within the timeout — the leg never finished ' +
+            '(an unclicked share picker is the usual cause on the picker leg)',
+        ],
+        file: null,
+      };
+    }
     const report = JSON.parse(body);
     mkdirSync('bench-reports', { recursive: true });
     const paths = reportPaths(report.build?.buildId ?? 'unknown-build', name, stamp);
@@ -459,7 +474,9 @@ async function main() {
     } finally {
       release();
     }
-    if (CROSSCHECK) {
+    if (capture.report === null || second.report === null) {
+      console.log('\n(no summary — a leg produced no report; see failures below)');
+    } else if (CROSSCHECK) {
       console.log('\n=== Part A′ cross-check (picker-granted vs flag-granted) ===');
       console.log(formatComparison(compareReports(second.report, capture.report), 'picker'));
     } else {

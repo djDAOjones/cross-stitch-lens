@@ -48,6 +48,10 @@ refusal is the gate working, not a defect.
 - Semantics vary by release: re-probe on a Chrome update before
   trusting a run (the launcher's validation catches the failure
   modes).
+- Unflagged, a no-gesture `getDisplayMedia` **shows the picker and
+  pends** (proven 2026-08-08: the picker leg waited the full timeout
+  with no report) — so the picker-granted cross-check leg works with
+  exactly one click, scripted or human.
 
 ## Tier 2 — CDP driver (needs owner dependency approval first)
 

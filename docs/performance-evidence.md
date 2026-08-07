@@ -968,13 +968,18 @@ production pause behaviour — and it collects the page isolate only.
 The DevTools snapshot pair (old Part D) is retired unless a future
 run reports real retention.
 
-**No new capture rows are quoted here yet.** The engineering runs
-measured every leg (canonical live windows at the driven 4/sec, all
-six `.edit-<class>` windows behaving per design, the interaction
-protocol race visible as counted misses), but each run was either
-refused by the validity gate — hidden windows on an in-use desktop,
-plus two since-fixed harness ledger defects — or predates those
-fixes. That refusal behaviour is the gate working. The quotable
-artefacts come from the next quiet-desktop `npm run bench:auto`, and
-the capture report's rows enter canon only after the one-time manual
-cross-check (rehearsal sheet Part A′).
+**The valid artefacts landed 2026-08-08** via the armed quiet-gap
+run (D130): first attempt, both legs untainted on a visible desktop,
+build `v0.5.0+20260807.6e79c78` — canonical
+`bench-reports/browser-bench-v0.5.0_20260807.6e79c78-{capture,mem}.json`.
+Headlines: live 300² median 40.6 ms (n=120) at 4.0 updates/sec
+(driven at the product-promise cadence), live 200² median 30.7 ms
+(n=120), interaction median 80.9 ms (n=5 of 8 — the double-rAF
+protocol race counts the rest as misses, per the ticket), all six
+`.edit-<class>` windows measured, forced GC 172.7 → 11.5 MiB.
+Earlier engineering runs were refused by the validity gate — hidden
+windows on an in-use desktop plus two since-fixed harness ledger
+defects — which is the gate working. The capture rows enter canon
+only after the one-time manual cross-check (rehearsal sheet
+Part A′); the mem/forced-GC verdict stands as a labelled diagnostic
+with its untainted artefact.

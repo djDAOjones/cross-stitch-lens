@@ -13,14 +13,12 @@ refusal is the gate working, not a defect.
 
 ## Remaining
 
-1. **One quiet-desktop run** to produce the first valid (untainted,
-   visible) capture-leg artefact. Now self-arming:
-   `npm run bench:auto -- --when-quiet` waits for a real user-idle
-   gap (HIDIdleTime), wakes/holds the display via `caffeinate`, and
-   retries environmental failures across quiet gaps (D130). Armed
-   2026-08-08 in the background; if that arming died with the
-   session, re-arm with the same command. Canonical report names are
-   valid-only; stamped files carry every attempt.
+1. ~~One quiet-desktop run~~ **Landed 2026-08-08**: the armed
+   quiet-gap run (D130) validated both legs first attempt on
+   `6e79c78` — canonical reports in `bench-reports/`, headlines
+   quoted in `docs/performance-evidence.md` → D129 section. Re-runs
+   any time via `npm run bench:auto -- --when-quiet` (canonical
+   names stay valid-only; stamped files carry every attempt).
 2. **Owner Part-A′ cross-check** (shrunk sheet,
    `docs/browser-measurement.md`): one manual Part-A run compared
    against the automated capture report on the same build, recorded

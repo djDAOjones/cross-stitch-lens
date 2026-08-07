@@ -29,7 +29,8 @@ src/
       resize.ts
       adjust.ts
       reduce.ts    # palette mapping + LUT build
-      dither.ts    # Floyd–Steinberg (error diffusion)
+      dither.ts    # five dither methods (DitherConfig union)
+      threshold-tiles.ts # Bayer + blue-noise threshold tiles
     color/         # sRGB↔linear↔Lab, distance metrics
     stats.ts       # stitch/colour counts
     project.ts     # (de)serialisation, schema versioning
@@ -72,6 +73,14 @@ opaque black would diffuse phantom error into the stitches beside a
 the rule is mirrored bit-for-bit in the TS and Rust dither backends
 (D49).
 
+Dithering is a discriminated **`DitherConfig` union** (project schema
+v4): `none`; error-diffusion methods (Floyd–Steinberg, Atkinson,
+Jarvis) carrying `serpentine` + `strength` (0–1, fraction of error
+diffused); threshold methods (ordered Bayer 8×8, blue-noise 32×32)
+carrying `strength` alone (0–2 × a ±48/255 base amplitude), tiles from
+`threshold-tiles.ts`. Invalid combinations cannot be expressed
+(D61/D62).
+
 ### Stage backends
 
 ```ts
@@ -91,7 +100,11 @@ interface Stage<P> {
   documented tolerance where not (GPU float rounding in colour math).
 - Backend selection is per-stage, routed by the colour **metric**, not
   by runtime profiling: `lab → ts` (the TS path prunes candidates),
-  `rgb → wasm`. Routing holds no state — D42's startup calibration was
+  `rgb → wasm`. The wasm crate implements exactly Floyd–Steinberg at
+  full strength, so `routeDither` sends every other `DitherConfig` to
+  `ts` unconditionally and the wasm adapter delegates defensively when
+  params say otherwise — a backend may never substitute a different
+  method (D62). Routing holds no state — D42's startup calibration was
   removed, not retuned (D48). A recorded per-stage override exists
   (`setSelectedBackend`, applied where routing has no opinion) but is
   currently reachable only from tests and audits — there is no

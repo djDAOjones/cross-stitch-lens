@@ -286,9 +286,12 @@ asks — capturing the one line is the whole interaction.
 ### Performance
 
 - No processing on the main thread. Main thread = capture + UI.
-- The benchmark test's budgets (`architecture.md`) are part of `check`.
-  A change that regresses a budget does not merge; either fix it or
-  bring a decision-log entry proposing the new budget.
+- The benchmark budgets (`architecture.md`) are asserted by
+  `npm run bench` (`BENCH=1`-gated, deliberately outside `check`, which
+  runs only the bench machinery tests — D43/D44). A change that
+  regresses a budget row does not merge; either fix it or bring a
+  decision-log entry proposing the new budget, and run `bench` on any
+  perf-sensitive change.
 - Never optimise ahead of the profiler. Adding WebAssembly, shaders,
   SharedArrayBuffer, etc. without a profile is out of scope by
   definition.
@@ -306,9 +309,12 @@ asks — capturing the one line is the whole interaction.
 
 ### Scope guards
 
-- MVP scope is `brief.md`; anything else goes to the wish-list via "Park
-  it" — including tempting spec sections (§25 second-stage features are
-  the main drift risk).
+- Scope is the backlog's committed milestones; the MVP in `brief.md` is
+  the original fence (shipped at M5) that later milestones deliberately
+  extend — e.g. M8's five dither methods (D61/D62). Anything not in a
+  committed milestone goes to the wish-list via "Park it" — including
+  tempting spec sections (§25 second-stage features are the main drift
+  risk).
 - No new runtime dependencies without approval. Current allowlist:
   Carbon web components, pdf-lib. (Dev deps per `DEV-INFRASTRUCTURE.md`.)
 - UXP / Photoshop-plugin approaches are rejected (decision-log D2); do
@@ -350,17 +356,19 @@ legitimately changes the output stitch count.
   Field names carry their unit.
 - Preview scale crosses persistence in **CSS** px per stitch, never
   device px, so a project reopens the same size at any DPR.
-- The capture region's aspect **follows the pattern by default**, and
-  the invariant splits on the session-only aspect toggle (M14-EXT-15,
-  owner-signed A + D — D101, superseding the always-locked D52 rule):
-  **locked** (the default), every crop mutation goes through
-  `constrainRect` and a region chooses _which_ source pixels feed the
-  pipeline, never _how many_ stitches come out; **unlocked** (or
-  during a shift-drag), pins move freely through `clampRect`/
-  `resizeRect` and the region's shape _writes the design height_ via
-  `deriveGridHeight` — one direction only, stitches always square,
-  the derived dimension named in the readout, the height field
-  disabled while derived. There is still no third path.
+- The capture region's invariant splits on the session-only "Lock
+  aspect" toggle, which **defaults off** (M14-EXT-20 — D107,
+  superseding D101's locked-by-default shape): **unlocked** (the
+  default, or during a shift-drag), pins move freely through
+  `clampRect`/`resizeRect` and **both pattern dimensions derive** from
+  the region through one held source-px-per-stitch scale
+  (`deriveGridSize`, the "Stitch size" slider) — stitches always
+  square, both Size fields disabled with a reason while derived, and a
+  mid-session project load re-seeds the scale from the loaded width
+  (D101's width-honoured semantics); **locked**, every crop mutation
+  goes through `constrainRect` and a region chooses _which_ source
+  pixels feed the pipeline, never _how many_ stitches come out. There
+  is still no third path.
 
 ### Thread identity (M7 terminology contract — D55/D56)
 

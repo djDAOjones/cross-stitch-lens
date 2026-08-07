@@ -67,9 +67,6 @@ alternative ports or URLs.
   coexists with a running one instead of colliding on 5173 (D27). The
   env var is the sanctioned override; hard-coding a port is still out.
 
-<!-- `?backend=ts|wasm|webgpu` URL override forces a backend for manual
-     testing (see "Maintainer diagnostics"). -->
-
 ---
 
 ## Runtime lifecycle
@@ -114,8 +111,10 @@ native DevTools console.
 - **Global capture:** `window` `error` + `unhandledrejection` funnel
   into the logger so nothing fails silently.
 - **Debug panel (dev builds):** per-stage timings, active backend per
-  stage, frames processed/skipped, LUT rebuild count. `?backend=ts|`
-  `wasm|webgpu` URL override forces a backend for manual testing.
+  stage, frames processed/skipped, LUT rebuild count. There is no
+  user-facing backend override: `setSelectedBackend` is reachable only
+  from tests and audits (a `?backend=` URL param is a wish-list idea,
+  not a shipped switch).
 - **Copy-diagnostics bundle:** dev-only affordance (control defined in
   `UI-STANDARDS.md` → "Diagnostics affordance"). Copies app name,
   `appVersion` + `buildId` (+ commit), timestamp + timezone, route/view,

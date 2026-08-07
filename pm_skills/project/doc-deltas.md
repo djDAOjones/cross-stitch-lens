@@ -76,42 +76,42 @@
 - [x] 2026-07-21 UI-STANDARDS — no guidance yet for the conflict/explanation
   pattern the Colour panel introduces (aria-live list, severity as a word
   not a colour) (source: D55)
-- [ ] 2026-07-21 DEV-INFRASTRUCTURE — claims a `?backend=ts|wasm|webgpu` URL
+- [x] 2026-07-21 DEV-INFRASTRUCTURE — claims a `?backend=ts|wasm|webgpu` URL
   override twice (Dev server, Maintainer diagnostics) but no such wiring
   exists in `src/` — `setSelectedBackend` is reachable only from
   tests/audits; build the override or delete the claim (source: perf-area
   review 2026-07-21, `src/worker/backend-select.ts`)
-- [ ] 2026-07-21 AGENTS §Performance — says the benchmark budgets "are part
+- [x] 2026-07-21 AGENTS §Performance — says the benchmark budgets "are part
   of `check`", but `bench` is `BENCH=1`-gated and deliberately out of
   `check` since D43; the gate runs the bench *machinery* tests, not the
   budget assertions (source: perf-area review 2026-07-21, D43/D44)
-- [ ] 2026-07-22 architecture §Repository layout + §Core contracts — `dither.ts`
+- [x] 2026-07-22 architecture §Repository layout + §Core contracts — `dither.ts`
   is described as "Floyd–Steinberg (error diffusion)" only; M8 shipped five
   methods behind a `DitherConfig` union (schema v4), a `threshold-tiles.ts`
   sibling, and FS-only wasm routing (source: D61/D62)
-- [ ] 2026-07-22 AGENTS §Scope guards / brief — "multiple dithering algorithms
+- [x] 2026-07-22 AGENTS §Scope guards / brief — "multiple dithering algorithms
   beyond Floyd–Steinberg" is listed as out-of-MVP-scope; M8 deliberately
   shipped them post-MVP, so the guard reads as stale against the current
   feature set (source: D61/D62)
-- [ ] 2026-08-06 AGENTS §The four resolutions — the D101 split text (aspect
+- [x] 2026-08-06 AGENTS §The four resolutions — the D101 split text (aspect
   "locked (the default)", height-only derive via `deriveGridHeight`) is
   superseded: "Lock aspect" defaults OFF and both dimensions derive through
   a held source-px-per-stitch scale (`deriveGridSize`) (source: D107)
-- [ ] 2026-08-06 UI-STANDARDS §Capture UX — "dimensions readout in source
+- [x] 2026-08-06 UI-STANDARDS §Capture UX — "dimensions readout in source
   pixels and resulting stitches" retired: the numbers live in the Stats
   section, gesture ends announce via status (source: D107)
-- [ ] 2026-08-06 UI-STANDARDS §Layout model — "Panels collapse; the canvas
+- [x] 2026-08-06 UI-STANDARDS §Layout model — "Panels collapse; the canvas
   never does" superseded: the preview collapses like any region
   (session-only, control outside it, capture re-expands) (source: D107)
-- [ ] 2026-08-06 UI-STANDARDS §Shell presentation modes — preview focus
+- [x] 2026-08-06 UI-STANDARDS §Shell presentation modes — preview focus
   retired whole (M6-FOCUS-01 → EXT-24); the section's focus-mode rules
   (persistent exit control, focus-only status) are dead letters (source: D107)
-- [ ] 2026-08-07 UI-STANDARDS §Shell presentation modes — the section's
+- [x] 2026-08-07 UI-STANDARDS §Shell presentation modes — the section's
   premise is gone: panel collapse and preview focus both retired
   (EXT-24/32); the shell model is cold-only and the persisted state is
   per-disclosure, so the "both compose through one model" and
   reveal-control rules need recasting around accordion headers
   (source: D110)
-- [ ] 2026-08-07 UI-STANDARDS §Layout model — the D107 "collapses like
+- [x] 2026-08-07 UI-STANDARDS §Layout model — the D107 "collapses like
   any region (session-only)" line is superseded again: the preview
   collapses from its own persisted accordion header (source: D110)

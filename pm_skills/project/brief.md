@@ -62,7 +62,8 @@ preview mode.
 
 ## Explicitly out of scope for MVP
 
-Multiple dithering algorithms beyond Floyd–Steinberg, user-defined
+Multiple dithering algorithms beyond Floyd–Steinberg (since shipped
+post-MVP: M8's five-method expansion — D61/D62), user-defined
 palettes and palette import/export UI, symbols and pattern keys,
 multi-page PDF, advanced grid/tick styling, thread-length estimates,
 fabric simulation, image adjustments beyond the pipeline hooks,

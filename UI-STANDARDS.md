@@ -59,8 +59,9 @@ the Carbon/WCAG/Nielsen defaults above do not.
   controls grouped as **Pattern / Grid / Colour / Dither / Pipeline /
   Export / Project**; info strip (stitch & colour stats) docked below
   the preview.
-- The preview canvas is the product. Panels collapse; the canvas never
-  does.
+- The preview canvas is the product. It collapses like any other
+  region — from its own accordion header, disclosure persisted, and
+  starting a capture session re-expands it (D107/D110).
 - **Preview-first DOM order at every width**, with the settings panel to
   its right above 60 rem and stacked below it under that. Never reorder
   regions with CSS `order`: reading order, visual order, and tab order
@@ -74,21 +75,28 @@ the Carbon/WCAG/Nielsen defaults above do not.
   320 CSS px, wide tables scrolling inside their own container, and the
   preview keeping the majority of the width.
 
-### Shell presentation modes
+### Shell presentation state
 
-Panel collapse and preview focus are **app-shell presentation state**,
-never pipeline configuration, project data, or the M4 draft-quality
-state. Both compose through one model (`src/ui/shell.ts`); a second
-independent `hidden` layer is the anti-pattern.
+Shell presentation is **app-shell state**, never pipeline
+configuration, project data, or the M4 draft-quality state. The shell
+model (`src/ui/shell.ts`) reduces to the **cold** entry flag; every
+other presentation choice is a per-section accordion disclosure.
+Whole-panel collapse and preview focus are both retired (D107/D110) —
+do not reintroduce a mode layer. A second independent `hidden` layer
+is still the anti-pattern: visibility composes through the one model
+plus the disclosure store.
 
-- The control that reveals a collapsed region lives **outside** it.
-- Preview focus keeps a persistent, predictably-placed exit control;
-  `Escape` may be a convenience but never the only route.
-- When a mode hides the focused element, move focus deliberately (to
-  the toggle, or to the preview host) — never let the page lose it.
-- Shell preferences persist in a UI-preference store, **not** the
-  project file: a shared project must not rearrange a collaborator's
-  interface. Preview focus is session-only.
+- A collapsed section reopens from its own accordion header, which
+  stays visible; any control that reveals something other than its own
+  section lives **outside** what it reveals.
+- When a state change hides the focused element, move focus
+  deliberately (to the toggle, or to the preview host) — never let the
+  page lose it.
+- Per-disclosure open state persists in the UI-preference store,
+  **not** the project file: a shared project must not rearrange a
+  collaborator's interface. Deliberate exceptions (the Capture section
+  opens expanded every session, unpersisted) are named, never
+  accidental (D110).
 
 ### Canvas accessibility
 
@@ -126,7 +134,9 @@ independent `hidden` layer is the anti-pattern.
 
 - Permission prompt is user-initiated (button), never on load.
 - Crop rectangle: draggable, resizable via handles and arrow keys,
-  lockable; dimensions readout in source pixels and resulting stitches.
+  lockable. No standing dimensions readout: the Stats section owns the
+  headline figures, and gesture ends announce position/size through
+  the status region (D107).
 
 ### Conflict and explanation pattern (Colour panel)
 

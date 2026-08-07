@@ -1164,3 +1164,31 @@ which governs at pick time.
 **Link:** backlog M15-PERSIST-01 / M15-UI-02 / M15-DITH-03 /
 M15-GALLERY-01 lines + the M8-GOLD-01 icebox line; tickets
 M15-UI-03, M15-DITH-05.
+
+## D118 — Doc-sync: ten deltas reconciled across five protected docs (2026-08-07)
+
+**Decision:** the doc-deltas ledger reached its 10-open threshold and
+this maintenance session reconciled all ten in one signed batch, each
+edit derived fresh from its source entry. UI-STANDARDS (5): the
+Capture UX standing dimensions readout retired in favour of Stats +
+gesture-end status announcements (D107); the Layout model's "the
+canvas never collapses" replaced by the preview's own persisted
+accordion header (D107, then D110); "Shell presentation modes" recast
+as "Shell presentation state" — cold-only shell model, per-disclosure
+persistence, whole-panel collapse and preview focus both retired
+(D107/D110). AGENTS (3): the bench-budgets-in-`check` claim corrected
+to `npm run bench` (`BENCH=1`, outside the gate — D43/D44); the MVP
+scope guard reframed around committed milestones with the M8 dither
+expansion named (D61/D62); the four-resolutions split text updated to
+the shipped shape — "Lock aspect" defaults off, both dimensions derive
+via `deriveGridSize` (D107). brief.md (same delta): the out-of-scope
+dithering line tagged as since-shipped (M8). architecture.md (1):
+`dither.ts` described as the five-method `DitherConfig` union with
+`threshold-tiles.ts` in the tree and the FS-only wasm routing guard
+(D61/D62). DEV-INFRASTRUCTURE (1): both `?backend=` URL-override
+claims removed — no such wiring exists in `src/` (`setSelectedBackend`
+is test/audit-only; the override idea stays on the wish-list). No
+delta deferred; all ten ticked in the ledger.
+
+**Link:** `pm_skills/project/doc-deltas.md` (all open lines ticked);
+sources D43/D44, D61/D62, D107, D110.

@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 221 file(s) across 11 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 229 file(s) across 11 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 12 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
@@ -24,9 +24,9 @@
 - `crates` — 4 file(s)
 - `docs` — 12 file(s)
 - `public` — 1 file(s)
-- `scripts` — 7 file(s)
-- `src` — 90 file(s)
-- `tests` — 91 file(s)
+- `scripts` — 10 file(s)
+- `src` — 92 file(s)
+- `tests` — 94 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -88,6 +88,9 @@
 
 ## scripts
 
+- `scripts/bench-auto-validate.d.mts` — types for the validation module (kept plain-JS for the node launcher)
+- `scripts/bench-auto-validate.mjs` — bv2 report validation for the automated owner-session legs (pure; shared launcher/test)
+- `scripts/bench-auto.mjs` — one-command automated owner-session legs: build, serve, flagged dedicated Chrome ×2, collect + validate reports
 - `scripts/build-palette.mjs` — derives `dmc.json` from the owner CSV
 - `scripts/check-contrast.mjs` — gate step: WCAG AAA proof of every tokens.css @pair, both schemes
 - `scripts/check-docs.mjs` — docs gate: backticked path/link validation
@@ -109,7 +112,9 @@
 - `src/bench/boundaries.ts` — the six measurement boundaries + BOUNDARY_VERSION (code copy of the contract; moved from tests/bench so production entries never import test modules)
 - `src/bench/clock.ts` — absolute cross-context timestamps (timeOrigin + now) + timer-resolution probe
 - `src/bench/counters.ts` — capture-path counter ledger: interval snapshots, conservation checks, zero-frame verdict (pure)
+- `src/bench/edit-classes.ts` — the six Part-B edit-class approximations: seeded pure geometry + drive cadences
 - `src/bench/harness.ts` — warm-up policy, sync/async sample collection, interleaved candidate timing
+- `src/bench/memory.ts` — retained-heap verdict vocabulary: plateau threshold + forced-GC lazy-vs-real classification (pure)
 - `src/bench/report.ts` — report schema, percentiles, unmeasured-never-zero rows, run-validity assessment (pure)
 - `src/bench/workloads.ts` — the frozen bv2 workload matrix (DitherConfig axis) + seeded source generators
 - `src/capture/crop.ts` — pure crop-rect geometry: clamp/move/resize, hit-test, stitch span
@@ -207,8 +212,11 @@
 - `tests/audits/runtime.audit.test.ts` — M5-PERF-16/17/19: compare cost, gate stalls, dirty sensitivity, export isolation
 - `tests/audits/wasm-boundary.audit.test.ts` — M5-PERF-15: boundary vs Rust split, calibration representativeness
 - `tests/backend-select.test.ts` — selection policy/calibration + ts fallback with both backends disabled
+- `tests/bench-auto-validate.test.ts` — automated-run validation: tainted/hidden/incomplete reports must fail, complete ones pass
 - `tests/bench-counters.test.ts` — capture-counter ledger: interval deltas, conservation violations, meta flattening
+- `tests/bench-edit-classes.test.ts` — edit-class geometry: seed determinism, per-class ops, bounds, stroke continuity
 - `tests/bench-matrix.test.ts` — workload-matrix invariants: dither ID tokens, unique/derived IDs, core + method blocks, axis coverage
+- `tests/bench-memory.test.ts` — retention verdicts: plateau/no-reading/lazy-GC/real-retention branches + threshold boundary
 - `tests/bench-report.test.ts` — boundary contract, percentile math, warm-up exclusion, run-validity rules, schema round-trip
 - `tests/bench/env-node.ts` — node build/environment capture + report output dir
 - `tests/bench/run-node.ts` — matrix runner + budget-to-row bindings + cold preparation rows

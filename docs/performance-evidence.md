@@ -945,3 +945,36 @@ and `…d7218be-mem.json` (`?auto=mem`, 8 rows).
 The 2026-07-23 packs stay valid as history; the synthesis quotes
 `d7218be` rows. The owner capture session (rehearsal sheet
 Parts A–D) is the sole remaining input to M13-SYNTH-01.
+
+## M13 owner-session automation and the D71 forced-GC answer (2026-08-08, D129)
+
+`npm run bench:auto` (M13-MEAS-03, Tier 1 — flags only) now runs the
+capture legs and the memory leg unattended in a dedicated flagged
+Chrome; procedure and honesty rules in `docs/browser-measurement.md`
+→ "Automated owner-session legs". Probed semantics on Chrome
+151.0.7922.77: `--auto-select-window-capture-source-by-title` alone
+grants `getDisplayMedia` with no gesture and no picker (window
+selected by title substring, content-verified in-page before any row
+is measured); `--use-fake-ui-for-media-stream` breaks capture on that
+release (`NotReadableError`) and is not used.
+
+**The D71 ~75 MiB question is answered in mechanism: lazy major GC,
+not retention.** With `--js-flags=--expose-gc`, the plateau probe's
+idle residue (172.7 / 45.8 / 80.2 / 172.7 MiB across four runs on
+`f36fd9b`) collapsed to **11.5 MiB** after a forced GC, every run —
+including one fully valid mem report (untainted, visible page). A
+forced GC is a labelled diagnostic — reachability evidence, never
+production pause behaviour — and it collects the page isolate only.
+The DevTools snapshot pair (old Part D) is retired unless a future
+run reports real retention.
+
+**No new capture rows are quoted here yet.** The engineering runs
+measured every leg (canonical live windows at the driven 4/sec, all
+six `.edit-<class>` windows behaving per design, the interaction
+protocol race visible as counted misses), but each run was either
+refused by the validity gate — hidden windows on an in-use desktop,
+plus two since-fixed harness ledger defects — or predates those
+fixes. That refusal behaviour is the gate working. The quotable
+artefacts come from the next quiet-desktop `npm run bench:auto`, and
+the capture report's rows enter canon only after the one-time manual
+cross-check (rehearsal sheet Part A′).

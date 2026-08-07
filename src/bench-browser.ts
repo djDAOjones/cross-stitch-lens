@@ -36,7 +36,9 @@ import {
   zeroFrameReason,
   type CaptureCounters,
 } from './bench/counters.ts';
+import { driveIntervalMs, EDIT_CLASSES, type EditClass } from './bench/edit-classes.ts';
 import { measure, measureAsync } from './bench/harness.ts';
+import { retentionVerdict } from './bench/memory.ts';
 import {
   assessValidity,
   buildReport,
@@ -89,8 +91,9 @@ const STILL_300 = 'noise.w1280.opaque.g300.p64.lab.fs-s100-serp.resize-first.str
  * `docs/measurement-contract.md`; actual capture dimensions ride in
  * the row's `meta`.
  */
-function captureId(grid: number): string {
-  return `capture.g${String(grid)}.p64.lab.fs-s100-serp`;
+function captureId(grid: number, editClass?: EditClass): string {
+  const base = `capture.g${String(grid)}.p64.lab.fs-s100-serp`;
+  return editClass === undefined ? base : `${base}.edit-${editClass}`;
 }
 
 const rows: BenchRow[] = [];
@@ -392,6 +395,47 @@ function resetRvfc(): void {
   lastRvfc = null;
 }
 
+/** Client drops already removed from the in-flight ledger — a cursor,
+ * so each dropped job retires exactly once across windows. */
+let dropsAccounted = 0;
+
+/**
+ * Retire client-dropped jobs from the in-flight ledger. The client's
+ * latest-wins slot replaces a pending frame silently: the replaced
+ * job counts in `droppedFrames` but is never posted, so it gets no
+ * `jobSettled` and would sit in `inFlight` forever — a phantom the
+ * drain cannot clear and the conservation identity double-counts
+ * (run 4's `submitted ≠ results + drops + inFlight` off-by-one).
+ */
+function retireDroppedJobs(): void {
+  const newlyDropped = client.droppedFrames - dropsAccounted;
+  if (newlyDropped > 0) {
+    inFlight = Math.max(0, inFlight - newlyDropped);
+    dropsAccounted = client.droppedFrames;
+  }
+}
+
+/**
+ * Await settlement of jobs still in flight after a window's pump has
+ * stopped. Back-to-back automated windows (M13-MEAS-03) close their
+ * books milliseconds after the last submit; a job that settles after
+ * `onSettled` detaches would stay counted as submitted but never as a
+ * result, and the conservation check — rightly — refuses the ledger
+ * (the second end-to-end run's six off-by-one findings). The manual
+ * flow never hit this because human pauses between buttons drain the
+ * pipeline for free. Every posted request answers exactly once (D46),
+ * so after dropped jobs retire the wait is bounded in practice; the
+ * timeout only guards a wedged worker, which conservation would then
+ * still flag — truthfully.
+ */
+async function drainInFlight(timeoutMs = 2000): Promise<void> {
+  retireDroppedJobs();
+  const deadline = performance.now() + timeoutMs;
+  while (inFlight > 0 && performance.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+}
+
 async function startCaptureSession(): Promise<void> {
   if (capture !== null) {
     say('Capture already running.');
@@ -446,8 +490,19 @@ async function startCaptureSession(): Promise<void> {
  * job. Mirrors `main.ts` policy (latest-wins both gates, dirty skip
  * with bounded staleness, draft governor sampled per frame). 300² is
  * the product-promise grid; 200² is the second M13-PROF-04 anchor.
+ *
+ * With `editClass` set (M13-MEAS-03), the source window is driven in
+ * that Part-B approximation instead of the full-bleed 4/sec change:
+ * the row's ID gains an `.edit-<class>` tail, its label names the
+ * class, and the mid-stream selection export stays out (it belongs to
+ * the canonical window only). Controlled-source numbers only — never
+ * Photoshop behaviour.
  */
-async function runLiveWindow(seconds: number, grid = 300): Promise<void> {
+async function runLiveWindow(
+  seconds: number,
+  grid = 300,
+  editClass?: EditClass,
+): Promise<void> {
   const session = capture;
   if (session === null) {
     say('Start capture first.');
@@ -563,10 +618,13 @@ async function runLiveWindow(seconds: number, grid = 300): Promise<void> {
   // Drive the controlled source while the window runs: the source
   // repaints only on command (bench-source.ts), so an undriven window
   // over it is static and records zeros — the 2026-07-23 first-run
-  // failure. 250 ms matches the ≥ 4 updates/sec product promise. Seqs
-  // sit far above the interaction run's 1..8 so the two flows can
-  // never claim each other's paint replies.
+  // failure. The canonical window commands full-bleed changes at
+  // 250 ms (the ≥ 4 updates/sec product promise); an edit-class window
+  // commands its class at the class's own cadence. Seqs sit far above
+  // the interaction run's 1..8 so the two flows can never claim each
+  // other's paint replies.
   const LIVE_SEQ_BASE = 1_000_000;
+  const driveEveryMs = editClass === undefined ? 250 : driveIntervalMs(editClass);
   let changesCommanded = 0;
   let paintsConfirmed = 0;
   const onPaint = (event: MessageEvent): void => {
@@ -581,8 +639,9 @@ async function runLiveWindow(seconds: number, grid = 300): Promise<void> {
           sourceChannel.postMessage({
             type: 'change',
             seq: LIVE_SEQ_BASE + changesCommanded,
+            ...(editClass === undefined ? {} : { pattern: editClass }),
           } satisfies BenchSourceMessage);
-        }, 250)
+        }, driveEveryMs)
       : null;
 
   const tracker = new CounterTracker({ ...counters }, performance.now());
@@ -597,8 +656,9 @@ async function runLiveWindow(seconds: number, grid = 300): Promise<void> {
     intervalMeta[`interval ${String(interval.index)}`] = JSON.stringify(interval.deltas);
     // The D68 carry-in (M13-PROF-04): one selection-source export
     // fired mid-stream over the real capture path, so the pump-side
-    // half of the contention question is on record.
-    if (i === 2 && selectionExport === null) {
+    // half of the contention question is on record. Canonical window
+    // only — an edit-class window measures its class undisturbed.
+    if (i === 2 && selectionExport === null && editClass === undefined) {
       try {
         const grabbed = await session.grabFrame();
         const exportStart = absNow();
@@ -616,9 +676,10 @@ async function runLiveWindow(seconds: number, grid = 300): Promise<void> {
   }
   stopPump?.();
   stopPump = null;
+  if (driver !== null) clearInterval(driver);
+  await drainInFlight();
   onSettled = null;
   longTaskObserver?.disconnect();
-  if (driver !== null) clearInterval(driver);
   sourceChannel.removeEventListener('message', onPaint);
 
   counters.pumpDrops = pumpGate.droppedCount - pumpDropsBefore;
@@ -647,14 +708,18 @@ async function runLiveWindow(seconds: number, grid = 300): Promise<void> {
   // A window in which no frame was ever presented is not a measured
   // zero — it is a not-measured row plus a tainting finding (the bv2
   // rule: no result is encoded as zero).
+  const liveLabel =
+    editClass === undefined
+      ? 'preview-update (live capture)'
+      : `preview-update (edit class ${editClass}, controlled source)`;
   const zeroReason = zeroFrameReason(windowCallbacks, paintsConfirmed);
   if (zeroReason !== null) {
     findings.push(`live window: ${zeroReason}`);
     rows.push(
       skippedRow({
-        workloadId: captureId(grid),
+        workloadId: captureId(grid, editClass),
         boundary: 'preview-update',
-        label: 'preview-update (live capture)',
+        label: liveLabel,
         status: 'not-measured',
         reason: zeroReason,
         meta: {
@@ -705,9 +770,9 @@ async function runLiveWindow(seconds: number, grid = 300): Promise<void> {
 
     rows.push(
       measuredRow({
-        workloadId: captureId(grid),
+        workloadId: captureId(grid, editClass),
         boundary: 'preview-update',
-        label: 'preview-update (live capture)',
+        label: liveLabel,
         cache: 'warm',
         warmupRuns: 0,
         samples,
@@ -739,7 +804,15 @@ let sourceWindow: Window | null = null;
 const sourceChannel = new BroadcastChannel('csl-bench-source');
 
 async function openSource(): Promise<void> {
-  sourceWindow = window.open('/bench-source.html', 'csl-bench-source', 'width=800,height=600');
+  // Positioned beside the harness window rather than cascaded over it:
+  // a popup that fully occludes the harness can flip this page to
+  // `hidden`, and a hidden page's samples are throttled garbage. Both
+  // windows staying at least partially visible is a run precondition.
+  sourceWindow = window.open(
+    '/bench-source.html',
+    'csl-bench-source',
+    'left=780,top=40,width=720,height=560',
+  );
   if (sourceWindow === null) {
     findings.push('popup blocked — open /bench-source.html manually in a second window');
     say('Popup blocked. Open /bench-source.html manually, then share that window.');
@@ -859,6 +932,7 @@ async function runInteraction(changes: number): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, 400));
   }
   stop();
+  await drainInFlight();
   onSettled = null;
 
   // Zero presented frames means the shared surface never showed the
@@ -912,6 +986,208 @@ async function runInteraction(changes: number): Promise<void> {
     }),
   );
   say('Interaction run done.');
+}
+
+// ------------------- flag-granted auto capture (M13-MEAS-03)
+
+/**
+ * Await the controlled source window answering a ping. BroadcastChannel
+ * delivers nothing to a page that has not subscribed yet, so pings
+ * repeat until the freshly-opened window answers or the timeout ends.
+ */
+function pingSource(timeoutMs: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const started = performance.now();
+    const finish = (ok: boolean): void => {
+      clearInterval(pinger);
+      sourceChannel.removeEventListener('message', onPong);
+      resolve(ok);
+    };
+    const onPong = (event: MessageEvent): void => {
+      if ((event.data as BenchSourceMessage).type === 'pong') finish(true);
+    };
+    sourceChannel.addEventListener('message', onPong);
+    const pinger = setInterval(() => {
+      if (performance.now() - started > timeoutMs) {
+        finish(false);
+        return;
+      }
+      sourceChannel.postMessage({ type: 'ping' } satisfies BenchSourceMessage);
+    }, 300);
+  });
+}
+
+/** Verification seqs sit above every other flow's range so their
+ * painted replies can never be claimed by a live window or the
+ * interaction run. */
+const VERIFY_SEQ_BASE = 2_000_000;
+
+/** Sample one captured pixel (RGB string) at a fractional position. */
+function sampledPixel(video: HTMLVideoElement, fx: number, fy: number): string {
+  const canvas = new OffscreenCanvas(2, 2);
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (ctx === null) return 'no-2d-context';
+  ctx.drawImage(video, video.videoWidth * fx, video.videoHeight * fy, 8, 8, 0, 0, 2, 2);
+  const px = ctx.getImageData(0, 0, 1, 1).data;
+  return `${String(px[0])},${String(px[1])},${String(px[2])}`;
+}
+
+/**
+ * Content guard for the flag-granted picker (M13-MEAS-03):
+ * `--auto-select-window-capture-source-by-title` matches **any** window
+ * on the system whose title contains the configured substring, so an
+ * automated run must prove the captured pixels are really the
+ * controlled source before a single row is measured. Three legacy
+ * full-bleed changes are commanded; after each confirmed paint the
+ * captured frame is sampled at two background points. The source's
+ * changes are full-saturation hues, so a matching capture shows
+ * changing, saturated colours. Returns null when verified, else the
+ * reason — the caller records it and refuses the legs (the same
+ * no-zero rule as `zeroFrameReason`, one step earlier).
+ */
+async function verifySourceCapture(session: CaptureSession): Promise<string | null> {
+  const samples: string[] = [];
+  for (let i = 0; i < 3; i++) {
+    const seq = VERIFY_SEQ_BASE + i;
+    const painted = new Promise<boolean>((resolve) => {
+      const timeout = setTimeout(() => {
+        sourceChannel.removeEventListener('message', handler);
+        resolve(false);
+      }, 1500);
+      function handler(event: MessageEvent): void {
+        const message = event.data as BenchSourceMessage;
+        if (message.type === 'painted' && message.seq === seq) {
+          clearTimeout(timeout);
+          sourceChannel.removeEventListener('message', handler);
+          resolve(true);
+        }
+      }
+      sourceChannel.addEventListener('message', handler);
+    });
+    sourceChannel.postMessage({ type: 'change', seq } satisfies BenchSourceMessage);
+    if (!(await painted)) return 'the controlled source never confirmed a verification paint';
+    // Capture frame delivery lags the source's own paint; give the
+    // pipeline two ticks before sampling.
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    if (session.video.videoWidth === 0) return 'the captured surface has no frames to sample';
+    const a = sampledPixel(session.video, 0.25, 0.35);
+    const b = sampledPixel(session.video, 0.75, 0.85);
+    const moreSaturated = (p: string, q: string): string => {
+      const spread = (s: string): number => {
+        const parts = s.split(',').map(Number);
+        return Math.max(...parts) - Math.min(...parts);
+      };
+      return spread(p) >= spread(q) ? p : q;
+    };
+    samples.push(moreSaturated(a, b));
+  }
+  const distinct = new Set(samples).size;
+  const saturated = samples.some((s) => {
+    const parts = s.split(',').map(Number);
+    return Math.max(...parts) - Math.min(...parts) > 60;
+  });
+  if (distinct < 2 || !saturated) {
+    return (
+      `captured pixels do not match the controlled source (samples ${samples.join(' | ')}) — ` +
+      'the auto-select flag matched some other window; close other windows whose title ' +
+      'contains "controlled capture source" and rerun'
+    );
+  }
+  return null;
+}
+
+/**
+ * Bring up the full auto-capture precondition: source window open and
+ * answering, capture running (the flag grants the picker), captured
+ * content verified as the source. Returns true only when every guard
+ * passed; on any failure the reason is recorded (finding or
+ * not-measured row) and capture is torn down so no leg can run over an
+ * unverified surface.
+ */
+async function ensureAutoCapture(): Promise<boolean> {
+  if (sourceWindow === null || sourceWindow.closed) await openSource();
+  if (!(await pingSource(4000))) {
+    findings.push(
+      'auto capture: the controlled source window never answered ping — ' +
+        'popup blocked (launch with --disable-popup-blocking) or the window failed to load',
+    );
+    return false;
+  }
+  if (capture === null) await startCaptureSession();
+  if (capture === null) return false; // startCaptureSession recorded the refusal row
+  const reason = await verifySourceCapture(capture);
+  if (reason !== null) {
+    findings.push(`auto capture: ${reason}`);
+    capture.stop();
+    capture = null;
+    return false;
+  }
+  return true;
+}
+
+/**
+ * The capture legs of the owner session, run gestureless under a
+ * flag-granted stream (M13-MEAS-03 Tier 1): the two canonical live
+ * windows and the interaction run — buttons 5/6/6b/7 with no human at
+ * the picker. Valid only in a Chrome launched with
+ * `--auto-select-window-capture-source-by-title` (see
+ * `scripts/bench-auto.mjs`); in an ordinary browser the picker simply
+ * appears and, unattended, times out into the declined-prompt row.
+ */
+/** Publish explicit refusals when the auto-capture precondition fails:
+ * absent rows read as "forgot to run"; a not-measured row with the
+ * cause reads as what happened (the bv2 no-silent-zero rule). */
+function refuseLegs(
+  legs: readonly { workloadId: string; boundary: 'preview-update' | 'interaction'; label: string }[],
+): void {
+  for (const leg of legs) {
+    rows.push(
+      skippedRow({
+        workloadId: leg.workloadId,
+        boundary: leg.boundary,
+        label: leg.label,
+        status: 'not-measured',
+        reason: 'auto-capture precondition failed (source unanswering, capture refused, or content unverified) — see findings',
+      }),
+    );
+  }
+}
+
+async function runCaptureLegsAuto(): Promise<void> {
+  if (!(await ensureAutoCapture())) {
+    refuseLegs([
+      { workloadId: captureId(300), boundary: 'preview-update', label: 'preview-update (live capture)' },
+      { workloadId: captureId(200), boundary: 'preview-update', label: 'preview-update (live capture)' },
+      { workloadId: captureId(300), boundary: 'interaction', label: 'interaction (controlled source)' },
+    ]);
+    return;
+  }
+  await runLiveWindow(30);
+  await runLiveWindow(30, 200);
+  await runInteraction(8);
+  say('Auto capture legs done.');
+}
+
+/**
+ * The six Part-B edit-class approximations, one 15 s live window each
+ * over the controlled source (M13-MEAS-03). Runs on the same verified
+ * flag-granted session as the canonical legs.
+ */
+async function runEditClassWindows(): Promise<void> {
+  if (!(await ensureAutoCapture())) {
+    refuseLegs(
+      EDIT_CLASSES.map((editClass) => ({
+        workloadId: captureId(300, editClass),
+        boundary: 'preview-update' as const,
+        label: `preview-update (edit class ${editClass}, controlled source)`,
+      })),
+    );
+    return;
+  }
+  for (const editClass of EDIT_CLASSES) {
+    await runLiveWindow(15, 300, editClass);
+  }
+  say('Edit-class windows done.');
 }
 
 // ------------------------------------------------------------ exports
@@ -1561,6 +1837,22 @@ async function runMemPlateau(): Promise<void> {
   // idle reading is the retention signal, the peak is the churn one.
   await new Promise((resolve) => setTimeout(resolve, 5000));
   const afterIdle = heapMb() ?? 0;
+  // Forced-GC probe (M13-MEAS-03): in a Chrome launched with
+  // `--js-flags=--expose-gc`, force a major GC and re-read — the D71
+  // question answered without DevTools. A residue that drops was lazy
+  // major GC; one that survives is really reachable. Labelled
+  // diagnostic: reachability evidence, never production pause
+  // behaviour. `gc()` collects this page's isolate only — a
+  // worker-held graph still needs the snapshot pair, and the verdict
+  // text stays honest about that.
+  const forceGc = (globalThis as { gc?: () => void }).gc;
+  let afterForcedGc: number | null = null;
+  if (forceGc !== undefined) {
+    forceGc();
+    forceGc();
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    afterForcedGc = heapMb();
+  }
   const third = Math.floor(heapSamples.length / 3);
   const drift =
     medianOf(heapSamples.slice(-third)) - medianOf(heapSamples.slice(0, third));
@@ -1578,12 +1870,15 @@ async function runMemPlateau(): Promise<void> {
         'heap after frames MiB': afterFrames,
         'heap after exports MiB': afterExports,
         'heap after 5 s idle MiB': afterIdle,
+        'heap after forced GC MiB':
+          afterForcedGc ?? 'unavailable — launch Chrome with --js-flags=--expose-gc',
+        'forced GC scope':
+          afterForcedGc === null
+            ? 'n/a'
+            : 'page isolate only (diagnostic; worker heap not collected by this call)',
         'heap peak MiB': Math.max(...heapSamples, afterExports),
         'frame-phase drift first→last third MiB': Number(drift.toFixed(1)),
-        verdict:
-          afterIdle - startHeap < 25
-            ? 'plateau after natural GC'
-            : 'RETAINED after idle — investigate with a snapshot pair',
+        verdict: retentionVerdict(startHeap, afterIdle, afterForcedGc),
         caveat: 'JS heap only; typed-array backing stores may be external',
       },
     }),
@@ -2583,9 +2878,14 @@ function finishReport(): Promise<void> {
  * cold in a combined run.
  * (A hidden page is CPU-throttled to the point of 10–20× inflated
  * samples — the in-app preview pane can never be a measurement
- * surface.) The capture legs are excluded by construction: they need
- * the owner's picker gesture. Visibility still rides in the env row,
- * so a background auto run is self-incriminating, not silently wrong.
+ * surface.) Visibility still rides in the env row, so a background
+ * auto run is self-incriminating, not silently wrong.
+ *
+ * The capture legs are gesture-gated in an ordinary browser; in a
+ * Chrome launched with `--auto-select-window-capture-source-by-title`
+ * (M13-MEAS-03, `scripts/bench-auto.mjs`), the `capture` and
+ * `editclasses` tokens run them flag-granted — content-verified
+ * against the controlled source before any row is measured.
  */
 async function runAuto(): Promise<void> {
   const params = new URL(location.href).searchParams;
@@ -2593,20 +2893,44 @@ async function runAuto(): Promise<void> {
   if (auto === null) return;
   const legs = new Set(auto.split(','));
   say('Auto run: measuring…');
+  // A leg that throws must still leave a posted, self-incriminating
+  // report — an unattended page whose promise chain dies is
+  // indistinguishable from a hung run, and the collector can only
+  // time out on it (M13-MEAS-03).
+  const guarded = async (name: string, leg: () => Promise<void>): Promise<void> => {
+    try {
+      await leg();
+    } catch (error) {
+      findings.push(
+        `auto leg ${name} threw: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  };
   if (legs.has('still')) {
-    await runStillPreview(STILL_200);
-    await runStillPreview(STILL_300);
+    await guarded('still', async () => {
+      await runStillPreview(STILL_200);
+      await runStillPreview(STILL_300);
+    });
   }
-  if (legs.has('stage')) await runStageMatrix();
-  if (legs.has('backend')) await runBackendComparison();
+  if (legs.has('stage')) await guarded('stage', runStageMatrix);
+  if (legs.has('backend')) await guarded('backend', runBackendComparison);
   if (legs.has('livepath')) {
-    await runDirtyReplay();
-    await runStatsCost();
+    await guarded('livepath', async () => {
+      await runDirtyReplay();
+      await runStatsCost();
+    });
   }
-  if (legs.has('mem')) await runMemLeg();
-  if (legs.has('gpu')) await gpuChecks();
-  if (legs.has('lut')) await lutBuildTiming();
-  if (legs.has('contention')) await runContentionProbe();
+  if (legs.has('mem')) await guarded('mem', runMemLeg);
+  if (legs.has('gpu')) await guarded('gpu', gpuChecks);
+  if (legs.has('lut')) await guarded('lut', lutBuildTiming);
+  if (legs.has('contention')) await guarded('contention', runContentionProbe);
+  // The flag-granted capture legs (M13-MEAS-03) run last: they open a
+  // second window, and nothing after them should compete with the live
+  // pump. `capture` = buttons 5/6/6b/7; `editclasses` = the six
+  // Part-B approximations. Both refuse to measure until the captured
+  // pixels verify as the controlled source.
+  if (legs.has('capture')) await guarded('capture', runCaptureLegsAuto);
+  if (legs.has('editclasses')) await guarded('editclasses', runEditClassWindows);
   show();
   const report = assembleReport();
   publishReport(report);
@@ -2655,6 +2979,7 @@ function main(): void {
     button('5 · Start capture (choose a surface)', startCaptureSession),
     button('6 · Measure live preview (30 s, 300²)', async () => runLiveWindow(30)),
     button('6b · Measure live preview (30 s, 200²)', async () => runLiveWindow(30, 200)),
+    button('6c · Edit-class windows (6 × 15 s, controlled source)', runEditClassWindows),
     button('7 · Interaction run (8 changes)', async () => runInteraction(8)),
     button('8 · Finish & download report', finishReport),
   );

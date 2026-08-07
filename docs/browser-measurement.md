@@ -293,7 +293,9 @@ using the worker's absolute-clock phase marks (`FrameMarks` in
    gestureless dirty-replay + stats pair, button 3c; `mem` — button
    3d's plateau/isolation/contention/peak set — is also a valid token,
    with its ~2 GiB transient peak probe in mind before running it
-   unattended);
+   unattended; `capture` and `editclasses` are the flag-granted
+   capture legs — valid only under the sanctioned flagged launch, see
+   "Automated owner-session legs" below);
    `&post=http://127.0.0.1:<port>/report` POSTs the finished bv2 JSON
    to a local collector. This exists so an agent can run the
    gestureless half in a real, foreground browser window it cannot
@@ -358,28 +360,85 @@ surface to share, and the harness itself both warns at capture start
 and refuses to publish a zero-frame window as a measured row
 (`zeroFrameReason`, `src/bench/counters.ts`).
 
-### The M13-PROF-04 owner session (rehearsal sheet)
+### Automated owner-session legs (M13-MEAS-03) — one command
 
-The live half of the live-path profile needs the owner's capture
-gesture. One sitting, three parts; everything else is already
-automated. Keep every shared window at least partially visible.
+```sh
+npm run bench:auto
+```
 
-**Part A — controlled source (repeatable numbers).** Button 4 → 5
-(share the *source* window) → 6 (300², 30 s) → 6b (200², 30 s) → 7 →
-8. The live windows now also record the main-thread decomposition
-(dirty-sample and grab medians), long tasks, draft transitions with
-timestamps, capture-track settings (`frameRate`, `displaySurface`),
-and fire one selection-source export mid-stream (~15 s in) — the
-pump-side half of the D68 contention question.
+builds and serves the production bundle, then launches the installed
+Chrome twice with a **dedicated throwaway profile** (never the daily
+browser) and collects two validated bv2 reports into `bench-reports`:
 
-**Part B — Photoshop content.** Stop sharing, button 5 again, share
-the Photoshop window, rerun 6 and 6b while performing in order:
+- **`…-capture.json`** — the old Part A plus the six edit-class
+  approximations: canonical live windows (300²/200², 30 s), the
+  interaction run, and one 15 s window per Part-B edit class
+  (`hands-off`, `pixel-marks`, `slow-stroke`, `large-fill`,
+  `transform`, `rapid-scatter`) driven on the controlled source.
+- **`…-mem.json`** — button 3d's memory leg in a
+  `--js-flags=--expose-gc` Chrome: after the 5 s idle reading the
+  harness forces a GC and re-reads, answering the D71 residue
+  question (lazy major GC vs real retention) without DevTools.
+
+**Flag-granted capture is a sanctioned variant.** The launch flag
+`--auto-select-window-capture-source-by-title` (probed on Chrome
+151.0.7922.77, 2026-08-07: resolves `getDisplayMedia` with no gesture
+and no picker, even against the shipped `displaySurface: 'monitor'`
+hint; `--use-fake-ui-for-media-stream` breaks capture on that release
+and is not used) replaces the owner's picker gesture; everything
+after the grant is the shipped pump → dirty → latest-wins → worker
+loop, unchanged. Honesty rules:
+
+- Every self-incrimination guard stays load-bearing: visibility in
+  the env row, `zeroFrameReason`, the surface-width warning — plus a
+  new one, the **content guard**: the flag matches *any* window on
+  the system whose title contains the substring, so before a single
+  row is measured the harness commands verification changes and
+  checks the captured pixels really show the controlled source.
+  Close other windows whose title contains "controlled capture
+  source" (an editor showing `bench-source.html`, for instance)
+  before a run.
+- Flag semantics vary by Chrome release — on a Chrome update, re-run
+  the probe expectation (no gesture, no picker, content verified)
+  before trusting a run; the launcher's validation catches the
+  failure modes as non-zero exits.
+- Edit-class rows carry the `.edit-<class>` ID tail and are
+  **controlled-source numbers only** — never quoted as Photoshop
+  capture behaviour, which is what the human Part B remains for.
+- **Cross-check before canon**: the first automated capture report on
+  a build is quoted only after one manual Part-A run (sheet below)
+  confirms its canonical rows; the comparison is recorded in the
+  decision log. Status: automation shipped 2026-08-07; the manual
+  cross-check happens at the owner's next sitting and D129 records
+  the pending state.
+- Runs need an **awake desktop with both Chrome windows left at
+  least partially visible** for the few minutes they take — "one
+  command, hands off", never headless, never CI. A hidden page
+  taints the run and the launcher refuses it.
+
+### The M13-PROF-04 owner session (rehearsal sheet, shrunk to the human legs)
+
+What `bench:auto` cannot do is what remains. One sitting; keep every
+shared window at least partially visible.
+
+**Part A′ — one-time cross-check of the automated capture leg.**
+Button 4 → 5 (share the *source* window) → 6 (300², 30 s) → 6b
+(200², 30 s) → 7 → 8, exactly the old Part A. Compare the canonical
+rows against the automated `…-capture.json` on the same build; record
+the comparison in the decision log. After it holds once, this part
+retires — rerun it only when a Chrome update changes flag behaviour.
+
+**Part B — Photoshop content (stays human by policy).** Button 5,
+share the Photoshop window, rerun 6 and 6b while performing in order:
 10 s hands-off (expect dirty skips plus a forced refresh at most every
 2 s), 1 px pencil marks (expect up to ~2 s latency — the measured
 detection floor, see the dirty replay rows), a slow continuous stroke,
 a large fill, a transform drag, rapid scattered edits. Note perceived
 latency, stalls and the draft badge per case; run button 8 again for a
-second report.
+second report. The automated edit-class rows approximate these cases
+on the controlled source — useful for regressions, never a
+substitute: real-Photoshop capture behaviour is the reason this part
+exists.
 
 **Part C — app-side responsiveness (DevTools trace).** In the *app*
 (not the harness): capture Photoshop, record a ~30 s Performance
@@ -391,14 +450,17 @@ layout, one export mid-edit. Expected: no wedge,
 truthful status, clean recovery, export unaffected by draft mode.
 Read GC pauses off the same trace (M13-PROF-05). Traces and owner
 notes stay out of committed reports if they show artwork; acceptance
-itself stays with M13-ACCEPT-02.
+itself stays with M13-ACCEPT-02. (Tier-2 automation of this part
+needs a CDP driver — an owner dependency decision, deliberately not
+taken by default.)
 
-**Part D — memory snapshot pair (M13-PROF-05).** On `/bench.html`:
-DevTools Memory → heap snapshot, run button **3d**, snapshot again
-after it finishes, and compare — the D71 open question is whether the
-~75 MiB the export step leaves after 5 s idle is lazy major GC or a
-real retained path. Optionally run allocation sampling across one
-button-6 live window for the churn profile.
+**Part D — memory snapshot pair, now conditional (M13-PROF-05).**
+The forced-GC reading in `…-mem.json` answers the D71 question first.
+Only if it reports **real retention** does the manual snapshot pair
+still matter: DevTools Memory → heap snapshot, button **3d**,
+snapshot again, compare, and name the retained path. On a lazy-GC
+verdict this part retires. Optionally run allocation sampling across
+one button-6 live window for the churn profile.
 
 ### Interpretation limits
 

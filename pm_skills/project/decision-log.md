@@ -1125,3 +1125,41 @@ exactly that remainder.
 and both PROF status lines re-dated; tickets M13-PROF-04/05 status
 appended; evidence `docs/performance-evidence.md` → D128 section;
 procedure `docs/browser-measurement.md` auto-list + Part C repairs.
+
+## D129 — M13-MEAS-03: the owner session shrinks to its human legs; flag-granted capture sanctioned; D71 answered in mechanism (2026-08-08)
+
+**Decision:** Tier 1 only — launch flags, no new dependencies; the
+Tier-2 CDP driver stays untaken pending explicit owner dependency
+approval. The probe (the ticket's kill-switch) passed on Chrome
+151.0.7922.77: `--auto-select-window-capture-source-by-title` alone
+resolves `getDisplayMedia` gestureless and pickerless, overriding
+even the shipped monitor hint; `--use-fake-ui-for-media-stream`
+breaks capture on that release and is excluded. Because the flag
+matches any window system-wide by title substring, the automated
+legs measure nothing until an in-page content guard proves the
+captured pixels are the controlled source — joining visibility,
+`zeroFrameReason` and the width warning as load-bearing
+self-incrimination. `npm run bench:auto` is the one command
+(dedicated throwaway profile, CORS-correct collector, validated
+reports; invalid runs exit non-zero). Back-to-back automated windows
+exposed two real harness ledger defects the manual flow's human
+pauses had hidden — jobs settling after the books closed, and
+latest-wins client drops leaving phantom in-flight entries — fixed
+by a drain plus a drop-retirement cursor, so conservation now holds
+at machine cadence. The six Part-B edit classes ride the controlled
+source as seeded commanded patterns (`.edit-<class>` rows,
+controlled-source evidence only). The forced-GC probe
+(`--js-flags=--expose-gc`) answered D71: the idle residue collapses
+to 11.5 MiB on forced GC in every run — lazy major GC, not
+retention; the snapshot-pair Part D retires unless a run reports
+otherwise. Engineering runs were refused by the validity gate
+(hidden windows on an in-use desktop) — the gate working as built;
+the first valid capture artefact awaits a quiet-desktop run, and its
+rows enter canon only after the one-time manual cross-check
+(Part A′), still owner work.
+
+**Link:** ticket M13-MEAS-03 (remaining slivers); backlog status
+lines; procedure `docs/browser-measurement.md` → "Automated
+owner-session legs" + the shrunk rehearsal sheet; evidence
+`docs/performance-evidence.md` → D129 section; scripts table
+`DEV-INFRASTRUCTURE.md`.

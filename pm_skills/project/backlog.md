@@ -28,19 +28,20 @@ optimising (D62/D63); `AGENTS.md` hard rules hold.
 
 Each task files defects for performance-sensitive bugs it uncovers.
 
-- [ ] **M13-MEAS-03 Automate the owner-session legs** [detail] (2026-08-07)
-  Intent: owner ask (2026-08-07) — shrink the PROF-04/05 owner session to its genuinely human legs by automating the mechanisable ones: flag-granted capture for Part A, the forced-GC probe answering Part D's 74.8 MiB question, optional Part-B edit classes on the controlled source; the Tier-2 CDP driver only on explicit dependency approval (tiers in the ticket). Runs next, ahead of the owner session it shrinks.
+- [~] **M13-MEAS-03 Automate the owner-session legs** [detail] (2026-08-07)
+  Intent: owner ask (2026-08-07) — shrink the PROF-04/05 owner session to its genuinely human legs by automating the mechanisable ones: flag-granted capture for Part A, the forced-GC probe answering Part D's 74.8 MiB question, Part-B edit classes on the controlled source; the Tier-2 CDP driver only on explicit dependency approval (tiers in the ticket).
   Done when: one command yields valid (untainted, visible-window) capture-leg and forced-GC reports on an awake desktop; the rehearsal sheet shrinks to the human legs; the flag-granted variant is decision-logged with one manual cross-check.
+  Status 2026-08-08: automation shipped and gate-proven (D129) — `npm run bench:auto`, sheet shrunk, variant decision-logged, D71 answered in mechanism (lazy major GC, not retention). Remaining: one quiet-desktop run for the valid capture-leg artefact (the engineering runs were refused for hidden windows on an in-use desktop — the validity gate working), then the owner Part-A′ cross-check before capture rows are canon.
 
 - [~] **M13-PROF-04 Live-path profile: capture, scheduling, preview** [detail] (2026-07-22)
   Intent: the live capture→preview path — pump cadence, dirty-detection cost and small-edit misses, coalescing drops, draft governor, split-compare overhead, preview/UI latency, failure recovery.
   Done when: an end-to-end latency decomposition at 200²/300² live capture, with dropped/stale-frame behaviour quantified against the ≥ 4 updates/sec promise.
-  Status 2026-08-07: gestureless half published (D70) and re-baselined on the current build (D128 — every figure replicates; sheet repaired to the M14 surface). Remaining: the owner capture session — rehearsal sheet in `docs/browser-measurement.md`.
+  Status 2026-08-08: gestureless half published (D70), re-baselined (D128); capture legs automated (D129). Remaining: the human legs of the shrunk sheet — Part A′ one-time cross-check, Part B Photoshop content, Part C trace (`docs/browser-measurement.md`).
 
 - [~] **M13-PROF-05 Memory, GC and export contention** [detail] (2026-07-22)
   Intent: per-frame allocation census, typed-array reuse candidates, live GC pressure, peak export memory, worker blocking during export.
   Done when: allocation/peak/contention figures published, top candidates ranked; export full-quality isolation re-verified.
-  Status 2026-08-07: gestureless half published (D71) and the mem leg re-run current (D128 — isolation EXACT again; the ~75 MiB idle residue replicates to the decimal; the DEF-02 refusal proven in-row). Remaining: snapshot pair + GC-pause trace, folded into the PROF-04 owner session (rehearsal sheet Parts C/D).
+  Status 2026-08-08: gestureless half published (D71), re-run current (D128); the idle residue answered in mechanism — lazy major GC, not retention (forced-GC probe, D129), retiring the snapshot pair unless a run reports otherwise. Remaining: GC-pause trace (Part C of the shrunk sheet) + the quiet-desktop `bench:auto` artefact.
 
 #### Phase 3 — Synthesis
 

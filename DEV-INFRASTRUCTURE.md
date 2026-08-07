@@ -43,6 +43,7 @@ Package manager: **npm** (Node LTS).
 | `audit` | `AUDIT=1 vitest run tests/audits` | M5B component decompositions + defect reproductions; JSON artefacts to `bench-reports` | Investigating where a cost or a defect lives |
 | `matrix` | `MATRIX_FULL=1 vitest run tests/acceptance-matrix.test.ts` | Full acceptance/parity matrix incl. the 1024² ceiling row | Verifying composed-pipeline correctness across axes |
 | `matrix:write` | `node scripts/write-acceptance-matrix.mjs` | Regenerate `docs/acceptance-matrix.md`, the matrix coverage table | After a matrix row change — `check` fails if the committed copy drifts (staleness gate) |
+| `bench:auto` | `node scripts/bench-auto.mjs` | Automated owner-session legs: flag-granted capture + forced-GC memory reports via a dedicated Chrome (M13-MEAS-03) | Refreshing the browser capture/memory evidence — awake desktop, hands off, never CI |
 | `check` | 7 non-mutating steps: types, lint, wasm, test, build, docs, secrets | **Quality gate** | Before calling a task done |
 | `lint:fix` | `eslint . --fix` | Auto-fix (separate from the gate) | Cleanup, never the CI pass/fail |
 
@@ -275,6 +276,23 @@ is overwritten on every build.
   `docs/browser-measurement.md` → "The bv2 harness run". Shares the bv2
   vocabulary through `src/bench/` (moved from `tests/bench/` so
   production entries never import test modules).
+- **`bench:auto`** — the automated owner-session legs (M13-MEAS-03,
+  Tier 1: launch flags only, no new dependencies). Builds, serves the
+  production bundle (`BENCH_PORT`, default 4173, `--strictPort` — it
+  never takes over a port something else holds), then launches the
+  installed Chrome (`BENCH_CHROME` overrides the binary path) twice
+  with a throwaway profile: once for the flag-granted capture legs
+  (`--auto-select-window-capture-source-by-title`, content-verified
+  in-page before any row is measured) and once for the memory leg
+  under `--js-flags=--expose-gc` (the forced-GC retention probe).
+  Validates both reports (untainted, visible page, all legs measured
+  — `scripts/bench-auto-validate.mjs`) and writes them to
+  `bench-reports`; an invalid run exits non-zero and must not be
+  quoted. Needs an **awake desktop with the windows left visible** —
+  never headless, never CI. Owns only what it starts: its preview
+  server, its Chrome instances, their temp profiles. Procedure and
+  honesty rules: `docs/browser-measurement.md` → "Automated
+  owner-session legs".
 
 ---
 

@@ -148,7 +148,13 @@ every real ID starts with a source class:
 - `capture.g<grid>.<palette>.<metric>.<dither>` — browser-harness rows
   whose input is the **user-shared capture surface** (M13-MEAS-02): the
   source is whatever the owner shares, so a matrix ID would lie about
-  the input. Actual capture dimensions ride in the row's `meta`.
+  the input. Actual capture dimensions ride in the row's `meta`. An
+  optional `.edit-<class>` tail (M13-MEAS-03) marks a live window in
+  which the controlled source was driven in one of the six Part-B
+  edit-class approximations (`hands-off`, `pixel-marks`,
+  `slow-stroke`, `large-fill`, `transform`, `rapid-scatter`); such
+  rows are controlled-source evidence only — never Photoshop
+  behaviour, and never budget-bindable.
 
 Comparison and audit legs may additionally publish rows under
 **grammar-derived IDs outside the frozen matrix** (M13-PROF-03: the

@@ -61,3 +61,5 @@ refer to `docs/requirements.md`.
 - Global error capture logs ErrorEvents as "[object Object]" in the console mirror (seen while diagnosing an M14 boot error 2026-07-23) — stringify message/stack in src/diagnostics/log.ts's global hook for legible uncaught errors.
 - [ ] Remove the retired policy-world resolver (resolvePermitted/resolveProjectPalette in src/core/palette-policy.ts + palette-resolve.ts) and the LCh presets once no migration-era consumer remains — kept post-M15-UI-01 as tested substrate only (D124).
 - bv2 env row records no browser version/UA — the one attribution the D128 fresh-vs-banked comparison wanted (TS reduce ran 2.5× faster with the stage untouched, cause unprovable from the reports); a bv3 nicety (from: 2026-08-07 D128 re-baseline)
+- bench:auto: timestamp report filenames so an invalid rerun cannot clobber a valid artefact (run 6 overwrote run 5's valid mem report)
+- bench:auto occlusion resilience: evaluate `--disable-backgrounding-occluded-windows` — needs its own visible-vs-occluded equivalence evidence before it could be sanctioned

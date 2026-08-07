@@ -146,11 +146,16 @@ export const SCALE_LABELS = {
   patternHeight: 'Design height',
   patternHelper: 'Stitches across the design',
   patternHeightHelper: 'Stitches down the design',
-  // The region↔design scale (M14-EXT-20): the unit lives in the
-  // helper per the house idiom, and "scale" alone is banned (D52 —
-  // a bare "scale" label is how the four resolutions fuse).
-  stitchSize: 'Stitch size',
-  stitchSizeHelper: 'Source pixels per stitch',
+  // The region↔design scale (M14-EXT-20), renamed "Zoom" on the
+  // owner's word (M14-EXT-40). The factor is the same number the
+  // slider always held — source pixels per stitch — and the helper
+  // carries that unit. Recorded tension: the preview strip also
+  // speaks of zoom (preview CSS px per stitch, a different D52
+  // resolution); the helper is the disambiguation, and the collision
+  // is named for ACCEPT-01 rather than silently renamed. A bare
+  // "scale" label stays banned (D52).
+  stitchSize: 'Zoom',
+  stitchSizeHelper: 'Source pixels per stitch — 3× turns three source pixels into one stitch',
   captureRegion: 'Capture region',
   previewScale: 'Preview scale',
   exportScale: 'Export scale',

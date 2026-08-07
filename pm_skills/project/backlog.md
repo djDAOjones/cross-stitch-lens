@@ -24,46 +24,13 @@ once at M14-ACCEPT-01 (D73). UI-only milestone: engine, worker and
 export outputs stay byte-identical; no new runtime dependencies; no
 project-file schema change. Milestone docs under `docs/`:
 `ui-audit.md`, `ui-journeys.md`, `ui-spec.md`, `ui-evidence.md`.
-Looks one to five have shipped whole (see trajectory + decision log
-D91–D110). The sixth look (D111 memos 1–5, D112 memos 6–8) adds
-EXT-38..44; several supersede fifth-look decisions on the owner's
-own authority, having seen them live. Run order:
-38 → 39 → 43 → 40 → 42 → 44 → 41.
-
-#### Extension — sixth look (D111/D112)
-
-- [ ] **M14-EXT-38 Capture row trims: Capture frame retires, Pause becomes Freeze** (2026-08-07)
-  Intent: memos 1+2 — the Capture frame button goes (the owner now names the cut D108 declined for want of exactly that); the pump-death recovery copy re-points at the freeze toggle (unfreeze restarts the pump — verify that leg). "Pause capture" renames to "Freeze"; settle at the gate whether the label flips (Freeze/Unfreeze) or stays constant under aria-pressed, and sweep the paused-state copy for the rename.
-  Done when: the row reads Stop capture · Freeze · Lock aspect · Lock region; a dead pump is still recoverable and the copy says how; no orphaned handlers or copy.
-
-- [ ] **M14-EXT-39 Status line moves under the build id; header economised** (2026-08-07)
-  Intent: memo 4 — the app's one live region (home of "Source unchanged.", export confirmations, the width guide) relocates from the content column to the header, under the version/build line; same element, still the app's only status region. Then an economy pass over the header block (dead space, wrap behaviour at 380 px). Consequence to record: announcements leave the viewport when scrolled deep at narrow — visible-status loss is the owner's accepted trade, named for ACCEPT-01.
-  Done when: status renders under the build id at both postures with no header overflow at 320 px; the content column no longer reserves a status row; the trade is recorded.
-
-- [ ] **M14-EXT-40 Design dissolves into Capture; Stitch size becomes Zoom; Stats gains the row** [detail] (2026-08-07)
-  Intent: memo 5 — the Design section is removed; the width × height fields move to the Capture section; "Stitch size" renames to "Zoom"; Stats gains a stitch-size readout. Supersedes D110's EXT-34/A on the owner's authority. The three gate questions are in the ticket (no-session home, factor definition, the D52 zoom-naming collision).
-  Done when: no Design section; size and zoom edit in one place with or without a session; Stats reads the stitch size; the supersession and the zoom-vocabulary decision are recorded.
-
-- [ ] **M14-EXT-42 Colour section: compress the redundancy** [detail] (2026-08-07)
-  Intent: memo 6 — seven elements for one integer, eight near-identical brand helper lines, a summary overlapping Stats, six standing library buttons: rank and compress with a design gate (census + candidates in the ticket; one flagged owner-ask reversal — the EXT-29 steppers). Must not foreclose M15's Colour-profile slot.
-  Done when: the section's default surface is materially shorter at both postures with no lost capability, before/after evidence recorded; any owner-ask reversal named.
-
-- [ ] **M14-EXT-43 Threads dropdown snaps shut — diagnose and fix** [detail] (2026-08-07)
-  Intent: memo 7 (a defect) — selects in the Colour panel close before a choice can be made; the dither selects are fine. Hypothesis and fix shape in the ticket (per-frame `update()` rebuilds under the open popup; never rebuild an open/focused control, diff-update on a fingerprint).
-  Done when: a select stays open and selectable during live capture and across frame results; a regression test pins the no-rebuild-when-unchanged contract; the fix is evidence-backed live.
-
-- [ ] **M14-EXT-44 Processing order retires; Advanced sunsets** [detail] (2026-08-07)
-  Intent: memo 8 — the Processing order select goes and the Advanced section (its only occupant) retires with it (the EXT-32 sunset pattern). Core keeps `reduce-first` for loaded files; the recommended conduct (honour + a visible note) and the recorded pros/cons are in the ticket.
-  Done when: no Processing order control, no Advanced section, no orphaned keys; a loaded reduce-first project still reopens byte-identical and says what it is doing; save round-trip unchanged.
-
-- [ ] **M14-EXT-41 Colours used: rename and one section hierarchy everywhere** [detail] (2026-08-07)
-  Intent: memo 3 — "Colours by usage" renames to "Colours used" and becomes a real accordion section; every region reads at the same hierarchy level (options in the ticket: anatomy-only vs flattening the aside's box; the two-column companion layout itself stays). Runs after EXT-40 so the equalisation lands on the final section census.
-  Done when: one section treatment across every region at both postures; the renamed section collapses to a bare heading with its disclosure persisted (old key seeded by fallback); highlight rows keep reach 2.
+Looks one to six have shipped whole (see trajectory + decision log
+D91–D121); the gate is the milestone's one open item.
 
 #### Phase 4 — Verification & end review
 
-- [ ] **M14-ACCEPT-01 Maintainer end review** [maintainer] [detail] [blocked: M14-EXT-38..44] (2026-07-23)
-  Intent: the reserved human gate — judge look, feel and taste over the review pack (changes, logged decisions, before/after evidence, waivers) and a live Photoshop companion session. Every look through the fifth (D110) has shipped; the sixth (D111/D112) re-blocks the gate on EXT-38..44. The named live-session legs and watch items are listed in the ticket.
+- [ ] **M14-ACCEPT-01 Maintainer end review** [maintainer] [detail] (2026-07-23)
+  Intent: the reserved human gate — judge look, feel and taste over the review pack (changes, logged decisions, before/after evidence, waivers) and a live Photoshop companion session. Every look through the sixth (D121) has shipped. The named live-session legs and watch items are listed in the ticket.
   Done when: owner pass/fail notes are recorded; failures route to new M14 fix tasks, never silent rework.
 
 ### Next — M13 Visual processing performance (remainder)

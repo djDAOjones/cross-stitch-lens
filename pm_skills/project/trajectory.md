@@ -43,6 +43,20 @@
 
 ## M14 — UI/UX excellence (in progress — agent half complete, ACCEPT-01 open)
 
+- M14-EXT-38, M14-EXT-39, M14-EXT-40, M14-EXT-41, M14-EXT-42,
+  M14-EXT-43, M14-EXT-44 (2026-08-07) — the sixth look lands in one
+  auto-jazz run: the capture row trims to Stop · Freeze · locks
+  (Capture frame cut, pump death recovers via Unfreeze); the status
+  region moves into the header under the build id with an economy
+  pass; the snapping Threads dropdown is fixed by a structural
+  no-rebuild contract (fingerprint-gated updates, pinned by test);
+  Design dissolves into a standing Capture section with the Zoom
+  rename and a Stats stitch-size row; the Colour section compresses
+  (count cluster, availability-only summary, provenance marks);
+  Processing order and the Advanced section retire (loaded
+  reduce-first files honoured and named); "Colours used" becomes a
+  real section and the settings aside flattens to one hierarchy. See
+  decision-log D121.
 - M14-EXT-31..37 (2026-08-07) — the fifth look lands in one auto-jazz
   run: the preview becomes a real accordion section (bar toggle
   retired, disclosure persisted, collapsed heading unpinned); the

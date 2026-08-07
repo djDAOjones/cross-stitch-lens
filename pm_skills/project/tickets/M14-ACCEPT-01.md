@@ -74,3 +74,29 @@ Further live-session legs the sixth-look triage named for this gate
   recovery-without-Capture-frame (EXT-38), off-viewport status at
   narrow (EXT-39), and the Zoom naming beside the preview's zoom
   (EXT-40).
+
+## Post-ship additions (D121 — appended 2026-08-07)
+
+The sixth look shipped (EXT-38..44); the trades above are now live.
+Concrete legs and judgement calls this run added:
+
+- **Freeze live legs** (EXT-38): freeze → unfreeze during a real
+  capture; kill the pump (stop sharing from the OS side mid-frame if
+  reproducible) and recover via the single Unfreeze press.
+- **Zoom live leg** (EXT-40): drag the Zoom slider mid-session
+  (unlocked) and judge the "N×" factor + helper against the preview
+  strip's zoom percentage one panel away.
+- **"Capture" over a still image** (EXT-40/A): the standing section
+  holds Zoom + Size for still-image users under the owner's word
+  "Capture" — judge whether the name stretches too far without a
+  session ("Source & size" was the alternative).
+- **"Colours used" vs "Colours in use"** (EXT-41): the section name
+  and the Stats row are near-twins naming different things (the
+  table vs a count); the owner's wording stands unless it reads as a
+  duplicate live.
+- **The flattened aside** (EXT-41/B): the settings column now sits
+  flat on the page — judge whether the section dividers alone hold
+  the column together in both schemes.
+- **The parked steppers cut** (EXT-42): removing − / + would reverse
+  the owner's own EXT-29 ask; parked as their call, with the count
+  cluster now one packed row-set.

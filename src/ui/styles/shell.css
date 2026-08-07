@@ -33,11 +33,33 @@ main {
   margin: 0;
 }
 
+/* Identity-and-state block (M14-EXT-39): the build id with the app's
+  one status region stacked directly under it. It takes the slack
+  width between the title and the utility controls so long
+  announcements wrap inside the block instead of widening the header;
+  the status keeps a one-line reserve so an announcement never
+  reflows the layout below (no content jumps). */
+.header-id {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.header-id p {
+  margin: 0;
+}
+
+.header-id #status {
+  min-height: 1lh;
+}
+
 /* Shell bar: the Source chooser on a permanent surface (the collapse
   toggles retired at M14-EXT-31/32 — sections collapse from their own
   headers). Hugs the right edge at wide widths; wraps as a tidy
-  left-aligned row at companion widths (M14-EXT-05). */
-.shell-bar {
+  left-aligned row at companion widths (M14-EXT-05). Scoped under
+  .app-header so the margin zeroing outranks the later generic
+  .toolbar margins — the unscoped rule silently lost that cascade and
+  paid 24 px of header dead space for it (M14-EXT-39). */
+.app-header .shell-bar {
   margin: 0;
   flex: 0 1 auto;
   margin-left: auto;
@@ -88,11 +110,14 @@ main {
   text-align: left;
 }
 
+/* Companion widths: the utility controls share one left-aligned row
+  instead of a full-width row each — the M14-EXT-39 economy pass
+  (two stacked rows plus their gaps were the header's dead space). */
 @media (max-width: 60rem) {
-  .shell-bar,
-  .diagnostics-control {
+  .app-header .shell-bar,
+  .app-header .diagnostics-control {
     margin-left: 0;
-    flex-basis: 100%;
+    flex-basis: auto;
   }
 }
 
@@ -109,13 +134,12 @@ main {
   align-items: stretch;
 }
 
-/* Settings column: a Carbon layer, not an outlined box — the panel
-  reads as a surface (layer-01) with a decorative edge, per the spec's
-  layer model. */
+/* Settings column: flat on the page background (M14-EXT-41 — one
+  hierarchy everywhere; the layer-01 box read as a nested tier below
+  the content column's sections). The section dividers carry the
+  column's rhythm; the two-column companion architecture itself is
+  untouched. */
 .controls {
-  background: var(--csl-layer-01);
-  border: 1px solid var(--csl-border-subtle);
-  padding: var(--csl-spacing-05);
   /* A zero minimum: an intrinsic min-content floor here is what
     pushes a flex row wider than its container. */
   min-width: 0;
@@ -355,12 +379,12 @@ main {
   overflow-x: auto;
 }
 
-/* Compressed info block (M14-FIX-05): the stats line, colours fold
-  and status stack directly under the preview — every default text
-  margin here is height the companion posture pays for. */
+/* Compressed info block (M14-FIX-05): the stats line and colours
+  fold stack directly under the preview — every default text margin
+  here is height the companion posture pays for. (The status region
+  moved to the header at M14-EXT-39.) */
 .info-panel p,
-.info-panel details,
-#status {
+.info-panel details {
   margin-top: var(--csl-spacing-02);
   margin-bottom: var(--csl-spacing-02);
 }

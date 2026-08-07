@@ -1,11 +1,14 @@
 /**
- * Info panel (§11 subset bound to the preview): the colours-by-usage
+ * Info panel (§11 subset bound to the preview): the "Colours used"
  * table, re-rendered per processed frame. The headline numbers moved
- * to the Stats section (M14-EXT-21 — one owner per figure), and the
- * fold line is the bare heading (M14-EXT-22 — no stat rides a closed
- * fold). The row model is pure (tested in node); only createInfoPanel
- * touches the DOM. Thread colours in swatches are content, not UI
- * tokens (UI-STANDARDS → "Colour fidelity").
+ * to the Stats section (M14-EXT-21 — one owner per figure). Since
+ * M14-EXT-41 the panel is bare section *content*: the host mounts it
+ * in a real accordion section (one hierarchy across every region),
+ * so the D99-lineage `<details>` fold is gone and the host learns
+ * about empty states through `onContent`. The row model is pure
+ * (tested in node); only createInfoPanel touches the DOM. Thread
+ * colours in swatches are content, not UI tokens (UI-STANDARDS →
+ * "Colour fidelity").
  */
 
 import type { ColorUsage, DesignStats } from '../core/stats.ts';
@@ -106,11 +109,10 @@ export interface InfoPanel {
   clearHighlight(): void;
 }
 
-/** Disclosure wiring for the colours table (M14-EXT-05). */
-export interface InfoPanelDepthOptions {
-  open: boolean;
-  onToggle(open: boolean): void;
-}
+/** Host notifications about the table's content (M14-EXT-41): the
+ *  section wrapper hides while there are no rows, and only the panel
+ *  knows. */
+export type InfoPanelContentListener = (hasRows: boolean) => void;
 
 /** A selected highlight row, as reported to the host (M14-EXT-17). */
 export interface HighlightSelection {
@@ -131,47 +133,29 @@ export interface InfoPanelHighlightOptions {
 }
 
 /**
- * Build the panel. Starts in its empty state until the first update.
+ * Build the panel content. Starts empty until the first update.
  *
  * `brandNames` labels each row with the brand as well as the
  * reference — "310" alone is not a shopping list once more than one
- * brand can be enabled. The colours table sits behind a persisted
- * fold (open by default) so the one always-on block left after the
- * IA restructure can be put away too (M14-EXT-05).
+ * brand can be enabled. The host owns the section header and
+ * disclosure ("Colours used", M14-EXT-41); this element is the
+ * panel's content alone.
  */
 export function createInfoPanel(
   doc: Document,
   brandNames?: ReadonlyMap<string, string>,
-  depth?: InfoPanelDepthOptions,
+  onContent?: InfoPanelContentListener,
   highlight?: InfoPanelHighlightOptions,
 ): InfoPanel {
-  const element = doc.createElement('section');
+  const element = doc.createElement('div');
   element.className = 'info-panel';
 
-  const details = doc.createElement('details');
-  details.className = 'depth-reveal';
-  // The fold line is the bare heading (M14-EXT-22): the count and
-  // leading-thread précis retired with every other fold stat — the
-  // numbers live in the Stats section, the detail lives inside.
-  const detailsSummary = doc.createElement('summary');
-  detailsSummary.textContent = 'Colours by usage';
-  const detailsBody = doc.createElement('div');
-  detailsBody.className = 'depth-reveal-body';
-  details.append(detailsSummary, detailsBody);
-  // Closed by default (M14-EXT-14, flipping the D90 default on the
-  // owner's ask); a persisted user choice still wins at the call site.
-  details.open = depth?.open ?? false;
-  details.addEventListener('toggle', () => {
-    depth?.onToggle(details.open);
-  });
-  details.hidden = true;
-
   const table = doc.createElement('table');
-  // The visible heading is the disclosure summary; the caption keeps
-  // the table's accessible name without saying it twice on screen.
+  // The visible heading is the section header; the caption keeps the
+  // table's accessible name without saying it twice on screen.
   const caption = doc.createElement('caption');
   caption.className = 'visually-hidden';
-  caption.textContent = 'Colours by usage';
+  caption.textContent = 'Colours used';
   const thead = doc.createElement('thead');
   const headRow = doc.createElement('tr');
   if (highlight !== undefined) {
@@ -195,8 +179,7 @@ export function createInfoPanel(
   thead.append(headRow);
   const tbody = doc.createElement('tbody');
   table.append(caption, thead, tbody);
-  detailsBody.append(table);
-  element.append(details);
+  element.append(table);
 
   // Thread highlight (M14-EXT-17): one selected palette index at a
   // time, session-only. Selection is keyed by palette index — the
@@ -219,7 +202,7 @@ export function createInfoPanel(
   // Escape clears the highlight from anywhere inside the table region
   // — one deliberate step, before it would bubble to canvas/section
   // handlers. Only when a highlight is set; otherwise pass through.
-  details.addEventListener('keydown', (event) => {
+  element.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape' || selectedIndex === null) return;
     event.preventDefault();
     event.stopPropagation();
@@ -287,7 +270,10 @@ export function createInfoPanel(
       tr.append(td);
       tbody.append(tr);
     }
-    details.hidden = rows.length === 0;
+    // The host hides the whole section while there is nothing to
+    // show (M14-EXT-41) — an open heading over an empty table is the
+    // blank-panel anti-pattern.
+    onContent?.(rows.length > 0);
   }
 
   return {

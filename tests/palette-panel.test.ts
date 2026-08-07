@@ -14,15 +14,19 @@ import {
   buildPaletteEntryRows,
   buildThreadRows,
   bulkOwnershipTargets,
+  conflictsFingerprint,
   countSummary,
+  editorFingerprint,
   filteredThreads,
   moveEntry,
   matchesSearch,
   roleOf,
+  sourceFingerprint,
   sourceFromValue,
   sourceOptions,
   sourceValue,
   threadLabel,
+  threadsFingerprint,
   withRole,
   type PalettePanelState,
 } from '../src/ui/palette-panel.ts';
@@ -37,9 +41,6 @@ function state(overrides: Partial<PalettePanelState> = {}): PalettePanelState {
     paletteMode: true,
     conflicts: [],
     eligibleCount: 489,
-    selectedCount: 489,
-    usedCount: null,
-    awaitingSource: false,
     owned: new Set(),
     library: [],
     selectedIds: new Set(),
@@ -210,65 +211,18 @@ describe('countSummary', () => {
     expect(countSummary(state({ paletteMode: false }))).toBe('Unlimited colours — no thread palette.');
   });
 
-  it('reports permitted and palette size with no limit', () => {
-    // Explicit no-limit policy: the ambient default became max/8 at
-    // M14-EXT-13 (D98), and this test is about the unlimited branch.
-    expect(
-      countSummary(
-        state({
-          policy: { ...defaultPolicy(), count: { mode: 'all', n: 20 } },
-          eligibleCount: 489,
-          selectedCount: 489,
-        }),
-      ),
-    ).toBe('489 permitted · 489 in palette.');
+  it('reports availability alone — Stats owns the other figures (M14-EXT-42)', () => {
+    // The selected/requested/used copies this line once carried were
+    // the third copy of Stats' numbers (EXT-21). Availability is the
+    // one figure with no other home.
+    expect(countSummary(state({ eligibleCount: 489 }))).toBe('489 threads available.');
+    expect(countSummary(state({ eligibleCount: 1 }))).toBe('1 thread available.');
   });
 
   it('defaults to a limit of eight (M14-EXT-13, D98)', () => {
     // The fresh-session default is at-most-8 — a stitchable first
-    // result, never silent (the summary strings above carry it).
+    // result, never silent (Stats carries the limit line).
     expect(defaultPolicy().count).toEqual({ mode: 'max', n: 8 });
-  });
-
-  it('reports selected against requested when a limit is in force', () => {
-    // "Selected" and "requested" are always both shown: asking for 20
-    // and getting 17 is normal, and only NOT a fault if the app says so
-    // (M7-COUNT-01).
-    const summary = countSummary(
-      state({
-        policy: { ...defaultPolicy(), count: { mode: 'max', n: 20 } },
-        eligibleCount: 489,
-        selectedCount: 17,
-      }),
-    );
-    expect(summary).toBe('489 permitted · 17 selected of 20 requested.');
-  });
-
-  it('says a limit is pending rather than violated before the first frame', () => {
-    // "82 selected of 20 requested" reads as a broken limit; the limit
-    // simply has not been applied yet, because selection needs the
-    // design's own colours.
-    const summary = countSummary(
-      state({
-        policy: { ...defaultPolicy(), count: { mode: 'max', n: 20 } },
-        eligibleCount: 82,
-        selectedCount: 82,
-        awaitingSource: true,
-      }),
-    );
-    expect(summary).toBe('82 permitted · 20 requested — chosen when the design updates.');
-  });
-
-  it('adds the used count once a frame has run', () => {
-    const summary = countSummary(
-      state({
-        policy: { ...defaultPolicy(), count: { mode: 'exact', n: 20 } },
-        selectedCount: 20,
-        usedCount: 18,
-      }),
-    );
-    expect(summary).toContain('20 selected of 20 requested');
-    expect(summary).toContain('18 used in the design');
   });
 });
 
@@ -377,5 +331,107 @@ describe('buildPaletteEntryRows', () => {
 
   it('handles an empty palette', () => {
     expect(buildPaletteEntryRows({ ...palette, threadIds: [] }, catalogue)).toEqual([]);
+  });
+});
+
+describe('rebuild fingerprints (M14-EXT-43)', () => {
+  // The regression this pins: update() runs on every processed frame
+  // during live capture, and rebuilding a region under an open native
+  // select popup snaps it shut before a choice can be made. A region
+  // may rebuild only when its *structure* changed — never for a
+  // value-only change, and never for an identical state.
+  const palette: LibraryPalette = {
+    id: 'pal-1',
+    name: 'Mine',
+    revision: 3,
+    createdFrom: 'brands',
+    threadIds: ['dmc:310', 'anchor:403'],
+  };
+
+  it('an unchanged state produces identical fingerprints everywhere', () => {
+    const a = state();
+    const b = state();
+    expect(sourceFingerprint(b)).toBe(sourceFingerprint(a));
+    expect(editorFingerprint(b)).toBe(editorFingerprint(a));
+    expect(conflictsFingerprint(b.conflicts)).toBe(conflictsFingerprint(a.conflicts));
+    const rowsA = buildThreadRows(catalogue, a, '');
+    const rowsB = buildThreadRows(catalogue, b, '');
+    expect(threadsFingerprint(rowsB.rows)).toBe(threadsFingerprint(rowsA.rows));
+  });
+
+  it('frame-level changes are value-level: counts, usage, roles, ownership', () => {
+    const a = state();
+    // What a processed frame can move: used counts, chosen threads,
+    // per-thread roles, ownership. None of it may force a rebuild.
+    const b = state({
+      owned: new Set(['dmc:310']),
+      policy: {
+        ...defaultPolicy(),
+        locked: ['dmc:310'],
+        count: { mode: 'max', n: 12 },
+      },
+      selectedIds: new Set(['dmc:310']),
+    });
+    expect(sourceFingerprint(b)).toBe(sourceFingerprint(a));
+    expect(editorFingerprint(b)).toBe(editorFingerprint(a));
+    const rowsA = buildThreadRows(catalogue, a, '');
+    const rowsB = buildThreadRows(catalogue, b, '');
+    expect(threadsFingerprint(rowsB.rows)).toBe(threadsFingerprint(rowsA.rows));
+  });
+
+  it('the selected source value is deliberately not structure', () => {
+    // Arrowing through the closed select fires a change per step; a
+    // rebuild then would drop focus mid-gesture. Only the option list
+    // and the preset-mode reveal are structural.
+    const brandsA = state();
+    const withLibrary = state({ library: [palette] });
+    const chosen = state({
+      library: [palette],
+      policy: { ...defaultPolicy(), source: { kind: 'library', paletteId: 'pal-1' } },
+    });
+    expect(sourceFingerprint(chosen)).toBe(sourceFingerprint(withLibrary));
+    expect(sourceFingerprint(withLibrary)).not.toBe(sourceFingerprint(brandsA));
+  });
+
+  it('structural changes are seen: library list, preset reveal, conflicts, editor', () => {
+    const base = state();
+    expect(sourceFingerprint(state({ library: [palette] }))).not.toBe(sourceFingerprint(base));
+    expect(
+      sourceFingerprint(
+        state({
+          policy: {
+            ...defaultPolicy(),
+            source: { kind: 'preset', presetId: 'pastel', mode: 'strict' },
+          },
+        }),
+      ),
+    ).not.toBe(sourceFingerprint(base));
+    expect(
+      conflictsFingerprint([
+        {
+          kind: 'no-brands-enabled',
+          severity: 'error',
+          ids: [],
+          message: 'No thread brand is enabled.',
+        },
+      ]),
+    ).not.toBe(conflictsFingerprint([]));
+    const editing = state({
+      library: [palette],
+      policy: { ...defaultPolicy(), source: { kind: 'library', paletteId: 'pal-1' } },
+    });
+    const reordered = state({
+      library: [{ ...palette, revision: 4, threadIds: ['anchor:403', 'dmc:310'] }],
+      policy: { ...defaultPolicy(), source: { kind: 'library', paletteId: 'pal-1' } },
+    });
+    expect(editorFingerprint(editing)).not.toBe(editorFingerprint(reordered));
+    expect(editorFingerprint(base)).toBe('none');
+  });
+
+  it('a narrowed row set changes the thread fingerprint', () => {
+    const a = state();
+    const all = buildThreadRows(catalogue, a, '');
+    const narrowed = buildThreadRows(catalogue, a, '310');
+    expect(threadsFingerprint(narrowed.rows)).not.toBe(threadsFingerprint(all.rows));
   });
 });

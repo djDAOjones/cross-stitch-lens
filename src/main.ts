@@ -475,14 +475,18 @@ function build(app: HTMLElement): void {
   // alternative source. The permission prompt is user-initiated —
   // button only, never on load (UI-STANDARDS → "Capture UX").
   // The session controls live inline in the Capture section
-  // (M14-EXT-33, the owner's fifth look superseding D108's
-  // modal-carried option A having seen it live): Stop capture,
-  // Pause/Resume and Capture frame beside the two region toggles —
-  // one row, one owner per control; the Source modal holds source
-  // choices only and the bar button reads "Source" at all times. The
-  // D108 fixed point (Stop reachable from the bar) is consciously
-  // given up by that move. The section mounts only while a session
-  // runs, so the session verbs need no per-session hidden dance.
+  // (M14-EXT-33, recut at M14-EXT-38 on the owner's sixth look):
+  // Stop capture and Freeze beside the two region toggles — one row,
+  // one owner per control; the Source modal holds source choices only
+  // and the bar button reads "Source" at all times. Capture frame is
+  // retired (the cut D108 declined for want of the owner naming it —
+  // now named): the initial grab still runs on session start, and the
+  // freeze toggle owns every later "hold this frame" gesture. Freeze
+  // flips its label (Freeze ↔ Unfreeze) with no aria-pressed — a
+  // changing label under aria-pressed is the ARIA-APG anti-pattern,
+  // and the pump-death recovery copy needs a literal Unfreeze button
+  // to point at. The section mounts only while a session runs, so the
+  // session verbs need no per-session hidden dance.
   const captureRow = document.createElement('div');
   captureRow.className = 'toolbar';
   const stopCaptureButton = document.createElement('button');
@@ -491,18 +495,11 @@ function build(app: HTMLElement): void {
   stopCaptureButton.addEventListener('click', () => {
     stopSession();
   });
-  const pauseButton = document.createElement('button');
-  pauseButton.type = 'button';
-  pauseButton.textContent = 'Pause capture';
-  pauseButton.setAttribute('aria-pressed', 'false');
-  pauseButton.addEventListener('click', () => {
-    togglePauseCapture();
-  });
-  const captureFrameButton = document.createElement('button');
-  captureFrameButton.type = 'button';
-  captureFrameButton.textContent = 'Capture frame';
-  captureFrameButton.addEventListener('click', () => {
-    void grabCaptureFrame();
+  const freezeButton = document.createElement('button');
+  freezeButton.type = 'button';
+  freezeButton.textContent = 'Freeze';
+  freezeButton.addEventListener('click', () => {
+    toggleFreeze();
   });
   const lockButton = document.createElement('button');
   lockButton.type = 'button';
@@ -583,21 +580,22 @@ function build(app: HTMLElement): void {
   entryActions.append(chooseButton, captureCta, captureExpectation, openProjectButton);
   entryState.append(entryTitle, entryActions, hint);
   // Session verbs first, region toggles after (M14-EXT-33): stopping
-  // is the row's primary reach, and the locks pair at the end.
-  captureRow.append(
-    stopCaptureButton,
-    pauseButton,
-    captureFrameButton,
-    aspectButton,
-    lockButton,
-  );
+  // is the row's primary reach, and the locks pair at the end. The
+  // row is session machinery in a standing section (M14-EXT-40), so
+  // it hides whole outside a session.
+  captureRow.append(stopCaptureButton, freezeButton, aspectButton, lockButton);
+  captureRow.hidden = true;
   // The source section carries the cold entry only (M14-EXT-06/12):
   // the capture surfaces live in the Capture region section, mounted
   // in the settings panel for the duration of a session.
   importSection.append(entryState, label, input);
 
   // Status is text in an aria-live region — never colour-only, never
-  // silent (UI-STANDARDS → "System status").
+  // silent (UI-STANDARDS → "System status"). It lives in the header
+  // under the build id (M14-EXT-39, superseding the M2-era content
+  // placement): the app's one status region, on the chrome's own
+  // line. The recorded trade: scrolled deep at narrow, announcements
+  // sit off-viewport — accepted by the owner, named for ACCEPT-01.
   const status = document.createElement('p');
   status.id = 'status';
   status.setAttribute('role', 'status');
@@ -670,13 +668,12 @@ function build(app: HTMLElement): void {
   const info = createInfoPanel(
     document,
     BRAND_NAMES,
-    {
-      // Spec default closed (M14-EXT-14, superseding D90's open); the
-      // persisted choice wins as ever.
-      open: disclosureOpen('colours-table', false),
-      onToggle: (open) => {
-        setDisclosure('colours-table', open);
-      },
+    // The section wrapper (built below) hides while the table is
+    // empty — an open heading over nothing is the blank-panel
+    // anti-pattern (M14-EXT-41).
+    (hasRows) => {
+      coloursHasRows = hasRows;
+      syncColoursSection();
     },
     // Thread highlight (M14-EXT-17): rows map to palette indices via
     // the entry order — the sidecar's own vocabulary. Session state,
@@ -700,6 +697,30 @@ function build(app: HTMLElement): void {
   highlightInvalidated = () => {
     info.clearHighlight();
   };
+
+  // "Colours used" as a real accordion section (M14-EXT-41, the
+  // owner's rename of "Colours by usage" and the one-hierarchy pass):
+  // the D99 fold anatomy retires, its collapsed-by-default choice
+  // survives as the spec default, and a remembered fold choice seeds
+  // the new key (the EXT-30 fallback precedent). Lives in the content
+  // column under the preview, exactly where the fold sat; visibility
+  // composes shell state with has-rows through one writer below.
+  let coloursHasRows = false;
+  const coloursSection = createSection(document, {
+    id: 'colours-used-section',
+    title: 'Colours used',
+    open: disclosureOpen('colours-used-section', disclosureOpen('colours-table', false)),
+    onToggle: (open) => {
+      setDisclosure('colours-used-section', open);
+    },
+  });
+  coloursSection.panel.append(info.element);
+  coloursSection.element.hidden = true;
+
+  /** One writer for the section's visibility: shell × content. */
+  function syncColoursSection(): void {
+    coloursSection.element.hidden = !visibility(shell).info || !coloursHasRows;
+  }
 
   // Profiling panel (M5 harness): dev-only per UI-STANDARDS →
   // "Diagnostics affordance" — never mounted in a production build.
@@ -885,15 +906,16 @@ function build(app: HTMLElement): void {
   controls.className = 'controls';
   controls.setAttribute('aria-label', 'Controls');
 
-  // Pattern group: the design's own resolution, in stitches. Kept in
-  // its own group above Grid because "how many stitches" and "how the
-  // grid lines look" are different questions that shared a legend
-  // before M6 and invited exactly the confusion M6-SCALE-01 exists to
-  // remove.
+  // Pattern group: the design's own resolution, in stitches. Its one
+  // home is the Capture section (M14-EXT-40, superseding EXT-34/A's
+  // permanent Design home on the owner's authority — the Design
+  // section itself is removed): size and zoom edit in one place, with
+  // or without a session.
   const patternGroup = document.createElement('fieldset');
   const patternLegend = document.createElement('legend');
-  // "Size" under the Design section header — repeating "Design" in
-  // the legend would say the word twice in one breath (M14-EXT-04).
+  // "Size" under the Capture section header — repeating the section
+  // name in the legend would say the word twice in one breath
+  // (M14-EXT-04).
   patternLegend.textContent = 'Size';
   // Compact footprint (M14-EXT-20): the two fields share one row with
   // a decorative × between them — visible labels and 44 px targets
@@ -935,15 +957,18 @@ function build(app: HTMLElement): void {
       },
     ),
   );
-  // Stitch size (M14-EXT-20): the region↔design scale made visible —
-  // a slider plus an exact readout, session-only (hidden without a
-  // capture session, a readout while aspect is locked). Session
-  // machinery, so it lives in the Capture section (M14-EXT-34/A,
-  // retiring D101's S1 reparent — Size keeps one permanent home in
-  // Design; only this slider travels with the session).
+  // Zoom (M14-EXT-20's stitch-size slider, renamed at M14-EXT-40):
+  // the region↔design scale made visible — a slider plus an exact
+  // "N×" readout. The factor is source pixels per stitch (the same
+  // number the slider always held); the helper carries the meaning
+  // and disambiguates from the preview strip's zoom, which is a
+  // different resolution in the D52 contract (capture px per stitch
+  // vs preview CSS px per stitch) — the collision is the owner's
+  // chosen word, named for ACCEPT-01, never silently renamed.
+  // Always present in the section; enabled only during a session
+  // (disabled-with-reason otherwise, the A9 pattern).
   const stitchSizeField = document.createElement('div');
   stitchSizeField.className = 'field';
-  stitchSizeField.hidden = true;
   const stitchSizeLabel = document.createElement('label');
   stitchSizeLabel.htmlFor = 'stitch-size';
   stitchSizeLabel.textContent = SCALE_LABELS.stitchSize;
@@ -978,7 +1003,7 @@ function build(app: HTMLElement): void {
         ? ` — clamped to the ${String(MAX_PATTERN_SIDE)}-stitch maximum`
         : '';
     status.textContent =
-      `Stitch size ${formatStitchSize(stitchSizePx)} source px — ` +
+      `Zoom ${formatStitchSize(stitchSizePx)}× — ` +
       `design ${patternSummary(scales.pattern)}${clampNote}.`;
   });
   patternGroup.append(patternLegend, sizeRow);
@@ -1083,16 +1108,15 @@ function build(app: HTMLElement): void {
     },
   );
 
-  /** The panel's view of the current policy, library, and resolution. */
+  /** The panel's view of the current policy, library, and resolution.
+   *  Selected/used/limit figures are Stats' numbers, not the panel's
+   *  (M14-EXT-42) — only availability travels here. */
   function panelState(): PalettePanelState {
     return {
       policy,
       paletteMode,
       conflicts: paletteConflicts,
       eligibleCount,
-      selectedCount: config.palette?.entries.length ?? 0,
-      usedCount: lastColorCount,
-      awaitingSource: selectionSource === null,
       owned,
       library: libraryPalettes,
       selectedIds: new Set(config.palette?.entries.map((t) => t.id) ?? []),
@@ -1368,25 +1392,21 @@ function build(app: HTMLElement): void {
 
   const ditherGroup = ditherControls.element;
 
-  const pipelineGroup = document.createElement('fieldset');
-  pipelineGroup.append(
-    selectField(
-      document,
-      'order-preset',
-      'Processing order',
-      [
-        ['resize-first', 'Resize, then match colours (recommended)'],
-        ['reduce-first', 'Match colours, then resize'],
-      ],
-      config.preset,
-      (preset) => {
-        config.preset = preset as PipelineConfig['preset'];
-        refreshSections();
-        reprocess();
-      },
-      'Resizing first is faster and usually cleaner.',
-    ),
-  );
+  // Processing order retires from the UI (M14-EXT-44, the owner's
+  // call — assessment recorded at D112: reduce-first is slower by
+  // construction, kills the stats sidecar, and its softer look is
+  // the dither surface's job now). Core keeps `preset` whole, so a
+  // loaded reduce-first project renders byte-identically from its
+  // file — and says so while active (visible state, the A conduct):
+  // this line mounts in the Processing section for exactly that
+  // state. There is no edit route back; fresh designs are always
+  // resize-first (D3).
+  const orderNote = document.createElement('p');
+  orderNote.className = 'meta';
+  orderNote.id = 'order-note';
+  orderNote.textContent =
+    'Rendering with the retired “match colours first” order, kept from this project file.';
+  orderNote.hidden = true;
 
   // Export group (§13 MVP subset): clean PNG at an integer scale,
   // transparent or solid background. The button stays disabled until
@@ -1398,7 +1418,7 @@ function build(app: HTMLElement): void {
     background: 'transparent',
     color: '#ffffff',
   };
-  // The Export/Project/Advanced fieldsets carry no legend: each is
+  // The Export/Project fieldsets carry no legend: each is
   // its section's only group, so the accordion header is the name
   // (a legend would say it twice — D83).
   const exportGroup = document.createElement('fieldset');
@@ -1812,7 +1832,6 @@ function build(app: HTMLElement): void {
   function syncControls(): void {
     setFieldValue('pattern-width', String(scales.pattern.widthStitches));
     setFieldValue('pattern-height', String(scales.pattern.heightStitches));
-    setFieldValue('order-preset', config.preset);
     // The Threadify switch (M14-EXT-29) mirrors paletteMode inside
     // palettePanel.update below — no field write needed here.
     ditherControls.update(config.dither, config.palette === null);
@@ -1928,10 +1947,17 @@ function build(app: HTMLElement): void {
       // route exits cold too (M14-EXT-06) — quietly: the line below
       // already says what happened and what to do next.
       exitCold(false);
+      // The retired order is named at the moment it starts rendering
+      // (M14-EXT-44) — the standing line in Processing carries it
+      // from here on.
+      const orderTail =
+        config.preset === 'reduce-first'
+          ? ' This project uses the retired “match colours first” order — kept as saved.'
+          : '';
       status.textContent =
         masterImage === null
-          ? `Loaded ${fileBlob.name} — import an image to see it applied.`
-          : `Loaded ${fileBlob.name}.`;
+          ? `Loaded ${fileBlob.name} — import an image to see it applied.${orderTail}`
+          : `Loaded ${fileBlob.name}.${orderTail}`;
       log.info('project', 'loaded', { filename: fileBlob.name });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -1972,6 +1998,9 @@ function build(app: HTMLElement): void {
     if (!sectionsReady) return;
     refreshStats();
     exportSize.textContent = exportSizeLine();
+    // Only a loaded file can set reduce-first (M14-EXT-44); the note
+    // stands exactly while it renders.
+    orderNote.hidden = config.preset !== 'reduce-first';
   }
 
   /** "PNG 800 × 800 px · chart 2,000 px wide" — the derived output
@@ -2002,6 +2031,10 @@ function build(app: HTMLElement): void {
     return dd;
   }
   const statsSize = statsRow('Design size');
+  // Stitch size joins Stats as a readout (M14-EXT-40): the Zoom
+  // slider owns the input during a session; this row shows the
+  // source-px-per-stitch ratio whenever any source defines one.
+  const statsStitch = statsRow('Stitch size');
   const statsTotal = statsRow('Total stitches');
   const statsColours = statsRow('Colours in use');
 
@@ -2018,6 +2051,17 @@ function build(app: HTMLElement): void {
    *  from pixels here; the worker's stats land via setOnResult. */
   function refreshStats(): void {
     statsSize.textContent = patternSummary(scales.pattern);
+    // The live scale during a session; the still image's own ratio
+    // otherwise (M14-EXT-40 — the readout exists whenever a source
+    // defines one, not only under capture).
+    const ratio =
+      capture !== null && stitchSizePx > 0
+        ? stitchSizePx
+        : masterImage !== null && scales.pattern.widthStitches > 0
+          ? masterImage.width / scales.pattern.widthStitches
+          : null;
+    statsStitch.textContent =
+      ratio === null ? 'none yet' : `${formatStitchSize(ratio)} source px per stitch`;
     const total = scales.pattern.widthStitches * scales.pattern.heightStitches;
     statsTotal.textContent =
       lastEmptyCount !== null && lastEmptyCount > 0
@@ -2028,16 +2072,13 @@ function build(app: HTMLElement): void {
 
   section('section-stats', 'Stats', true, statsList);
 
-  // The D98 never-silent colour-limit duty moved to the Stats section
-  // (M14-EXT-21) before these fold lines flattened (M14-EXT-22).
-  // Size lives here permanently (M14-EXT-34/A): the section is never
-  // an open heading over nothing, with or without a session.
-  section('section-design', 'Design', true, patternGroup);
-  // Colour stands alone (M14-EXT-28): its own section directly after
-  // Design, the group moved whole; Design keeps size and geometry.
-  // Spec default closed — the default-8 conversion needs no colour
-  // decision first, and Stats carries the count.
-  section('section-colour', 'Colour', false, colourGroup, inventoryInput);
+  // No Design section (M14-EXT-40, the owner's sixth look): size and
+  // zoom live in the Capture section, whose element is inserted into
+  // Design's old slot — after Stats — once it is built below.
+  // Colour stands alone (M14-EXT-28): its own section, the group
+  // moved whole. Spec default closed — the default-8 conversion needs
+  // no colour decision first, and Stats carries the count.
+  const colourSection = section('section-colour', 'Colour', false, colourGroup, inventoryInput);
   // "Processing" (M14-EXT-30): the Appearance rename, reduced to the
   // Dither group — the grid geometry moved to the view strip's
   // reveal. The stored open/closed preference migrates by fallback:
@@ -2046,14 +2087,20 @@ function build(app: HTMLElement): void {
     'section-processing',
     'Processing',
     disclosureOpen('section-appearance', false),
+    orderNote,
     ditherGroup,
   );
   section('section-export', 'Export', false, exportGroup);
   section('section-project', 'Project', false, projectGroup);
-  section('section-advanced', 'Advanced', false, pipelineGroup);
+  // No Advanced section (M14-EXT-44): the Processing order select was
+  // its only occupant, and it retired with the select — the EXT-32
+  // sunset pattern. The stale `section-advanced` disclosure key is
+  // harmless (the EXT-35 precedent).
   controls.append(...sections.map((s) => s.element));
-  sectionsReady = true;
-  refreshSections();
+  // sectionsReady flips after the Capture section joins the panel
+  // below — refreshStats reads the session state it carries
+  // (M14-EXT-40), so the first refresh must not run before those
+  // declarations exist.
 
   // Open the cross-project library (inventory + saved palettes). It is
   // async, so the app starts on an empty in-memory store and adopts
@@ -2149,7 +2196,7 @@ function build(app: HTMLElement): void {
     // was duplication. One composed rule, one writer — the shell owns
     // this line.
     sourceButton.hidden = !show.source || !sourceExists;
-    info.element.hidden = !show.info;
+    syncColoursSection();
     if (debugPanel !== null) debugPanel.element.hidden = !show.debug;
     if (diagnostics !== null) diagnostics.element.hidden = !show.debug;
     status.hidden = !show.status;
@@ -2239,7 +2286,7 @@ function build(app: HTMLElement): void {
   // docked↔undocked flap (owner's live session, 2026-08-05). The
   // preview is simply sticky now; its height comes from the design
   // (the hug in PreviewController, M14-FIX-03) and never from scroll.
-  content.append(previewSection, info.element, status, importSection);
+  content.append(previewSection, coloursSection.element, importSection);
   if (debugPanel !== null) content.append(debugPanel.element);
   const layout = document.createElement('div');
   layout.className = 'app-layout';
@@ -2248,10 +2295,15 @@ function build(app: HTMLElement): void {
   header.className = 'app-header';
   // Build identity returns to the chrome as quiet meta text — the
   // owner's call at the D88 triage, reversing A13's Project-foot
-  // placement. The dev diagnostics cluster is its own bar group so it
-  // wraps as a unit and its status line never squeezes the product
-  // controls (M14-EXT-05).
-  header.append(heading, version, shellBar);
+  // placement. The status region stacks directly under it
+  // (M14-EXT-39): one identity-and-state block between the title and
+  // the utility controls. The dev diagnostics cluster is its own bar
+  // group so it wraps as a unit and its status line never squeezes
+  // the product controls (M14-EXT-05).
+  const headerId = document.createElement('div');
+  headerId.className = 'header-id';
+  headerId.append(version, status);
+  header.append(heading, headerId, shellBar);
   if (diagnostics !== null) header.append(diagnostics.element);
   app.replaceChildren(header, layout);
   applyShell();
@@ -2339,37 +2391,56 @@ function build(app: HTMLElement): void {
   const pumpGate = new PumpGate();
   let stopPump: (() => void) | null = null;
   const dirtyGate = new DirtyGate();
-  let capturePaused = false;
+  let captureFrozen = false;
   const draftGovernor = new DraftGovernor();
   let draftMode = false;
 
-  // Capture section (M14-EXT-33 rename — the crop overlay keeps its
-  // own "Capture region" name, it names the rectangle): the whole
-  // capture surface — thumb + crop overlay, session controls, stitch
-  // size, draft badge — as an accordion section mounted only while a
-  // session runs. Every session starts expanded (memo 1, superseding
-  // D97's persisted collapse: a stored choice that only ever got
-  // overridden was a dead preference, so this section's disclosure is
-  // deliberately not persisted). The mid-session collapse still works
-  // and still hands the lead back (M14-FIX-01). Collapsed it is its
-  // bare heading (M14-EXT-22).
+  // Capture section (M14-EXT-33 rename; permanent home at M14-EXT-40
+  // — the crop overlay keeps its own "Capture region" name, it names
+  // the rectangle): Zoom and the Size fields always, plus the session
+  // machinery — verbs row, thumb + crop overlay, draft badge — shown
+  // only while a session runs. The section replaces Design in the
+  // settings panel (naming tension over a still image recorded for
+  // ACCEPT-01 — the owner's memo names this section, so "Capture" it
+  // is). Standing section, standing disclosure: persisted under its
+  // own key, seeded from the retired Design key so a remembered
+  // choice survives the merge; a session start still force-opens it
+  // (the EXT-33 conduct, now persisted like the preview's re-expand).
+  // The mid-session collapse still hands the lead back (M14-FIX-01);
+  // in the panel, collapse is just a section collapsing.
   const captureSection = createSection(document, {
     id: 'section-capture',
     title: 'Capture',
-    open: true,
+    open: disclosureOpen('section-capture', disclosureOpen('section-design', true)),
     onToggle: (open) => {
-      // Collapsing is the "done with the region" gesture (M14-FIX-01):
-      // the preview takes the lead back. Instant scroll — reduced
-      // motion by construction.
-      if (!open) window.scrollTo(0, 0);
+      setDisclosure('section-capture', open);
+      // Collapsing mid-session is the "done with the region" gesture
+      // (M14-FIX-01): the preview takes the lead back. Instant
+      // scroll — reduced motion by construction.
+      if (!open && capture !== null) window.scrollTo(0, 0);
     },
   });
-  captureSection.panel.append(captureRow, stitchSizeField, captureMeta, thumbWrap, draftBadge);
+  captureSection.panel.append(
+    captureRow,
+    stitchSizeField,
+    patternGroup,
+    captureMeta,
+    thumbWrap,
+    draftBadge,
+  );
   sections.push(captureSection);
   captureSectionElement = captureSection.element;
+  // Design's old slot: directly after Stats, ahead of Colour.
+  controls.insertBefore(captureSection.element, colourSection.element);
+  sectionsReady = true;
+  refreshSections();
+  // First paint of the size/zoom conducts (M14-EXT-40): the fields
+  // enabled, the zoom slider disabled with its no-session reason.
+  syncSizeDerivedState();
+  updateStitchSizeUi();
 
   /**
-   * Mount the capture section above the preview, per-session
+   * Move the capture section above the preview for the session
    * (M14-FIX-01, superseding EXT-12's panel-first slot on the
    * owner's ask): tweak → lock → collapse → progress, with the
    * region leading the page while it is the task at hand. The move
@@ -2379,16 +2450,22 @@ function build(app: HTMLElement): void {
    */
   function showCaptureSection(): void {
     content.insertBefore(captureSection.element, previewSection);
-    // Expanded at every session start (M14-EXT-33, memo 1).
+    captureRow.hidden = false;
+    // Expanded at every session start (M14-EXT-33, memo 1) —
+    // persisted, as the preview's session re-expand is.
     captureSection.setOpen(true);
+    setDisclosure('section-capture', true);
     refreshSections();
   }
 
-  /** Unmount on session end. Focus rescue is endCaptureUi's job: by
-   *  the time this runs, hiding the session buttons has already
-   *  dropped focus to body, so a contains() check here sees nothing. */
+  /** Return the section to its panel slot on session end
+   *  (M14-EXT-40 — the section is permanent; only the session
+   *  machinery leaves). Focus rescue is endCaptureUi's job: by the
+   *  time this runs, hiding the session buttons has already dropped
+   *  focus to body, so a contains() check here sees nothing. */
   function hideCaptureSection(): void {
-    captureSection.element.remove();
+    captureRow.hidden = true;
+    controls.insertBefore(captureSection.element, colourSection.element);
   }
 
   // First paint of the source area: cold start shows the entry state
@@ -2492,13 +2569,13 @@ function build(app: HTMLElement): void {
     dirtyGate.reset();
     draftGovernor.reset();
     setDraftMode(false);
-    capturePaused = false;
-    pauseButton.textContent = 'Pause capture';
-    pauseButton.setAttribute('aria-pressed', 'false');
+    captureFrozen = false;
+    freezeButton.textContent = 'Freeze';
     aspectButton.hidden = true;
     aspectLocked = false;
     aspectButton.setAttribute('aria-pressed', 'false');
     stitchSizePx = 0;
+    updateStitchSizeUi();
     capture?.video.remove();
     capture = null;
     // After `capture` clears: the derived-state check reads it, and
@@ -2548,7 +2625,8 @@ function build(app: HTMLElement): void {
 
   // Live pump grab: quiet (no per-frame status or logging — the ring
   // buffer must not fill with routine ticks). On failure the pump
-  // stops but the session stays usable via Capture frame.
+  // stops and the session enters the frozen state, so the one
+  // documented exit — Unfreeze — restarts it (M14-EXT-38).
   async function pumpGrab(): Promise<void> {
     if (capture === null) {
       pumpGate.reset();
@@ -2587,9 +2665,15 @@ function build(app: HTMLElement): void {
       stopPump?.();
       stopPump = null;
       pumpGate.reset();
-      // The recovery route lives in the Capture section since
-      // M14-EXT-33 moved Capture frame back — the copy points at it.
-      status.textContent = `Live update stopped (${message}). Capture is still running — use Capture frame in the Capture section.`;
+      draftGovernor.reset();
+      setDraftMode(false);
+      // A dead pump and a frozen one are the same observable state
+      // (preview holds, capture runs), so the button tells the truth
+      // and the recovery is its single documented exit (M14-EXT-38,
+      // superseding the EXT-33 Capture-frame route).
+      captureFrozen = true;
+      freezeButton.textContent = 'Unfreeze';
+      status.textContent = `Live update stopped (${message}). Capture is still running — press Unfreeze in the Capture section to restart live updates.`;
       log.error('capture', 'pump grab failed', { message });
     }
   }
@@ -2606,12 +2690,9 @@ function build(app: HTMLElement): void {
       aspectLocked = false;
       aspectButton.setAttribute('aria-pressed', 'false');
       aspectButton.hidden = false;
-      // The Size fields stay home in Design (M14-EXT-34/A, retiring
-      // D101's S1 reparent): Stats already shows the design size
-      // beside the capture settings, and under the unlocked default
-      // the fields are disabled here anyway — reparenting disabled
-      // fields was noise, and it left Design an open heading over
-      // nothing for the whole session.
+      // The Size fields live in this very section (M14-EXT-40,
+      // superseding EXT-34/A): under the unlocked default they show
+      // disabled-with-reason while the region drives them.
       captureMeta.hidden = false;
       captureMeta.textContent = `Capturing ${session.label}.`;
       // Mount the live thumbnail with the full frame selected; the
@@ -2692,23 +2773,23 @@ function build(app: HTMLElement): void {
     log.info('capture', 'session stopped');
   }
 
-  /** Freeze/resume the live pump — a named state, never silent. The
-   *  button's label and pressed state both carry it (M14-EXT-33). */
-  function togglePauseCapture(): void {
+  /** Freeze/unfreeze the live pump — a named state, never silent.
+   *  The flipping label is the state carrier (M14-EXT-38); unfreeze
+   *  restarts the pump, which is also the pump-death recovery leg. */
+  function toggleFreeze(): void {
     if (capture === null) return;
-    capturePaused = !capturePaused;
-    pauseButton.textContent = capturePaused ? 'Resume capture' : 'Pause capture';
-    pauseButton.setAttribute('aria-pressed', String(capturePaused));
-    if (capturePaused) {
+    captureFrozen = !captureFrozen;
+    freezeButton.textContent = captureFrozen ? 'Unfreeze' : 'Freeze';
+    if (captureFrozen) {
       stopPumpNow();
       draftGovernor.reset();
       setDraftMode(false);
-      status.textContent = 'Capture paused — the preview holds the last frame.';
-      log.info('capture', 'paused');
+      status.textContent = 'Frozen — the preview holds the last frame; capture is still running.';
+      log.info('capture', 'frozen');
     } else {
       startPumpNow(capture);
-      status.textContent = 'Capture resumed.';
-      log.info('capture', 'resumed');
+      status.textContent = 'Unfrozen — live updates resumed.';
+      log.info('capture', 'unfrozen');
     }
   }
   lockButton.addEventListener('click', () => {
@@ -2744,11 +2825,15 @@ function build(app: HTMLElement): void {
           : helperText;
       }
     }
-    stitchSizeField.hidden = capture === null;
-    stitchSizeRange.disabled = aspectLocked;
-    stitchSizeHelper.textContent = aspectLocked
-      ? 'Follows the region and design while aspect is locked'
-      : SCALE_LABELS.stitchSizeHelper;
+    // Zoom stays visible without a session (M14-EXT-40 — the section
+    // is the one home for size and zoom), disabled with its reason.
+    stitchSizeRange.disabled = capture === null || aspectLocked;
+    stitchSizeHelper.textContent =
+      capture === null
+        ? 'Applies during screen capture — a still image is sized by the fields below'
+        : aspectLocked
+          ? 'Follows the region and design while aspect is locked'
+          : SCALE_LABELS.stitchSizeHelper;
   }
 
   /** Re-derive the held scale from the current region and design. */
@@ -2765,9 +2850,14 @@ function build(app: HTMLElement): void {
 
   /** Mirror the held scale onto the slider and its exact readout. */
   function updateStitchSizeUi(): void {
-    if (stitchSizePx <= 0) return;
+    if (stitchSizePx <= 0) {
+      // No session holds a scale: the readout says so rather than
+      // showing a stale factor under a disabled slider (M14-EXT-40).
+      stitchSizeValue.textContent = '—';
+      return;
+    }
     stitchSizeRange.value = String(Math.min(64, Math.max(1, stitchSizePx)));
-    stitchSizeValue.textContent = `${formatStitchSize(stitchSizePx)} px`;
+    stitchSizeValue.textContent = `${formatStitchSize(stitchSizePx)}×`;
   }
 
   aspectButton.addEventListener('click', () => {

@@ -687,3 +687,39 @@ the two styling corrections above).
 | Data tables (colours by usage, thread rows) | Data table | Conforms — real header row, 44 px rows, per-row accessible names, in-panel horizontal scroll (Reflow), zebra omitted (optional in Carbon) |
 | Type & spacing | Type ramp / spacing scale | Conforms — productive ramp + spacing-01..09 tokens (D80); layout literals recorded in ui-spec §9 incl. the new 12 rem reserve; heading structure h1 → section h2s |
 | Interaction states | States | Conforms — hover/active/focus-visible/disabled on every interactive class via base rules, both schemes AAA (`check:contrast` green, @pair contract) |
+
+## Sixth look — M14-EXT-38..44 (D111/D112, 2026-08-07)
+
+Automated: typecheck 0 · ESLint 0 · Vitest green (958 passing — the
+5 new EXT-43 fingerprint tests; scales label test updated with the
+owner's Zoom rename, countSummary tests rewritten to the trimmed
+contract — approved behaviour changes, not weakening) · build ·
+contrast · docs · secrets green (full `check`). Live (this session's
+own dev server, drop-fed synthetic sources, 1280 × 800 and 380/320
+× 700, light + dark, error/rejection catcher armed):
+
+| Task | Check | Evidence |
+| --- | --- | --- |
+| EXT-38 | capture row | reads Stop capture · Freeze · Lock aspect · Lock region; Capture frame gone (initial session grab kept in code); Freeze flips label Freeze↔Unfreeze with no aria-pressed (APG: a flipping label is two actions, not a pressed toggle) |
+| EXT-38 | pump death | the catch enters the frozen state (label Unfreeze, draft reset) and the copy names the single exit: "press Unfreeze in the Capture section to restart live updates"; unfreeze calls startPumpNow — code-verified; live leg rides getDisplayMedia, named for ACCEPT-01 |
+| EXT-39 | placement | #status renders inside .header-id directly under the build id; content column no longer reserves a status row; announcements land live in the header ("Preview updated.", the 380 px width guide) |
+| EXT-39 | economy | header 63 px one row at 1280; 225 → 165 px at 380 (two fixes: the unscoped .shell-bar margin rule lost the cascade to .toolbar — 24 px of dead top margin; utilities now share one left row instead of flex-basis:100% each); zero horizontal overflow at 380 and 320 |
+| EXT-39 | trade | scrolled deep at narrow, announcements sit off-viewport — the owner's accepted trade, recorded for ACCEPT-01 |
+| EXT-43 | diagnosis | confirmed the D112 hypothesis: update() ran per processed frame and renderSource() rebuilt the open select via replaceChildren; the dither panel (rebuilt only on algorithm change) was the surviving contrast |
+| EXT-43 | fix | structural fingerprints gate every region rebuild (source/editor/threads/conflicts); value-only changes land in place; selected values deliberately excluded from fingerprints (keyboard arrowing); focused count controls never written; focus restored by id → aria-label → summary on structural rebuilds |
+| EXT-43 | evidence | element identity preserved across two source replacements + frame results for all five probed controls (source select, search input, first role select, first own checkbox, count input); 5 pure regression tests pin unchanged ⇒ identical fingerprints |
+| EXT-40 | sections | no Design section; Capture is a standing section after Stats holding Zoom + Size always; session machinery (verbs row, thumb, meta, badge) hidden without a session; disclosure persisted under section-capture, seeded from the retired section-design key |
+| EXT-40 | zoom | label Zoom, readout "N×", helper carries the unit ("Source pixels per stitch — 3× turns three source pixels into one stitch"); disabled without a session with its reason ("Applies during screen capture — a still image is sized by the fields below"), readout "—"; the D52 collision with the preview strip's zoom is helper-disambiguated and named for ACCEPT-01 |
+| EXT-40 | stats | "Stitch size" row shows the ratio for any source (still image: 96 px source ÷ 200 stitches → "0.5 source px per stitch"); live session reads the held scale — session leg named for ACCEPT-01 |
+| EXT-42 | count cluster | slider + exact field + steppers pack side by side (input width 4.5 rem, shared helper line at cluster level); 16 rem column: three packed rows vs five stacked blocks (cluster 232 → 202 px; the full stacked-equivalent 556 → 508 at wide, 536 → 486 at 380) |
+| EXT-42 | summary | "489 permitted · 8 selected of 8 requested · 4 used in the design." → "489 threads available." — Stats owns selected/used/limit (EXT-21 no-third-copy); the asked-for-N-got-fewer duty lives in the conflicts list |
+| EXT-42 | brand notes | eight per-brand provenance spans → marked exceptions only ("mapped colours") plus one shared group note when any exist; none render in this catalogue build (all measured) — M7-BRAND-01 satisfied by the exception marks |
+| EXT-42 | parked | the steppers cut (reverses the owner's own EXT-29 ask — their call at ACCEPT-01); library-button re-home (M15-UI-01 deletes those wholesale — D115 caps this task at cheap wins) |
+| EXT-44 | retirement | no Processing order select, no Advanced section (its only occupant — the EXT-32 sunset); syncControls line gone; stale section-advanced key harmless |
+| EXT-44 | conduct A | end-to-end live: saved a project through the app, flipped preset to reduce-first, loaded through the real Open route — the standing Processing note renders ("Rendering with the retired “match colours first” order, kept from this project file.") and the load status carries the tail; core keeps the preset so save round-trips unchanged (byte-identity pinned by the existing project suite) |
+| EXT-41 | anatomy | "Colours used" is a real accordion section in the content column under Preview — same h2/toggle/region anatomy as every section; the D99 fold is gone; collapsed-by-default survives as the spec default; a remembered colours-table choice seeded the new key live |
+| EXT-41 | hierarchy | the aside's layer-01 box flattened (transparent background, no border) — every region reads at one level in both postures, section dividers carry the column; the two-column companion layout untouched |
+| EXT-41 | reach | highlight rows stay reach 2: open section → press row ("DMC 907 Parrot Green light — 40,000 stitches highlighted.", aria-pressed true); Escape clear moved to the panel wrapper; empty table ⇒ whole section hidden (shell × content composed by one writer) |
+| EXT-41 | flagged | Stats' "Colours in use" row vs the section "Colours used" — near-twin names for different concepts (a count vs the table); the owner's wording stands, named for ACCEPT-01 |
+| all | console | zero uncaught errors on a clean boot with the catcher armed across drop → sections → highlight → project round-trip (one mid-session error batch traced to stale HMR modules, gone on reload) |
+| all | postures | zero horizontal overflow at 380 and 320; dark scheme walked at 1280 (screenshot evidence in session) |

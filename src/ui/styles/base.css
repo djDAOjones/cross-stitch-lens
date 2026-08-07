@@ -243,6 +243,47 @@ button[aria-pressed='true']:active:not(:disabled),
   padding-top: calc(var(--csl-label-01-line) + var(--csl-spacing-02) + 0.625rem);
 }
 
+/* Count cluster (M14-EXT-42, the size-row precedent): the Colours
+  slider, exact field and steppers share one line — labels, helpers
+  and 44 px targets unchanged, only the stacked height goes. Wraps
+  at companion widths rather than squeezing targets. */
+.count-cluster {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--csl-spacing-03);
+}
+
+.count-cluster .field {
+  margin-bottom: 0;
+}
+
+.count-cluster > .field:first-child {
+  flex: 1 1 9rem;
+  min-width: 0;
+}
+
+.count-cluster > .field:first-child input[type='range'] {
+  width: 100%;
+}
+
+/* The exact field needs three digits, not a column: its width is the
+  number, and the shared helper line below carries the explanation. */
+.count-cluster input[type='number'] {
+  width: 4.5rem;
+}
+
+.count-cluster .count-steppers {
+  margin: 0;
+  /* Clear the label line so the steppers sit beside the inputs. */
+  padding-top: calc(var(--csl-label-01-line) + var(--csl-spacing-02));
+}
+
+.count-cluster > .helper {
+  flex-basis: 100%;
+  margin-top: 0;
+}
+
 /* Stitch-size row (M14-EXT-20): the scale slider and its exact
   readout share a line; the readout keeps a stable width so the
   slider does not shimmy as digits change. */

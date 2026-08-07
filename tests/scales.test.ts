@@ -167,11 +167,13 @@ describe('visible labels keep the four apart', () => {
     }
   });
 
-  it('carries the stitch-size unit in the helper, not the label', () => {
-    // The M14-EXT-20 slider: "Stitch size" + "Source pixels per
-    // stitch" — the unit-in-helper idiom, and "source" distinguishes
-    // it from the export and preview px-per-stitch quantities.
-    expect(SCALE_LABELS.stitchSize).toBe('Stitch size');
+  it('carries the zoom unit in the helper, not the label', () => {
+    // The M14-EXT-20 slider, renamed "Zoom" on the owner's word
+    // (M14-EXT-40): the unit-in-helper idiom holds — "source …
+    // per stitch" distinguishes it from the export and preview
+    // px-per-stitch quantities, which is the whole D52 point of the
+    // helper now that the label collides with the preview's zoom.
+    expect(SCALE_LABELS.stitchSize).toBe('Zoom');
     expect(SCALE_LABELS.stitchSizeHelper.toLowerCase()).toContain('source');
     expect(SCALE_LABELS.stitchSizeHelper.toLowerCase()).toContain('per stitch');
   });

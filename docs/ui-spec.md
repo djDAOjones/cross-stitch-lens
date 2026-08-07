@@ -169,6 +169,27 @@ fold is its bare title; no stat or state rides a closed fold anywhere
 in the app. The recognition duty moved to the always-readable Stats
 section (EXT-21) before the flatten, so nothing went silent.*
 
+*(Amended sixth look, D111/D112 — M14-EXT-38..44: the **status
+region moved into the header**, stacked directly under the build id
+(EXT-39, superseding the M2-era content placement; the header's
+identity line itself returned at D88) — the content column no longer
+reserves a status row, and the recorded trade is that deep-scrolled
+narrow postures put announcements off-viewport. The **Design section
+retired** (EXT-40): the Capture section is a standing settings
+section — Zoom (the renamed Stitch size slider) and the Size fields
+always, the session machinery only while a session runs; its
+disclosure persists under `section-capture`, seeded from the retired
+`section-design` key, and the D104 above-the-preview session mount is
+unchanged. The **Advanced section retired** with the Processing
+order select (EXT-44, the EXT-32 sunset); Processing carries the
+reduce-first honour note for loaded legacy files. The info panel's
+fold became a real **"Colours used"** accordion section in the
+content column under the preview (EXT-41, the owner's rename), and
+the settings aside dropped its layer-01 box so every region reads at
+one hierarchy level. Panel census: Stats · Capture · Colour ·
+Processing · Export · Project; content column: preview section ·
+Colours used · source section.)*
+
 ## 3. First-run and the content column (D78)
 
 **Empty state** (source section, before any import — answers J1/J2
@@ -449,6 +470,45 @@ adjacent (A9: the Dither group, when disabled by Unlimited colours,
 shows one line "Dithering applies to thread palettes"); ≥ 44 × 44 px
 targets including checkboxes (A1) and the search/summary gaps (A3);
 no colour-only state.
+
+### Sixth look amendments (D111/D112, M14-EXT-38..44)
+
+- **Capture row** (EXT-38): **Stop capture · Freeze · Lock aspect ·
+  Lock region**. Capture frame retired (the owner named the cut D108
+  declined); the session-start grab survives in code. Freeze flips
+  its label (Freeze ↔ Unfreeze) with no `aria-pressed` — a flipping
+  label is two actions, and the pump-death recovery copy points at
+  the literal Unfreeze button (a dead pump enters the frozen state).
+- **Zoom** (EXT-40): the Stitch size slider's owner-chosen rename —
+  factor unchanged (source px per stitch, "3×"), unit in the helper;
+  disabled-with-reason without a session. The vocabulary collision
+  with the preview strip's zoom (a different D52 resolution) is
+  deliberate, helper-disambiguated, and on ACCEPT-01's list. Stats
+  gains a **Stitch size** readout row (the ratio for any source).
+- **Colour** (EXT-42): the count cluster packs the slider, exact
+  field and steppers side by side with one shared helper; the summary reads
+  availability alone ("489 threads available." — selected/used/limit
+  are Stats' numbers, EXT-21); brand provenance renders as marked
+  exceptions ("mapped colours") plus one shared group note. The
+  steppers stay (their cut would reverse the owner's EXT-29 ask);
+  the library-button re-home is M15-UI-01's deletion, not refined
+  here (D115).
+- **Processing order** (EXT-44): the select and the Advanced section
+  are retired. Core honours a loaded `reduce-first` file
+  byte-identically and says so — a standing note in Processing plus
+  a load-status tail; there is no edit route back.
+- **Colours used** (EXT-41): the "Colours by usage" fold is a real
+  accordion section named **Colours used**, content column, under
+  the preview; collapsed-by-default survives as the spec default and
+  the old `colours-table` disclosure key seeds the new id. Reach
+  unchanged: 0 to the heading, 2 to a highlight row. Flagged for
+  ACCEPT-01: the near-twin with Stats' "Colours in use" row.
+- **No-rebuild contract** (EXT-43): panel regions rebuild only when
+  their structural fingerprint changes; value-only changes land in
+  place on existing elements, selected values are never structural,
+  and focused controls are never written to. Pinned by the
+  palette-panel fingerprint suite — the contract M15's editor
+  inherits by name (D114).
 
 ## 6. Keyboard model
 

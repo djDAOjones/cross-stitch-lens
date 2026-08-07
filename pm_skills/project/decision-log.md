@@ -725,3 +725,86 @@ standing pause-sync advice repeats at session start.
 
 **Link:** archive/INDEX.md; the D118 doc-sync and D119 refactor
 entries this session precede it.
+
+## D121 — M14-EXT-38..44: the sixth look lands in one auto-jazz run (2026-08-07)
+
+**Decision:** all seven sixth-look tasks shipped as one gateless run
+(auto-jazz, the owner's "autojazz M14 and M15" instruction — this is
+the M14 half; M13 deferred to its own session by the same
+instruction). Conservative picks at every skipped gate: EXT-38 — the
+Freeze label flips (Freeze ↔ Unfreeze) and aria-pressed is dropped (a
+flipping label under aria-pressed is the ARIA-APG anti-pattern the
+shipped Pause/Resume pair carried; the two lock toggles keep
+constant-label + pressed); a dead pump enters the frozen state — same
+observable state, honest button — so the documented recovery is the
+single Unfreeze press and the copy names it (verified: the resume leg
+calls startPumpNow). EXT-39 — the status stacks under the build id in
+a `.header-id` block taking the slack width, with a one-line
+min-height reserve so announcements never reflow the page; two
+economy fixes (the unscoped `.shell-bar` margin rule silently lost
+the cascade to the later generic `.toolbar` margins — 24 px of dead
+space; the ≤60 rem `flex-basis: 100%` utility rows collapse to one
+shared row): header 225 → 165 px at 380. The off-viewport-when-
+scrolled-deep trade is recorded for ACCEPT-01. EXT-43 — the D112
+hypothesis confirmed exactly (per-frame `update()` rebuilt the source
+select under its open popup via replaceChildren; the
+algorithm-change-only dither panel was the surviving contrast); fix
+is structural fingerprints per region (source/editor/threads/
+conflicts) with value-only changes landing in place, selected values
+excluded from structure (keyboard arrowing fires change per step),
+focused count controls never written, and focus restored by id →
+aria-label → summary on structural rebuilds; five pure tests pin
+unchanged ⇒ identical fingerprints (vitest env is node, so the
+contract pins at the pure level per the house convention — DOM legs
+proven live: element identity preserved across source swaps for all
+five probed controls). EXT-40 — option A with the section title
+unchanged ("Capture" is the owner's own word in the memo; the
+still-image naming stretch is recorded for ACCEPT-01, not silently
+retitled); zoom factor (i) — the same number as "N×", unit in the
+helper; the D52 zoom-vocabulary collision helper-disambiguated and
+named, never silently renamed; the Capture section becomes a
+standing panel section in Design's old slot, its disclosure seeded
+from the retired `section-design` key, force-opened per session —
+D110's named unpersisted-disclosure exception dissolves because the
+section is no longer session-scoped; `sectionsReady` now flips after
+the capture declarations so the first Stats refresh can read the
+session state. EXT-42 — cheap wins per the D115 cap: the count
+cluster packs (five stacked blocks → three packed rows at 16 rem),
+the summary trims to availability alone, brand provenance to marked
+exceptions plus one shared group note; the retired panel-state
+fields (selectedCount/usedCount/awaitingSource) leave the interface;
+the steppers cut is parked (it reverses the owner's own EXT-29 ask)
+alongside the library-button re-home (M15-UI-01 deletes those
+wholesale). EXT-44 — conduct A, honour + say so: a standing note in
+Processing plus a load-status tail; no edit route back; proven
+end-to-end through the app's own save → flip → load. EXT-41 —
+option B: the fold promotes to a real "Colours used" section (old
+`colours-table` key seeds the new id), the settings aside drops its
+layer-01 box so every region reads at one level; an empty table
+hides the whole section (shell × content composed by one writer);
+the "Colours in use"/"Colours used" near-twin is flagged with the
+owner's wording standing.
+
+**Supersessions land as triaged (D111/D112):** D110's EXT-33-restored
+Capture frame → cut; D110's EXT-34/A permanent Design home → the
+standing Capture section is the fields' only home and Design retires;
+the M2-era content-column status region → header; D99's fold
+placement of the colours table → section anatomy (its
+collapsed-by-default choice surviving); EXT-30's Processing-order
+seat and the Advanced section → retired whole.
+
+**Verified:** full gate green — typecheck, lint, 955 tests (5 new
+fingerprint tests; the scales label and countSummary suites updated
+with the approved renames, not weakened), wasm, build, contrast AAA,
+docs, secrets. Live sweep on this session's own dev server at
+1280 × 800 and 380/320 × 700, both schemes, error catcher armed —
+evidence tables in `docs/ui-evidence.md` ("Sixth look"). The
+in-session capture legs (freeze toggle live, zoom slider live, the
+session mount) ride getDisplayMedia — not driveable in this rig
+(D101's limitation) — and are named for ACCEPT-01's live checklist.
+
+**Link:** backlog → sixth-look section removed, ACCEPT-01 unblocked
+(again the milestone's one remaining item, the owner's); tickets
+M14-EXT-40/41/42/43/44 deleted on ship (38/39 were line-only);
+ui-spec §2/§5 amended; ui-evidence extended; AGENTS/UI-STANDARDS
+deltas ledgered in `doc-deltas.md`, never auto-edited.

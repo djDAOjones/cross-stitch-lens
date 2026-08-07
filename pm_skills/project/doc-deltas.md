@@ -23,3 +23,6 @@
      pass. See pm_skills/memory-policy.md. -->
 
 ## Open
+
+- [ ] 2026-08-07 AGENTS.md § The four resolutions — the '"Stitch size" slider' reference is now the Zoom slider (owner rename, D52 collision recorded) (source: D121/M14-EXT-40)
+- [ ] 2026-08-07 UI-STANDARDS.md § Layout model — controls census stale: Design and Advanced retired, Capture is a standing section, the colours table is a "Colours used" content section, the aside box flattened (source: D121/M14-EXT-40/41/44)

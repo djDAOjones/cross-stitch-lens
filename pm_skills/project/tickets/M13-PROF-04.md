@@ -141,3 +141,17 @@ Remaining — needs the owner's capture gesture: the rehearsal sheet in
 DevTools-trace app-side half, adversarial/recovery checks). Close the
 item on that session's numbers plus owner notes; acceptance stays
 M13-ACCEPT-02.
+
+## Status 2026-08-07 (D128) — re-validated on the current build; owner session is the sole remainder
+
+M14/M15 churned ~3k lines through the live-path surfaces after the
+D70 report, so the gestureless legs were re-run on `d7218be`
+(`bench-reports/browser-bench-v0.5.0_20260807.d7218be-auto.json`;
+evidence in `docs/performance-evidence.md` → the D128 section): every
+load-bearing figure replicates (dirty knee 16–32 px, per-tick
+< 0.1 ms, stats 2.2 ms, selection-source export 50.6 ms mid-pump),
+GPU agreement/device-loss/export byte-identity re-proven, and the D72
+fixes show up truthfully in the rows. The rehearsal sheet is repaired
+against the shipped M14 surface (pause/resume is now Freeze/Unfreeze;
+harness buttons 4–8/3d verified unchanged). Remaining: unchanged —
+the owner capture session above.

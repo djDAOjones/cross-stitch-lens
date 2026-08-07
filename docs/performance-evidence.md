@@ -887,3 +887,61 @@ JS-heap number — see the row caveat).
   loss (the worker owns its device; the D46 suites cover `ensureLut`
   rejection answering once), and GC pauses (the owner session's
   Performance trace).
+
+## M13 re-baseline: the gestureless legs on the post-M14/M15 build (2026-08-07, D128)
+
+M14 closed (D127) and M15's agent work shipped between the
+2026-07-23 profile packs and the owner session, churning the
+live-path surfaces (`src/main.ts` +2.8k/−0.8k;
+`capture/session`, `worker/{execute,router,protocol,preview-surface}`),
+so every gestureless leg was re-run on the build the owner session
+will actually sit on — the D62/D63 re-measure rule applied to the
+profile evidence itself. Node first: `npm run bench` green
+(22 budget rows, 1 skip) on `d7218be`.
+
+Artefacts (Chrome, M1 Max, foreground, production, untainted):
+`bench-reports/browser-bench-v0.5.0_20260807.d7218be-auto.json`
+(`?auto=still,stage,backend,livepath,gpu,lut,contention`, 142 rows)
+and `…d7218be-mem.json` (`?auto=mem`, 8 rows).
+
+- **Every load-bearing 2026-07-23 figure replicates.** Still
+  `preview-update` rows within ±7% (200² forced-ts 21.3 ms vs 21.1;
+  300² forced-ts 38.9 vs 36.8; wasm rows likewise); `computeStats`
+  2.2 ms vs 2.0; dirty per-tick still < 0.1 ms; the dirty-replay
+  curve reproduces the size-blind knee at 16–32 px (12–14/20 at
+  16 px, 20/20 from 32 px, ≤ 2/20 at ≤ 4 px, contrast still
+  irrelevant); the mid-pump selection-source export costs 50.6 ms vs
+  the banked ~51 ms; the export step still leaves **74.8 MiB**
+  unreclaimed after 5 s idle — the same number to the decimal as
+  20260723 (109.2 − 34.4 MiB vs 109.7 − 34.9), so the
+  lazy-GC-vs-retention question rides Part D unchanged.
+- **Correctness gates re-proven on `d7218be`**: GPU LUT agreement
+  EXACT on all three configs with the all-zeros trap clear; GPU
+  device-loss recovery PASS ("rebuilt, EXACT"); backend-comparison
+  export re-runs EXACT on pixels *and* the indices sidecar; the mem
+  leg's isolation re-proof EXACT under idle/pump/draft/rapid ×2.
+- **The D72 fixes are visible in the rows.** The forced-wasm non-FS
+  probe now reports backend `ts` (the truthful capability clamp,
+  M13-DEF-01), changing that row's identity vs the 20260723 backend
+  report; chart cell 16 past the canvas edge publishes as
+  `not-measured` via the refusal sentence instead of dying on a
+  zeroed canvas (M13-DEF-02 closed-and-proven).
+- **Environment drift, flagged not hidden.** Worker-route TS reduce
+  runs ~2.5× *faster* than the 20260723 stage rows (0.4–0.5 ms at
+  300², 5.2–5.3 at 1024²) with `reduce.ts` untouched since
+  `c68e2c3` — runtime/JIT drift, and exactly why budgets bind to
+  re-measured baselines. (The bv2 env row records no browser
+  version — the one attribution this comparison wanted; noted for
+  the synthesis, not changed here.) Cold prepare rows moved with
+  cache warmth (wasm init 90.3 → 8.1 ms). One GPU map row
+  (1024²/p489) ran 1.60× slower (5.6 → 8.9 ms) — small absolute
+  jitter on a GPU-scheduled row routing does not consume
+  (`mapPaletteGpu` stays unwired). Export peak probes ran 1.2–1.6×
+  slower (clean ×16: 3.49 s vs 2.18 s) on single stress runs with
+  only the D72 guards and D124 key labels in the export diff —
+  read as machine-load noise, not a regression claim; the synthesis
+  re-times them if they become load-bearing.
+
+The 2026-07-23 packs stay valid as history; the synthesis quotes
+`d7218be` rows. The owner capture session (rehearsal sheet
+Parts A–D) is the sole remaining input to M13-SYNTH-01.

@@ -134,3 +134,17 @@ Remaining — rides the PROF-04 owner session (rehearsal sheet, Parts
 C/D): the DevTools snapshot pair for the post-export ~75 MiB idle
 residue (lazy GC vs retention), allocation sampling over a live
 window, GC pauses off the Part C trace.
+
+## Status 2026-08-07 (D128) — mem leg re-run on the current build
+
+`?auto=mem` re-run on `d7218be`
+(`bench-reports/browser-bench-v0.5.0_20260807.d7218be-mem.json`):
+isolation EXACT everywhere again; the export step leaves **74.8 MiB**
+unreclaimed after 5 s idle — the same number to the decimal as
+20260723, so the snapshot-pair question rides Part D unchanged; chart
+cell 16 now publishes `not-measured` via the D72 refusal instead of
+dying (M13-DEF-02 closed-and-proven); peak probes 1.2–1.6× slower on
+single stress runs, read as machine load, not regression (export diff
+since the banked build is only the D72 guards + D124 key labels).
+Remaining: unchanged — the snapshot pair + GC-pause trace riding
+Parts C/D.

@@ -15,13 +15,13 @@ line passes and `check` is green. Requirements references are to
 
 ## Active
 
-### Next — M13 Visual processing performance (remainder)
+### Current — M13 Visual processing performance (remainder)
 
-Displaced from Current 2026-07-23 (D73): the remaining halves are
-owner-session-gated (PROF-04/05 rehearsals → the [sign-off]
-synthesis), so the machine-executable M14 runs first; banked evidence
-(D64–D72) stands. If M13 implementation ships mid-M14, re-capture
-M14's reference exports (byte-identity baseline). Re-measure before
+Returned to Current 2026-08-07 (D128, the owner's pick) after M14
+closed (D127). The gestureless evidence is re-baselined on `d7218be`
+(D128) — the 2026-07-23 packs stay as history; the synthesis quotes
+the `d7218be` rows. The remaining halves are owner-session-gated
+(PROF-04/05 rehearsal → the [sign-off] synthesis). Re-measure before
 optimising (D62/D63); `AGENTS.md` hard rules hold.
 
 #### Phase 2 — Component profiling & defect discovery
@@ -31,12 +31,12 @@ Each task files defects for performance-sensitive bugs it uncovers.
 - [~] **M13-PROF-04 Live-path profile: capture, scheduling, preview** [detail] (2026-07-22)
   Intent: the live capture→preview path — pump cadence, dirty-detection cost and small-edit misses, coalescing drops, draft governor, split-compare overhead, preview/UI latency, failure recovery.
   Done when: an end-to-end latency decomposition at 200²/300² live capture, with dropped/stale-frame behaviour quantified against the ≥ 4 updates/sec promise.
-  Status 2026-07-23: gestureless half published (D70 — dirty replay probability, per-tick cost, stats cost) and the live legs instrumented (dirty/grab medians, long tasks, draft marks, 200² window, mid-stream selection export). Remaining: the owner capture session — rehearsal sheet in `docs/browser-measurement.md`.
+  Status 2026-08-07: gestureless half published (D70) and re-baselined on the current build (D128 — every figure replicates; sheet repaired to the M14 surface). Remaining: the owner capture session — rehearsal sheet in `docs/browser-measurement.md`.
 
 - [~] **M13-PROF-05 Memory, GC and export contention** [detail] (2026-07-22)
   Intent: per-frame allocation census, typed-array reuse candidates, live GC pressure, peak export memory, worker blocking during export.
   Done when: allocation/peak/contention figures published, top candidates ranked; export full-quality isolation re-verified.
-  Status 2026-07-23: gestureless half published (D71 — census with ranked candidates, isolation EXACT, contention = main-thread starvation not worker queue, peaks incl. the 16,384 px ceiling; M13-DEF-02 filed). Remaining: snapshot pair + GC-pause trace, folded into the PROF-04 owner session (rehearsal sheet Parts C/D).
+  Status 2026-08-07: gestureless half published (D71) and the mem leg re-run current (D128 — isolation EXACT again; the ~75 MiB idle residue replicates to the decimal; the DEF-02 refusal proven in-row). Remaining: snapshot pair + GC-pause trace, folded into the PROF-04 owner session (rehearsal sheet Parts C/D).
 
 #### Phase 3 — Synthesis
 

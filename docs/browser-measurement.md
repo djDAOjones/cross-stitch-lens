@@ -288,8 +288,12 @@ using the worker's absolute-clock phase marks (`FrameMarks` in
    reach a project file.
 
    **Unattended form**:
-   `bench.html?auto=still,stage,backend,gpu,lut,contention`
-   runs the listed no-capture legs on load;
+   `bench.html?auto=still,stage,backend,livepath,gpu,lut,contention`
+   runs the listed no-capture legs on load (`livepath` is the
+   gestureless dirty-replay + stats pair, button 3c; `mem` — button
+   3d's plateau/isolation/contention/peak set — is also a valid token,
+   with its ~2 GiB transient peak probe in mind before running it
+   unattended);
    `&post=http://127.0.0.1:<port>/report` POSTs the finished bv2 JSON
    to a local collector. This exists so an agent can run the
    gestureless half in a real, foreground browser window it cannot
@@ -381,8 +385,9 @@ second report.
 (not the harness): capture Photoshop, record a ~30 s Performance
 trace while editing, zooming/panning, and toggling compare and the
 grid. Then the adversarial checks: crop move/resize mid-capture,
-pause/resume, end capture from the browser bar, a declined re-prompt,
-the narrow companion layout, one export mid-edit. Expected: no wedge,
+Freeze/Unfreeze (the capture pause control's M14 name), end capture
+from the browser bar, a declined re-prompt, the narrow companion
+layout, one export mid-edit. Expected: no wedge,
 truthful status, clean recovery, export unaffected by draft mode.
 Read GC pauses off the same trace (M13-PROF-05). Traces and owner
 notes stay out of committed reports if they show artwork; acceptance

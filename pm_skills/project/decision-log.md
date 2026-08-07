@@ -1091,3 +1091,37 @@ M15-GALLERY-01 are unchanged by this entry.
 milestone until the next pick); M15-ACCEPT-02 line dated deferred;
 ticket M14-ACCEPT-01 deleted on ship; trajectory M14 phase closed;
 README status refreshed.
+
+## D128 — M13 returned to Current; gestureless evidence re-baselined on the post-M14/M15 build (2026-08-07)
+
+**Decision:** the owner's "autojazz M13" is the pick that returns the
+M13 remainder to Current (M14 closed at D127). Because the live-path
+surfaces churned ~3k lines through M14/M15 after the 2026-07-23
+packs, every gestureless leg was re-run on `d7218be` before the owner
+session — the D62/D63 re-measure rule applied to the profile evidence
+itself. Node bench green (22 rows); the browser auto legs
+(`still,stage,backend,livepath,gpu,lut,contention`) and the mem leg
+re-run in a visible production Chrome window, both untainted
+(`bench-reports/browser-bench-v0.5.0_20260807.d7218be-{auto,mem}.json`,
+quoted in `docs/performance-evidence.md` → the D128 section). Every
+load-bearing 2026-07-23 figure replicates — dirty knee, stats, still
+preview-update, the ~51 ms selection export, isolation EXACT, GPU
+agreement EXACT, device-loss PASS, and the post-export idle residue
+to the decimal (74.8 MiB) — so the owner session lands on
+known-good instrumentation. The D72 fixes are visible and truthful
+in the rows (the non-FS clamp reports `ts`; the oversized chart
+publishes `not-measured` via the refusal). TS reduce runs ~2.5×
+faster with `reduce.ts` untouched — environment/JIT drift, recorded
+so the synthesis binds to current-build baselines; the bv2 env row's
+missing browser-version field is noted as the one attribution the
+comparison wanted. The rehearsal sheet is repaired against the
+shipped M14 surface (pause/resume → Freeze/Unfreeze; the documented
+auto-token list gains `livepath` and names `mem` with its ~2 GiB
+peak-probe caveat). The owner capture session (Parts A–D) is now the
+sole input left for M13-SYNTH-01's gate; PROF-04/05 stay `[~]` on
+exactly that remainder.
+
+**Link:** backlog → M13 returned to Current with the note refreshed
+and both PROF status lines re-dated; tickets M13-PROF-04/05 status
+appended; evidence `docs/performance-evidence.md` → D128 section;
+procedure `docs/browser-measurement.md` auto-list + Part C repairs.

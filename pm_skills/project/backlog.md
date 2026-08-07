@@ -28,6 +28,10 @@ optimising (D62/D63); `AGENTS.md` hard rules hold.
 
 Each task files defects for performance-sensitive bugs it uncovers.
 
+- [ ] **M13-MEAS-03 Automate the owner-session legs** [detail] (2026-08-07)
+  Intent: owner ask (2026-08-07) — shrink the PROF-04/05 owner session to its genuinely human legs by automating the mechanisable ones: flag-granted capture for Part A, the forced-GC probe answering Part D's 74.8 MiB question, optional Part-B edit classes on the controlled source; the Tier-2 CDP driver only on explicit dependency approval (tiers in the ticket). Runs next, ahead of the owner session it shrinks.
+  Done when: one command yields valid (untainted, visible-window) capture-leg and forced-GC reports on an awake desktop; the rehearsal sheet shrinks to the human legs; the flag-granted variant is decision-logged with one manual cross-check.
+
 - [~] **M13-PROF-04 Live-path profile: capture, scheduling, preview** [detail] (2026-07-22)
   Intent: the live capture→preview path — pump cadence, dirty-detection cost and small-edit misses, coalescing drops, draft governor, split-compare overhead, preview/UI latency, failure recovery.
   Done when: an end-to-end latency decomposition at 200²/300² live capture, with dropped/stale-frame behaviour quantified against the ≥ 4 updates/sec promise.

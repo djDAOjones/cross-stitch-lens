@@ -1053,3 +1053,77 @@ the candidate list living in the ticket and never the select.
 **Link:** backlog → M15 reordered, M15-GALLERY-01 added,
 ICE-PRESET-01 removed (absorbed); tickets M15-CORE-02, M15-UI-03,
 M15-GALLERY-01 (new), M14-EXT-42.
+
+## D116 — M15-SCOPE-02: dithering-profile scope signed — complete configs on the shared shell, colour builds first (2026-08-07)
+
+**Decision:** the dither half of the D106 scoping ask ran 2026-08-07
+(a design session in parallel with D114's colour session, landing
+before UI-02 starts — the D115 hope) and signs the dithering-profile
+scope. A **dithering profile is a complete named `DitherConfig`** —
+method, per-family strength, serpentine where the method has a scan
+direction — never partial: a profile fully determines the dither
+stage, extending M8-CTRL-01's no-hidden-state rule to the profile
+layer. The D61 control surface is the whole surface; no new engine
+parameters. The seven shipped presets (`DITHER_PRESETS`) become
+**read-only built-in profiles** (duplicate-to-edit, evidence basis
+lines kept) — D114's "presets end as a concept" extends to dither —
+and the never-lying Custom sentinel carries over: an unmatched
+configuration renders as an honest unnamed state, never silently
+adopted by a profile.
+
+**Editor:** the dither kind mounts in the kind-agnostic takeover
+shell (M15-UI-02) with the UI-04 preview rig inherited whole —
+last-still default view, photo slots, generated test card,
+three-resolution grid, draft-labelled real-pipeline renders,
+draft-then-Save (D114's recorded §5.4 exception), the EXT-43
+no-rebuild contract. The chooser-editor reading is signed: profile
+list + judgement preview + the three-field form; the editor opens
+on the design's active profile, and an explicit act (a shell verb
+or a per-kind Use — settled at build against the shipped colour
+editor) updates the design. The kind contract UI-02/UI-04 build
+against: the draft is **opaque to the shell** (each kind supplies
+its form and its pipeline stage-override mapping — the rig renders
+"the pipeline with a draft-overridden stage", never "a draft colour
+recipe"), and a dither preview needs a resolved thread palette —
+the design's current palette by default, a **named demonstration
+palette when the design is full-RGB** (dithering applies to thread
+palettes; the label always names what the preview renders with,
+because dither's look depends on palette density).
+
+**Section:** Processing recuts to a "Dithering profile" select plus
+an Edit profiles… button — the owner's minimal pick; the Dither
+style select and the Dither details reveal retire (the editor
+absorbs depth). With no inline tuning, divergence arises only from
+load-time unmatched configs and later library edits, both rendered
+honestly. Persistence extends D55 the cheap way: the project file
+already stores the resolved config (the snapshot half), so
+`ditherProfileRef {id, revision}` is additive — old projects attach
+a built-in reference on structural match and otherwise stay
+unreferenced; no migration beyond the bump. Unlike colour, an
+unchanged config through the profile layer changes no engine
+output, so byte-identity is assertable at acceptance — the dither
+half's risk is persistence, not appearance.
+
+**Owner picks at the gate:** complete profiles; built-ins immutable
+with Duplicate; store + snapshot + reference persistence; the
+chooser-editor on the shared shell; the minimal section; the
+interaction contract and live preview inherited from the colour
+editor by name; **colour builds first, dither second** — the
+owner's call, reversing the agent's prove-the-shell-on-the-small-
+kind recommendation, recorded so UI-02/UI-04 design against both
+kinds from this entry rather than generalising later. M8-ACCEPT-01
+**folds into the dither acceptance session** (M15-DITH-05 absorbs
+its checklist whole; the five methods have shipped since M8 without
+complaint, so the visual judgement runs once, on the final profile
+surface — agent licence to unfold if that stops making sense). The
+v1 cut line is owner-delegated: in — built-ins + user profiles
+with duplicate/rename/delete, one judgement preview with content
+and scale selection, the palette-context line; deferred — the
+side-by-side compare grid; import/export ships only if the
+PERSIST-01 pattern provides it generically.
+
+**Link:** backlog → M15 "Dither half (D116)" M15-DITH-01..05
+(after the colour half, owner order); tickets M15-DITH-01/02/05;
+M15-SCOPE-02 ships (ticket superseded, deleted); M8-ACCEPT-01
+absorbed into M15-DITH-05 (icebox line removed); M15-UI-02's
+backlog line and M15-UI-04's ticket carry the kind pointer.

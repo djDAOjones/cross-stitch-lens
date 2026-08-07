@@ -146,11 +146,13 @@ note). No new runtime deps; Carbon hand-built; AAA. Run order
 UI-04 → UI-01 → ACCEPT-01 → ACCEPT-02 — the editor completes first
 behind a dev-only entry, and UI-01's section cutover lands last,
 atomic and wired to a finished editor, on the section M14's
-EXT-41/42 leave behind (M14 completes first). SCOPE-02 stays
-scoping-first, ideally before UI-02 starts so the kind-agnostic
-shell is designed against both known kinds (dither scoping in
-progress 2026-08-07); failing that, UI-02 builds colour-first and
-generalises at the dither build. Ordering against the M13
+EXT-41/42 leave behind (M14 completes first). Dither half signed
+2026-08-07 (D116), before UI-02 as D115 hoped: a dithering profile
+is a complete named `DitherConfig`; the seven presets become
+read-only built-ins; the dither kind mounts in the same shell and
+rig (kind contract in D116); Processing recuts to select + Edit
+profiles. The DITH tasks run **after the colour half ships** —
+owner order, colour first then dither. Ordering against the M13
 remainder is the owner's call at pick time.
 
 - [ ] **M15-CORE-01 Colour sources: maps, namespaces, names** [detail] (2026-08-07)
@@ -170,7 +172,7 @@ remainder is the owner's call at pick time.
   Done when: save→load→save byte-identical on the new schema; old fixtures load and render via snapshot with the note; a pre-existing saved palette reappears as a profile with its order intact; library round-trip tests green.
 
 - [ ] **M15-UI-02 Takeover editor shell (shared)** (2026-08-07)
-  Intent: the shell view swap (not a dialog): header with profile switcher and New/Duplicate/Rename/Delete, draft model with Save/Cancel/Back, focus and a11y anatomy, a capture session surviving underneath; built profile-kind-agnostic for SCOPE-02.
+  Intent: the shell view swap (not a dialog): header with profile switcher and New/Duplicate/Rename/Delete, draft model with Save/Cancel/Back, focus and a11y anatomy, a capture session surviving underneath; built profile-kind-agnostic — the dither kind's shell contract is signed in D116 (draft opaque to the shell; each kind supplies its form and stage-override mapping).
   Done when: open→edit→Save/Cancel/Back all keyboard-clean with focus returned; frame results never rebuild editor controls (regression test — the EXT-43 contract); a second profile kind could mount without shell change.
 
 - [ ] **M15-UI-03 Editor content: libraries, pins, ranges, readout** [detail] (2026-08-07)
@@ -197,9 +199,27 @@ remainder is the owner's call at pick time.
   Intent: owner ask (second look, D115) — create lots of useful and interesting built-in profiles drawn from across culture and nature (absorbs ICE-PRESET-01 and the D114 placeholder list); agent drafts rule- or membership-based candidates in batches with test-image evidence, the owner curates names and membership per batch; shipped names style-descriptive, never trademarks; nothing placeholder ships in the UI.
   Done when: each shipped batch has owner-signed membership or rules and honest naming, distinguished from user profiles; the candidate list lives in the ticket, never the select.
 
-- [ ] **M15-SCOPE-02 Dithering profiles & editor — joint scoping** [maintainer] [sign-off] [detail] (2026-08-06)
-  Intent: scope "Dithering profiles" with the owner — the Processing section reduced to profile selection (EXT-30 lands the rename first), a full-surface editor over the five methods and seven evidence-based presets, and how much editor machinery it shares with UI-02's kind-agnostic shell.
-  Done when: a signed scope and option pick are recorded (decision log) and the build is broken into agent-executable tasks; no code before that.
+#### Dither half (D116) — after the colour half ships (owner order)
+
+- [ ] **M15-DITH-01 Dither profile model and store** [detail] [blocked: M15-PERSIST-01] (2026-08-07)
+  Intent: the DitherProfile entity (complete `DitherConfig` + name + revision), the seven presets seeded as read-only built-ins with basis lines kept, the PERSIST-01 store pattern reused under a dither kind, `ditherProfileRef {id, revision}` beside the already-persisted config with load-time built-in matching; schema bump under the D114 waiver.
+  Done when: save→load→save byte-identical; old projects attach the right built-in or stay honestly unreferenced (tests over both); built-in immutability pinned at the store level.
+
+- [ ] **M15-DITH-02 Dither editor on the shared shell** [detail] [blocked: M15-UI-02, M15-UI-04, M15-DITH-01] (2026-08-07)
+  Intent: mount the dither kind in the takeover shell — built-in/user profile list, the three-field form with per-family strength semantics and basis lines, duplicate-to-edit, the UI-04 rig rendering the draft config with the design's palette (a named demonstration palette under full-RGB), dev-only entry until DITH-03.
+  Done when: draft edits preview live without rebuilding controls (EXT-43 test extended to this kind); full-RGB shows the labelled demo palette; keyboard-clean per the shell anatomy; any shell change the second kind forced is recorded (the UI-02 goal is none).
+
+- [ ] **M15-DITH-03 Processing section cutover** [blocked: M15-DITH-02] (2026-08-07)
+  Intent: the atomic cutover mirroring UI-01 — a "Dithering profile" select plus Edit profiles… replace the Dither style select and the Dither details reveal; unmatched or drifted configs name themselves honestly; no dead controls at any point.
+  Done when: select and editor are the only dither surface; the honest-state renderings are in place; the section is shorter than today's at both postures.
+
+- [ ] **M15-DITH-04 Automated dither-profile acceptance** [blocked: M15-DITH-03] (2026-08-07)
+  Intent: the machine half — store/round-trip suites, the no-rebuild regression on the dither kind, and byte-identity: an unchanged config through the profile layer produces identical engine output.
+  Done when: `npm run check` green; byte-identity pinned by test; acceptance-matrix rows updated where the config path moved.
+
+- [ ] **M15-DITH-05 Dither acceptance session (absorbs M8-ACCEPT-01)** [maintainer] [detail] [blocked: M15-DITH-04] (2026-08-07)
+  Intent: the human half — the absorbed M8 visual-quality session (gallery, live capture, comprehension, exports, fallback, access) run once on the final profile surface, judging the five methods and whether profiles and their names predict what the eye sees.
+  Done when: owner pass/fail notes per method and per built-in profile are recorded; failures route per the ticket (a method failure reopens D61), never silent rework.
 
 ### Icebox
 
@@ -220,11 +240,6 @@ constraint; candidates for the next UI-capability milestone:
 
 Deferred 2026-07-22 (D63) for M13 — intentionally deferred, not
 passed, cut or shipped:
-
-- [ ] **M8-ACCEPT-01 Visual-quality acceptance session** [maintainer] [detail] (2026-07-22)
-  Intent: the human half of the M8 gate — judge the five shipped methods on the audit gallery and on live Photoshop capture: banding, noise, edge damage, isolated stitches, stitchability, and whether the labels/presets predict what the eye sees.
-  Done when: owner pass/fail notes are recorded per method (failure routing per the ticket) and live editing stays usable across all shipped methods.
-  The automated matrix, per-method suites, bench evidence, and the regenerable gallery (`npm run audit` → `bench-reports/m8-spike-01-gallery.html`) are already in place — see the ticket for the session checklist.
 
 - [ ] **M8-GOLD-01 Golden fixtures for the M8 methods** [maintainer] [sign-off] (2026-07-22)
   Intent: decide whether the four new algorithms join `tests/golden/**` (protected — owner approval with a stated algorithm reason required). Ordinary deterministic fixtures already prove the implementations; golden fixtures would pin them against future backends.

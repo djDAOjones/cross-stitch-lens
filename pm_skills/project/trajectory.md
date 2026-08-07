@@ -17,7 +17,18 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
-## M15 — Colour & dithering profiles (scoping — colour half signed, build not started)
+## M15 — Colour & dithering profiles (scoped — both halves signed, build not started)
+
+- M15-SCOPE-02 (2026-08-07) — the dither half signs: a dithering
+  profile is a complete named `DitherConfig`; the seven presets
+  become read-only built-in profiles (duplicate-to-edit, basis
+  lines kept); the dither kind mounts in the shared takeover shell
+  and preview rig with a named demo palette under full-RGB;
+  Processing recuts to profile select + Edit profiles; persistence
+  is snapshot + additive `ditherProfileRef`. Colour builds first,
+  dither second (owner order). M8-ACCEPT-01 absorbed into
+  M15-DITH-05. Build broken into M15-DITH-01..05. See decision-log
+  D116.
 
 - M15-SCOPE-01 (2026-08-07) — the joint scoping session signs the
   colour-profile scope: profile = composition recipe (libraries,

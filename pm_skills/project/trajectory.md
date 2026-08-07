@@ -67,7 +67,12 @@
   M15-CORE-01..03, M15-PERSIST-01, M15-UI-01..04, M15-ACCEPT-01/02.
   See decision-log D114.
 
-## M14 — UI/UX excellence (in progress — agent half complete, ACCEPT-01 open)
+## M14 — UI/UX excellence (complete — owner accepted 2026-08-07)
+
+- M14-ACCEPT-01 (2026-08-07) — the maintainer end review passes over
+  the six looks' review pack and evidence; no failures routed. The
+  milestone closes: acceptance passed, `check` green on final code.
+  See decision-log D127.
 
 - M14-EXT-38, M14-EXT-39, M14-EXT-40, M14-EXT-41, M14-EXT-42,
   M14-EXT-43, M14-EXT-44 (2026-08-07) — the sixth look lands in one

@@ -1068,3 +1068,26 @@ duplicate ids with both editors mounted; the migrated file renders
 the sentinel selected.
 
 **Link:** the D124 review (session report); ui-spec §5 amended.
+
+## D127 — M14-ACCEPT-01 accepted: M14 closes; M15-ACCEPT-02 deferred (2026-08-07)
+
+**Decision:** the owner accepts M14-ACCEPT-01 — the maintainer end
+review over the six looks (D74–D121), the review pack and this
+session's evidence — with no failures routed to fix tasks, so **M14
+UI/UX excellence closes whole**: the acceptance line has passed and
+`check` is green on the final code. The watch items and live-session
+legs the ticket carried (the getDisplayMedia legs, the Zoom naming
+beside the preview's zoom, the "Capture"-over-a-still stretch, the
+"Colours used"/"Colours in use" near-twin, the parked steppers
+question, the off-viewport status trade) are accepted as shipped by
+this verdict; anything the owner later wants changed arrives as a
+new item, never silent rework. **M15-ACCEPT-02 is deferred** on the
+owner's word: the colour half stays agent-complete with the human
+acceptance session to run at a time of their choosing; the item
+stays open in the backlog with its deferral dated. M15-DITH-05 and
+M15-GALLERY-01 are unchanged by this entry.
+
+**Link:** backlog → the M14 section removed whole (no Current
+milestone until the next pick); M15-ACCEPT-02 line dated deferred;
+ticket M14-ACCEPT-01 deleted on ship; trajectory M14 phase closed;
+README status refreshed.

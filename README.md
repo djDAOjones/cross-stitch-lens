@@ -18,8 +18,14 @@ WebGPU as profiled drop-in backends.
 ## Status
 
 Pre-MVP. Work is organised into milestones in
-[`pm_skills/project/backlog.md`](pm_skills/project/backlog.md);
-**M13 (visual processing performance)** is the active milestone.
+[`pm_skills/project/backlog.md`](pm_skills/project/backlog.md).
+**M14 (UI/UX excellence) is complete** — six review looks shipped
+and the maintainer end review passed (D127). **M15 (colour &
+dithering profiles)** has shipped its agent work whole: colour
+profiles as composition recipes with a kind-agnostic takeover
+editor, schema v5, and dithering profiles on the same shell; its
+maintainer acceptance sessions are pending. The **M13 remainder**
+(owner-session-gated performance work) is queued next.
 **M0–M7 have shipped (v0.5.0)**: the quality-gated scaffold, the full
 TypeScript engine core (resize, CIELAB palette reduction, Floyd–
 Steinberg dithering, stats), still-image import, the preview UI —

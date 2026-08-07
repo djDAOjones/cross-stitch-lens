@@ -15,24 +15,6 @@ line passes and `check` is green. Requirements references are to
 
 ## Active
 
-### Current — M14 UI/UX excellence
-
-Novice-first default surface, Carbon productive language, WCAG 2.2
-AAA and the Nielsen hard rules per `UI-STANDARDS.md`; design
-decisions are recorded (decision log + `ui-evidence.md`) and judged
-once at M14-ACCEPT-01 (D73). UI-only milestone: engine, worker and
-export outputs stay byte-identical; no new runtime dependencies; no
-project-file schema change. Milestone docs under `docs/`:
-`ui-audit.md`, `ui-journeys.md`, `ui-spec.md`, `ui-evidence.md`.
-Looks one to six have shipped whole (see trajectory + decision log
-D91–D121); the gate is the milestone's one open item.
-
-#### Phase 4 — Verification & end review
-
-- [ ] **M14-ACCEPT-01 Maintainer end review** [maintainer] [detail] (2026-07-23)
-  Intent: the reserved human gate — judge look, feel and taste over the review pack (changes, logged decisions, before/after evidence, waivers) and a live Photoshop companion session. Every look through the sixth (D121) has shipped. The named live-session legs and watch items are listed in the ticket.
-  Done when: owner pass/fail notes are recorded; failures route to new M14 fix tasks, never silent rework.
-
 ### Next — M13 Visual processing performance (remainder)
 
 Displaced from Current 2026-07-23 (D73): the remaining halves are
@@ -111,8 +93,9 @@ against the M13 remainder is the owner's call at pick time.
 - [ ] **M15-ACCEPT-02 Maintainer acceptance session** [maintainer] (2026-08-07)
   Intent: the human half — a live session over the editor: build a profile from scratch, judge the style built-ins, the test preview's usefulness, and the (edited) flow's legibility.
   Done when: owner pass/fail notes recorded; failures route to fix tasks, never silent rework.
+  Status 2026-08-07: deferred by the owner at the D127 acceptance — runs at their choosing.
 
-- [ ] **M15-GALLERY-01 Profile gallery: culture & nature** [sign-off] [detail] [blocked: M15-CORE-02] (2026-08-07)
+- [ ] **M15-GALLERY-01 Profile gallery: culture & nature** [sign-off] [detail] (2026-08-07)
   Intent: owner ask (D115) — many useful and interesting built-in profiles from across culture and nature (absorbs ICE-PRESET-01); agent drafts rule- or membership-based candidates in batches with test-image evidence, the owner curates names and membership per batch; shipped names style-descriptive, never trademarks; batches are owner-paced and interleave freely with the dither half — they never block it (D117). Candidate list in the ticket.
   Done when: each shipped batch has owner-signed membership or rules and honest naming, distinguished from user profiles; the candidate list lives in the ticket, never the select.
 

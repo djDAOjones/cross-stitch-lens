@@ -1,7 +1,8 @@
 /**
  * One-command automated owner-session legs (M13-MEAS-03 Tier 1):
  *
- *   npm run bench:auto
+ *   npm run bench:auto                    # run now (desktop must stay quiet)
+ *   npm run bench:auto -- --when-quiet    # arm: wait for real user idle, then run
  *
  * Builds the production bundle, serves it with `vite preview`, then
  * launches the installed Chrome twice — a dedicated throwaway profile,
@@ -17,30 +18,53 @@
  *      Chrome, so the plateau probe can answer the D71 lazy-GC vs
  *      retention question with a forced-GC re-read.
  *
- * Both reports are validated (`bench-auto-validate.mjs`) and written
- * to `bench-reports/` (gitignored, like every bench artefact). Any
- * validation failure exits non-zero — an invalid run is never quietly
- * left on disk as evidence.
+ * Every attempt writes **timestamped** reports to `bench-reports/`
+ * (evidence survives, valid or not); a leg that passes validation
+ * (`bench-auto-validate.mjs`) is also copied to the canonical
+ * unstamped name, so the canonical artefact can never hold a tainted
+ * run. Any validation failure exits non-zero.
  *
- * Run it on an **awake desktop and leave the machine alone**: the
- * Chrome windows must stay at least partially visible (a hidden page
- * is CPU-throttled 10–20×, and the env row records it). This is
- * "one command, a few minutes of hands-off", never headless CI.
- * Procedure and honesty rules: `docs/browser-measurement.md` →
- * "Automated owner-session legs".
+ * The runs need an **awake desktop with the Chrome windows left at
+ * least partially visible** (a hidden page is CPU-throttled 10–20×,
+ * and the env row records it — the validity gate refuses such runs).
+ * `--when-quiet` (or `BENCH_WHEN_QUIET=1`) automates exactly that
+ * precondition instead of bending it: the launcher waits until the
+ * desktop has been free of user input for `BENCH_IDLE_SECS` (default
+ * 60), wakes the display and holds it awake (`caffeinate`, macOS
+ * built-in) for the run, and — when a failure is wholly environmental
+ * (hidden windows, throttled source) — re-arms for another quiet gap,
+ * up to `BENCH_ATTEMPTS` tries (default 3 when quiet-armed, else 1).
+ * Structural failures never retry. This is still "a few minutes of
+ * hands-off on a real desktop", never headless CI. Procedure and
+ * honesty rules: `docs/browser-measurement.md` → "Automated
+ * owner-session legs".
  *
  * Owns only what it starts: the preview server, the flagged Chrome
- * instances, and their temp profiles. It never touches a running dev
- * server, the daily browser, or any other port.
+ * instances, their temp profiles, and its own `caffeinate` holder. It
+ * never touches a running dev server, the daily browser, or any other
+ * port, and it never fakes user input.
  */
 
-import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawn } from 'node:child_process';
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { createServer, get } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { clearTimeout, setTimeout } from 'node:timers';
 import { setTimeout as delay } from 'node:timers/promises';
+import {
+  formatStamp,
+  isEnvironmentalFailure,
+  parseIdleSeconds,
+  reportPaths,
+} from './bench-auto-lib.mjs';
 import { validateCaptureReport, validateMemReport } from './bench-auto-validate.mjs';
 
 const PORT = Number(process.env.BENCH_PORT ?? 4173);
@@ -51,6 +75,10 @@ const CHROME =
  * bench-source.html and nothing else on the desktop. */
 const SOURCE_TITLE = 'controlled capture source';
 const RUN_TIMEOUT_MS = 10 * 60 * 1000;
+const WHEN_QUIET =
+  process.argv.includes('--when-quiet') || process.env.BENCH_WHEN_QUIET === '1';
+const IDLE_SECS = Number(process.env.BENCH_IDLE_SECS ?? 60);
+const ATTEMPTS = Number(process.env.BENCH_ATTEMPTS ?? (WHEN_QUIET ? 3 : 1));
 
 const cleanups = [];
 function cleanup() {
@@ -96,13 +124,78 @@ async function waitForHttp(url, timeoutMs) {
   throw new Error(`${url} did not serve HTTP 200 within ${String(timeoutMs)} ms`);
 }
 
+// ------------------------------------------------- quiet-desktop gate
+
+/** Seconds since the last user input, or null when unreadable. */
+function idleSeconds() {
+  try {
+    return parseIdleSeconds(execFileSync('ioreg', ['-c', 'IOHIDSystem'], { encoding: 'utf8' }));
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Start the collector; resolves each POSTed body via a rotating
+ * Block until the desktop has been input-free for `minIdle` seconds.
+ * Polls every 10 s with a low-noise heartbeat. If idleness cannot be
+ * read at all, says so once and proceeds — the validity gate still
+ * refuses a disturbed run, so the worst case is a wasted attempt,
+ * never a quietly wrong report.
+ */
+async function waitForQuiet(minIdle) {
+  const first = idleSeconds();
+  if (first === null) {
+    console.warn('cannot read HIDIdleTime on this system — running without the idle gate');
+    return;
+  }
+  console.log(
+    `Armed: waiting for ${String(minIdle)} s of user idle before measuring ` +
+      '(step away and the run starts itself)…',
+  );
+  let polls = 0;
+  for (;;) {
+    const idle = idleSeconds();
+    if (idle === null || idle >= minIdle) return;
+    if (polls > 0 && polls % 30 === 0) {
+      console.log(`still waiting for quiet (idle ${String(idle)} s / need ${String(minIdle)} s)`);
+    }
+    polls++;
+    await delay(10_000);
+  }
+}
+
+/** Wake a possibly-sleeping display so the measurement windows render
+ * on glass. Declares one user-active moment — called only after the
+ * idle gate has already passed, and the run launches immediately. */
+function wakeDisplay() {
+  try {
+    execFileSync('caffeinate', ['-u', '-t', '1']);
+  } catch {
+    /* non-macOS or restricted — the validity gate remains the backstop */
+  }
+}
+
+/** Hold display + system awake for the duration of a run. */
+function holdAwake() {
+  try {
+    const holder = spawn('caffeinate', ['-di'], { stdio: 'ignore' });
+    const release = () => {
+      if (holder.exitCode === null) holder.kill('SIGTERM');
+    };
+    cleanups.push(release);
+    return release;
+  } catch {
+    return () => {};
+  }
+}
+
+// ----------------------------------------------------- run machinery
+
+/** Start the collector; resolves each POSTed body via a rotating
  * waiter. The harness page posts cross-origin (localhost:PORT →
  * 127.0.0.1:collector) with a JSON content type, so Chrome preflights
  * — the collector must answer OPTIONS and carry CORS headers or the
- * report silently never arrives (the first end-to-end run's failure).
- */
+ * report silently never arrives (the first end-to-end run's failure). */
 function startCollector() {
   let waiter = null;
   const cors = {
@@ -161,7 +254,7 @@ function launchChrome(url) {
       '--js-flags=--expose-gc',
       // Prominent enough that ordinary desktop activity is unlikely to
       // fully occlude it — macOS Chrome marks a fully-covered window
-      // hidden, which throttles and taints the run (run 3's failure).
+      // hidden, which throttles and taints the run.
       '--window-position=20,40',
       '--window-size=1040,940',
       url,
@@ -172,7 +265,7 @@ function launchChrome(url) {
     if (child.exitCode === null) child.kill('SIGTERM');
     // Chrome keeps writing the profile while it shuts down; removal of
     // our own temp dir is best-effort and must never mask the run's
-    // real outcome (the first end-to-end run died on this ENOTEMPTY).
+    // real outcome.
     try {
       rmSync(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 });
     } catch {
@@ -183,8 +276,9 @@ function launchChrome(url) {
   return kill;
 }
 
-/** One flagged-Chrome page load → one parsed, written, validated report. */
-async function runLeg(collector, name, autoTokens, validate) {
+/** One flagged-Chrome page load → one parsed, stamped, validated
+ * report; valid legs are additionally copied to the canonical name. */
+async function runLeg(collector, name, autoTokens, validate, stamp) {
   console.log(`\n=== ${name}: launching flagged Chrome (leave the machine alone) ===`);
   const post = `http://127.0.0.1:${String(collector.port)}/report`;
   const url =
@@ -195,12 +289,17 @@ async function runLeg(collector, name, autoTokens, validate) {
     const body = await collector.nextReport(RUN_TIMEOUT_MS);
     const report = JSON.parse(body);
     mkdirSync('bench-reports', { recursive: true });
-    const buildId = String(report.build?.buildId ?? 'unknown-build').replaceAll('+', '_');
-    const file = join('bench-reports', `browser-bench-${buildId}-${name}.json`);
-    writeFileSync(file, body);
+    const paths = reportPaths(report.build?.buildId ?? 'unknown-build', name, stamp);
+    const stamped = join('bench-reports', paths.stamped);
+    writeFileSync(stamped, body);
     const failures = validate(report);
-    console.log(`${name}: report written to ${file}`);
-    return { report, failures, file };
+    if (failures.length === 0) {
+      copyFileSync(stamped, join('bench-reports', paths.canonical));
+      console.log(`${name}: VALID — ${stamped} (canonical copy updated)`);
+    } else {
+      console.log(`${name}: invalid — ${stamped} (canonical copy untouched)`);
+    }
+    return { report, failures, file: stamped };
   } finally {
     kill();
   }
@@ -216,6 +315,26 @@ function headline(report, workloadId, boundary) {
     `median ${row.summary.median.toFixed(1)} ms (n=${String(row.summary.count)})` +
     (typeof rate === 'number' ? `, ${rate.toFixed(1)} updates/sec` : '')
   );
+}
+
+function printSummary(capture, mem) {
+  console.log('\n=== Summary ===');
+  const base = 'capture.g300.p64.lab.fs-s100-serp';
+  console.log(`live 300²:  ${headline(capture.report, base, 'preview-update')}`);
+  console.log(
+    `live 200²:  ${headline(capture.report, 'capture.g200.p64.lab.fs-s100-serp', 'preview-update')}`,
+  );
+  console.log(`interaction: ${headline(capture.report, base, 'interaction')}`);
+  const plateau = mem.report.rows.find(
+    (r) => r.label === 'retained-heap plateau (fixed sequence)',
+  );
+  if (plateau !== undefined) {
+    console.log(
+      `mem plateau: idle ${String(plateau.meta?.['heap after 5 s idle MiB'])} MiB → ` +
+        `forced GC ${String(plateau.meta?.['heap after forced GC MiB'])} MiB — ` +
+        String(plateau.meta?.verdict),
+    );
+  }
 }
 
 async function main() {
@@ -237,38 +356,43 @@ async function main() {
   await waitForHttp(`http://localhost:${String(PORT)}/bench.html`, 20_000);
 
   const collector = await startCollector();
-  const capture = await runLeg(collector, 'capture', 'capture,editclasses', validateCaptureReport);
-  const mem = await runLeg(collector, 'mem', 'mem', validateMemReport);
 
-  console.log('\n=== Summary ===');
-  const base = 'capture.g300.p64.lab.fs-s100-serp';
-  console.log(`live 300²:  ${headline(capture.report, base, 'preview-update')}`);
-  console.log(
-    `live 200²:  ${headline(capture.report, 'capture.g200.p64.lab.fs-s100-serp', 'preview-update')}`,
-  );
-  console.log(`interaction: ${headline(capture.report, base, 'interaction')}`);
-  const plateau = mem.report.rows.find(
-    (r) => r.label === 'retained-heap plateau (fixed sequence)',
-  );
-  if (plateau !== undefined) {
-    console.log(
-      `mem plateau: idle ${String(plateau.meta?.['heap after 5 s idle MiB'])} MiB → ` +
-        `forced GC ${String(plateau.meta?.['heap after forced GC MiB'])} MiB — ` +
-        String(plateau.meta?.verdict),
-    );
-  }
-
-  const failures = [
-    ...capture.failures.map((f) => `capture: ${f}`),
-    ...mem.failures.map((f) => `mem: ${f}`),
-  ];
-  if (failures.length > 0) {
-    console.error('\nINVALID RUN — do not quote these reports:');
+  for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
+    if (WHEN_QUIET) {
+      await waitForQuiet(IDLE_SECS);
+      wakeDisplay();
+    }
+    const release = holdAwake();
+    const stamp = formatStamp(new Date());
+    let capture;
+    let mem;
+    try {
+      capture = await runLeg(collector, 'capture', 'capture,editclasses', validateCaptureReport, stamp);
+      mem = await runLeg(collector, 'mem', 'mem', validateMemReport, stamp);
+    } finally {
+      release();
+    }
+    printSummary(capture, mem);
+    const failures = [
+      ...capture.failures.map((f) => `capture: ${f}`),
+      ...mem.failures.map((f) => `mem: ${f}`),
+    ];
+    if (failures.length === 0) {
+      console.log(
+        `\nBoth reports valid (untainted, visible, all legs measured) — attempt ${String(attempt)}.`,
+      );
+      return;
+    }
+    console.error(`\nAttempt ${String(attempt)} invalid:`);
     for (const failure of failures) console.error(`  ✗ ${failure}`);
-    process.exitCode = 1;
-  } else {
-    console.log('\nBoth reports valid (untainted, visible, all legs measured).');
+    if (attempt < ATTEMPTS && isEnvironmentalFailure(failures)) {
+      console.log('Failure is environmental (disturbed desktop) — re-arming for a quiet gap.');
+      continue;
+    }
+    break;
   }
+  console.error('\nINVALID RUN — canonical reports untouched; do not quote the stamped ones.');
+  process.exitCode = 1;
 }
 
 try {

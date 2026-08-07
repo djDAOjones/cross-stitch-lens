@@ -43,7 +43,7 @@ Package manager: **npm** (Node LTS).
 | `audit` | `AUDIT=1 vitest run tests/audits` | M5B component decompositions + defect reproductions; JSON artefacts to `bench-reports` | Investigating where a cost or a defect lives |
 | `matrix` | `MATRIX_FULL=1 vitest run tests/acceptance-matrix.test.ts` | Full acceptance/parity matrix incl. the 1024² ceiling row | Verifying composed-pipeline correctness across axes |
 | `matrix:write` | `node scripts/write-acceptance-matrix.mjs` | Regenerate `docs/acceptance-matrix.md`, the matrix coverage table | After a matrix row change — `check` fails if the committed copy drifts (staleness gate) |
-| `bench:auto` | `node scripts/bench-auto.mjs` | Automated owner-session legs: flag-granted capture + forced-GC memory reports via a dedicated Chrome (M13-MEAS-03) | Refreshing the browser capture/memory evidence — awake desktop, hands off, never CI |
+| `bench:auto` | `node scripts/bench-auto.mjs` | Automated owner-session legs: flag-granted capture + forced-GC memory reports via a dedicated Chrome (M13-MEAS-03) | Refreshing the browser capture/memory evidence — awake desktop, hands off, never CI; `-- --when-quiet` arms it to fire in the next user-idle gap |
 | `check` | 7 non-mutating steps: types, lint, wasm, test, build, docs, secrets | **Quality gate** | Before calling a task done |
 | `lint:fix` | `eslint . --fix` | Auto-fix (separate from the gate) | Cleanup, never the CI pass/fail |
 
@@ -286,12 +286,24 @@ is overwritten on every build.
   in-page before any row is measured) and once for the memory leg
   under `--js-flags=--expose-gc` (the forced-GC retention probe).
   Validates both reports (untainted, visible page, all legs measured
-  — `scripts/bench-auto-validate.mjs`) and writes them to
-  `bench-reports`; an invalid run exits non-zero and must not be
-  quoted. Needs an **awake desktop with the windows left visible** —
-  never headless, never CI. Owns only what it starts: its preview
-  server, its Chrome instances, their temp profiles. Procedure and
-  honesty rules: `docs/browser-measurement.md` → "Automated
+  — `scripts/bench-auto-validate.mjs`) and writes every attempt to a
+  **timestamped** file in `bench-reports`, copying a leg to its
+  canonical unstamped name only when it validated — the canonical
+  artefact can never hold a tainted run. An invalid run exits
+  non-zero and must not be quoted. Needs an **awake desktop with the
+  windows left visible** — never headless, never CI.
+  `-- --when-quiet` (or `BENCH_WHEN_QUIET=1`) automates that
+  precondition rather than bending it: wait for `BENCH_IDLE_SECS`
+  (default 60) of user idle (`ioreg` HIDIdleTime), wake and hold the
+  display with the macOS built-in `caffeinate` for the run, and
+  re-arm for the next quiet gap when a failure is wholly
+  environmental (hidden windows / throttled source), up to
+  `BENCH_ATTEMPTS` tries (default 3 armed, 1 direct); structural
+  failures never retry, and no user input is ever faked
+  (quiet-run logic unit-tested in `scripts/bench-auto-lib.mjs`).
+  Owns only what it starts: its preview server, its Chrome
+  instances, their temp profiles, its caffeinate holder. Procedure
+  and honesty rules: `docs/browser-measurement.md` → "Automated
   owner-session legs".
 
 ---

@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 229 file(s) across 11 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 232 file(s) across 11 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 12 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
@@ -24,9 +24,9 @@
 - `crates` — 4 file(s)
 - `docs` — 12 file(s)
 - `public` — 1 file(s)
-- `scripts` — 10 file(s)
+- `scripts` — 12 file(s)
 - `src` — 92 file(s)
-- `tests` — 94 file(s)
+- `tests` — 95 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -88,6 +88,8 @@
 
 ## scripts
 
+- `scripts/bench-auto-lib.d.mts` — types for the quiet-run helpers (plain-JS module, typed for the test suite)
+- `scripts/bench-auto-lib.mjs` — quiet-run logic: HIDIdleTime parsing, stamped/canonical artefact naming, environmental-retry gate (pure)
 - `scripts/bench-auto-validate.d.mts` — types for the validation module (kept plain-JS for the node launcher)
 - `scripts/bench-auto-validate.mjs` — bv2 report validation for the automated owner-session legs (pure; shared launcher/test)
 - `scripts/bench-auto.mjs` — one-command automated owner-session legs: build, serve, flagged dedicated Chrome ×2, collect + validate reports
@@ -212,6 +214,7 @@
 - `tests/audits/runtime.audit.test.ts` — M5-PERF-16/17/19: compare cost, gate stalls, dirty sensitivity, export isolation
 - `tests/audits/wasm-boundary.audit.test.ts` — M5-PERF-15: boundary vs Rust split, calibration representativeness
 - `tests/backend-select.test.ts` — selection policy/calibration + ts fallback with both backends disabled
+- `tests/bench-auto-lib.test.ts` — quiet-run logic: idle parsing, valid-only canonical naming, never-retry-structural gate
 - `tests/bench-auto-validate.test.ts` — automated-run validation: tainted/hidden/incomplete reports must fail, complete ones pass
 - `tests/bench-counters.test.ts` — capture-counter ledger: interval deltas, conservation violations, meta flattening
 - `tests/bench-edit-classes.test.ts` — edit-class geometry: seed determinism, per-class ops, bounds, stroke continuity

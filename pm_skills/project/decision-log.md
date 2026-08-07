@@ -1163,3 +1163,35 @@ lines; procedure `docs/browser-measurement.md` → "Automated
 owner-session legs" + the shrunk rehearsal sheet; evidence
 `docs/performance-evidence.md` → D129 section; scripts table
 `DEV-INFRASTRUCTURE.md`.
+
+## D130 — bench:auto --when-quiet: the quiet-desktop precondition automated, not bent (2026-08-08)
+
+**Decision:** the owner's "take another look at automating" lands as
+scheduling automation, deliberately not environment modification.
+The alternative — Chrome's throttle-disabling flags
+(`--disable-backgrounding-occluded-windows` et al.) — would let runs
+survive occlusion but changes the scheduler on a measurement
+instance and makes the env row's `visible` mean something weaker;
+it stays a wish-list item requiring visible-vs-occluded equivalence
+evidence before it could ever be sanctioned. Instead the launcher
+automates the precondition the sheet already states: `--when-quiet`
+polls `ioreg` HIDIdleTime until the desktop has been input-free for
+`BENCH_IDLE_SECS` (60 s default), wakes and holds the display via
+the macOS built-in `caffeinate` (`-u -t 1` then `-di` — display
+wake and hold only; user input is never faked), runs, and re-arms
+for the next quiet gap when an attempt's failures are wholly
+environmental — a tested signature gate, so structural failures
+(conservation, missing forced-GC) never burn retries. Artefact
+naming becomes clobber-safe: every attempt writes a timestamped
+file; only a validated leg is copied to the canonical unstamped
+name, closing the run-6 hole where an invalid rerun overwrote run
+5's valid mem report. Pure logic (idle parsing, naming,
+retry gate) lives in `scripts/bench-auto-lib.mjs` under unit test.
+If idleness is unreadable the gate degrades to a warning and the
+validity gate remains the backstop — a wasted attempt is possible,
+a quietly wrong report is not.
+
+**Link:** launcher `scripts/bench-auto.mjs` + `bench-auto-lib.mjs`
+(+ tests); `DEV-INFRASTRUCTURE.md` scripts table + utility entry;
+procedure `docs/browser-measurement.md` → "Automated owner-session
+legs"; ticket M13-MEAS-03 + backlog status (armed 2026-08-08).

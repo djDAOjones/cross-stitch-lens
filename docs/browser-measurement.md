@@ -415,6 +415,19 @@ loop, unchanged. Honesty rules:
   least partially visible** for the few minutes they take — "one
   command, hands off", never headless, never CI. A hidden page
   taints the run and the launcher refuses it.
+- **`npm run bench:auto -- --when-quiet` automates the quiet-desktop
+  precondition instead of bending it**: the launcher waits until the
+  machine has seen no user input for `BENCH_IDLE_SECS` (default
+  60 s), wakes and holds the display awake (`caffeinate`, macOS
+  built-in — no user input is ever faked), runs, and — when a failed
+  attempt's failures are wholly environmental (hidden windows,
+  throttled source) — re-arms for the next quiet gap, up to
+  `BENCH_ATTEMPTS` tries. Structural failures never retry. Arm it
+  before stepping away; the artefact is waiting when you return.
+- Every attempt writes a **timestamped** report file; only a leg
+  that passed validation is also copied to the canonical unstamped
+  name — the canonical artefact can never hold a tainted run, and a
+  failed rerun can never clobber earlier valid evidence.
 
 ### The M13-PROF-04 owner session (rehearsal sheet, shrunk to the human legs)
 

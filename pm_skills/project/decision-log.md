@@ -1642,3 +1642,79 @@ green.
 **Link:** backlog → M15-GALLERY-01 batch 1 signed, item stays open for
 later batches; trajectory → one line; D139 is the drafting and review
 record and stands unamended.
+
+---
+
+## D141 — M13-IMPL-01 closes: the pair is clean, the grab term moves, the end-to-end span does not (2026-08-09)
+
+**Decision:** both candidates are **kept**, and M13-IMPL-01 closes.
+The persistent grab surface is priced and pays; the pre-submit copy
+elimination remains unpriced by construction (D138) and is kept on
+its correctness proof plus the D71 census, not on a measured delta.
+
+**The pair.** Baseline `138cd0f`
+(`browser-bench-v0.5.0_20260808.138cd0f-capture.20260809-005550.json`),
+after `3bfe7ef`
+(`…3bfe7ef-capture.20260809-005914.json`). Both **valid on attempt 1**
+— untainted, page visible, every leg measured — with the same shared
+surface at 2080 × 1948 (4.05 MP) and the same driven cadence, so the
+rows compare. Each was built from a *committed* state in its own git
+worktree, because a build from an uncommitted tree carries the parent
+commit's build id and the pair would have been indistinguishable.
+
+**Grab median, the term candidate 1 owns — 8 of 8 rows down:**
+
+| Row | Before | After | Δ |
+| --- | --- | --- | --- |
+| canonical g300 | 20.2 | 17.0 | −3.2 (−16 %) |
+| canonical g200 | 21.0 | 18.2 | −2.8 (−13 %) |
+| edit-hands-off | 23.1 | 21.4 | −1.7 |
+| edit-pixel-marks | 24.1 | 20.9 | −3.2 |
+| edit-slow-stroke | 18.2 | 15.0 | −3.2 |
+| edit-large-fill | 23.8 | 21.8 | −2.0 |
+| edit-transform | 24.9 | 21.4 | −3.5 |
+| edit-rapid-scatter | 18.5 | 15.0 | −3.5 |
+
+Mean −2.9 ms. One pair of runs proves little on its own; eight
+independent windows all moving the same way is what makes this a
+result rather than a coin flip.
+
+**The end-to-end span did not follow, and that is the honest
+headline.** `preview-update` medians went the *other* way by a hair —
+canonical g300 40.5 → 41.0, g200 30.6 → 31.2, the six edit classes
++0.20 to +1.20, interaction 81.2 → 78.3. Seven of seven
+`preview-update` rows carry a small positive sign, which is not
+nothing; but the per-row standard deviation is ~9.5 ms, so a shift of
+half a millisecond is not separable from drift on a single pair, and
+this is recorded as **flat** in either direction rather than claimed
+as a regression or explained away.
+
+**Why a 3 ms saving buys no latency.** At the driven 250 ms cadence
+the path is not grab-bound: long tasks are 0 in both runs, drops are 0
+in both, and submitted = results = 120 with no in-flight residue. The
+source-paint → preview-update span is owned by worker processing and
+the drive interval, so removing main-thread allocation returns
+**headroom, not latency**. That headroom is exactly what the D135
+surface-size trigger cares about — the term that would have grown with
+the crop no longer does.
+
+**The memory leg is silent on this, by construction.** Its plateau
+verdict is bit-identical across the pair (idle 172.7 MiB → forced GC
+11.5 MiB, lazy major GC), but its workload is synthetic noise and
+never touches `grabFrame`, so it neither confirms nor denies the
+allocation reduction; the ±5–9 ms wobble on its export rows is that
+leg's own noise. The census-scale claim (~93 % of per-frame churn)
+therefore stands on the D71 arithmetic and the deterministic
+allocation test, not on this leg — a distinction D138 already drew for
+candidate 2 and which applies to candidate 1's *memory* half too.
+Only its *time* half is measured here.
+
+**No regression anywhere else.** Every row holds 4.0 updates/sec — the
+product target is met before and after. `npm run bench` (the Node
+budget suite) is green at 22 passed; nothing in `src/core/` or
+`src/worker/` was touched, so no engine row could move.
+
+**Link:** backlog → M13-IMPL-01 removed, M13-IMPL-02 unblocked;
+trajectory → one line; `docs/performance-evidence.md` → the D141
+measured section; D138 is the implementation record and stands
+unamended; the harness-fidelity wish-list line survives, unclosed.

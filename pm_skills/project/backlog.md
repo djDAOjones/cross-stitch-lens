@@ -34,18 +34,15 @@ Profiling shipped (PROF-01..05 — see trajectory); defects closed
 
 #### Phase 4 — Evidence-approved implementation (activated by D135)
 
-- [~] **M13-IMPL-01 Quality-neutral optimisations** [detail] (2026-07-22)
-  Intent: land the two D135-approved bit-exact candidates — persistent grab surface and pre-submit copy elimination (D71 census #1/#2; allocator confirmed D134 Part C) — one candidate per measurement, byte-equality incl. the indices sidecar.
-  Done when: each change shows byte-identical output, a before/after on the automated capture + mem legs, no budget regression. Every other candidate class in the ticket stays unapproved.
-  Status 2026-08-08 (D138): both candidates implemented, correctness-proven, `check` green — the code half is done. Open on evidence only: the owner runs the bv2 pair (baseline from the parent commit as a detached checkout so the build id is honest, then the implementation build). Note candidate 2 is **not** measurable on the capture leg — the harness pump never had the pre-submit copy (wish-listed).
+IMPL-01 shipped (D138 code, D141 evidence — see trajectory).
 
-- [ ] **M13-IMPL-02 Backend routing and budget rebinding** [detail] [blocked: M13-IMPL-01] (2026-07-22)
+- [ ] **M13-IMPL-02 Backend routing and budget rebinding** [detail] (2026-07-22)
   Intent: apply D135 — routing confirmed unchanged (record only; no thresholds); re-take node bv2 on the implementation build and rebind all rows; add the browser product-target rows (driven capture leg, bv2 amendment) and the env browser-version field.
   Done when: bench green on the rebound rows; the capture-leg target rows assert; contract text updated; fallback intact (correct with WASM and WebGPU both unavailable).
 
 #### Phase 5 — Integrated acceptance
 
-- [ ] **M13-ACCEPT-01 Automated integrated acceptance** [detail] [blocked: M13-IMPL-01, M13-IMPL-02] (2026-07-22)
+- [ ] **M13-ACCEPT-01 Automated integrated acceptance** [detail] [blocked: M13-IMPL-02] (2026-07-22)
   Intent: the machine half — refreshed bench budgets, acceptance matrix, backend/feature fallback suites, export correctness, quality gate, green on final code.
   Done when: `npm run check` and `npm run bench` pass on the refreshed rows; matrix, fallback and export byte-identity re-proven.
 

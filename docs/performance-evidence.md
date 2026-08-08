@@ -1491,3 +1491,75 @@ reads that sha), then the implementation build — comparing the live
 leg's forced-GC residue. Candidate 1's expected signature is a lower
 grab median and reduced per-frame allocation; candidate 2's saving is
 not visible on this leg by construction.
+
+---
+
+## M13-IMPL-01 measured — the grab term moves, the span does not (2026-08-09, D141)
+
+The pair D138 left outstanding, each leg built in its own detached git
+worktree so the build id is honest (an uncommitted tree carries the
+parent commit's sha, which would have made the two reports
+indistinguishable):
+
+| | Build | Report | Verdict |
+| --- | --- | --- | --- |
+| Before | `138cd0f` | `browser-bench-v0.5.0_20260808.138cd0f-capture.20260809-005550.json` | valid, attempt 1 |
+| After | `3bfe7ef` | `browser-bench-v0.5.0_20260808.3bfe7ef-capture.20260809-005914.json` | valid, attempt 1 |
+
+Both untainted, page visible, all legs measured, same shared surface
+(2080 × 1948 = 4.05 MP), same driven cadence — the rows compare.
+
+### `grab median ms` — candidate 1's own term, 8 of 8 rows down
+
+| Row | Before | After | Δ |
+| --- | --- | --- | --- |
+| canonical g300 | 20.2 | 17.0 | −3.2 (−16 %) |
+| canonical g200 | 21.0 | 18.2 | −2.8 (−13 %) |
+| edit-hands-off | 23.1 | 21.4 | −1.7 |
+| edit-pixel-marks | 24.1 | 20.9 | −3.2 |
+| edit-slow-stroke | 18.2 | 15.0 | −3.2 |
+| edit-large-fill | 23.8 | 21.8 | −2.0 |
+| edit-transform | 24.9 | 21.4 | −3.5 |
+| edit-rapid-scatter | 18.5 | 15.0 | −3.5 |
+
+Mean −2.9 ms. A single pair proves little; eight independent windows
+moving the same way is what carries this.
+
+### `preview-update` medians — flat, not improved
+
+| Row | Before | After | Δ |
+| --- | --- | --- | --- |
+| canonical g300 | 40.50 | 41.00 | +0.50 |
+| canonical g200 | 30.55 | 31.20 | +0.65 |
+| interaction | 81.20 | 78.30 | −2.90 |
+| edit-hands-off | 48.80 | 50.00 | +1.20 |
+| edit-pixel-marks | 48.90 | 49.65 | +0.75 |
+| edit-slow-stroke | 48.10 | 48.30 | +0.20 |
+| edit-large-fill | 45.10 | 46.20 | +1.10 |
+| edit-transform | 47.85 | 48.80 | +0.95 |
+| edit-rapid-scatter | 48.00 | 48.20 | +0.20 |
+
+Seven of seven `preview-update` rows carry a small positive sign,
+which is not nothing — but per-row standard deviation is ~9.5 ms, so
+half a millisecond is not separable from drift on one pair. Recorded
+as **flat**, neither a regression nor explained away.
+
+**Why the saving buys no latency here.** At the driven 250 ms cadence
+the path is not grab-bound: long tasks 0 in both, drops 0 in both,
+submitted = results = 120 with nothing in flight. The span is owned by
+worker processing and the drive interval, so removing main-thread
+allocation returns **headroom, not latency** — which is precisely the
+term the D135 surface-size trigger was worried about growing.
+
+**What this pair does not measure.** The mem leg's plateau verdict is
+identical across the pair (idle 172.7 MiB → forced GC 11.5 MiB, lazy
+major GC), but its workload is synthetic noise and never calls
+`grabFrame`; the ±5–9 ms wobble on its export rows is that leg's own
+noise. So the census-scale allocation claim rests on the D71
+arithmetic and the deterministic allocation test, not on this leg —
+only candidate 1's *time* half is measured. Candidate 2 stays unpriced
+by construction (D138: the harness pump never had the copy).
+
+**No regression elsewhere:** 4.0 updates/sec on every row before and
+after, `npm run bench` green at 22 passed, nothing in `src/core/` or
+`src/worker/` touched.

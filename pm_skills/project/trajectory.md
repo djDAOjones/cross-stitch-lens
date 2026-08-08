@@ -19,6 +19,16 @@
 
 ## M13 — Visual processing performance, remainder (in progress)
 
+- M13-IMPL-01 (2026-08-09) — the two D135-signed candidates ship: one
+  reused grab surface per session, and the pump's pre-submit 5.9 MB
+  copy replaced by a transfer plus a guarded refill off that surface.
+  Measured on a clean bv2 pair (`138cd0f` → `3bfe7ef`, both valid on
+  attempt 1): `grab median ms` down in 8 of 8 windows, mean −2.9 ms
+  (canonical −16 %/−13 %); `preview-update` flat — the path is not
+  grab-bound at the driven cadence, so the saving is headroom, not
+  latency. Candidate 2 stays unpriced by construction (the harness
+  pump never had the copy). See D138 (code) and D141 (evidence).
+
 - M13-DEF-03 (2026-08-08) — the multi-window bench ledger conserves:
   drop counts fold by delta (`DropLedger`) instead of overwriting a
   cumulative field, per-window totals published separately, and the

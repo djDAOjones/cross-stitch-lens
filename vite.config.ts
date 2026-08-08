@@ -74,5 +74,13 @@ export default defineConfig({
   test: {
     include: ['tests/**/*.test.ts'],
     environment: 'node',
+    // Liveness guards, not perf assertions (perf budgets live in `bench`,
+    // outside `check` — D43/D44). The Vitest 5 s default has only ~5.6×
+    // headroom over the suite's slowest healthy test (889 ms), and a
+    // QoS-demoted gate under a loaded desktop measurably inflates
+    // per-test wall 10–35× (INFRA-CHECK-01, D136): starvation must slow
+    // the gate, never fail it. 30 s still catches genuine hangs.
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
   },
 });

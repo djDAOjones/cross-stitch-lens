@@ -29,10 +29,6 @@ signed scope and matrix live in `docs/performance-evidence.md` →
 
 Profiling shipped (PROF-01..05 — see trajectory); open defects only.
 
-- [ ] **INFRA-CHECK-01 `check` flakes all-timeout under desktop load on the synced path** (2026-08-08)
-  Intent: on the OneDrive-synced repo with a loaded desktop (Photoshop + Chrome + the agent app open — and, owner-disclosed, a game active during the aftermath's red runs), full-suite Vitest runs starve — transform/import aggregates inflate 10–25×, heavyweight pipeline tests exceed the 5 s default timeout (16/11/14/8/13 failures across runs, every one a timeout, zero assertion failures; single files green; one full run green at 3.5 s). Composed `check` hits it hardest right after `check:wasm` rewrites `pkg/*`.
-  Done when: the mechanism is pinned and one recorded fix lands — candidates: per-suite `testTimeout` raise for the heavyweight pipeline suites (a gate-rule change, needs its own decision entry), a settle/retry between `check:wasm` and `check:test`, Vite/Vitest `cacheDir` moved off the synced tree, or sync exclusions for `node_modules`/`target`/`pkg` — and `check` passes composed, repeatedly, on this machine. Evidence: 2026-08-08 close of PROF-04/05 (D134).
-
 - [ ] **M13-DEF-03 Manual multi-window bench ledger fails conservation** (2026-08-08)
   Intent: `bench-browser.ts` reassigns `counters.clientDrops` (and latently `pumpDrops`) per live window while `submitted`/`results` accumulate, so a second window after nonzero drops taints the report (short by exactly the earlier windows' drops; negative interval deltas). Repro: share a 30 fps surface, buttons 6, 6, 6b, 8. Invisible on automated runs (driven source never drops).
   Done when: cumulative and per-window drop accounting separated so a clean multi-window manual sitting validates untainted; the D134 photoshop report's arithmetic re-checked against the fix. Does not gate SYNTH-01.

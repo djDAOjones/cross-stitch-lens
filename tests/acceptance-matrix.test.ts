@@ -109,10 +109,13 @@ describe.each(ROWS.map((r) => [r.id, r] as const))('row %s', (_id, spec) => {
    * Each invariant re-runs the row rather than sharing one result, so a
    * failure names the invariant that broke instead of a shared setup.
    * That is cheap at matrix grids but not at the 1024² ceiling, where a
-   * dithered run is ~0.5 s — hence a budget that scales with the grid
-   * instead of the 5 s default.
+   * dithered run is ~0.5 s — hence a budget that scales with the grid.
+   * The floor mirrors the config-wide 30 s liveness bound (vite.config.ts,
+   * INFRA-CHECK-01/D136): an explicit per-test timeout overrides the
+   * config default, so a lower floor here would quietly reintroduce the
+   * starved-desktop flake for exactly these rows.
    */
-  const timeout = Math.max(5_000, Math.ceil((spec.grid.width * spec.grid.height) / 100));
+  const timeout = Math.max(30_000, Math.ceil((spec.grid.width * spec.grid.height) / 100));
 
   it('answers with a result, never an error', () => {
     expect(run(spec, source).type).toBe('result');

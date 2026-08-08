@@ -1377,3 +1377,44 @@ IMPL-03 + SYNTH-01 deleted on ship; wish-list → three lines resolved
 (1024 cap, env browser-version, trace slice), off-main capture line
 added; `brief.md` performance bar annotated;
 `docs/measurement-contract.md` pointer sentence updated.
+
+## D136 — INFRA-CHECK-01: the gate's test timeouts become 30 s liveness bounds; the starved-desktop flake closes (2026-08-08)
+
+**Decision:** raise Vitest `testTimeout`/`hookTimeout` from the 5 s
+default to 30 s config-wide (`vite.config.ts`), and raise the matching
+explicit floor in `tests/acceptance-matrix.test.ts` (its per-row
+`Math.max(5 s, grid/100)` overrides the config exactly where it hurt).
+Timeouts in `check` are liveness guards, not perf assertions — the
+perf budgets live in `bench`, deliberately outside the gate (D43/D44)
+— so a loaded desktop must slow the gate, never fail it. Assertions
+are untouched; a genuine hang still dies at 30 s.
+
+**Mechanism (pinned by controlled legs on this machine):** healthy
+suite 3.2 s wall, slowest test 889 ms — only ~5.6× tail headroom
+against 5 s. Default-QoS 2× core oversubscription inflates just ~2.9×
+(green). Clamping the run to the **utility QoS band** under the same
+load — where macOS puts background work while a foreground app/game
+owns the machine — reproduces the sitting's exact signature:
+timeout-only failures, zero assertion failures, transform/import
+aggregates 32×/35×; at the background band the suite exceeds 187×.
+The sitting's 10–25× sits inside that QoS envelope, and the moving
+failure set (8–16 across runs) is whichever tests' inflated wall
+crossed 5 s. The synced-path coupling (`check:wasm` rewriting the
+111 MB `target/` + `pkg/` into the OneDrive File Provider domain just
+before `check:test`) is a secondary multiplier only — unobservable
+today: the sync client sat at 0 % CPU through a 100 MB in-domain
+write storm, so it is recorded as unexercised, not asserted. Its
+hygiene fix (churn relocation off the synced tree) goes to the
+wish-list.
+
+**Verification:** post-fix the full suite is green at utility-band
+starvation (1052/1052; transform 60×, import 47×, tests 19×; 86 s
+wall) and composed `check` is green quiet (16.4 s). Residual:
+pathological starvation (saturated cores + a foreground game) can
+exceed any finite bound — the operational rule stays "gate on a
+settled desktop" (D134's practice).
+
+**Link:** backlog → INFRA-CHECK-01 removed; trajectory → one line;
+wish-list → synced-tree churn-relocation line;
+`DEV-INFRASTRUCTURE.md` → Quality gate liveness-bound note;
+`docs/performance-evidence.md` → residual-risks line closed.

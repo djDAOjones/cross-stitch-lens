@@ -158,6 +158,14 @@ native DevTools console.
 - **Omits:** `bench` and `audit` (their own verbs; run on
   perf-sensitive changes and pre-release) and any future e2e — slow,
   kept out of `check`. `check` must stay under ~2 minutes locally.
+- **Test timeouts are liveness bounds, not perf assertions:** Vitest
+  `testTimeout`/`hookTimeout` are 30 s (`vite.config.ts`, mirrored by
+  the explicit floor in `tests/acceptance-matrix.test.ts`) so a loaded
+  desktop slows the gate instead of failing it — a QoS-demoted run
+  measurably inflates per-test wall 10–35× with assertions still
+  passing. Perf budgets stay in `bench` (D43/D44); the ~2-minute bar
+  above describes a quiet desktop. Rationale and evidence: decision
+  log D136.
 
 ---
 

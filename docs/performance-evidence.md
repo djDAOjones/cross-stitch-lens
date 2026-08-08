@@ -1339,6 +1339,8 @@ is bit-exact.
 Surface-size scaling beyond 6.5 MP (the named off-main-thread
 trigger); interaction unbound; M13-DEF-03 blocks clean multi-window
 *manual* sittings until fixed (automated runs unaffected);
-INFRA-CHECK-01 makes composed `check` flaky under desktop load on the
-synced path; baselines rebind on whatever build M13-IMPL-02 runs on
+INFRA-CHECK-01 closed by D136 — the gate's test timeouts became 30 s
+liveness bounds after the flake's QoS-starvation mechanism was
+reproduced (the synced-path coupling stays a wish-listed hygiene
+line); baselines rebind on whatever build M13-IMPL-02 runs on
 (build id recorded per row, as always).

@@ -19,6 +19,13 @@
 
 ## M13 — Visual processing performance, remainder (in progress)
 
+- INFRA-CHECK-01 (2026-08-08) — the starved-desktop all-timeout
+  `check` flake reproduced (utility-QoS clamp + load: 10–35×
+  inflation, timeout-only failures) and closed: test/hook timeouts
+  become 30 s liveness bounds config-wide plus the matrix file's
+  explicit floor; suite green at 19–60× starvation, composed `check`
+  green quiet. See D136.
+
 - M13-SYNTH-01 (2026-08-08) — synthesis signed at the owner meeting:
   product promise binds to the driven capture leg (rate, not
   interaction p95), the brief's 1024² ≤ 100 ms line retired (1024

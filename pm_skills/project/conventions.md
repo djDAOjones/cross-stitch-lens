@@ -71,6 +71,15 @@ identifiers, which use US spelling (`color`) to match platform APIs.
   palette/metric change; exact error terms in the dither stage.
 - Typed-array buffers crossing thread boundaries as transferables,
   never structured-clone copies.
+- **A range-shaped colour profile is the eligible universe, not the
+  palette.** Its rule narrows the catalogue; the design's colour-count
+  limit then selects the actual palette from what survives. So a
+  healthy one resolves in the hundreds (Sepia 346, Pastels 965) and
+  judging it by entry count is a category error — narrowness of
+  *character* is the property that matters. Where a count bound is
+  needed, count **distinct colours**, not entries: 3,338 catalogue
+  threads render as only 2,830 distinct colours (D55/D56), so entries
+  overstate what a profile offers the eye. See D139.
 
 ## Patterns to avoid
 

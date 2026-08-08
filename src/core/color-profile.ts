@@ -352,6 +352,18 @@ export function builtInProfiles(catalogue: ThreadCatalogue): ColorProfile[] {
     '699', '700', '702', '907', '796', '797', '336', '995',
     '550', '899', '818', '3371', '434', '801', '762', '415', '317',
   ].map((reference) => `dmc:${reference}`);
+  const dmc = (...references: string[]): string[] =>
+    references.map((reference) => `dmc:${reference}`);
+  // M15-GALLERY-01 batch 1 (unsigned until the owner curates — D115).
+  // Curated membership, in deliberate order: order is identity (D46),
+  // so a ladder ships reading light-to-dark rather than as a bag.
+  const deStijl = dmc('666', '820', '444', '310', 'B5200');
+  // One white, not two: B5200 Snow White sat beside 3865 Winter White
+  // and took 1.1 % of the image — a slot spent on a near-duplicate
+  // (#fafaff vs #f7f7f0). Winter White stays; it is the warmer of the
+  // two and reads as glaze rather than paper.
+  const delft = dmc('3865', '3752', '932', '931', '930', '3750', '336', '823');
+  const ukiyoE = dmc('3865', '3046', '3852', '921', '355', '522', '931', '930', '3750', '3781', '310');
   return [
     profile('dmc', 'DMC', { libraries: ['dmc'] }),
     profile('all-threads', 'All threads', { libraries: allBrands }),
@@ -368,6 +380,50 @@ export function builtInProfiles(catalogue: ThreadCatalogue): ColorProfile[] {
       ranges: [{ saturation: [0, 45], brightness: [65, 100] }],
     }),
     profile('classic', 'Classic cross stitch', { include: classic }),
+    // --- M15-GALLERY-01 batch 1 -------------------------------------
+    // Rule-shaped where the style genuinely is a band of colour space,
+    // curated where a rule would lie about it. A range profile is the
+    // *eligible universe* the design's colour-count limit then selects
+    // from, so hundreds of entries is the shape (Sepia resolves 346,
+    // Pastels 965) — narrowness of character matters, not of count.
+    profile('autumn-leaves', 'Autumn leaves', {
+      libraries: allBrands,
+      ranges: [{ hue: [10, 42], saturation: [45, 100], brightness: [22, 78] }],
+    }),
+    profile('golden-hour', 'Golden hour', {
+      libraries: allBrands,
+      ranges: [{ hue: [28, 55], saturation: [40, 100], brightness: [72, 100] }],
+    }),
+    profile('winter-frost', 'Winter frost', {
+      libraries: allBrands,
+      ranges: [{ hue: [175, 245], saturation: [5, 35], brightness: [70, 100] }],
+    }),
+    profile('deep-sea', 'Deep sea', {
+      libraries: allBrands,
+      ranges: [{ hue: [185, 255], saturation: [35, 100], brightness: [8, 45] }],
+    }),
+    // Three bands, because the style is two saturated poles against
+    // near-black rather than one contiguous region: magenta, cyan, and
+    // an unhued dark neutral floor for everything the light misses.
+    // Retuned twice at review, and the floor is why. The cyan pole
+    // started at hue 170 — sea green — and won the image at 43 %
+    // while the floor supplied 9 %: the profile rendered tropical.
+    // Loosening the floor to saturation 35 then let a dark olive win
+    // at 30 %: swampy, no better. The floor has to stay genuinely
+    // neutral to read as black, so it is saturation ≤ 12 taken deeper
+    // instead (brightness ≤ 35) — 32 near-neutral darks with no greens
+    // among them at all. Cyan starts at 188, past green.
+    profile('neon-noir', 'Neon noir', {
+      libraries: allBrands,
+      ranges: [
+        { hue: [285, 335], saturation: [65, 100], brightness: [55, 100] },
+        { hue: [188, 208], saturation: [65, 100], brightness: [55, 100] },
+        { saturation: [0, 12], brightness: [0, 35] },
+      ],
+    }),
+    profile('de-stijl', 'De Stijl primaries', { include: deStijl }),
+    profile('delft-blue', 'Delft blue', { include: delft }),
+    profile('ukiyo-e', 'Ukiyo-e woodblock', { include: ukiyoE }),
   ];
 }
 

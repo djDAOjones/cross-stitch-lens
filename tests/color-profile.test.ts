@@ -236,21 +236,127 @@ describe('built-in profiles', () => {
     }
   });
 
-  it('classic cross stitch resolves every pin — honest, never placeholder', () => {
-    const classic = builtInProfiles(catalogue).find((p) => p.id === 'builtin:classic');
-    expect(classic).toBeDefined();
-    if (classic === undefined) return;
-    const result = resolveProfileMembership(classic.recipe, inputs());
-    expect(result.conflicts.find((c) => c.kind === 'include-unresolved')).toBeUndefined();
-    expect(result.entries.length).toBe(classic.recipe.include.length);
-  });
-
   it('marks every built-in read-only with builtin provenance', () => {
     for (const profile of builtInProfiles(catalogue)) {
       expect(profile.builtin).toBe(true);
       expect(profile.revision).toBe(0);
       expect(profile.createdFrom).toBe('builtin');
       expect(profile.id.startsWith('builtin:')).toBe(true);
+    }
+  });
+
+  it('gives every built-in a distinct id and a distinct name', () => {
+    // The gallery grows by batches (M15-GALLERY-01); a duplicate name
+    // is invisible in the select and a duplicate id silently shadows.
+    const profiles = builtInProfiles(catalogue);
+    expect(new Set(profiles.map((p) => p.id)).size).toBe(profiles.length);
+    expect(new Set(profiles.map((p) => p.name)).size).toBe(profiles.length);
+  });
+
+  it('resolves every curated pin', () => {
+    // A curated profile is only honest if each colour it names really
+    // exists: an unresolved pin ships a shorter palette than its name
+    // promises, and does it quietly. This is the *resolution* claim
+    // only — see below for the separate pin-only claim, which a future
+    // curated profile that also enables a library would rightly break.
+    for (const profile of builtInProfiles(catalogue)) {
+      if (profile.recipe.include.length === 0) continue;
+      const result = resolveProfileMembership(profile.recipe, inputs());
+      expect(
+        result.conflicts.find((c) => c.kind === 'include-unresolved'),
+        `${profile.name} has an unresolved pin`,
+      ).toBeUndefined();
+      for (const id of profile.recipe.include) {
+        expect(
+          result.entries.some((t) => t.id === id),
+          `${profile.name} is missing pinned ${id}`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it('keeps today’s curated profiles pin-only — membership is the whole recipe', () => {
+    // Separate from the claim above on purpose: this one is about the
+    // shape the gallery currently uses, not about pins resolving, and
+    // it is meant to fail loudly if a curated profile ever also opens
+    // a library — at which point the count below stops meaning
+    // anything and the profile needs its own reasoning.
+    for (const profile of builtInProfiles(catalogue)) {
+      if (profile.recipe.include.length === 0) continue;
+      expect(profile.recipe.libraries, `${profile.name} opens a library`).toEqual([]);
+      const result = resolveProfileMembership(profile.recipe, inputs());
+      expect(result.entries.length, `${profile.name} entry count`).toBe(
+        profile.recipe.include.length,
+      );
+    }
+  });
+
+  // No test guards against a curated profile carrying two colours the
+  // eye cannot separate — the Delft double-white the review caught.
+  // One was written and removed: a wasteful duplicate and a deliberate
+  // tonal rung have the same signature. That white pair was 21 apart
+  // in RGB, but the shipped Classic set has two greens at 18 and
+  // Delft's own navies sit at 15, so every threshold that catches the
+  // duplicate also condemns a ladder. The difference is intent, which
+  // is what owner curation is for — a gate here would be theatre.
+
+  it('keeps every range-shaped built-in a real narrowing, not a relabelled catalogue', () => {
+    // The failure a range profile actually has is being so wide it is
+    // "All threads" under a prettier name, or so narrow a colour-count
+    // limit cannot select from it. The eligible universe is meant to
+    // be large (Sepia 346, Pastels 965) — a range profile is what the
+    // design's colour-count limit selects *from*, never the palette.
+    //
+    // Both bounds count DISTINCT COLOURS, not entries: the catalogue's
+    // 3,338 threads render as 2,830 distinct colours (D55/D56), so
+    // entry count overstates how much a profile really offers the eye.
+    //
+    // The floor guards the DEFAULT limit of 8 with room to spare, not
+    // the maximum: the count field accepts up to 512 (colour-section.ts),
+    // and no rule-shaped profile is expected to satisfy that — asking a
+    // style for more colours than the style contains is answered by
+    // giving fewer, not by widening the style.
+    const distinct = (recipe: ColorProfileRecipe): number =>
+      new Set(resolveProfileMembership(recipe, inputs()).entries.map((t) => t.hex)).size;
+    const total = distinct({ ...emptyRecipe(), libraries: catalogue.brands.map((b) => b.id) });
+    for (const profile of builtInProfiles(catalogue)) {
+      if (profile.recipe.ranges.length === 0) continue;
+      const colours = distinct(profile.recipe);
+      expect(colours, `${profile.name} too narrow to select from`).toBeGreaterThan(48);
+      expect(colours, `${profile.name} is not a narrowing`).toBeLessThan(total * 0.5);
+    }
+  });
+
+  it('names the gallery by style, never by trademark', () => {
+    // The D115 naming rule, kept as a test because it is the one that
+    // a later batch is most likely to break in good faith. The list
+    // leans towards the traps a *colour* gallery attracts — brands
+    // whose names are commonly used as colour words — rather than
+    // brands nobody would reach for when naming a palette.
+    //
+    // Whole words only. Unanchored, short brand names are substrings of
+    // ordinary colour vocabulary: `ral` sits inside "Coral reef", which
+    // is a candidate in this very ticket, and `lego` inside "Allegory".
+    // A naming guard that rejects legitimate names would be worse than
+    // no guard, because the fix looks like renaming the profile.
+    const forbidden = new RegExp(
+      `\\b(?:${[
+        'pantone', 'copic', 'dulux', 'farrow', 'ral',
+        'tiffany', 'hermes', 'hermès', 'barbie', 'coca[- ]?cola', 'ferrari',
+        'lego', 'disney', 'pokemon', 'pokémon', 'minecraft', 'stardew', 'nintendo',
+        'crayola', 'sharpie', 'instagram', 'starbucks', 'ikea',
+      ].join('|')})\\b`,
+      'i',
+    );
+    // The guard has to still bite, and still let the ticket's own
+    // candidates through — both directions, or the anchoring above
+    // could silently defang it.
+    expect(forbidden.test('Pantone 448 C')).toBe(true);
+    expect(forbidden.test('RAL 5013 cobalt')).toBe(true);
+    expect(forbidden.test('Coral reef')).toBe(false);
+    expect(forbidden.test('Allegory')).toBe(false);
+    for (const profile of builtInProfiles(catalogue)) {
+      expect(forbidden.test(profile.name), `${profile.name} reads as a trademark`).toBe(false);
     }
   });
 });

@@ -1528,3 +1528,75 @@ owner's measurement pair.
 **Link:** backlog → M13-IMPL-01 `[~]`; `docs/performance-evidence.md`
 → the D138 section; wish-list → the harness-fidelity line; tests →
 `tests/capture-surface.test.ts`, `tests/capture-master-image.test.ts`.
+
+---
+
+## D139 — M15-GALLERY-01 batch 1: eight candidates drafted and reviewed, unsigned (2026-08-09)
+
+**Decision:** eight built-in profiles are drafted into
+`builtInProfiles()` — five rule-shaped (Autumn leaves, Golden hour,
+Winter frost, Deep sea, Neon noir) and three curated (De Stijl
+primaries, Delft blue, Ukiyo-e woodblock). They ship as code but are
+**unsigned**: the owner curates names and membership per batch (D115).
+This batch establishes the evidence format the rest follow. A review
+pass ran before signature and its follow-ups are folded in here.
+
+**The split is a claim, not a convenience.** Rule-shaped where the
+style genuinely is a band of colour space; curated where a rule would
+misdescribe it. No HSB band produces "red, blue, yellow, black,
+white" without dragging in every neighbouring shade.
+
+**A stated criterion was wrong and is corrected.** Scoping proposed
+"roughly 8–60 entries" as the acceptance band, which would have
+rejected every shipped range profile (Sepia 346, Pastels 965). A range
+profile is the *eligible universe* the colour-count limit selects
+from. The bound now counts **distinct colours**, not entries — 3,338
+threads render as 2,830 distinct colours (D55/D56) — and is recorded
+in `conventions.md`, because the wrong intuition is specific and
+repeatable.
+
+**Evidence format, set here:** each candidate rendered through the
+real pipeline on the sample card at the default eight-colour limit,
+reported as its selected colours with each colour's share of the
+image. The eligible count alone cannot say whether the style reads —
+and twice here it did not.
+
+**Two candidates changed under that evidence.** Neon noir was retuned
+twice: its cyan pole started at hue 170, which is sea green, and won
+the image at 43 % while the dark floor gave 9 % — tropical, not noir.
+Loosening the floor to saturation 35 then handed 30 % to a dark olive
+— swampy, no better. The floor has to stay genuinely neutral to read
+as black, so it is saturation ≤ 12 taken deeper (brightness ≤ 35): 32
+near-neutral darks with no greens among them. Delft blue lost B5200,
+a second white one step from 3865, which freed the slot its ladder
+needed.
+
+**A test was written and removed, which is the more useful finding.**
+"No two colours the eye cannot separate" is not expressible as a
+distance threshold: the duplicate white was 21 apart in RGB, but the
+shipped Classic set has two greens at 18 and Delft's own navies sit at
+15. Every threshold that catches the duplicate condemns a deliberate
+tonal rung. The difference is intent — which is what owner curation is
+for, and a gate there would have been theatre.
+
+**The naming guard nearly became the thing it guards against.** A
+second review caught the widened trademark list matching as
+substrings: `ral` sits inside "Coral reef" — a candidate in this very
+ticket — and `lego` inside "Allegory". It was whole-word anchored, and
+the test now asserts in both directions, because a guard that rejects
+a legitimate name is worse than none: the fix looks like renaming the
+profile.
+
+**Left deliberately:** rule-shaped profiles keep `libraries: allBrands`,
+following Sepia/Pastels. Restricting only the gallery to DMC would
+make these behave differently from the two profiles beside them in the
+same menu; it is one word per profile and it is the owner's call.
+
+**Scope:** `src/core/color-profile.ts`, its test, and a
+`conventions.md` line. No UI change, no change to
+`resolveProfileMembership`, no protected file touched. `check` green.
+
+**Link:** backlog → M15-GALLERY-01 batch 1 pending signature;
+curation sheet published; the photo-slot half of the evidence format
+is blocked on owner-supplied images (`public/profile-demo/` is empty);
+the catalogue oddity is wish-listed.

@@ -45,8 +45,6 @@ refer to `docs/requirements.md`.
 
 ## Open questions (spec §26 residue — see decision-log D9/D10)
 
-- Maximum *useful* grid size — revisit the 1024 cap after M5
-  benchmarks.
 - Optimisation modes (accuracy vs perception vs stitchability, §6) —
   needs real stitching feedback before designing.
 - Rust lint/format in the gate: clippy -D warnings + rustfmt --check for the stitch-engine crate (needs the components locally + in CI) (from: 2026-07-19 M5-CRATE)
@@ -60,8 +58,7 @@ refer to `docs/requirements.md`.
 - bv2 per-row taint attribution: one bad window currently taints the whole report even when the same report carries a clean retake of that leg — row-level validity would let a report separate its own good and bad rows (from: 2026-07-23 M13-MEAS-02 run 3)
 - Global error capture logs ErrorEvents as "[object Object]" in the console mirror (seen while diagnosing an M14 boot error 2026-07-23) — stringify message/stack in src/diagnostics/log.ts's global hook for legible uncaught errors.
 - [ ] Remove the retired policy-world resolver (resolvePermitted/resolveProjectPalette in src/core/palette-policy.ts + palette-resolve.ts) and the LCh presets once no migration-era consumer remains — kept post-M15-UI-01 as tested substrate only (D124).
-- bv2 env row records no browser version/UA — the one attribution the D128 fresh-vs-banked comparison wanted (TS reduce ran 2.5× faster with the stage untouched, cause unprovable from the reports); a bv3 nicety (from: 2026-08-07 D128 re-baseline)
 - bench:auto occlusion resilience: evaluate `--disable-backgrounding-occluded-windows` — needs its own visible-vs-occluded equivalence evidence before it could be sanctioned
-- App-UI responsiveness trace (the MEAS-04 second slice, unshipped): drive index.html itself under flag-granted capture over CDP — zoom/pan/compare/grid toggles plus one export mid-edit, same GC/long-task extraction — the automatable remainder of the sheet's Part C if the synthesis wants that evidence (from: 2026-08-08 M13-MEAS-04 ship, D133)
+- Off-main-thread capture (MediaStreamTrackProcessor-class): move the surface-sized grab readback + dirty sample off the main thread — the readback term IMPL-01's reuse cannot remove. Trigger: felt stutter, or a captured surface materially over 6.5 MP (a 5K screen share is ~2×, likely crossing the 100 ms perception line). Architecture change + new API surface; needs its own scope (from: 2026-08-08 M13-SYNTH-01, D135)
 - Export-settings milestone: defaults sized for print — enlarged PNG ≥ 2k px on the largest dimension by default, grid lines + major numbers included; owner asked for this as a milestone at the PROF-04/05 sitting (from: 2026-08-08 owner, D134)
 - End-of-capture salience: the external-stop status line ("Screen capture ended (sharing was stopped).") is truthful but easy to miss — owner expected a more prominent prompt; consider a toast/banner treatment (from: 2026-08-08 owner sitting, D134 → ACCEPT-02 input)

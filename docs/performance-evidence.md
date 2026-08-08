@@ -1198,3 +1198,147 @@ edit classes own repeatability (D129's design, vindicated). One
 product idea surfaced and was parked to the wish-list: default
 export settings sized for print (≥ 2k px largest dimension, grid
 lines + major numbers included).
+
+## M13-SYNTH-01 — the synthesis: targets, roles, go/no-go (2026-08-08, D135)
+
+The owner-signed synthesis over the five profile packs. Later M13
+tickets cite this section; the decision rationale is D135.
+
+**Evidence-quality gate: passed, no route-backs.** Every load-bearing
+row is untainted on a current build, with three recorded caveats: the
+candidate-table cold cost is quoted only as a cross-harness range
+(D66's 2.7× spread); the D134 Part-B report's formal taint is
+adjudicated as harness bookkeeping (M13-DEF-03 — window 1's own books
+balance at 190 = 141 + 49, the whole sitting conserves at
+720 = 491 + 229 + 0, and the quoted medians do not derive from the
+broken counters); Part C is DevTools-recorded cross-context evidence.
+Environment provenance (quiet-gated canon vs the lived-in sitting) is
+recorded; mechanism claims rest on same-run internal ratios.
+
+**Status verdict: the product passes its promise on current
+evidence.** ≥ 4 visible updates/sec at ≤ 300² holds on the driven
+controlled source (medians 40.6 / 30.7 ms, zero cadence misses —
+D130/D131) and on real Photoshop content (4.7–7.5 /sec at 300², 4.1
+at 200² — D134). GC is not a pause source on any measured path
+(≤ 0.71 % of wall, worst single pause 12.5 ms — D133/D134); the idle
+residue is lazy major GC, not retention (D129); export isolation is
+EXACT (re-proven, D128); backend routing is confirmed byte-exact in
+every cell (D69). No engine correctness defect is open.
+
+### Targets (owner-signed)
+
+1. **Product promise** — binds as a sustained-rate target at the
+   `preview-update` boundary, asserted by the automated capture leg:
+   the driven 4 /sec cadence completes without misses, and the live
+   300²/200² medians (40.6 / 30.7 ms on `6e79c78`) become guarded
+   browser baselines (×1.35). The bv2 contract is amended by
+   M13-IMPL-02 so driven **base** capture rows may carry product
+   targets; `.edit-<class>` rows stay unbindable, and nothing measured
+   on real Photoshop ever binds — the sitting numbers stay ACCEPT-02
+   corroboration. **Interaction stays published, not bound**: the
+   double-rAF protocol race (2–3 of 8 attempts missed) and the absence
+   of a real-Photoshop start mark would make a p95 bound noise.
+2. **1024² — the brief's "≤ 100 ms" line is retired.** 1024² is an
+   export/finishing grid: what binds there is correctness and
+   robustness (full-quality isolation, refusal-with-a-sentence past
+   canvas limits) plus published honest medians (321.4 ms node
+   whole-pipeline — D64). Reaching 100 ms would need ~3× on dither
+   with no quality-neutral candidate in any pack. **The 1024 cap
+   stays** — raising it multiplies export peak memory (clean ×16 is
+   ~2.1 GB transient — D71) and no user need is evidenced. This
+   closes the D9/D10-era "revisit the 1024 cap" question.
+3. **Regression baselines** — M13-IMPL-02 re-takes node bv2 on the
+   implementation build and rebinds every row (the `33d021b` baselines
+   are green-under-guard but predate ~3k churned lines), adds the
+   browser product-target rows above, and adds the env row's missing
+   browser version/UA field (D128's wanted attribution). Guards stay
+   ×1.35 regression + the >2× staleness trip.
+
+### The decision table (approved actions)
+
+| Finding | Action | Owner ticket |
+| --- | --- | --- |
+| Main-thread long tasks scale with captured surface: zero at 4.1 MP → 11–18 % of wall at 6.5 MP, 14.4 % real workflow; cause is the surface-sized grab readback (~32 ms) + dirty sample (~14 ms) per frame (D134, D71) | Quality-neutral pair (activation block below) | M13-IMPL-01 |
+| The readback term itself (what reuse cannot remove) | Defer — wish-listed behind a named trigger: felt stutter, or a captured surface materially over 6.5 MP (a 5K screen share is ~2×, likely crossing the 100 ms perception line) | wish-list |
+| Small-stroke dirty blindness: ≤ 2 px invisible at any contrast, knee 16–32 px; the 2 s staleness bound is the rescue (D70/D128) | No code. ACCEPT-02 agenda line — only the owner can judge the feel; if felt, the first candidate is lowering `DIRTY_MAX_STALE_MS`, not a hash redesign | M13-ACCEPT-02 |
+| PDF export blocks the main thread ~0.5 s (preview freeze, nothing lost — D71) | No code. ACCEPT-02 agenda line — acceptability; if rejected, a worker-side PDF assembly task is scoped then | M13-ACCEPT-02 |
+| Eight-brand cold prep: candidate table ~1.3–3.3 s on first dithered use (spread), union count-selection 121 ms (D64/D66) | Defer with trigger: real use or ACCEPT-02 hitting the path | — |
+| FS 1024² dither +28 % vs pre-M8 (D64) | Baseline truth only — rows rebind on the implementation build; no optimisation (1024² is not a live grid) | M13-IMPL-02 |
+| Selection-source export displaces one frame ~51 ms mid-pump (D68/D128) | No action, recorded — invisible at promise cadence | — |
+| Interaction protocol double-rAF race (D129–D131) | Not fixed now (interaction is unbound); becomes harness work only if a future synthesis binds interaction | — |
+
+**Rejected candidates, recorded:** palette RGB/Lab derivative caching
+(counter-proven at ≤ 0.1 ms/call — D69); worker stage-output pooling
+(GC proven cheap, 1024² not live — D133/D134); any per-method dither
+optimisation (no method is an outlier; the shared exact match
+dominates — D66/D68); canvas resize and every appearance-changing
+lever (gate below).
+
+### Backend roles — confirmed, no change
+
+`lab → ts` and `rgb → wasm` stand as categorical metric routing — no
+size/palette threshold exists in the evidence (D69: 12/12 cells
+byte-exact, margins 1.33–2.88× and 2.0–2.9×; the rgb→wasm win
+survives whole at the export boundary, 2.39×). `mapPaletteGpu` stays
+unwired (loses every cell in the grid range and returns no indices
+sidecar — wiring it would erase thread identity; re-open only if the
+executor asyncifies for other reasons *and* the kernel emits
+indices). The GPU LUT build stays wired GPU-first (2.3–16×, agreement
+EXACT, device-loss recovery PASS). TS remains the reference and
+universal fallback (all probes PASS). The request-level `force` stays
+harness-only by construction; no user-facing backend override ships.
+
+### Appearance gate: not met — M13-IMPL-03 cut
+
+No measured, material user problem lacks a quality-neutral answer.
+D47's canvas-resize rejection stands; nothing here reopens it. The
+cut is evidence-led restraint per the ticket's own activation gate,
+and counts as **resolved** for M13-ACCEPT-01's blocker list.
+
+### M13-IMPL-01 activation block (the approved candidates)
+
+1. **Persistent grab surface** — `grabFrame`'s fresh OffscreenCanvas +
+   `ImageData` per accepted frame (5.9 MB + graphics — D71 census #1;
+   the allocator confirmed in the owner's Part-C trace, D134). Reuse a
+   module-held surface sized to the crop.
+2. **Pre-submit copy elimination** — the main-thread 5.9 MB copy per
+   submit (census #2): transfer the grab buffer to the worker and
+   re-copy only when `masterImage` is actually consumed (re-render
+   without a new frame; selection source).
+
+Oracle: byte-equality of the submitted frame and all downstream
+outputs — pixels *and* the indices sidecar — plus the IMPL-01
+invariant list (explicit detached-buffer checks). Before/after on the
+automated capture leg + mem leg (live 300²/200² medians, long-task
+counts, forced-GC residue), **one candidate per measurement** (the
+D48 discipline). Honest expectation: removes ~93 % of per-frame
+allocation churn (~11.9 MB/frame) and trims the grab median; it does
+**not** remove the readback term. Everything else in the IMPL-01
+candidate classes stays unapproved.
+
+### Acceptance matrix (signed)
+
+**M13-ACCEPT-01 (machine, final build):** `npm run check` green;
+`npm run matrix` green (regenerated only via `matrix:write` on an
+intentional row change); `npm run bench` green on the rebound rows;
+`bench:auto` capture leg valid with the product-target rows passing;
+`bench:auto` mem leg valid (isolation EXACT, forced-GC collapse);
+`bench:trace` valid (GC accounting conserves; zero observer long
+tasks on the controlled source); backend leg byte-exact in every
+cell.
+
+**M13-ACCEPT-02 (owner, live):** promise feel at 200²/300² across all
+five dither methods on real Photoshop; agenda — small-stroke latency
+feel, PDF-freeze acceptability, eight-brand cold prep if the owner's
+practice reaches it, external-stop prompt salience (D134's note).
+Visual review narrows to no-change confirmation: everything activated
+is bit-exact.
+
+### Residual risks
+
+Surface-size scaling beyond 6.5 MP (the named off-main-thread
+trigger); interaction unbound; M13-DEF-03 blocks clean multi-window
+*manual* sittings until fixed (automated runs unaffected);
+INFRA-CHECK-01 makes composed `check` flaky under desktop load on the
+synced path; baselines rebind on whatever build M13-IMPL-02 runs on
+(build id recorded per row, as always).

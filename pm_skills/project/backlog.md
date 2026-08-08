@@ -18,11 +18,12 @@ line passes and `check` is green. Requirements references are to
 ### Current — M13 Visual processing performance (remainder)
 
 Returned to Current 2026-08-07 (D128, the owner's pick) after M14
-closed (D127). Phase 2 profiling is **complete** (D134): gestureless
-evidence re-baselined on `d7218be` (D128), automated capture/trace
-canon on `6e79c78`/`684811a` (D129–D133), and the owner sitting's
-real-Photoshop numbers (D134). The synthesis is next and unblocked.
-Re-measure before optimising (D62/D63); `AGENTS.md` hard rules hold.
+closed (D127). Phase 2 profiling complete (D134); the synthesis is
+**signed** (D135): promise bound to the driven capture leg, the
+1024² 100 ms line retired (cap stays), routing confirmed unchanged,
+IMPL-03 cut. Phase 4 runs the two activated items in order; the
+signed scope and matrix live in `docs/performance-evidence.md` →
+"M13-SYNTH-01 — the synthesis". `AGENTS.md` hard rules hold.
 
 #### Phase 2 — Component profiling & defect discovery
 
@@ -36,31 +37,19 @@ Profiling shipped (PROF-01..05 — see trajectory); open defects only.
   Intent: `bench-browser.ts` reassigns `counters.clientDrops` (and latently `pumpDrops`) per live window while `submitted`/`results` accumulate, so a second window after nonzero drops taints the report (short by exactly the earlier windows' drops; negative interval deltas). Repro: share a 30 fps surface, buttons 6, 6, 6b, 8. Invisible on automated runs (driven source never drops).
   Done when: cumulative and per-window drop accounting separated so a clean multi-window manual sitting validates untainted; the D134 photoshop report's arithmetic re-checked against the fix. Does not gate SYNTH-01.
 
-#### Phase 3 — Synthesis
+#### Phase 4 — Evidence-approved implementation (activated by D135)
 
-- [ ] **M13-SYNTH-01 Performance synthesis: targets, roles, go/no-go** [detail] [sign-off] (2026-07-22)
-  Intent: decide — proven bottlenecks vs measurement artefacts; binding targets (budget rows, 300² promise, 1024² export, the 1024 cap); which quality-neutral changes proceed; whether an appearance-changing trade-off merits exploring; backend roles and crossovers; which Phase-4 tasks are activated, merged or cut.
-  Done when: a maintainer-approved synthesis recorded (decision-log + one shared evidence doc later tickets cite); activated tasks cite their evidence; no speculative speedup encoded as acceptance.
+- [ ] **M13-IMPL-01 Quality-neutral optimisations** [detail] (2026-07-22)
+  Intent: land the two D135-approved bit-exact candidates — persistent grab surface and pre-submit copy elimination (D71 census #1/#2; allocator confirmed D134 Part C) — one candidate per measurement, byte-equality incl. the indices sidecar.
+  Done when: each change shows byte-identical output, a before/after on the automated capture + mem legs, no budget regression. Every other candidate class in the ticket stays unapproved.
 
-#### Phase 4 — Evidence-approved implementation
-
-Conditional: activated, merged or cut by M13-SYNTH-01.
-
-- [ ] **M13-IMPL-01 Quality-neutral optimisations** [detail] [blocked: M13-SYNTH-01] (2026-07-22)
-  Intent: land the bit-exact changes the synthesis approves, parity/golden evidence per change.
-  Done when: each change shows byte-identical output (or documented GPU tolerance), a bench delta on its named workload, no budget regression.
-
-- [ ] **M13-IMPL-02 Backend routing and budget rebinding** [detail] [blocked: M13-SYNTH-01] (2026-07-22)
-  Intent: apply decided backend roles — routing thresholds from end-to-end evidence; budget rows rebound to refreshed baselines.
-  Done when: routing matches the decided crossovers; fallback intact (correct with WASM and WebGPU both unavailable); bench green on the rebound rows.
-
-- [ ] **M13-IMPL-03 Appearance-affecting options (exploration)** [detail] [blocked: M13-SYNTH-01] (2026-07-22)
-  Intent: only if the synthesis activates it — prototype approved appearance-changing trade-offs, quantified against the reference.
-  Done when: quantified difference metrics + maintainer visual sign-off approve or reject each option; nothing appearance-changing ships without both.
+- [ ] **M13-IMPL-02 Backend routing and budget rebinding** [detail] [blocked: M13-IMPL-01] (2026-07-22)
+  Intent: apply D135 — routing confirmed unchanged (record only; no thresholds); re-take node bv2 on the implementation build and rebind all rows; add the browser product-target rows (driven capture leg, bv2 amendment) and the env browser-version field.
+  Done when: bench green on the rebound rows; the capture-leg target rows assert; contract text updated; fallback intact (correct with WASM and WebGPU both unavailable).
 
 #### Phase 5 — Integrated acceptance
 
-- [ ] **M13-ACCEPT-01 Automated integrated acceptance** [detail] [blocked: M13-IMPL-01, M13-IMPL-02, M13-IMPL-03] (2026-07-22)
+- [ ] **M13-ACCEPT-01 Automated integrated acceptance** [detail] [blocked: M13-IMPL-01, M13-IMPL-02] (2026-07-22)
   Intent: the machine half — refreshed bench budgets, acceptance matrix, backend/feature fallback suites, export correctness, quality gate, green on final code.
   Done when: `npm run check` and `npm run bench` pass on the refreshed rows; matrix, fallback and export byte-identity re-proven.
 

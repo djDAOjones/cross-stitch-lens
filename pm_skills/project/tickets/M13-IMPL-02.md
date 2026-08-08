@@ -7,6 +7,31 @@ crossover thresholds and target/baseline policy. It does not choose them. If the
 synthesis confirms current routing and declines all rebinding, cut or narrow the
 ticket to evidence/document updates.
 
+## Signed narrowing (M13-SYNTH-01 — D135, 2026-08-08)
+
+Routing is **confirmed unchanged**: categorical metric routing (`lab → ts`,
+`rgb → wasm`) with no size/palette thresholds; `mapPaletteGpu` stays unwired;
+GPU LUT build stays GPU-first; the request-level force stays harness-only. The
+routing half of this ticket is record-only — no selection code changes.
+
+The active scope is the budget half, run **after M13-IMPL-01** so the rebound
+rows include its wins:
+
+1. Re-take node bv2 on the implementation build; rebind every baseline row
+   (the `33d021b` figures are green-under-guard but stale by ~3k lines).
+2. Add the browser product-target rows per the signed T1: the driven capture
+   leg's 4 /sec cadence (zero misses) + live 300²/200² `preview-update`
+   medians guarded ×1.35. This carries the **bv2 contract amendment**: driven
+   *base* capture rows become product-target-bindable; `.edit-<class>` and
+   real-Photoshop rows never bind. Update `docs/measurement-contract.md`
+   accordingly (including its budget-bindings section pointer sentence).
+3. Add the env row's missing browser version/UA field (D128's wanted
+   attribution; resolves the wish-list line promoted here).
+4. Interaction stays published-not-bound — do not add an interaction target.
+
+Guards stay ×1.35 regression + the >2× staleness trip. Targets and rationale:
+`docs/performance-evidence.md` → "M13-SYNTH-01 — the synthesis".
+
 ## Outcome
 
 Make runtime backend selection match proven end-to-end crossovers while keeping

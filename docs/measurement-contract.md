@@ -326,7 +326,10 @@ baselines with a ×1.35 regression guard**, not aspirational targets;
 the figures below were re-taken under bv2 on 2026-07-22 (node 24.5,
 Apple M1 Max, build `v0.5.0+20260722.33d021b` — D64, with the bv1→bv2
 comparison in `docs/performance-evidence.md`). Product-target choices
-wait for M13-SYNTH-01; committed rebinding waits for M13-IMPL-02.
+were signed at M13-SYNTH-01 (D135 — `docs/performance-evidence.md` →
+"M13-SYNTH-01 — the synthesis"); committed rebinding, the browser
+product-target rows and the capture-row bindability amendment wait
+for M13-IMPL-02.
 
 Core defaults elided from the IDs below:
 `noise.w1280.opaque.…lab….resize-first.stretch.still`.

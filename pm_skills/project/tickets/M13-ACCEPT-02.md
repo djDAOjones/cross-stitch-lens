@@ -95,6 +95,26 @@ target **and** the maintainer accepts the feel, all shipped dither methods remai
 usable, fallbacks/recovery/exports pass, and any visual delta has an explicit
 owner verdict. Record pass/fail notes and final decision-log sign-off.
 
+## Synthesis agenda additions (M13-SYNTH-01 — D135, 2026-08-08)
+
+Four owner-judgement lines the synthesis deferred here rather than encoding as
+code changes; each gets an explicit pass/fail note in the evidence record:
+
+- **Small-stroke latency feel** — ≤ 2 px edits are invisible to dirty
+  detection and appear only via the 2 s staleness bound (D70/D128). If the
+  feel fails, the first candidate is lowering `DIRTY_MAX_STALE_MS`, not a
+  hash redesign.
+- **PDF-freeze acceptability** — PDF export blocks the main thread ~0.5 s
+  (preview freeze, nothing lost — D71). If rejected, a worker-side PDF
+  assembly task is scoped then.
+- **Eight-brand cold prep** — if the owner's practice enables many brands
+  with lab dither, the first dithered use pays ~1.3–3.3 s of candidate-table
+  build (D64/D66). Only judge if the path is actually reached.
+- **External-stop prompt salience** — the truthful status line the owner
+  found easy to miss (D134; wish-list carries the toast/banner idea).
+
+Visual review runs in no-change mode: everything M13 activated is bit-exact.
+
 ## Fresh-chat starting point
 
 Read M13-SYNTH-01, final shared evidence, M13-ACCEPT-01 and the production browser

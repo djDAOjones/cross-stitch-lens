@@ -7,6 +7,31 @@ exact approved candidates, their evidence rows, target workloads and expected
 invariants. If synthesis activates none, cut this item; do not invent work to
 satisfy the ticket title.
 
+## Approved by M13-SYNTH-01 (D135, 2026-08-08) — the signed candidates
+
+Exactly two candidates are activated; every other candidate class below stays
+unapproved (palette-derivative caching is counter-proven at ≤ 0.1 ms/call —
+D69; worker stage-output pooling declined — GC proven cheap, D133/D134).
+
+1. **Persistent grab surface** — `grabFrame`'s fresh OffscreenCanvas +
+   `ImageData` per accepted frame (5.9 MB + graphics; D71 census #1, the
+   allocator confirmed in the owner's Part-C trace, D134). Reuse a module-held
+   surface sized to the crop.
+2. **Pre-submit copy elimination** — the main-thread 5.9 MB copy per submit
+   (census #2): transfer the grab buffer to the worker and re-copy only when
+   `masterImage` is actually consumed (re-render without a new frame; selection
+   source).
+
+Evidence rows: D71 census table; D134 Part B (grab 31.8/32.3 ms at 6.5 MP,
+long-task density 11–18 % of wall) and Part C (allocator confirmation). Target
+workloads / before-after: the automated capture leg (live 300²/200²
+`preview-update` medians, long-task counts) + the mem leg (forced-GC residue),
+**one candidate per measurement** (D48 discipline). Oracle: byte-equality of
+the submitted frame and all downstream outputs — pixels *and* indices sidecar —
+with explicit detached-buffer checks. Honest expectation: ~93 % of per-frame
+allocation churn removed, grab median trimmed; the readback term itself
+remains (its removal is wish-listed behind the D135 surface-size trigger).
+
 ## Outcome
 
 Land only changes that preserve output byte-for-byte (or the already documented

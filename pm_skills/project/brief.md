@@ -58,7 +58,10 @@ current feature list; `README.md` has that.
 Interactive feel while editing in Photoshop: ≥ 4 preview updates/sec
 at typical grids (≤ 300 × 300); full pipeline ≤ 100 ms at the
 1024 × 1024 maximum. Exports always run at full quality regardless of
-preview mode.
+preview mode. (The 1024² ≤ 100 ms line was retired at the M13
+synthesis — D135: 1024² is an export/finishing grid bound by
+correctness and honest published medians, not a live-editing target.
+The ≥ 4 updates/sec promise binds at the driven capture leg.)
 
 ## Explicitly out of scope for MVP
 

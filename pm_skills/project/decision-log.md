@@ -1331,3 +1331,49 @@ trajectory → PROF-04/05 lines; wish-list → export-settings default
 line; tickets M13-PROF-04/05 deleted on ship. Artefacts local
 (untracked): `bench-reports/…da5d80b-photoshop.json`,
 `bench-reports/traces/…owner-partC.json.gz`.
+
+## D135 — M13-SYNTH-01 signed: the promise binds to the driven capture leg, the 1024² 100 ms line retires, Phase 4 narrows to two bit-exact candidates (2026-08-08)
+
+**Decision:** all four rows signed on the recommendations at the
+sign-off meeting; the evidence-quality gate passed with no
+route-backs (Part B's formal taint adjudicated as M13-DEF-03 harness
+bookkeeping — window 1 balances, the sitting conserves, medians
+unaffected). (1) **Promise:** binds as sustained rate at
+`preview-update` on the automated driven capture leg — zero cadence
+misses at 4 /sec, medians 40.6/30.7 ms guarded ×1.35 — with a bv2
+amendment (IMPL-02's to make) letting driven *base* capture rows
+carry product targets; `.edit-<class>` and real-Photoshop rows never
+bind. Interaction stays published-not-bound (double-rAF race, no
+Photoshop start mark — a p95 bound would encode noise). (2)
+**1024²:** the brief's "≤ 100 ms" line is retired — 1024² is an
+export/finishing grid bound by correctness/robustness plus honest
+medians; no quality-neutral ~3× exists. The 1024 cap stays (closes
+the D9/D10-era wish-list question; ×16 export is already ~2.1 GB
+transient). (3) **Phase 4:** IMPL-01 activates narrowed to two
+bit-exact candidates — persistent grab surface, pre-submit copy
+elimination (census #1/#2, allocator confirmed in Part C) — one
+candidate per measurement, capture+mem legs as before/after;
+IMPL-02 activates narrowed — routing **confirmed unchanged** (no
+size/palette thresholds invented; `mapPaletteGpu` stays unwired),
+scope = node bv2 rebind on the implementation build + browser
+target rows + env browser-version field; **IMPL-03 is cut** — the
+appearance gate is not met, no material user problem lacks a
+quality-neutral answer, D47 stands; the cut resolves ACCEPT-01's
+third blocker. (4) **Deferrals:** small-stroke feel and PDF-freeze
+acceptability become ACCEPT-02 agenda lines; eight-brand cold prep
+defers behind a use trigger; the D133 app-UI trace slice is cut;
+off-main-thread capture is wish-listed behind a named surface-size
+trigger (> ~6.5 MP or felt stutter). Headline finding driving
+IMPL-01: main-thread long tasks scale with captured-surface pixels
+(zero at 4.1 MP → 11–18 % of wall at 6.5 MP), not with grid.
+
+**Link:** evidence `docs/performance-evidence.md` → "M13-SYNTH-01 —
+the synthesis" (gate verdicts, targets, decision table, IMPL-01
+activation block, signed acceptance matrix, residual risks); backlog
+→ SYNTH-01 removed, Phase 4 re-cut (IMPL-03 line removed, IMPL-02
+blocked on IMPL-01), ACCEPT-01 blockers now IMPL-01/02; tickets →
+IMPL-01/02 updated with the signed scope, ACCEPT-02 agenda appended,
+IMPL-03 + SYNTH-01 deleted on ship; wish-list → three lines resolved
+(1024 cap, env browser-version, trace slice), off-main capture line
+added; `brief.md` performance bar annotated;
+`docs/measurement-contract.md` pointer sentence updated.

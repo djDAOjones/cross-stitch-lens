@@ -19,6 +19,14 @@
 
 ## M13 — Visual processing performance, remainder (in progress)
 
+- M13-SYNTH-01 (2026-08-08) — synthesis signed at the owner meeting:
+  product promise binds to the driven capture leg (rate, not
+  interaction p95), the brief's 1024² ≤ 100 ms line retired (1024
+  cap stays), backend routing confirmed unchanged, Phase 4 narrowed
+  to two bit-exact reuse candidates (IMPL-01) + budget rebinding
+  (IMPL-02), IMPL-03 cut as evidence-led restraint. Signed matrix
+  and activation block in `docs/performance-evidence.md`. See D135.
+
 - M13-PROF-04 (2026-08-08) — live-path profile complete: the owner
   sitting lands real-Photoshop numbers — promise held (4.1–7.5
   updates/sec), every cost surface-sized not grid-sized (×1.62

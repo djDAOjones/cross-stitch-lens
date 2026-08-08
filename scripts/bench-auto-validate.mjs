@@ -111,6 +111,58 @@ export function validatePickerCaptureReport(report) {
   return failures;
 }
 
+/** The nine `<workloadId>|<boundary>` windows a trace leg must pair. */
+export const EXPECTED_TRACE_WINDOWS = [
+  'capture.g300.p64.lab.fs-s100-serp|preview-update',
+  'capture.g200.p64.lab.fs-s100-serp|preview-update',
+  'capture.g300.p64.lab.fs-s100-serp|interaction',
+  ...EXPECTED_EDIT_CLASSES.map(
+    (editClass) => `capture.g300.p64.lab.fs-s100-serp.edit-${editClass}|preview-update`,
+  ),
+];
+
+/**
+ * Validate a merged trace-leg report (M13-MEAS-04): the embedded page
+ * report must pass the capture-leg gate (the trace taints with it),
+ * the trace buffer must not have overflowed, the bench renderer must
+ * be identified, all nine windows must pair, and a leg minutes long
+ * with zero GC events means the categories or the thread attribution
+ * broke — refused, never published as "no GC".
+ */
+export function validateTraceReport(merged) {
+  if (typeof merged !== 'object' || merged === null || merged.pageReport === undefined) {
+    return ['not a trace-leg report (no embedded pageReport)'];
+  }
+  const failures = validateCaptureReport(merged.pageReport).map((f) => `page: ${f}`);
+  if (merged.dataLoss !== false) {
+    failures.push(
+      'trace: Chrome reported trace-buffer data loss — trim categories or shorten the leg',
+    );
+  }
+  if (merged.trace?.renderer == null) {
+    failures.push('trace: bench renderer never identified (no bench: window marks found)');
+  }
+  const found = new Set(
+    (merged.trace?.windows ?? []).map((w) => `${w.workloadId}|${w.boundary}`),
+  );
+  for (const key of EXPECTED_TRACE_WINDOWS) {
+    if (!found.has(key)) failures.push(`trace: window ${key} missing (absent or unpaired marks)`);
+  }
+  const unpaired = merged.trace?.unpairedMarks ?? [];
+  if (unpaired.length > 0) {
+    failures.push(`trace: unpaired bench marks: ${unpaired.join(', ')}`);
+  }
+  const gc = merged.trace?.wholeLeg?.gc;
+  const gcCount =
+    (gc?.minor?.count ?? 0) + (gc?.major?.count ?? 0) + (gc?.incrementalMarking?.count ?? 0);
+  if (merged.trace?.renderer != null && gcCount === 0) {
+    failures.push(
+      'trace: zero GC events across the whole leg — category set or thread attribution broken',
+    );
+  }
+  return failures;
+}
+
 /**
  * Validate the mem report: the plateau row carries a numeric forced-GC
  * reading (the whole point of the flagged launch) and the export

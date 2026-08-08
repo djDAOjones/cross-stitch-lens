@@ -379,6 +379,20 @@ browser) and collects two validated bv2 reports into `bench-reports`:
   `--js-flags=--expose-gc` Chrome: after the 5 s idle reading the
   harness forces a GC and re-reads, answering the D71 residue
   question (lazy major GC vs real retention) without DevTools.
+- **`…-trace.json`** (`npm run bench:trace`, M13-MEAS-04 — D132's
+  raw-CDP driver, Node built-in WebSocket, zero new dependencies) —
+  the capture workloads re-run under browser-level tracing: GC
+  pauses per measured window in three honest buckets (minor / major
+  / incremental-marking, never summed — a marking step is
+  main-thread work, not a stop-the-world pause), with the in-page
+  PerformanceObserver long-task numbers quoted alongside, source
+  named. Windows are located by the harness's own
+  `bench:<workloadId>:<boundary>` User Timing marks, and the bench
+  renderer self-identifies from those marks. **A trace-leg timing
+  row is cross-context evidence** — recorded under tracing, it
+  never replaces the untraced capture canon; the report's product
+  is the GC accounting. The raw trace (large, may embed window
+  titles) stays local in a `traces` subfolder of `bench-reports`.
 
 **Flag-granted capture is a sanctioned variant.** The launch flag
 `--auto-select-window-capture-source-by-title` (probed on Chrome
@@ -405,12 +419,14 @@ loop, unchanged. Honesty rules:
 - Edit-class rows carry the `.edit-<class>` ID tail and are
   **controlled-source numbers only** — never quoted as Photoshop
   capture behaviour, which is what the human Part B remains for.
-- **Cross-check before canon**: the first automated capture report on
-  a build is quoted only after one manual Part-A run (sheet below)
-  confirms its canonical rows; the comparison is recorded in the
-  decision log. Status: automation shipped 2026-08-07; the manual
-  cross-check happens at the owner's next sitting and D129 records
-  the pending state.
+- **Cross-check before canon**: the first automated capture report
+  needed one picker-granted twin run confirming its canonical rows
+  before any automated row could be quoted. Status: **held
+  2026-08-08 (D131)** on the `52300de` pair — ratios 0.98–1.01×
+  across the live and interaction rows, both reports untainted. A
+  validated `bench:auto` capture report is now quotable without a
+  manual twin. The check re-arms only when a Chrome update changes
+  flag behaviour (re-run the probe expectation, then Part A′ below).
 - Runs need an **awake desktop with both Chrome windows left at
   least partially visible** for the few minutes they take — "one
   command, hands off", never headless, never CI. A hidden page
@@ -434,18 +450,21 @@ loop, unchanged. Honesty rules:
 What `bench:auto` cannot do is what remains. One sitting; keep every
 shared window at least partially visible.
 
-**Part A′ — one-time cross-check of the automated capture leg.**
-One command runs the whole thing on one build:
-`npm run bench:auto -- --crosscheck` — the flag-granted leg, then a
-**picker-granted** leg in an unflagged Chrome (the real picker
-appears; the launcher clicks the controlled-source tile and Share
-itself via System Events where Accessibility allows, and otherwise
-asks for that one human click), then the side-by-side comparison
-table. Make the call yourself; the next agent session records it in
-the decision log. The clicked-buttons manual path (4 → 5 → 6 → 6b →
-7 → 8, then `npm run bench:crosscheck -- <downloaded report.json>`)
-remains equivalent. After the cross-check holds once, this part
-retires — rerun it only when a Chrome update changes flag behaviour.
+**Part A′ — one-time cross-check of the automated capture leg.
+RETIRED 2026-08-08 (D131): the cross-check held** (ratios
+0.98–1.01×, both reports untainted — see
+`docs/performance-evidence.md` → D131). Kept as the rerun procedure
+for when a Chrome update changes flag behaviour: one command runs
+the whole thing on one build — `npm run bench:auto -- --crosscheck`
+— the flag-granted leg, then a **picker-granted** leg in an
+unflagged Chrome (the real picker appears; the launcher clicks the
+controlled-source tile and Share itself via System Events where
+Accessibility allows, and otherwise asks for that one human click),
+then the side-by-side comparison table. Make the call yourself; the
+next agent session records it in the decision log. The
+clicked-buttons manual path (4 → 5 → 6 → 6b → 7 → 8, then
+`npm run bench:crosscheck -- <downloaded report.json>`) remains
+equivalent.
 
 **Part B — Photoshop content (stays human by policy).** Button 5,
 share the Photoshop window, rerun 6 and 6b while performing in order:
@@ -459,19 +478,22 @@ on the controlled source — useful for regressions, never a
 substitute: real-Photoshop capture behaviour is the reason this part
 exists.
 
-**Part C — app-side responsiveness (DevTools trace).** In the *app*
-(not the harness): capture Photoshop, record a ~30 s Performance
-trace while editing, zooming/panning, and toggling compare and the
-grid. Then the adversarial checks: crop move/resize mid-capture,
-Freeze/Unfreeze (the capture pause control's M14 name), end capture
-from the browser bar, a declined re-prompt, the narrow companion
-layout, one export mid-edit. Expected: no wedge,
-truthful status, clean recovery, export unaffected by draft mode.
-Read GC pauses off the same trace (M13-PROF-05). Traces and owner
-notes stay out of committed reports if they show artwork; acceptance
-itself stays with M13-ACCEPT-02. (Tier-2 automation of this part
-needs a CDP driver — an owner dependency decision, deliberately not
-taken by default.)
+**Part C — app-side responsiveness (DevTools trace), shrunk by
+M13-MEAS-04.** The GC-pause half is automated: `npm run bench:trace`
+publishes per-window GC buckets on the controlled source (D132
+approved the CDP driver; controlled-source numbers only). What
+stays human: in the *app* (not the harness), capture Photoshop,
+record a ~30 s Performance trace while editing, zooming/panning,
+and toggling compare and the grid. Then the adversarial checks:
+crop move/resize mid-capture, Freeze/Unfreeze (the capture pause
+control's M14 name), end capture from the browser bar, a declined
+re-prompt, the narrow companion layout, one export mid-edit.
+Expected: no wedge, truthful status, clean recovery, export
+unaffected by draft mode. Read Photoshop-content GC pauses off the
+same trace if wanted — the automated leg already answers the
+controlled-source question (M13-PROF-05). Traces and owner notes
+stay out of committed reports if they show artwork; acceptance
+itself stays with M13-ACCEPT-02.
 
 **Part D — memory snapshot pair, now conditional (M13-PROF-05).**
 The forced-GC reading in `…-mem.json` answers the D71 question first.

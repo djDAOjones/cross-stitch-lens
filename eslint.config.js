@@ -78,7 +78,9 @@ export default tseslint.config(
     // channel for CLI scripts, so the app-wide no-console rule is off.
     files: ['vite.config.ts', 'scripts/**/*.mjs'],
     languageOptions: {
-      globals: { process: 'readonly', console: 'readonly' },
+      // WebSocket is a Node ≥ 22 runtime global (engines pin 22.18) —
+      // there is no `node:` module to import it from (bench-cdp.mjs).
+      globals: { process: 'readonly', console: 'readonly', WebSocket: 'readonly' },
     },
     rules: {
       'no-console': 'off',

@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 235 file(s) across 11 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 239 file(s) across 11 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 12 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
@@ -24,9 +24,9 @@
 - `crates` — 4 file(s)
 - `docs` — 12 file(s)
 - `public` — 1 file(s)
-- `scripts` — 14 file(s)
+- `scripts` — 17 file(s)
 - `src` — 92 file(s)
-- `tests` — 96 file(s)
+- `tests` — 97 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -93,8 +93,11 @@
 - `scripts/bench-auto-validate.d.mts` — types for the validation module (kept plain-JS for the node launcher)
 - `scripts/bench-auto-validate.mjs` — bv2 report validation for the automated owner-session legs (pure; shared launcher/test)
 - `scripts/bench-auto.mjs` — one-command automated owner-session legs: build, serve, flagged dedicated Chrome ×2, collect + validate reports
+- `scripts/bench-cdp.mjs` — raw-CDP client for the trace leg (Node built-in WebSocket): DevToolsActivePort wait, command/event socket, streamed Tracing start/stop
 - `scripts/bench-cross-check.d.mts` — types for the cross-check comparison (plain-JS CLI, typed for the test suite)
 - `scripts/bench-cross-check.mjs` — Part-A′ arithmetic: manual vs automated capture rows side by side, same-build guarded (verdict stays human)
+- `scripts/bench-trace-lib.d.mts` — types for bench-trace-lib.mjs so the vitest suite gets real types over the plain-JS module
+- `scripts/bench-trace-lib.mjs` — pure trace parsing (M13-MEAS-04): mark grammar, renderer self-identification, window pairing, three-bucket GC accounting, observer long-task quoting
 - `scripts/build-palette.mjs` — derives `dmc.json` from the owner CSV
 - `scripts/check-contrast.mjs` — gate step: WCAG AAA proof of every tokens.css @pair, both schemes
 - `scripts/check-docs.mjs` — docs gate: backticked path/link validation
@@ -224,6 +227,7 @@
 - `tests/bench-matrix.test.ts` — workload-matrix invariants: dither ID tokens, unique/derived IDs, core + method blocks, axis coverage
 - `tests/bench-memory.test.ts` — retention verdicts: plateau/no-reading/lazy-GC/real-retention branches + threshold boundary
 - `tests/bench-report.test.ts` — boundary contract, percentile math, warm-up exclusion, run-validity rules, schema round-trip
+- `tests/bench-trace-lib.test.ts` — trace-parsing invariants: mark pairing strictness, thread majority vote, GC bucket attribution, ts-0 metadata span regression
 - `tests/bench/env-node.ts` — node build/environment capture + report output dir
 - `tests/bench/run-node.ts` — matrix runner + budget-to-row bindings + cold preparation rows
 - `tests/benchmark.test.ts` — BENCH=1-gated: runs the matrix, writes the report, then asserts validity and budgets

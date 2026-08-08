@@ -8,9 +8,11 @@ import { describe, expect, it } from 'vitest';
 
 import {
   EXPECTED_EDIT_CLASSES,
+  EXPECTED_TRACE_WINDOWS,
   validateCaptureReport,
   validateMemReport,
   validatePickerCaptureReport,
+  validateTraceReport,
 } from '../scripts/bench-auto-validate.mjs';
 
 const BASE = 'capture.g300.p64.lab.fs-s100-serp';
@@ -139,6 +141,95 @@ describe('picker report validation (the A′ cross-check leg)', () => {
     report.rows = report.rows.filter((row) => row.boundary !== 'interaction');
     expect(
       validatePickerCaptureReport(report).some((f: string) => f.includes('interaction')),
+    ).toBe(true);
+  });
+});
+
+function bucket(count = 1): { count: number; totalMs: number; maxMs: number } {
+  return { count, totalMs: count * 3, maxMs: count > 0 ? 3 : 0 };
+}
+
+function validTraceReport(): Record<string, unknown> {
+  return {
+    dataLoss: false,
+    trace: {
+      renderer: { pid: 1, tid: 10 },
+      unpairedMarks: [],
+      windows: EXPECTED_TRACE_WINDOWS.map((key: string) => {
+        const [workloadId, boundary] = key.split('|');
+        return {
+          workloadId,
+          boundary,
+          durationMs: 30_000,
+          gc: { minor: bucket(5), major: bucket(1), incrementalMarking: bucket(8) },
+        };
+      }),
+      wholeLeg: {
+        durationMs: 240_000,
+        gc: { minor: bucket(40), major: bucket(6), incrementalMarking: bucket(60) },
+      },
+    },
+    pageReport: validCaptureReport(),
+  };
+}
+
+describe('trace report validation (M13-MEAS-04)', () => {
+  it('passes a complete merged report (happy path)', () => {
+    expect(validateTraceReport(validTraceReport())).toEqual([]);
+  });
+
+  it('rejects a non-report without throwing (boundary)', () => {
+    expect(validateTraceReport(null)[0]).toContain('no embedded pageReport');
+    expect(validateTraceReport({ trace: {} })[0]).toContain('no embedded pageReport');
+  });
+
+  it('fails when the embedded page report is tainted, prefixed as the page half (error)', () => {
+    const report = validTraceReport();
+    (report.pageReport as { validity: unknown }).validity = {
+      tainted: true,
+      findings: ['page was hidden during the live window'],
+    };
+    const failures = validateTraceReport(report);
+    expect(failures.some((f: string) => f.startsWith('page: ') && f.includes('tainted'))).toBe(true);
+  });
+
+  it('fails on trace-buffer data loss (error)', () => {
+    const report = validTraceReport();
+    report.dataLoss = true;
+    expect(
+      validateTraceReport(report).some((f: string) => f.includes('data loss')),
+    ).toBe(true);
+  });
+
+  it('fails when a window never paired (boundary)', () => {
+    const report = validTraceReport();
+    const trace = report.trace as { windows: { boundary: string }[] };
+    trace.windows = trace.windows.filter((w) => w.boundary !== 'interaction');
+    expect(
+      validateTraceReport(report).some(
+        (f: string) => f.includes('interaction') && f.includes('missing'),
+      ),
+    ).toBe(true);
+  });
+
+  it('fails on unpaired marks and on zero GC across the leg (error)', () => {
+    const report = validTraceReport();
+    const trace = report.trace as {
+      unpairedMarks: string[];
+      wholeLeg: { gc: Record<string, { count: number }> };
+    };
+    trace.unpairedMarks = ['x|preview-update (start with no end)'];
+    trace.wholeLeg.gc = { minor: bucket(0), major: bucket(0), incrementalMarking: bucket(0) };
+    const failures = validateTraceReport(report);
+    expect(failures.some((f: string) => f.includes('unpaired'))).toBe(true);
+    expect(failures.some((f: string) => f.includes('zero GC'))).toBe(true);
+  });
+
+  it('fails when the renderer was never identified (error)', () => {
+    const report = validTraceReport();
+    (report.trace as { renderer: unknown }).renderer = null;
+    expect(
+      validateTraceReport(report).some((f: string) => f.includes('never identified')),
     ).toBe(true);
   });
 });

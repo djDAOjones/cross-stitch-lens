@@ -3,6 +3,8 @@
  *
  *   npm run bench:auto                    # run now (desktop must stay quiet)
  *   npm run bench:auto -- --when-quiet    # arm: wait for real user idle, then run
+ *   npm run bench:auto -- --trace         # trace leg: capture workloads under CDP
+ *                                         # tracing → GC-pause report (M13-MEAS-04)
  *
  * Builds the production bundle, serves it with `vite preview`, then
  * launches the installed Chrome twice — a dedicated throwaway profile,
@@ -69,7 +71,14 @@ import {
   validateCaptureReport,
   validateMemReport,
   validatePickerCaptureReport,
+  validateTraceReport,
 } from './bench-auto-validate.mjs';
+import { connectCdp, readDevToolsEndpoint, startTracing } from './bench-cdp.mjs';
+import {
+  attachObserverLongTasks,
+  summariseTrace,
+  TRACE_CATEGORIES,
+} from './bench-trace-lib.mjs';
 import { compareReports, formatComparison } from './bench-cross-check.mjs';
 
 const PORT = Number(process.env.BENCH_PORT ?? 4173);
@@ -83,6 +92,7 @@ const RUN_TIMEOUT_MS = 10 * 60 * 1000;
 const WHEN_QUIET =
   process.argv.includes('--when-quiet') || process.env.BENCH_WHEN_QUIET === '1';
 const CROSSCHECK = process.argv.includes('--crosscheck');
+const TRACE = process.argv.includes('--trace');
 const IDLE_SECS = Number(process.env.BENCH_IDLE_SECS ?? 60);
 const ATTEMPTS = Number(process.env.BENCH_ATTEMPTS ?? (WHEN_QUIET ? 3 : 1));
 
@@ -247,12 +257,14 @@ function startCollector() {
 }
 
 /**
- * Launch a dedicated Chrome at `url`; returns `{ kill, pid }`.
+ * Launch a dedicated Chrome at `url`; returns `{ kill, pid, profile }`.
  * `flagged: false` (the picker-granted cross-check leg) omits the
  * auto-select flag — the real picker appears — and forces renderer
  * accessibility so the picker is scriptable via System Events.
+ * `debug: true` (the trace leg) adds an OS-chosen DevTools port; the
+ * endpoint is read back from the profile's `DevToolsActivePort`.
  */
-function launchChrome(url, { flagged = true } = {}) {
+function launchChrome(url, { flagged = true, debug = false } = {}) {
   const profile = mkdtempSync(join(tmpdir(), 'csl-bench-chrome-'));
   const child = spawn(
     CHROME,
@@ -264,6 +276,7 @@ function launchChrome(url, { flagged = true } = {}) {
       ...(flagged
         ? [`--auto-select-window-capture-source-by-title=${SOURCE_TITLE}`]
         : ['--force-renderer-accessibility']),
+      ...(debug ? ['--remote-debugging-port=0'] : []),
       '--js-flags=--expose-gc',
       // Prominent enough that ordinary desktop activity is unlikely to
       // fully occlude it — macOS Chrome marks a fully-covered window
@@ -286,7 +299,7 @@ function launchChrome(url, { flagged = true } = {}) {
     }
   };
   cleanups.push(kill);
-  return { kill, pid: child.pid };
+  return { kill, pid: child.pid, profile };
 }
 
 // --------------------------------------- picker clicking (crosscheck)
@@ -394,16 +407,40 @@ async function clickPickerWhenUp(pid, timeoutMs = 60_000) {
  * report; valid legs are additionally copied to the canonical name.
  * `options.flagged: false` runs the picker-granted variant and
  * `options.driver(pid)` runs concurrently with the report wait (the
- * picker clicker — its failure never blocks the run). */
+ * picker clicker — its failure never blocks the run). The trace leg
+ * (M13-MEAS-04) uses three further hooks: `debug` adds the DevTools
+ * port, `onLaunched(profile)` attaches and starts recording before
+ * the windows run, `finalise(report, context)` turns the POSTed page
+ * report plus the recording into the written payload and its failure
+ * list (replacing `validate`), and `dispose(context)` releases the
+ * attachment on every path, including a leg that never reported. */
 async function runLeg(collector, name, autoTokens, validate, stamp, options = {}) {
   console.log(`\n=== ${name}: launching dedicated Chrome (leave the machine alone) ===`);
   const post = `http://127.0.0.1:${String(collector.port)}/report`;
   const url =
     `http://localhost:${String(PORT)}/bench.html` +
     `?auto=${autoTokens}&post=${encodeURIComponent(post)}`;
-  const { kill, pid } = launchChrome(url, { flagged: options.flagged ?? true });
+  const { kill, pid, profile } = launchChrome(url, {
+    flagged: options.flagged ?? true,
+    debug: options.debug ?? false,
+  });
+  let context;
   try {
     const reportPromise = collector.nextReport(RUN_TIMEOUT_MS);
+    if (options.onLaunched !== undefined) {
+      try {
+        context = await options.onLaunched(profile);
+      } catch (error) {
+        return {
+          report: null,
+          failures: [
+            `${name}: attach failed before any window ran — ` +
+              (error instanceof Error ? error.message : String(error)),
+          ],
+          file: null,
+        };
+      }
+    }
     if (options.driver !== undefined) void options.driver(pid);
     let body;
     try {
@@ -421,12 +458,29 @@ async function runLeg(collector, name, autoTokens, validate, stamp, options = {}
         file: null,
       };
     }
-    const report = JSON.parse(body);
+    let report = JSON.parse(body);
+    let payload = body;
+    let failures = validate(report);
+    if (options.finalise !== undefined) {
+      try {
+        const finalised = await options.finalise(report, context);
+        report = finalised.payload;
+        payload = JSON.stringify(finalised.payload, null, 2);
+        failures = [...failures, ...finalised.failures];
+      } catch (error) {
+        // Keep the page report as the stamped evidence; the leg still
+        // fails loudly rather than losing what did arrive.
+        failures = [
+          ...failures,
+          `${name}: finalise failed — ` +
+            (error instanceof Error ? error.message : String(error)),
+        ];
+      }
+    }
     mkdirSync('bench-reports', { recursive: true });
     const paths = reportPaths(report.build?.buildId ?? 'unknown-build', name, stamp);
     const stamped = join('bench-reports', paths.stamped);
-    writeFileSync(stamped, body);
-    const failures = validate(report);
+    writeFileSync(stamped, payload);
     if (failures.length === 0) {
       copyFileSync(stamped, join('bench-reports', paths.canonical));
       console.log(`${name}: VALID — ${stamped} (canonical copy updated)`);
@@ -435,7 +489,83 @@ async function runLeg(collector, name, autoTokens, validate, stamp, options = {}
     }
     return { report, failures, file: stamped };
   } finally {
+    try {
+      await options.dispose?.(context);
+    } catch {
+      /* never mask the leg's outcome */
+    }
     kill();
+  }
+}
+
+// ------------------------------------------------ trace leg (M13-MEAS-04)
+
+/**
+ * Attach to the freshly launched trace-leg Chrome over raw CDP and
+ * start recording before any window runs. The endpoint file appears
+ * well before the harness finishes opening the controlled source, so
+ * every window mark lands inside the trace.
+ */
+async function startTraceRecorder(profile) {
+  const endpoint = await readDevToolsEndpoint(profile);
+  const client = await connectCdp(endpoint);
+  const recorder = await startTracing(client, TRACE_CATEGORIES);
+  console.log(`trace: recording (categories: ${TRACE_CATEGORIES.join(', ')})`);
+  return { client, recorder };
+}
+
+/**
+ * Stop the recording, keep the raw trace as local evidence (large,
+ * may embed window titles — gitignored with the rest of
+ * `bench-reports`), and merge the extraction with the POSTed page
+ * report into the trace-leg payload. Validation is the single
+ * `validateTraceReport` gate — page half included — so the caller
+ * passes a no-op leg validator and failures never print twice.
+ */
+async function finaliseTraceLeg(report, context, stamp) {
+  const { events, dataLoss } = await context.recorder.stop();
+  context.client.close();
+  mkdirSync(join('bench-reports', 'traces'), { recursive: true });
+  const safeBuild = String(report.build?.buildId ?? 'unknown-build').replaceAll('+', '_');
+  const rawName = join('traces', `trace-${safeBuild}.${stamp}.json`);
+  writeFileSync(join('bench-reports', rawName), JSON.stringify({ traceEvents: events }));
+  const summary = attachObserverLongTasks(summariseTrace(events), report);
+  const payload = {
+    kind: 'bench-auto trace leg (M13-MEAS-04)',
+    generatedAt: new Date().toISOString(),
+    build: report.build ?? null,
+    categories: TRACE_CATEGORIES,
+    rawTrace: rawName,
+    eventCount: events.length,
+    dataLoss,
+    trace: summary,
+    pageReport: report,
+  };
+  return { payload, failures: validateTraceReport(payload) };
+}
+
+/** Compact per-window GC/long-task table for the console. */
+function printTraceSummary(merged) {
+  const bucket = (b) =>
+    `${String(b.count)}× ${b.totalMs.toFixed(1)} ms (max ${b.maxMs.toFixed(1)})`;
+  console.log('\n=== Trace summary — GC pauses (trace) + long tasks (in-page observer) ===');
+  for (const window of merged.trace.windows) {
+    const lt = window.observerLongTasks;
+    console.log(
+      `${window.workloadId} ${window.boundary} (${(window.durationMs / 1000).toFixed(0)} s):\n` +
+        `  minor ${bucket(window.gc.minor)}; major ${bucket(window.gc.major)}; ` +
+        `incr-marking ${bucket(window.gc.incrementalMarking)}` +
+        (lt === null || lt === undefined
+          ? ''
+          : `; long tasks ${String(lt.count)}× ${Math.round(lt.totalMs)} ms (observer)`),
+    );
+  }
+  const whole = merged.trace.wholeLeg;
+  if (whole !== null) {
+    console.log(
+      `whole leg (${(whole.durationMs / 1000).toFixed(0)} s): minor ${bucket(whole.gc.minor)}; ` +
+        `major ${bucket(whole.gc.major)}; incr-marking ${bucket(whole.gc.incrementalMarking)}`,
+    );
   }
 }
 
@@ -501,21 +631,37 @@ async function main() {
     let capture;
     let second;
     try {
-      capture = await runLeg(collector, 'capture', 'capture,editclasses', validateCaptureReport, stamp);
-      // Crosscheck mode (Part A′): instead of the mem leg, rerun just
-      // the canonical capture legs picker-granted — same build, same
-      // serve — then print the comparison. The verdict stays human.
-      second = CROSSCHECK
-        ? await runLeg(collector, 'picker', 'capture', validatePickerCaptureReport, stamp, {
-            flagged: false,
-            driver: clickPickerWhenUp,
-          })
-        : await runLeg(collector, 'mem', 'mem', validateMemReport, stamp);
+      if (TRACE) {
+        // Trace mode (M13-MEAS-04): one leg — the capture workloads
+        // re-run under CDP tracing. Its rows are cross-context
+        // evidence (recorded under tracing), never the capture canon;
+        // the published numbers are the GC buckets.
+        capture = await runLeg(collector, 'trace', 'capture,editclasses', () => [], stamp, {
+          debug: true,
+          onLaunched: startTraceRecorder,
+          finalise: (report, context) => finaliseTraceLeg(report, context, stamp),
+          dispose: (context) => context?.client.close(),
+        });
+        second = null;
+      } else {
+        capture = await runLeg(collector, 'capture', 'capture,editclasses', validateCaptureReport, stamp);
+        // Crosscheck mode (Part A′): instead of the mem leg, rerun just
+        // the canonical capture legs picker-granted — same build, same
+        // serve — then print the comparison. The verdict stays human.
+        second = CROSSCHECK
+          ? await runLeg(collector, 'picker', 'capture', validatePickerCaptureReport, stamp, {
+              flagged: false,
+              driver: clickPickerWhenUp,
+            })
+          : await runLeg(collector, 'mem', 'mem', validateMemReport, stamp);
+      }
     } finally {
       release();
     }
-    if (capture.report === null || second.report === null) {
+    if (capture.report === null || (second !== null && second.report === null)) {
       console.log('\n(no summary — a leg produced no report; see failures below)');
+    } else if (TRACE) {
+      printTraceSummary(capture.report);
     } else if (CROSSCHECK) {
       console.log('\n=== Part A′ cross-check (picker-granted vs flag-granted) ===');
       console.log(formatComparison(compareReports(second.report, capture.report), 'picker'));
@@ -523,13 +669,17 @@ async function main() {
       printSummary(capture, second);
     }
     const secondName = CROSSCHECK ? 'picker' : 'mem';
-    const failures = [
-      ...capture.failures.map((f) => `capture: ${f}`),
-      ...second.failures.map((f) => `${secondName}: ${f}`),
-    ];
+    const failures = TRACE
+      ? capture.failures.map((f) => `trace: ${f}`)
+      : [
+          ...capture.failures.map((f) => `capture: ${f}`),
+          ...second.failures.map((f) => `${secondName}: ${f}`),
+        ];
     if (failures.length === 0) {
       console.log(
-        `\nBoth reports valid (untainted, visible, all legs measured) — attempt ${String(attempt)}.`,
+        TRACE
+          ? `\nTrace report valid (untainted page, all windows paired, GC accounted) — attempt ${String(attempt)}.`
+          : `\nBoth reports valid (untainted, visible, all legs measured) — attempt ${String(attempt)}.`,
       );
       return;
     }

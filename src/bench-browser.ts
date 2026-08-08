@@ -96,6 +96,19 @@ function captureId(grid: number, editClass?: EditClass): string {
   return editClass === undefined ? base : `${base}.edit-${editClass}`;
 }
 
+/**
+ * Bracket a measured window with User Timing marks so the CDP trace
+ * leg (M13-MEAS-04, `scripts/bench-auto.mjs --trace`) can attribute GC
+ * pauses and long tasks to the exact window that produced them. The
+ * mark grammar `bench:<workloadId>:<boundary>:<edge>` is parsed by
+ * `scripts/bench-trace-lib.mjs`; workloadIds never contain colons, so
+ * the name splits unambiguously. Marks cost nothing when no tracer is
+ * attached and never affect the measured rows.
+ */
+function markWindow(workloadId: string, boundary: string, edge: 'start' | 'end'): void {
+  performance.mark(`bench:${workloadId}:${boundary}:${edge}`);
+}
+
 const rows: BenchRow[] = [];
 const findings: string[] = [];
 const runStart = { wall: Date.now(), mono: performance.now() };
@@ -533,6 +546,7 @@ async function runLiveWindow(
   // worker marks cannot see, span records for overlap analysis, draft
   // transition times, and long tasks while the pump runs.
   const windowStart = performance.now();
+  markWindow(captureId(grid, editClass), 'preview-update', 'start');
   const dirtySampleMs: number[] = [];
   const grabMs: number[] = [];
   const spanRecords: { startAt: number; endAt: number }[] = [];
@@ -681,6 +695,7 @@ async function runLiveWindow(
   onSettled = null;
   longTaskObserver?.disconnect();
   sourceChannel.removeEventListener('message', onPaint);
+  markWindow(captureId(grid, editClass), 'preview-update', 'end');
 
   counters.pumpDrops = pumpGate.droppedCount - pumpDropsBefore;
   counters.clientDrops = client.droppedFrames - clientDropsBefore;
@@ -881,6 +896,7 @@ async function runInteraction(changes: number): Promise<void> {
   });
 
   say(`Running ${String(changes)} controlled changes…`);
+  markWindow(captureId(300), 'interaction', 'start');
   for (let seq = 1; seq <= changes; seq++) {
     const painted = new Promise<number | null>((resolve) => {
       // The timeout also detaches the handler — a missed paint must
@@ -934,6 +950,7 @@ async function runInteraction(changes: number): Promise<void> {
   stop();
   await drainInFlight();
   onSettled = null;
+  markWindow(captureId(300), 'interaction', 'end');
 
   // Zero presented frames means the shared surface never showed the
   // source window's paints — publish the cause, never eight silent

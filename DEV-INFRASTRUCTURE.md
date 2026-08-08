@@ -46,6 +46,7 @@ Package manager: **npm** (Node LTS).
 | `bench:auto` | `node scripts/bench-auto.mjs` | Automated owner-session legs: flag-granted capture + forced-GC memory reports via a dedicated Chrome (M13-MEAS-03) | Refreshing the browser capture/memory evidence — awake desktop, hands off, never CI; `-- --when-quiet` arms it to fire in the next user-idle gap |
 | `bench:crosscheck` | `node scripts/bench-cross-check.mjs` | Part-A′ arithmetic: manual capture report vs the automated canonical one, side by side (same-build guarded) | Once, after the owner's manual Part-A′ run — the verdict stays human and is recorded in the decision log |
 | `bench:auto -- --crosscheck` | (mode of `bench:auto`) | The whole Part A′ in one command: flag-granted leg, then a picker-granted leg (real picker; scripted tile+Share click via System Events when Accessibility allows, else one human click), then the comparison table | The zero-or-one-click Part A′ — same build guaranteed by construction |
+| `bench:trace` | `node scripts/bench-auto.mjs --trace` | Part-C trace leg (M13-MEAS-04): the capture workloads re-run under raw-CDP tracing (Node built-in WebSocket, zero new deps) → validated GC-pause report per window, observer long tasks quoted alongside | Refreshing the GC-pause evidence — same quiet-desktop rules as `bench:auto`; its timing rows are cross-context (traced), never capture canon |
 | `check` | 7 non-mutating steps: types, lint, wasm, test, build, docs, secrets | **Quality gate** | Before calling a task done |
 | `lint:fix` | `eslint . --fix` | Auto-fix (separate from the gate) | Cleanup, never the CI pass/fail |
 
@@ -307,6 +308,18 @@ is overwritten on every build.
   instances, their temp profiles, its caffeinate holder. Procedure
   and honesty rules: `docs/browser-measurement.md` → "Automated
   owner-session legs".
+  `-- --trace` (M13-MEAS-04, or `bench:trace`) runs one leg instead:
+  the capture workloads under browser-level CDP tracing — the
+  launcher attaches to its own flagged Chrome over Node's built-in
+  WebSocket (`scripts/bench-cdp.mjs`, no new dependencies), records
+  the probed-affordable categories, and publishes per-window GC
+  buckets (minor / major / incremental-marking, never summed) with
+  the page's own PerformanceObserver long tasks quoted alongside,
+  source named (`scripts/bench-trace-lib.mjs`, unit-tested). The raw
+  trace stays local under a `traces` subfolder of `bench-reports`;
+  the merged report follows the stamped/canonical rule; a trace-leg
+  timing row is cross-context evidence (recorded under tracing) and
+  never replaces the untraced capture canon.
 
 ---
 

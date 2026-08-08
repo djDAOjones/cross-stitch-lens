@@ -1470,3 +1470,61 @@ policy and rides the next owner sitting.
 `docs/performance-evidence.md` → the D137 section plus the closed
 residual-risks line; tests → `tests/bench-counters.test.ts` (the
 D134 numbers as a regression fixture).
+
+---
+
+## D138 — M13-IMPL-01: both signed candidates land; the before/after pair does not (2026-08-08)
+
+**Decision:** the two D135-approved candidates are implemented and
+correctness-proven; the item stays **open** on its evidence half. No
+run made while implementing them is quoted.
+
+**What landed.** Candidate 1: one `OffscreenCanvas` per session
+(`src/capture/surface.ts`), resized in place on a crop change, instead
+of a fresh canvas + context per accepted frame (census #1). Candidate
+2: the pump's pre-submit `new Uint8ClampedArray` is gone — the grab
+buffer is transferred (census #2). They land together because
+candidate 2 is only safe *because of* candidate 1: the retained
+surface still holds the frame after its buffer detaches, so
+`snapshot()` re-reads it with no `drawImage` and the copy is paid only
+when a consumer appears. The one-candidate-per-**measurement** rule is
+untouched.
+
+**Two things the census did not say.** A reused surface composites
+`source-over` by default — a no-op only while the source is opaque.
+Capture video is, but exactness must not rest on that, so the draw is
+explicit `globalCompositeOperation = 'copy'`. And a transferred array
+keeps its geometry while losing its bytes, so a bare read returns a
+correctly-sized *blank* picture; one pure rule
+(`src/capture/master-image.ts`) now guards every pixel read, and a
+refill that cannot deliver reports no source rather than an empty one.
+
+**Two hazards found while implementing, neither in the ticket:**
+ending a capture session would have taken the design with it (the
+pixels live on the grab surface, not in `masterImage`) — `endCaptureUi`
+now rescues the last frame into a still first, and `snapshot()`
+survives `stop()` so the browser's own stop-sharing path can too; and
+the profile editors hold the design still across awaits, unlike every
+other consumer, so their hook returns a detach-proof copy.
+
+**Why no before/after.** The material reason: the automated capture
+leg *cannot* price candidate 2. `src/bench-browser.ts`'s pump submits
+its grab buffer directly and keeps no master image, so the app's
+per-frame copy never existed in the harness; a zero delta there
+reported as "no regression" would be measuring the wrong workload.
+Candidate 1 shares the app's `grabFrame` and is priced honestly.
+Closing that fidelity gap is a harness change and must not ride the
+same run as a candidate — wish-listed. The practical reason: of five
+attempts, one pair came back valid, and it measured neither the
+baseline nor the final source and carried the parent commit's build id
+(the work was uncommitted). It proves the legs run on this desktop and
+nothing about the change. The owner runs the pair later.
+
+**Scope:** `src/capture/` plus the master-image reads in `src/main.ts`;
+nothing in `src/core/` or `src/worker/`. `check` green (1,070 tests, 15
+new); boot check clean. Live capture is browser-only and rides the
+owner's measurement pair.
+
+**Link:** backlog → M13-IMPL-01 `[~]`; `docs/performance-evidence.md`
+→ the D138 section; wish-list → the harness-fidelity line; tests →
+`tests/capture-surface.test.ts`, `tests/capture-master-image.test.ts`.

@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 239 file(s) across 11 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 243 file(s) across 11 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 12 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
@@ -25,8 +25,8 @@
 - `docs` — 12 file(s)
 - `public` — 1 file(s)
 - `scripts` — 17 file(s)
-- `src` — 92 file(s)
-- `tests` — 97 file(s)
+- `src` — 94 file(s)
+- `tests` — 99 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -127,8 +127,10 @@
 - `src/capture/crop.ts` — pure crop-rect geometry: clamp/move/resize, hit-test, stitch span
 - `src/capture/dirty.ts` — dirty-frame skip: 64×64 sampler, FNV-1a hash, region signature, staleness gate
 - `src/capture/draft.ts` — draft-quality governor: pure hysteresis over frame times
+- `src/capture/master-image.ts` — master-image readback rule: refills a transferred (detached) buffer, never returns a blank one (pure)
 - `src/capture/pump.ts` — frame pump: rVFC subscription + pure latest-wins grab gate
-- `src/capture/session.ts` — getDisplayMedia session: start/grab/stop + pure error/label helpers
+- `src/capture/session.ts` — getDisplayMedia session: start/grab/snapshot/stop + pure error/label helpers
+- `src/capture/surface.ts` — one reusable grab canvas: resize in place, never reallocate per frame (pure, injected factory)
 - `src/core/color-profile.ts` — colour-profile recipe + resolver to the effective ordered table, every narrowing explained; built-ins; policy→recipe bridge (M15)
 - `src/core/color-sources.ts` — generated colour maps, map:/user: identity namespaces, CSS name table, provenance-honest labels (M15)
 - `src/core/color/candidates.ts` — per-bin candidate pruning for exact Lab matching: conservative Lab bounding box per 15-bit bin, witness-radius exclusion. An exclusion proof, not an approximation — returns the identical index to a full scan
@@ -234,8 +236,10 @@
 - `tests/capture-crop.test.ts` — crop geometry: bounds/min-size, handles, hit-test, span
 - `tests/capture-dirty.test.ts` — hash determinism/sensitivity, region-aware signatures, staleness bound
 - `tests/capture-draft.test.ts` — governor hysteresis: enter/exit runs, gap, reset
+- `tests/capture-master-image.test.ts` — master readback: real transfer-detachment, refill, failed/empty refill
 - `tests/capture-pump.test.ts` — pump gate policy: busy/pending/drop/reset transitions
 - `tests/capture-session.test.ts` — capture pure half: error messages, surface labels
+- `tests/capture-surface.test.ts` — grab-surface reuse: one canvas across N grabs, in-place resize, context failure
 - `tests/color-convert.test.ts` — golden: Lab reference values + round-trips
 - `tests/color-profile.test.ts` — profile resolver: every narrowing step + sentence, ordering contract, built-ins non-empty, policy→recipe bridge
 - `tests/color-sources.test.ts` — map identity/count/ordering pins, exact-match naming incl. lime/green, namespace collision guard

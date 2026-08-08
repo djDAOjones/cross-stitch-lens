@@ -1415,3 +1415,79 @@ is touched, so no measured row changes and no budget moves. The
 manual multi-window sitting is unblocked; validating it against a
 real 30 fps surface (share, then buttons 6, 6, 6b, 8) belongs to the
 next owner sitting — the repro is human by policy.
+
+---
+
+## M13-IMPL-01 — the candidates land, the measurement does not (2026-08-08, D138)
+
+Both D135-signed candidates are implemented and correctness-proven.
+**No before/after row is published here**, and none of the runs made
+while implementing them is quoted: the item stays open on its evidence
+half.
+
+### What changed
+
+| Candidate | Before | After |
+| --- | --- | --- |
+| 1 — persistent grab surface | fresh `OffscreenCanvas` + context per accepted frame (census #1, 5.9 MB + graphics) | one canvas per session, resized in place on a crop change |
+| 2 — pre-submit copy elimination | `new Uint8ClampedArray(buffer.data)` before every `submit` (census #2, 5,941,344 B) | grab buffer transferred; the frame re-read off the retained surface only when a consumer asks |
+
+Candidate 2 is only safe because of candidate 1 — the retained surface
+is what still holds the frame after its buffer detaches. They are
+therefore landed together, which is a departure from the ticket's
+one-candidate-at-a-time *implementation* discipline; the
+one-candidate-per-*measurement* rule is unaffected, because candidate
+1 is separately measurable on the capture leg and candidate 2 is not
+measurable there at all (below).
+
+### Exactness
+
+`drawImage` onto a reused surface composites `source-over` by default,
+which is a no-op only for a fully opaque source. Capture video is
+opaque, but the byte-equality claim must not rest on that, so the draw
+is explicit `globalCompositeOperation = 'copy'` — outright
+replacement, at no extra cost, since the destination rect is the whole
+surface either way.
+
+Detachment is handled by one pure rule (`src/capture/master-image.ts`)
+rather than at each call site: a transferred `Uint8ClampedArray` keeps
+its geometry and loses only its bytes, so a bare read returns a
+correctly-sized blank picture. A refill that cannot deliver reports
+*no source*, never an empty one.
+
+Deterministic oracles, in `check`:
+
+- `tests/capture-surface.test.ts` — N grabs at one size allocate one
+  canvas and one context; a size change resizes in place; a failed
+  context is reported, not cached.
+- `tests/capture-master-image.test.ts` — real `structuredClone`
+  transfer-detachment, refill, failed refill, empty refill.
+
+### Why the automated capture leg cannot price candidate 2
+
+`src/bench-browser.ts`'s live pump submits its grab buffer directly
+and keeps no master image. The app's per-frame pre-submit copy — the
+thing candidate 2 removes — never existed in the harness, so a
+before/after there would read zero delta, and quoting that as "no
+regression" would be measuring the wrong workload. Candidate 1 runs
+through the same `grabFrame` the app uses and *is* priced by the leg.
+Closing this fidelity gap is a harness change and must not ride the
+same run as a candidate; it is on the wish-list.
+
+### Run status
+
+Five attempts on 2026-08-08; one pair valid (`capture` + `mem`,
+attempt 2 of the 23:32 run). That pair measured neither the baseline
+nor the final source and carried the parent commit's build id, because
+the work was uncommitted — it proves the legs are runnable on this
+desktop and nothing about the change. The other four failed the
+validity gate environmentally (hidden page, occluded source window),
+which is the gate working.
+
+**Outstanding, owner-run:** the pair, on correctly-labelled builds —
+baseline from the parent commit (detached checkout, so the build id
+reads that sha), then the implementation build — comparing the live
+300²/200² medians, `grab median ms`, long-task counts and the mem
+leg's forced-GC residue. Candidate 1's expected signature is a lower
+grab median and reduced per-frame allocation; candidate 2's saving is
+not visible on this leg by construction.

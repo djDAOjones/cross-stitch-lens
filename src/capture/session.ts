@@ -9,6 +9,7 @@
 
 import type { PixelBuffer } from '../core/types.ts';
 import { clampRect, type CropRect } from './crop.ts';
+import { reusableSurface } from './surface.ts';
 
 /**
  * Map a `getDisplayMedia` failure to a human-readable status message
@@ -64,6 +65,23 @@ export interface CaptureSession {
    * as a PixelBuffer (RGBA sRGB).
    */
   grabFrame(region?: CropRect): Promise<PixelBuffer>;
+  /**
+   * Re-read the *last grabbed* frame from the retained surface, with
+   * no new `drawImage` — a byte-identical second copy of whatever
+   * {@link grabFrame} last returned (M13-IMPL-01, D135 candidate 2).
+   *
+   * This is what lets the live pump transfer its grab buffer straight
+   * to the worker instead of copying it first: the frame is not lost
+   * when its buffer detaches, it is still sitting on the surface, and
+   * the copy is paid only if something actually asks for the master
+   * image. Null before the first grab and after {@link stop}.
+   *
+   * The surface holds the *latest* grab, so under a running pump a
+   * snapshot may be newer than the frame whose buffer detached — the
+   * same race the master image already had against the pump replacing
+   * it. While frozen, nothing draws, so the snapshot is exact.
+   */
+  snapshot(): PixelBuffer | null;
   /** Stop sharing and release the stream. Idempotent. */
   stop(): void;
   /** Called once if sharing ends outside the app (browser stop UI). */
@@ -116,6 +134,15 @@ export async function startCapture(): Promise<CaptureSession> {
   await whenReady(video);
 
   let stopped = false;
+  // One canvas for the whole session (M13-IMPL-01, D135 candidate 1),
+  // resized only when the crop changes. The retained surface is also
+  // what makes {@link CaptureSession.snapshot} exact: it still holds
+  // the last grabbed frame's pixels after that frame's buffer has been
+  // transferred away.
+  const surface = reusableSurface(
+    (width, height) => new OffscreenCanvas(width, height),
+    (canvas) => canvas.getContext('2d', { willReadFrequently: true }),
+  );
   return {
     label: displayLabel(track.label),
     video,
@@ -124,10 +151,28 @@ export async function startCapture(): Promise<CaptureSession> {
       if (video.videoWidth === 0) throw new Error('no frame available yet');
       const bounds = { width: video.videoWidth, height: video.videoHeight };
       const src = region === undefined ? { x: 0, y: 0, ...bounds } : clampRect(region, bounds);
-      const canvas = new OffscreenCanvas(src.width, src.height);
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      if (ctx === null) throw new Error('2d canvas context unavailable');
+      const { canvas, ctx } = surface.acquire(src.width, src.height);
+      // A reused surface still holds the previous frame, and the
+      // default 'source-over' would *blend* the new one onto it. That
+      // is a no-op only for a fully opaque source — true of capture
+      // video today, but the byte-equality claim must not rest on it.
+      // 'copy' replaces the destination outright, which is exactly
+      // what a fresh canvas gave, and costs nothing extra: the
+      // destination rect is the whole surface either way.
+      ctx.globalCompositeOperation = 'copy';
       ctx.drawImage(video, src.x, src.y, src.width, src.height, 0, 0, src.width, src.height);
+      const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      return { width: image.width, height: image.height, data: image.data };
+    },
+    snapshot(): PixelBuffer | null {
+      // Deliberately survives `stop()`: the surface is an ordinary
+      // canvas, not part of the stream, and the app's one chance to
+      // rescue the last live frame into a still is *after* sharing
+      // has ended (see main.ts → endCaptureUi).
+      const held = surface.current();
+      if (held === null) return null;
+      const { canvas, ctx } = held;
+      if (canvas.width === 0 || canvas.height === 0) return null;
       const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
       return { width: image.width, height: image.height, data: image.data };
     },

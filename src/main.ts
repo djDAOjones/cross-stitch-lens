@@ -34,6 +34,7 @@ import {
 } from './capture/crop.ts';
 import { DirtyGate, frameSignature, hashPixels, sampleVideo } from './capture/dirty.ts';
 import { DraftGovernor } from './capture/draft.ts';
+import { liveBuffer } from './capture/master-image.ts';
 import { PumpGate, startFramePump } from './capture/pump.ts';
 import {
   captureErrorMessage,
@@ -218,6 +219,61 @@ function build(app: HTMLElement): void {
     dither: { ...DEFAULT_DITHER },
   };
   let masterImage: PixelBuffer | null = null;
+  /**
+   * How to re-materialise {@link masterImage} once its pixels have
+   * been transferred away (M13-IMPL-01, D135 candidate 2). Set only by
+   * the live capture pump, whose grab buffer goes to the worker
+   * *without* a pre-submit copy; the frame survives on the session's
+   * retained grab surface, so the copy is paid at most once, by
+   * whoever actually reads the master image. Null for every still
+   * source (import, sample, project) — those buffers are never
+   * transferred and so never need refilling.
+   */
+  let masterRefill: (() => PixelBuffer | null) | null = null;
+
+  /**
+   * The master image, refilled first if its buffer was transferred.
+   *
+   * A transferred `Uint8ClampedArray` detaches to length 0 while its
+   * `width`/`height` stay truthful, so a bare `masterImage` read would
+   * hand a consumer a correctly-sized, entirely empty picture. Every
+   * consumer of the *pixels* goes through here; the null-checks and
+   * the `width`-only readouts can stay on the field itself.
+   */
+  function master(): PixelBuffer | null {
+    // A refill can legitimately fail — the session stopped, or nothing
+    // has been grabbed yet — and `liveBuffer` reports no source rather
+    // than an empty one. Cache what it recovers so a burst of readers
+    // pays one copy, not one each.
+    const live = liveBuffer(masterImage, masterRefill);
+    if (live !== null) masterImage = live;
+    return live;
+  }
+
+  /** Point the master image at a still buffer that is never transferred. */
+  function setStillMaster(buffer: PixelBuffer): void {
+    masterImage = buffer;
+    masterRefill = null;
+  }
+
+  /**
+   * A detach-proof copy of the master image for the profile editors'
+   * "design" preview. Unlike every other consumer — each of which
+   * copies in the same synchronous breath as its `master()` call — the
+   * editor preview holds the buffer across awaits and repaints, and
+   * under live capture the pump can transfer the live one away in
+   * between (M13-IMPL-01, D135 candidate 2). Copying here costs one
+   * allocation per preview render, on a debounced editor path.
+   */
+  function designStill(): PixelBuffer | null {
+    const still = master();
+    if (still === null) return null;
+    return {
+      width: still.width,
+      height: still.height,
+      data: new Uint8ClampedArray(still.data),
+    };
+  }
 
   // --- M15 profile-world colour state (M15-UI-01, D114) ------------
   // The design carries its OWN recipe copy plus a link to a named
@@ -349,11 +405,13 @@ function build(app: HTMLElement): void {
     if (masterImage === null || !paletteMode || designRules.count.mode === 'all') return;
     const wanted = selectionGeometryKey();
     if (selectionPending || (selectionSource !== null && selectionGeometry === wanted)) return;
+    const still = master();
+    if (still === null) return;
     selectionPending = true;
     const copy: PixelBuffer = {
-      width: masterImage.width,
-      height: masterImage.height,
-      data: new Uint8ClampedArray(masterImage.data),
+      width: still.width,
+      height: still.height,
+      data: new Uint8ClampedArray(still.data),
     };
     client.exportFrame(copy, fullRgbVariant(config)).then(
       (buffer) => {
@@ -465,7 +523,7 @@ function build(app: HTMLElement): void {
   function loadSample(): void {
     const buffer = sampleBuffer();
     log.info('import', 'sample generated', { width: buffer.width, height: buffer.height });
-    masterImage = buffer;
+    setStillMaster(buffer);
     sourceName = SAMPLE_NAME;
     invalidateSelectionSource();
     ensureSelectionSource();
@@ -811,13 +869,14 @@ function build(app: HTMLElement): void {
   });
 
   function reprocess(): void {
-    if (masterImage === null) return;
+    const still = master();
+    if (still === null) return;
     status.textContent = 'Processing…';
     client.submit(
       {
-        width: masterImage.width,
-        height: masterImage.height,
-        data: new Uint8ClampedArray(masterImage.data),
+        width: still.width,
+        height: still.height,
+        data: new Uint8ClampedArray(still.data),
       },
       config,
     );
@@ -1722,7 +1781,8 @@ function build(app: HTMLElement): void {
   );
 
   async function exportPng(): Promise<void> {
-    if (masterImage === null) return;
+    const still = master();
+    if (still === null) return;
     // Clamp so the output canvas stays within browser limits; say so
     // in the status when it bites rather than failing silently.
     const wanted = scales.export.cleanPxPerStitch;
@@ -1732,9 +1792,9 @@ function build(app: HTMLElement): void {
     try {
       const frame = await client.exportFrame(
         {
-          width: masterImage.width,
-          height: masterImage.height,
-          data: new Uint8ClampedArray(masterImage.data),
+          width: still.width,
+          height: still.height,
+          data: new Uint8ClampedArray(still.data),
         },
         config,
       );
@@ -1763,7 +1823,8 @@ function build(app: HTMLElement): void {
   }
 
   async function exportChart(): Promise<void> {
-    if (masterImage === null) return;
+    const still = master();
+    if (still === null) return;
     // Chart furniture follows the on-screen grid settings (CSS-px
     // thicknesses — the chart's own unit; the DPR scaling is a
     // preview concern). Paper/ink colours are fixed in chart.ts.
@@ -1777,9 +1838,9 @@ function build(app: HTMLElement): void {
     try {
       const frame = await client.exportFrame(
         {
-          width: masterImage.width,
-          height: masterImage.height,
-          data: new Uint8ClampedArray(masterImage.data),
+          width: still.width,
+          height: still.height,
+          data: new Uint8ClampedArray(still.data),
         },
         config,
       );
@@ -1800,15 +1861,16 @@ function build(app: HTMLElement): void {
   }
 
   async function exportPdf(): Promise<void> {
-    if (masterImage === null) return;
+    const still = master();
+    if (still === null) return;
     status.textContent = 'Exporting…';
     pdfButton.disabled = true;
     try {
       const frame = await client.exportFrame(
         {
-          width: masterImage.width,
-          height: masterImage.height,
-          data: new Uint8ClampedArray(masterImage.data),
+          width: still.width,
+          height: still.height,
+          data: new Uint8ClampedArray(still.data),
         },
         config,
       );
@@ -2573,7 +2635,7 @@ function build(app: HTMLElement): void {
                     },
                     previewConfig,
                   ),
-                designStill: () => masterImage,
+                designStill,
                 baseConfig: () => ({ ...config }),
                 // The kind contract (D116): the pipeline with a
                 // draft-overridden dither stage; a resolved palette is
@@ -2642,7 +2704,7 @@ function build(app: HTMLElement): void {
                   },
                   previewConfig,
                 ),
-              designStill: () => masterImage,
+              designStill,
               baseConfig: () => ({ ...config }),
               overrideConfig: (draft, base) => {
                 const entries = colourKind.resolveDraft(draft);
@@ -2745,7 +2807,7 @@ function build(app: HTMLElement): void {
         width: buffer.width,
         height: buffer.height,
       });
-      masterImage = buffer;
+      setStillMaster(buffer);
       sourceName = name ?? source;
       invalidateSelectionSource();
       ensureSelectionSource();
@@ -2764,6 +2826,15 @@ function build(app: HTMLElement): void {
   // the app or the browser's own stop-sharing UI) restores the idle
   // controls and says so — never a silent state change.
   let capture: CaptureSession | null = null;
+  /**
+   * The refill {@link master} uses while a capture session owns the
+   * master image (M13-IMPL-01, D135 candidate 2). Reads the last
+   * grabbed frame back off the session's retained surface — no new
+   * `drawImage`, so a frozen session refills the frozen frame exactly.
+   * Null once the session ends, which is also when `masterImage` stops
+   * being refillable and the app correctly reports no source.
+   */
+  const captureRefill = (): PixelBuffer | null => capture?.snapshot() ?? null;
   let cropRect: CropRect | null = null;
   let cropLocked = false;
   /**
@@ -2972,6 +3043,16 @@ function build(app: HTMLElement): void {
     aspectButton.setAttribute('aria-pressed', 'false');
     stitchSizePx = 0;
     updateStitchSizeUi();
+    // Rescue the last live frame into a still *before* the session
+    // goes (M13-IMPL-01, D135 candidate 2). Under the pump the master
+    // image's pixels live on the session's grab surface, not in
+    // `masterImage`; without this, stopping capture would take the
+    // design with it and the surviving still would be an empty
+    // correctly-sized picture. `master()` refills or, if the frame
+    // cannot be recovered at all, leaves no source — which is the
+    // honest report, never a blank one.
+    masterImage = master();
+    masterRefill = null;
     capture?.video.remove();
     capture = null;
     // After `capture` clears: the derived-state check reads it, and
@@ -3009,6 +3090,7 @@ function build(app: HTMLElement): void {
         height: buffer.height,
       });
       masterImage = buffer;
+      masterRefill = captureRefill;
       invalidateSelectionSource();
       ensureSelectionSource();
       reprocess();
@@ -3049,13 +3131,19 @@ function build(app: HTMLElement): void {
       }
       const buffer = await capture.grabFrame(cropRect ?? undefined);
       masterImage = buffer;
+      masterRefill = captureRefill;
       // Seeds the palette from the first live frame, then holds: a
       // palette rebuilt every frame would make the preview churn.
+      // Runs *before* the submit that detaches `buffer`, so on the
+      // seeding frame it copies from live pixels rather than paying a
+      // refill.
       ensureSelectionSource();
-      client.submit(
-        { width: buffer.width, height: buffer.height, data: new Uint8ClampedArray(buffer.data) },
-        liveConfig(),
-      );
+      // No pre-submit copy (M13-IMPL-01, D135 candidate 2): the grab
+      // buffer itself is transferred, and `masterRefill` re-reads the
+      // frame off the session's retained surface if anything asks.
+      // That trades one guaranteed 5.9 MB copy per frame for one paid
+      // only when a consumer appears.
+      client.submit(buffer, liveConfig());
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       stopPump?.();

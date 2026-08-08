@@ -19,6 +19,13 @@
 
 ## M13 — Visual processing performance, remainder (in progress)
 
+- M13-DEF-03 (2026-08-08) — the multi-window bench ledger conserves:
+  drop counts fold by delta (`DropLedger`) instead of overwriting a
+  cumulative field, per-window totals published separately, and the
+  same review caught `rvfc missed callbacks` silently clamping to 0
+  after window 1 (D134 published 0 where 119 and 81 were true). D134's
+  measured numbers re-checked and unchanged. See D137.
+
 - INFRA-CHECK-01 (2026-08-08) — the starved-desktop all-timeout
   `check` flake reproduced (utility-QoS clamp + load: 10–35×
   inflation, timeout-only failures) and closed: test/hook timeouts

@@ -24,14 +24,13 @@ closed (D127). Phase 2 profiling complete (D134); the synthesis is
 IMPL-03 cut. Phase 4 runs the two activated items in order; the
 signed scope and matrix live in `docs/performance-evidence.md` →
 "M13-SYNTH-01 — the synthesis". `AGENTS.md` hard rules hold.
+Phase 2 is closed out (D137): the bench ledger conserves across
+manual windows, so IMPL-01's before/after rests on sound bookkeeping.
 
 #### Phase 2 — Component profiling & defect discovery
 
-Profiling shipped (PROF-01..05 — see trajectory); open defects only.
-
-- [ ] **M13-DEF-03 Manual multi-window bench ledger fails conservation** (2026-08-08)
-  Intent: `bench-browser.ts` reassigns `counters.clientDrops` (and latently `pumpDrops`) per live window while `submitted`/`results` accumulate, so a second window after nonzero drops taints the report (short by exactly the earlier windows' drops; negative interval deltas). Repro: share a 30 fps surface, buttons 6, 6, 6b, 8. Invisible on automated runs (driven source never drops).
-  Done when: cumulative and per-window drop accounting separated so a clean multi-window manual sitting validates untainted; the D134 photoshop report's arithmetic re-checked against the fix. Does not gate SYNTH-01.
+Profiling shipped (PROF-01..05 — see trajectory); defects closed
+(DEF-03 — D137). Nothing open.
 
 #### Phase 4 — Evidence-approved implementation (activated by D135)
 

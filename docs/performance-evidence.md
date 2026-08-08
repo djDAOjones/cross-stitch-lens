@@ -1337,10 +1337,81 @@ is bit-exact.
 ### Residual risks
 
 Surface-size scaling beyond 6.5 MP (the named off-main-thread
-trigger); interaction unbound; M13-DEF-03 blocks clean multi-window
-*manual* sittings until fixed (automated runs unaffected);
+trigger); interaction unbound; M13-DEF-03 closed by D137 — the
+multi-window drop ledger no longer taints a *manual* sitting
+(automated runs were never affected), pending one owner sitting to
+validate it live;
 INFRA-CHECK-01 closed by D136 — the gate's test timeouts became 30 s
 liveness bounds after the flake's QoS-starvation mechanism was
 reproduced (the synced-path coupling stays a wish-listed hygiene
 line); baselines rebind on whatever build M13-IMPL-02 runs on
 (build id recorded per row, as always).
+
+---
+
+## M13-DEF-03 — the multi-window drop ledger fixed (2026-08-08, D137)
+
+The D134 Part-B taint is closed. It was bookkeeping throughout: no
+measured quantity moves, and every conclusion the sitting carried
+stands unchanged.
+
+### The defect, in one line
+
+`bench-browser.ts` **assigned** each live window's drop count into a
+`CaptureCounters` field whose siblings (`submitted`, `results`,
+`callbacks`) accumulate across windows — so from window 2 on the
+ledger was short by exactly the earlier windows' drops, and the first
+interval delta of each later window went negative.
+
+The two drop sources report on different clocks, which is what made
+the assignment look plausible: `PumpGate` is constructed **per
+window** (its count restarts at zero, so the `pumpDropsBefore`
+subtraction was always a no-op), while the worker client outlives
+every window and only ever grows. `pumpDrops` therefore carried the
+same defect latently — invisible on every automated run because the
+driven source never drops a frame.
+
+### The fix
+
+`DropLedger` (`src/bench/counters.ts`) folds both sources into the
+cumulative ledger **by delta** and returns the window's own totals
+separately. The harness now publishes both, distinctly labelled:
+`counter pumpDrops` / `counter clientDrops` are cumulative like every
+other `counter …` field, and `window pump drops` / `window client
+drops` sit beside `window callbacks`. Gate-tested in
+`tests/bench-counters.test.ts` against the D134 numbers below.
+
+### The D134 arithmetic, re-checked
+
+| Window | submitted (cum.) | results (cum.) | drops in window | drops (cum.) | conserves? |
+| --- | --- | --- | --- | --- | --- |
+| 1 — 300² | 190 | 141 | 49 | 49 | ✅ then and now |
+| 2 — 300² | 538 | 367 | 122 | 171 | ❌ then (read 122) → ✅ now |
+| 3 — 200² | 720 | 491 | 58 | 229 | ❌ then (read 58) → ✅ now |
+
+720 = 491 + 229 + 0 errors + 0 in flight. The whole-sitting totals
+D134 reported by hand are exactly what the fixed ledger now computes
+per window, so **the sitting's published numbers need no revision** —
+its two conservation findings and the negative interval deltas
+(−22, −106) were artefacts of the reset and disappear. The −22 was
+interval 1 of window 2: 27 in-window drops compared against the prior
+cumulative 49; under the fix that interval reads +27.
+
+### A sibling caught by the same review
+
+`rvfc missed callbacks` measured a **per-window** `presentedFrames`
+delta against the **cumulative** `counters.callbacks`, so
+`Math.max(0, …)` clamped it to zero for every window after the first.
+The D134 report published 0 missed callbacks for windows 2 and 3
+where 119 (887 presented − 768 callbacks) and 81 (404 − 323) were
+true. Now measured against `windowCallbacks`. This is a raw meta
+field only — no narrative or target in this document cited it, and
+window 1's 52 was always correct.
+
+### Scope
+
+Harness-only: nothing in `src/core/`, `src/worker/` or the app path
+is touched, so no measured row changes and no budget moves. The
+manual multi-window sitting is unblocked; validating it against a
+real 30 fps surface (share, then buttons 6, 6, 6b, 8) belongs to the
+next owner sitting — the repro is human by policy.

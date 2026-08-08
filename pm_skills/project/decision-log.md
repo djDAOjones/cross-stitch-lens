@@ -1418,3 +1418,55 @@ settled desktop" (D134's practice).
 wish-list → synced-tree churn-relocation line;
 `DEV-INFRASTRUCTURE.md` → Quality gate liveness-bound note;
 `docs/performance-evidence.md` → residual-risks line closed.
+
+---
+
+## D137 — M13-DEF-03: the multi-window drop ledger folds by delta; a silent missed-callback clamp falls with it (2026-08-08)
+
+**Decision:** drop counts fold into the cumulative `CaptureCounters`
+ledger **by delta** via a new `DropLedger` (`src/bench/counters.ts`),
+and each live window publishes its own totals separately
+(`window pump drops` / `window client drops` beside `window
+callbacks`, with the `counter …` block cumulative throughout). The
+harness no longer assigns a window value into a cumulative field.
+
+**Why it looked right:** the two drop sources run on different
+clocks. `PumpGate` is constructed per measurement window, so its
+count restarts at zero and the `pumpDropsBefore` subtraction was
+always a no-op; the worker client outlives every window and only
+grows. Subtracting a "before" reading from each therefore *looks*
+symmetrical while producing a per-window number for a field whose
+siblings (`submitted`, `results`, `callbacks`) accumulate. From
+window 2 the conservation identity was short by exactly the earlier
+windows' drops, and each later window's first interval delta went
+negative. Automated runs never showed it: the driven source drops no
+frames, so `pumpDrops` carried the identical defect purely latently.
+
+**The D134 arithmetic is unchanged.** Re-checked against the fixed
+ledger: 720 submitted = 491 results + 229 drops + 0 errors + 0 in
+flight, and the per-window drops (49 / 122 / 58) are what the fold
+now computes. The sitting's two conservation findings and its
+−22 / −106 interval deltas were artefacts of the reset and are gone;
+no measured quantity moves, so every D134 conclusion — and the D135
+synthesis resting on it — stands as signed.
+
+**A sibling, found by the same review and worth more than the
+original:** `rvfc missed callbacks` compared a per-window
+`presentedFrames` delta against the *cumulative* callback total, so
+`Math.max(0, …)` clamped it to zero for every window after the
+first. D134 published 0 missed callbacks for windows 2 and 3 where
+119 and 81 were true — a wrong number presented as a good one, where
+the drop defect at least announced itself as a taint. Now measured
+against `windowCallbacks`. Raw meta only: no narrative or target
+cited it, and window 1's 52 was always correct.
+
+**Scope:** harness-only. Nothing in `src/core/`, `src/worker/` or the
+app path is touched, so no measured row and no budget moves. The
+manual multi-window sitting is unblocked; validating it against a
+real 30 fps surface (share, then buttons 6, 6, 6b, 8) is human by
+policy and rides the next owner sitting.
+
+**Link:** backlog → M13-DEF-03 removed; trajectory → one line;
+`docs/performance-evidence.md` → the D137 section plus the closed
+residual-risks line; tests → `tests/bench-counters.test.ts` (the
+D134 numbers as a regression fixture).

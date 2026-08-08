@@ -32,6 +32,7 @@ import {
   conservationViolations,
   countersMeta,
   CounterTracker,
+  DropLedger,
   zeroCounters,
   zeroFrameReason,
   type CaptureCounters,
@@ -535,8 +536,9 @@ async function runLiveWindow(
   let wasDraft = false;
   const samples: number[] = [];
   let lastJob: SettledJob | null = null;
-  const pumpDropsBefore = pumpGate.droppedCount;
-  const clientDropsBefore = client.droppedFrames;
+  // Drops fold into the cumulative ledger rather than overwriting it,
+  // and the window's own totals come back separately (M13-DEF-03).
+  const dropLedger = new DropLedger(pumpGate.droppedCount, client.droppedFrames);
   const callbacksBefore = counters.callbacks;
   // Fresh cadence readings per window — module state would otherwise
   // leak a previous window's marks into this row.
@@ -664,8 +666,7 @@ async function runLiveWindow(
   let selectionExport: { ms: number; start: number; end: number } | null = null;
   for (let i = 0; i < Math.ceil(seconds / 5); i++) {
     await new Promise((resolve) => setTimeout(resolve, 5000));
-    counters.pumpDrops = pumpGate.droppedCount - pumpDropsBefore;
-    counters.clientDrops = client.droppedFrames - clientDropsBefore;
+    dropLedger.fold(counters, pumpGate.droppedCount, client.droppedFrames);
     const interval = tracker.snapshot({ ...counters }, performance.now());
     intervalMeta[`interval ${String(interval.index)}`] = JSON.stringify(interval.deltas);
     // The D68 carry-in (M13-PROF-04): one selection-source export
@@ -697,8 +698,7 @@ async function runLiveWindow(
   sourceChannel.removeEventListener('message', onPaint);
   markWindow(captureId(grid, editClass), 'preview-update', 'end');
 
-  counters.pumpDrops = pumpGate.droppedCount - pumpDropsBefore;
-  counters.clientDrops = client.droppedFrames - clientDropsBefore;
+  const windowDrops = dropLedger.fold(counters, pumpGate.droppedCount, client.droppedFrames);
   const violations = conservationViolations(counters, inFlight);
   for (const violation of violations) findings.push(`counter conservation: ${violation}`);
 
@@ -749,10 +749,14 @@ async function runLiveWindow(
     const cadence: Record<string, string | number | boolean> = {};
     if (firstRvfc !== null && lastRvfc !== null && lastRvfc !== firstRvfc) {
       // presentedFrames counts frames the browser presented; the gap to
-      // our callback count is the missed-callback figure.
+      // our callback count is the missed-callback figure. Both sides
+      // must be this window's — measuring the window's presents against
+      // the *cumulative* callback total silently reported 0 missed for
+      // every window after the first (M13-DEF-03's sibling; the D134
+      // sitting published 0 where 119 and 81 were true).
       const presented = lastRvfc.presentedFrames - firstRvfc.presentedFrames;
       cadence['rvfc presentedFrames delta'] = presented;
-      cadence['rvfc missed callbacks'] = Math.max(0, presented - counters.callbacks);
+      cadence['rvfc missed callbacks'] = Math.max(0, presented - windowCallbacks);
     } else {
       cadence['rvfc metadata'] = 'unsupported';
     }
@@ -795,7 +799,12 @@ async function runLiveWindow(
           'capture width': session.video.videoWidth,
           'capture height': session.video.videoHeight,
           'updates/sec over window': samples.length / seconds,
+          // Per-window figures sit beside the `counter …` block, which
+          // is cumulative across the sitting for every field including
+          // the two drop counts (M13-DEF-03).
           'window callbacks': windowCallbacks,
+          'window pump drops': windowDrops.pumpDrops,
+          'window client drops': windowDrops.clientDrops,
           'page visible': document.visibilityState === 'visible',
           ...sourceMeta,
           ...countersMeta(counters, 'counter '),

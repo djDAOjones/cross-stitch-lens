@@ -18,6 +18,8 @@
  * - `submitted` — frames submitted to the worker client.
  * - `pumpDrops` — pending frames dropped at the pump gate.
  * - `clientDrops` — pending jobs dropped at the worker client.
+ *   Both drop counts are cumulative like every other field; their two
+ *   sources run on different clocks, so fold them in via `DropLedger`.
  * - `results` — processed frames delivered.
  * - `errors` — worker error responses.
  * - `draftEnters` / `draftExits` — draft-quality transitions.
@@ -108,6 +110,59 @@ export class CounterTracker {
   /** Every closed interval, in order. */
   get intervals(): readonly CounterInterval[] {
     return this.all;
+  }
+}
+
+/**
+ * Cursor folding the two drop sources into the cumulative ledger
+ * (M13-DEF-03). They report on different clocks: the pump gate is
+ * constructed per measurement window, so its count starts at zero,
+ * while the worker client outlives every window and its count only
+ * grows. Assigning either raw value to a `CaptureCounters` field —
+ * whose siblings (`submitted`, `results`) accumulate across windows —
+ * is what tainted the D134 sitting: the ledger came up short by
+ * exactly the earlier windows' drops and interval deltas went
+ * negative. Folding by delta keeps the cumulative books straight while
+ * `windowTotals` keeps the per-window figure the row still wants.
+ *
+ * Both totals must be monotonic from the constructor's reading: a
+ * source that goes backwards is a defect, and it is left to surface in
+ * the conservation check rather than clamped away here.
+ */
+export class DropLedger {
+  private pumpAt: number;
+  private clientAt: number;
+  private windowPump = 0;
+  private windowClient = 0;
+
+  constructor(pumpTotal: number, clientTotal: number) {
+    this.pumpAt = pumpTotal;
+    this.clientAt = clientTotal;
+  }
+
+  /**
+   * Add drops observed since the last fold to `into`'s cumulative
+   * totals, and return this window's own totals so far.
+   */
+  fold(
+    into: CaptureCounters,
+    pumpTotal: number,
+    clientTotal: number,
+  ): { pumpDrops: number; clientDrops: number } {
+    const pumpNew = pumpTotal - this.pumpAt;
+    const clientNew = clientTotal - this.clientAt;
+    this.pumpAt = pumpTotal;
+    this.clientAt = clientTotal;
+    into.pumpDrops += pumpNew;
+    into.clientDrops += clientNew;
+    this.windowPump += pumpNew;
+    this.windowClient += clientNew;
+    return this.windowTotals;
+  }
+
+  /** This window's drops, separate from the cumulative ledger. */
+  get windowTotals(): { pumpDrops: number; clientDrops: number } {
+    return { pumpDrops: this.windowPump, clientDrops: this.windowClient };
   }
 }
 

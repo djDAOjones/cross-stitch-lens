@@ -118,7 +118,7 @@
 - `src/bench-source.ts` — controlled interaction source: repaints on BroadcastChannel command, replies with its own paint timestamp
 - `src/bench/boundaries.ts` — the six measurement boundaries + BOUNDARY_VERSION (code copy of the contract; moved from tests/bench so production entries never import test modules)
 - `src/bench/clock.ts` — absolute cross-context timestamps (timeOrigin + now) + timer-resolution probe
-- `src/bench/counters.ts` — capture-path counter ledger: interval snapshots, conservation checks, zero-frame verdict (pure)
+- `src/bench/counters.ts` — capture-path counter ledger: interval snapshots, conservation checks, drop folding across windows, zero-frame verdict (pure)
 - `src/bench/edit-classes.ts` — the six Part-B edit-class approximations: seeded pure geometry + drive cadences
 - `src/bench/harness.ts` — warm-up policy, sync/async sample collection, interleaved candidate timing
 - `src/bench/memory.ts` — retained-heap verdict vocabulary: plateau threshold + forced-GC lazy-vs-real classification (pure)
@@ -221,7 +221,7 @@
 - `tests/backend-select.test.ts` — selection policy/calibration + ts fallback with both backends disabled
 - `tests/bench-auto-lib.test.ts` — quiet-run logic: idle parsing, valid-only canonical naming, never-retry-structural gate
 - `tests/bench-auto-validate.test.ts` — automated-run validation: tainted/hidden/incomplete reports must fail, complete ones pass
-- `tests/bench-counters.test.ts` — capture-counter ledger: interval deltas, conservation violations, meta flattening
+- `tests/bench-counters.test.ts` — capture-counter ledger: interval deltas, conservation violations, multi-window drop folding, meta flattening
 - `tests/bench-cross-check.test.ts` — cross-check comparison: ratios, same-build + tainted guards, missing rows never invented
 - `tests/bench-edit-classes.test.ts` — edit-class geometry: seed determinism, per-class ops, bounds, stroke continuity
 - `tests/bench-matrix.test.ts` — workload-matrix invariants: dither ID tokens, unique/derived IDs, core + method blocks, axis coverage

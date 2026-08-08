@@ -10,6 +10,7 @@ import {
   conservationViolations,
   countersMeta,
   CounterTracker,
+  DropLedger,
   zeroCounters,
   zeroFrameReason,
   type CaptureCounters,
@@ -76,6 +77,113 @@ describe('conservation checks', () => {
   it('flags forced refreshes exceeding submissions', () => {
     const c = counters({ callbacks: 2, grabs: 2, submitted: 2, forcedRefreshes: 3, results: 2 });
     expect(conservationViolations(c, 0).join(' ')).toMatch(/forced refreshes/);
+  });
+});
+
+describe('drop ledger', () => {
+  /**
+   * One measurement window as the harness runs it: a *fresh* pump gate
+   * (its count restarts at zero) against the session-long worker
+   * client (its count only grows), folded at each 5 s interval and
+   * once more when the books close.
+   */
+  type Step = Partial<CaptureCounters>;
+
+  function runWindow(
+    ledger: CaptureCounters,
+    tracker: CounterTracker,
+    at: { clientTotal: number },
+    intervals: Step[],
+  ): { pumpDrops: number; clientDrops: number } {
+    let pumpTotal = 0;
+    const drops = new DropLedger(pumpTotal, at.clientTotal);
+    let window = drops.windowTotals;
+    for (const step of intervals) {
+      for (const [key, delta] of Object.entries(step) as [keyof CaptureCounters, number][]) {
+        // The drop fields reach the ledger only through the fold —
+        // that separation is the thing under test.
+        if (key === 'pumpDrops') pumpTotal += delta;
+        else if (key === 'clientDrops') at.clientTotal += delta;
+        else ledger[key] += delta;
+      }
+      window = drops.fold(ledger, pumpTotal, at.clientTotal);
+      tracker.snapshot({ ...ledger }, 0);
+    }
+    return window;
+  }
+
+  it('keeps a multi-window sitting conserved (the D134 taint, regressed)', () => {
+    // The 2026-08-08 Photoshop sitting: three live windows whose drop
+    // counts were *assigned* to the cumulative field, leaving windows 2
+    // and 3 short by exactly the earlier windows' drops (49, then 171).
+    const ledger = zeroCounters();
+    const tracker = new CounterTracker({ ...ledger }, 0);
+    const at = { clientTotal: 0 };
+
+    const w1 = runWindow(ledger, tracker, at, [
+      { callbacks: 834, grabs: 834, dirtySkips: 644, submitted: 190, results: 141, clientDrops: 49 },
+    ]);
+    expect(w1.clientDrops).toBe(49);
+    expect(conservationViolations(ledger, 0)).toEqual([]);
+
+    const w2 = runWindow(ledger, tracker, at, [
+      { callbacks: 768, grabs: 768, dirtySkips: 420, submitted: 348, results: 226, clientDrops: 122 },
+    ]);
+    // The window reports its own 122; the ledger carries all 171.
+    expect(w2.clientDrops).toBe(122);
+    expect(ledger.clientDrops).toBe(171);
+    expect(conservationViolations(ledger, 0)).toEqual([]);
+
+    const w3 = runWindow(ledger, tracker, at, [
+      { callbacks: 323, grabs: 323, dirtySkips: 141, submitted: 182, results: 124, clientDrops: 58 },
+    ]);
+    expect(w3.clientDrops).toBe(58);
+    // The sitting's own arithmetic, from the D134 report.
+    expect(ledger.submitted).toBe(720);
+    expect(ledger.results).toBe(491);
+    expect(ledger.clientDrops).toBe(229);
+    expect(conservationViolations(ledger, 0)).toEqual([]);
+  });
+
+  it('never emits a negative interval delta across a window boundary', () => {
+    // The published symptom: interval 1 of windows 2 and 3 read −22 and
+    // −106 because the cumulative field was reset to a window value.
+    const ledger = zeroCounters();
+    const tracker = new CounterTracker({ ...ledger }, 0);
+    const at = { clientTotal: 0 };
+    runWindow(ledger, tracker, at, [
+      { submitted: 17, results: 11, pumpDrops: 0, clientDrops: 5 },
+      { submitted: 173, results: 130, pumpDrops: 0, clientDrops: 44 },
+    ]);
+    runWindow(ledger, tracker, at, [
+      { submitted: 71, results: 43, pumpDrops: 0, clientDrops: 28 },
+      { submitted: 277, results: 183, pumpDrops: 0, clientDrops: 94 },
+    ]);
+    for (const interval of tracker.intervals) {
+      expect(interval.deltas.clientDrops).toBeGreaterThanOrEqual(0);
+      expect(interval.deltas.pumpDrops).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it('accumulates the per-window pump gate, whose count restarts each window', () => {
+    // `pumpDrops` shared the defect latently: the gate is constructed
+    // per window, so its raw count is never a cumulative total.
+    const ledger = zeroCounters();
+    const tracker = new CounterTracker({ ...ledger }, 0);
+    const at = { clientTotal: 0 };
+    const w1 = runWindow(ledger, tracker, at, [
+      { submitted: 10, results: 7, pumpDrops: 3, clientDrops: 3 },
+    ]);
+    const w2 = runWindow(ledger, tracker, at, [
+      { submitted: 10, results: 8, pumpDrops: 4, clientDrops: 2 },
+    ]);
+    expect(w1.pumpDrops).toBe(3);
+    expect(w2.pumpDrops).toBe(4);
+    expect(ledger.pumpDrops).toBe(7);
+  });
+
+  it('reports zeroed window totals before the first fold', () => {
+    expect(new DropLedger(0, 500).windowTotals).toEqual({ pumpDrops: 0, clientDrops: 0 });
   });
 });
 

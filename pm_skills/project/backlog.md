@@ -28,20 +28,20 @@ optimising (D62/D63); `AGENTS.md` hard rules hold.
 
 Each task files defects for performance-sensitive bugs it uncovers.
 
-- [~] **M13-MEAS-03 Automate the owner-session legs** [detail] (2026-08-07)
-  Intent: owner ask (2026-08-07) — shrink the PROF-04/05 owner session to its genuinely human legs by automating the mechanisable ones: flag-granted capture for Part A, the forced-GC probe answering Part D's 74.8 MiB question, Part-B edit classes on the controlled source; the Tier-2 CDP driver only on explicit dependency approval (tiers in the ticket).
-  Done when: one command yields valid (untainted, visible-window) capture-leg and forced-GC reports on an awake desktop; the rehearsal sheet shrinks to the human legs; the flag-granted variant is decision-logged with one manual cross-check.
-  Status 2026-08-08: agent side complete — automation shipped (D129), the quiet-gap arming (D130) landed both valid artefacts first attempt on `6e79c78` (capture 4.0 updates/sec at 300²/200²; forced GC 172.7 → 11.5 MiB), quoted in `docs/performance-evidence.md` → D129 section. The A′ cross-check evidence landed zero-click 2026-08-08 (`--crosscheck` + the System-Events picker driver; ratios 0.98–1.01×, ticket has the table). Remaining: the owner's one-word verdict on it, then the recording session makes automated capture rows canon.
+- [~] **M13-MEAS-04 Automate Part C: the CDP trace leg** [detail] (2026-08-08)
+  Intent: owner dependency approval (D132) unlocks the Tier-2 half MEAS-03 left untaken — drive the flagged bench Chrome over CDP to record Part-C traces (GC pauses, long tasks, input responsiveness) during driven live capture on the controlled source, shrinking the owner sitting to Part B + feel; raw CDP over Node's built-in WebSocket first, the approved dev dependency held in reserve (ticket has the design sketch and honesty rules).
+  Done when: one command publishes a validated trace report (GC pause count/total/max, long-task windows, input-latency evidence) alongside the capture leg; parsing logic unit-tested; the sheet's Part C shrinks to its genuinely human residue (Photoshop-content trace, adversarial feel).
+  Status 2026-08-08: machinery shipped and proven — `npm run bench:trace` validated end to end on the first engineering run (zero new dependencies; all nine windows paired, GC bucketed per window, observer long tasks quoted, page untainted); a whole-leg span bug found by that run is fixed under test. Remaining: one canonical run on a committed build (`bench:trace`, quiet-desktop rules) + the evidence-doc quote, then the ship entry.
 
 - [~] **M13-PROF-04 Live-path profile: capture, scheduling, preview** [detail] (2026-07-22)
   Intent: the live capture→preview path — pump cadence, dirty-detection cost and small-edit misses, coalescing drops, draft governor, split-compare overhead, preview/UI latency, failure recovery.
   Done when: an end-to-end latency decomposition at 200²/300² live capture, with dropped/stale-frame behaviour quantified against the ≥ 4 updates/sec promise.
-  Status 2026-08-08: gestureless half published (D70), re-baselined (D128); capture legs automated (D129). Remaining: the human legs of the shrunk sheet — Part A′ one-time cross-check, Part B Photoshop content, Part C trace (`docs/browser-measurement.md`).
+  Status 2026-08-08: gestureless half published (D70), re-baselined (D128); capture legs automated and now canon (D129, A′ held at D131 — ratios 0.98–1.01×). Remaining: Part B Photoshop content (human by policy) and Part C — M13-MEAS-04 automates Part C's trace half (D132), leaving the Photoshop-content trace and adversarial feel human.
 
 - [~] **M13-PROF-05 Memory, GC and export contention** [detail] (2026-07-22)
   Intent: per-frame allocation census, typed-array reuse candidates, live GC pressure, peak export memory, worker blocking during export.
   Done when: allocation/peak/contention figures published, top candidates ranked; export full-quality isolation re-verified.
-  Status 2026-08-08: gestureless half published (D71), re-run current (D128); the idle residue answered in mechanism — lazy major GC, not retention (forced-GC probe, D129), retiring the snapshot pair unless a run reports otherwise. Remaining: GC-pause trace (Part C of the shrunk sheet) + the quiet-desktop `bench:auto` artefact.
+  Status 2026-08-08: gestureless half published (D71), re-run current (D128); the idle residue answered in mechanism — lazy major GC, not retention (forced-GC probe, D129), retiring the snapshot pair unless a run reports otherwise; the quiet-desktop `bench:auto` mem artefact landed (D130: forced GC 172.7 → 11.5 MiB, untainted). Remaining: GC-pause trace — rides M13-MEAS-04's automated Part C (D132).
 
 #### Phase 3 — Synthesis
 

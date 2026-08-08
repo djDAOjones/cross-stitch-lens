@@ -1195,3 +1195,60 @@ a quietly wrong report is not.
 (+ tests); `DEV-INFRASTRUCTURE.md` scripts table + utility entry;
 procedure `docs/browser-measurement.md` → "Automated owner-session
 legs"; ticket M13-MEAS-03 + backlog status (armed 2026-08-08).
+
+## D131 — the Part-A′ cross-check holds: automated capture rows are canon; M13-MEAS-03 ships (2026-08-08)
+
+**Decision:** the owner's verdict on the Part-A′ cross-check is
+**holds** — given with the provenance stated plainly: the
+picker-granted leg used the real picker dialog (a grant path fully
+independent of the launch flags) with its two clicks scripted via
+System Events, not a human hand. The evidence is the `52300de` pair
+(`bench-reports/browser-bench-v0.5.0_20260808.52300de-{capture,picker}.json`,
+both untainted, zero findings, verified against the ticket's table
+in this session): live 300² median 38.5 → 37.7 ms (0.98×), live 200²
+30.6 → 30.2 ms (0.99×), interaction 76.5 → 77.3 ms (1.01×), 4.0
+updates/sec both sides, protocol misses 2 vs 3 (the known double-rAF
+race, both sides). Consequence: **automated capture rows are canon**
+— a `bench:auto` capture report that passes validation is quotable
+evidence without a manual twin, starting with the D130 artefacts on
+`6e79c78`; Part A′ retires from the rehearsal sheet and re-arms only
+when a Chrome update changes flag behaviour (the probe expectation
+re-run stays mandatory on update, per D129). The owner session
+shrinks to Parts B and C exactly as designed, and M13-MEAS-03 closes
+on this verdict — its remaining lines were only this call and this
+recording.
+
+**Link:** evidence `docs/performance-evidence.md` → D131 section
+(the comparison table); procedure `docs/browser-measurement.md` →
+"Cross-check before canon" status + Part A′ retirement; backlog →
+M13-MEAS-03 removed, PROF-04/05 statuses re-cut; trajectory →
+M13-MEAS-03 line; ticket M13-MEAS-03 deleted on ship (Tier-2 scope
+ported to M13-MEAS-04's ticket — see D132).
+
+## D132 — Tier-2 approved: the CDP trace leg opens as M13-MEAS-04, zero-dep raw CDP first (2026-08-08)
+
+**Decision:** the owner grants the Tier-2 dependency approval D129
+left pending — a CDP driver for the bench Chrome is sanctioned, and
+the Part-C trace half becomes agent work as **M13-MEAS-04**. Design
+stance chosen conservatively: **raw CDP over Node's built-in
+WebSocket first** (engines pin Node ≥ 22.18, so a WebSocket client
+ships with the runtime — the approved dev dependency is held in
+reserve, taken only if raw CDP proves insufficient; the approval
+covers `ws`/`playwright-core` if needed, recorded here so no future
+session re-asks). Scope: record tracing during driven live capture
+on the controlled source — GC pauses (serving PROF-05's remaining
+line), long tasks and input responsiveness (serving PROF-04's Part
+C) — published as a validated report next to the capture leg. The
+MEAS-03 honesty rules carry over whole: controlled-source numbers
+only (never quoted as Photoshop behaviour), the content guard stays
+load-bearing, validity gates refuse tainted runs, a forced or
+scripted anything is labelled. What stays human shrinks to: the
+Photoshop-content trace, adversarial feel checks (browser-bar stop
+and declined re-prompt stay approximate under any driver — D129),
+perceived responsiveness, and every acceptance verdict
+(M13-ACCEPT-02, SYNTH-01).
+
+**Link:** backlog → M13-MEAS-04 opened in Phase 2 with [detail];
+ticket `pm_skills/project/tickets/M13-MEAS-04.md` (design sketch,
+honesty rules, the ported Tier-2 notes); this entry is the recorded
+dependency approval D129 required.

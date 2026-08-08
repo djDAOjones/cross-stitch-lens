@@ -17,6 +17,16 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
+## M13 — Visual processing performance, remainder (in progress)
+
+- M13-MEAS-03 (2026-08-08) — the owner session shrinks to its human
+  legs: `bench:auto` runs the capture and mem legs unattended
+  (flag-granted, content-guarded, validity-gated), `--when-quiet`
+  arms quiet-gap runs, the forced-GC probe answers D71 in mechanism
+  (lazy major GC, not retention), and the zero-click Part-A′
+  cross-check holds (0.98–1.01×) so automated capture rows are
+  canon. See D129/D130/D131.
+
 ## M15 — Colour & dithering profiles (agent work complete — the two acceptance sessions remain)
 
 - M15-DITH-01, M15-DITH-02, M15-DITH-03, M15-DITH-04 (2026-08-07) —

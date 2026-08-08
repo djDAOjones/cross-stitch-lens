@@ -983,3 +983,32 @@ defects — which is the gate working. The capture rows enter canon
 only after the one-time manual cross-check (rehearsal sheet
 Part A′); the mem/forced-GC verdict stands as a labelled diagnostic
 with its untainted artefact.
+
+## The Part-A′ cross-check holds — automated capture rows are canon (2026-08-08, D131)
+
+The one-time cross-check ran fully zero-click on build
+`v0.5.0+20260808.52300de` (`npm run bench:auto -- --crosscheck`):
+the flag-granted leg, then a picker-granted leg in an unflagged
+Chrome — the real picker dialog appeared (a grant path independent
+of the flags) and the launcher clicked the controlled-source tile
+and Share via System Events. Both reports validated untainted on
+attempt 1.
+
+| Row | Flag-granted | Picker-granted | Ratio |
+| --- | --- | --- | --- |
+| live 300² `preview-update` median (n=120) | 38.5 ms | 37.7 ms | 0.98× |
+| live 200² `preview-update` median (n=120) | 30.6 ms | 30.2 ms | 0.99× |
+| interaction median (n=5 / n=6) | 76.5 ms | 77.3 ms | 1.01× |
+
+Both sides held 4.0 updates/sec at the driven cadence; the
+interaction protocol missed 2 vs 3 of 8 attempts (the known
+double-rAF race, present on both sides). Canonical + stamped
+artefacts:
+`bench-reports/browser-bench-v0.5.0_20260808.52300de-{capture,picker}.json`.
+
+**The owner's verdict (2026-08-08): holds** — recorded in D131 with
+the scripted-clicks provenance stated. From this point a validated
+`bench:auto` capture report is quotable evidence without a manual
+twin: the D130 headlines on `6e79c78` (live 300² 40.6 ms, live 200²
+30.7 ms, 4.0 updates/sec) stand as canon, and Part A′ retires from
+the rehearsal sheet until a Chrome update changes flag behaviour.

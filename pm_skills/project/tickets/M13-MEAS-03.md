@@ -19,19 +19,20 @@ refusal is the gate working, not a defect.
    quoted in `docs/performance-evidence.md` → D129 section. Re-runs
    any time via `npm run bench:auto -- --when-quiet` (canonical
    names stay valid-only; stamped files carry every attempt).
-2. **Owner Part-A′ cross-check** — now one command:
-   `npm run bench:auto -- --crosscheck` runs the flag-granted leg
-   plus a picker-granted leg on the same build and prints the
-   comparison; the picker click is scripted via System Events where
-   Accessibility allows (the grant needs a full Claude quit+reopen
-   to reach this process tree), else it is the run's single human
-   click. The holds/doesn't-hold call stays the owner's; the next
-   session records it in the decision log — only then do automated
-   capture rows enter canon. Watch item for the comparison: the
-   interaction run counts protocol misses (a captured frame can
-   beat the source's double-rAF paint reply; the then-static
-   surface presents nothing until the next change) — expect
-   misses-counted rows on both sides, not 8/8.
+2. **Owner Part-A′ verdict** — the cross-check evidence is captured
+   (2026-08-08, build `52300de`, both legs valid attempt 1, fully
+   zero-click): picker-granted vs flag-granted medians ratio
+   0.98×/0.99×/1.01× (live 300²/200²/interaction), 4.0 updates/sec
+   both sides, interaction protocol misses 2 vs 3 (the known
+   double-rAF race, both sides). Provenance stated honestly: the
+   picker leg used the real picker dialog (grant path independent of
+   the flags) with the clicks scripted via System Events
+   (Accessibility) — the picker driver's anatomy notes live in
+   `scripts/bench-auto.mjs` (`clickPickerWhenUp`; Chrome-151 paths,
+   re-probe on Chrome update). What remains is only the owner's
+   call: say "holds" (or ask for a hand-clicked run first) — the
+   recording session then writes the cross-check to the decision log
+   and automated capture rows become canon.
 
 ## Probed flag semantics (Chrome 151.0.7922.77, 2026-08-07)
 

@@ -291,60 +291,100 @@ function launchChrome(url, { flagged = true } = {}) {
 
 // --------------------------------------- picker clicking (crosscheck)
 
-/** One osascript invocation; returns true on success, false on any
- * error (no assistive access, element not found, dialog not up yet). */
-function osascript(script) {
-  try {
-    execFileSync('osascript', ['-e', script], { stdio: 'pipe' });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 /**
- * Best-effort zero-click driver for Chrome's share picker on the
- * picker-granted leg: find the tile whose name carries the controlled
- * source's title, click it, click Share — scoped to our dedicated
- * instance by unix process id, so the daily browser can never be
- * touched. Requires the app hosting this process to be enabled under
- * System Settings → Privacy & Security → Accessibility; without that
- * (or if Chrome's picker exposes a different tree) every attempt
- * fails harmlessly and a human click finishes the dialog — the run
- * itself continues either way, so automation degrades to one manual
- * click, never to a broken run.
+ * Zero-click driver for Chrome's share picker on the picker-granted
+ * leg, scoped to our dedicated instance by unix process id so the
+ * daily browser can never be touched. Probed live on Chrome
+ * 151.0.7922.77 (2026-08-08): the dialog is its own window named
+ * "Choose what to share with …"; its tab radios are the only named
+ * elements; window tiles and the bottom buttons are unlabelled, so
+ * the driver switches to the Window tab by name, clicks tile 1 (the
+ * source popup — frontmost, and the harness's content guard refuses
+ * a wrong window anyway), and clicks the **rightmost** bottom button
+ * (Share). Every action is a single fully-qualified AppleEvent —
+ * iterating `entire contents` of this dialog walks a mutating tree
+ * and can misfire clicks (one probe granted an entire-screen share
+ * that way). Requires the hosting app to be enabled under System
+ * Settings → Privacy & Security → Accessibility; without it, or on a
+ * future Chrome whose dialog differs, the driver fails harmlessly
+ * and one human click finishes the dialog — the run continues either
+ * way.
  */
-async function clickPickerWhenUp(pid, timeoutMs = 30_000) {
-  const inProcess = (body) =>
-    [
-      'tell application "System Events"',
-      `  tell (first process whose unix id is ${String(pid)})`,
-      ...body.map((line) => `    ${line}`),
-      '  end tell',
-      'end tell',
-    ].join('\n');
-  const inspectable = () => osascript(inProcess(['get name of window 1']));
-  const attempt = () =>
-    osascript(
-      inProcess([
-        'set frontmost to true',
-        `click (first UI element of window 1 whose name contains "${SOURCE_TITLE}")`,
-        'delay 0.4',
-        'click (first button of window 1 whose name is "Share")',
-      ]),
-    );
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    await delay(2000);
-    if (!inspectable()) continue; // dialog not up yet, or no assistive access
-    if (attempt()) {
-      console.log('picker: clicked the controlled-source tile and Share.');
+async function clickPickerWhenUp(pid, timeoutMs = 60_000) {
+  const W = '(first window whose name begins with "Choose what to share")';
+  const TAB = `tab group 1 of group 1 of group 2 of group 1 of group 1 of group 1 of ${W}`;
+  const script = [
+    'on run argv',
+    '  set thePid to (item 1 of argv) as integer',
+    '  tell application "System Events"',
+    '    tell (first process whose unix id is thePid)',
+    '      repeat 50 times',
+    '        delay 0.5',
+    '        try',
+    `          get name of ${W}`,
+    '          exit repeat',
+    '        end try',
+    '      end repeat',
+    '      delay 2 -- let the dialog settle; its thumbnails mutate the tree',
+    '      set frontmost to true',
+    '      repeat 6 times',
+    '        try',
+    `          click radio button "Window" of ${TAB}`,
+    '          exit repeat',
+    '        on error',
+    '          delay 1',
+    '        end try',
+    '      end repeat',
+    '      delay 2',
+    '      repeat 4 times',
+    '        try',
+    `          click button 1 of group 1 of group 1 of scroll area 1 of group 1 of group 1 of group 1 of ${TAB}`,
+    '          exit repeat',
+    '        on error',
+    '          delay 1',
+    '        end try',
+    '      end repeat',
+    '      delay 0.8',
+    `      set p1 to position of button 1 of group 2 of group 2 of group 1 of group 1 of group 1 of ${W}`,
+    `      set p2 to position of button 2 of group 2 of group 2 of group 1 of group 1 of group 1 of ${W}`,
+    '      if (item 1 of p2) > (item 1 of p1) then',
+    `        click button 2 of group 2 of group 2 of group 1 of group 1 of group 1 of ${W}`,
+    '      else',
+    `        click button 1 of group 2 of group 2 of group 1 of group 1 of group 1 of ${W}`,
+    '      end if',
+    '      return "shared"',
+    '    end tell',
+    '  end tell',
+    'end run',
+  ].join('\n');
+  try {
+    const result = await new Promise((resolve, reject) => {
+      const child = spawn('osascript', ['-', String(pid)], {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        timeout: timeoutMs,
+      });
+      let stdout = '';
+      let stderr = '';
+      child.stdout.on('data', (chunk) => (stdout += chunk));
+      child.stderr.on('data', (chunk) => (stderr += chunk));
+      child.on('error', reject);
+      child.on('exit', (code) =>
+        code === 0 ? resolve(stdout.trim()) : reject(new Error(stderr.trim())),
+      );
+      child.stdin.end(script);
+    });
+    if (result === 'shared') {
+      console.log('picker: drove the dialog myself — Window tab, source tile, Share.');
       return true;
     }
+    console.log(`picker: driver returned "${result}" — see below.`);
+  } catch (error) {
+    console.log(
+      `picker: could not click it myself (${error instanceof Error ? error.message : String(error)})`,
+    );
   }
   console.log(
-    'picker: could not click it myself (no assistive access, or an unexpected dialog ' +
-      'shape) — if a share picker is on screen, click the "controlled capture source" ' +
+    'picker: if a share picker is on screen, click the "controlled capture source" ' +
       'tile and Share; the run continues either way.',
   );
   return false;

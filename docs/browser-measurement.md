@@ -469,7 +469,12 @@ clicked-buttons manual path (4 → 5 → 6 → 6b → 7 → 8, then
 `npm run bench:crosscheck -- <downloaded report.json>`) remains
 equivalent.
 
-**Part B — Photoshop content (stays human by policy).** Button 5,
+**Part B — Photoshop content (stays human by policy). DONE
+2026-08-08 (D134)** — real-Photoshop rows banked
+(`…da5d80b-photoshop.json`, local) and quoted in
+`docs/performance-evidence.md` → D134; the taint in that report is
+the filed harness ledger defect M13-DEF-03, not frame loss. The
+procedure below stays for reruns. Button 5,
 share the Photoshop window, rerun 6 and 6b while performing in order:
 10 s hands-off (expect dirty skips plus a forced refresh at most every
 2 s), 1 px pencil marks (expect up to ~2 s latency — the measured
@@ -482,7 +487,12 @@ substitute: real-Photoshop capture behaviour is the reason this part
 exists.
 
 **Part C — app-side responsiveness (DevTools trace), shrunk by
-M13-MEAS-04.** The GC-pause half is automated: `npm run bench:trace`
+M13-MEAS-04. DONE 2026-08-08 (D134)** — a 156 s owner trace over the
+real whole-screen + crop geometry (local under
+`bench-reports/traces/`), GC/long-task numbers quoted in
+`docs/performance-evidence.md` → D134; all adversarial checks
+passed. The procedure below stays for reruns.
+The GC-pause half is automated: `npm run bench:trace`
 publishes per-window GC buckets on the controlled source (D132
 approved the CDP driver; controlled-source numbers only). What
 stays human: in the *app* (not the harness), capture Photoshop,

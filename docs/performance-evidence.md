@@ -1068,3 +1068,133 @@ tracing and are cross-context evidence — the untraced capture canon
 Long tasks come from the in-page observer with its source named, not
 from the trace (`toplevel` was probed at ~38 k events / 9.6 MB per
 6 s — an observer effect the leg refuses to buy).
+
+## The owner sitting — Parts B and C land real-Photoshop numbers (2026-08-08, D134)
+
+Build `v0.5.0+20260808.da5d80b` (docs-only atop `684811a` — app code
+identical to the trace-canon build), the owner's own Chrome 151,
+visible page, DPR 2. Part B report banked locally at
+`bench-reports/browser-bench-v0.5.0_20260808.da5d80b-photoshop.json`;
+the Part C DevTools trace stays local under `bench-reports/traces/`
+(`…owner-partC.json.gz`). Both artefacts are untracked by design —
+this section carries the quoted numbers.
+
+**Environment provenance (owner-disclosed):** this was an ordinary
+working desktop, not D130's input-free gated one — Photoshop,
+Chrome, the agent app, and a game open in the background throughout.
+The game was **paused during both measured legs** (near-idle) and
+actively played only in the sitting's aftermath, overlapping several
+INFRA-CHECK-01 gate runs but no measurement. Read the absolute
+medians as representative-use numbers on a lived-in desktop — the
+condition the product actually targets — and the comparison against
+the quiet-gated automated canon with that asymmetry in mind; the
+mechanism claims below rest on same-run internal ratios, which the
+asymmetry cannot fake.
+
+### Part B — Photoshop window capture (harness, human by policy)
+
+The Photoshop **window** was shared (`displaySurface: 'window'`,
+2708×2418 @ 30 fps track). Three live windows: two 300² (deliberate
+retries of the six-case schedule) and one 200². Enactment was
+approximate by the owner's own account — order held, timing loose —
+so per-case attribution stays with the automated edit classes
+(D129); these rows are real-content aggregates.
+
+| | Controlled source (auto canon, `6e79c78`) | Photoshop window | ratio |
+| --- | --- | --- | --- |
+| Captured surface | 2080×1948 (4.1 MP) | 2708×2418 (6.5 MP) | ×1.62 |
+| 300² end-to-end median | 40.6 ms | 69.7 ms | ×1.72 |
+| 200² end-to-end median | 30.7 ms | 50.2 ms | ×1.63 |
+| Grab median (main thread) | 18.7 / 19.2 ms | 31.8 / 32.3 ms | ×1.70 |
+| Dirty sample median | 8.1 / 8.4 ms | 13.5 / 14.1 ms | ×1.67 |
+| Worker compute (300²) | 39.1 ms | 68.8 ms | ×1.76 |
+| Long tasks per 30 s window | 0 | 60–105 (3.2–5.4 s; max 103 ms) | — |
+
+**Every cost scales with captured-surface pixels, not grid**: the
+ratios track the ×1.62 surface ratio, and the grab median is
+identical at 300² and 200² (the readback is surface-sized). The
+long-task column is the discovery — a perfectly quiet main thread
+under the controlled source vs 11–18 % of wall in ≥ 50 ms tasks
+under a 6.5 MP window, because per-frame readback + dirty sampling
+(~46 ms) crosses the observer's line. This is the headline
+M13-SYNTH-01 input.
+
+**The product promise holds on real content**: 4.7 and 7.5
+updates/sec at 300² (the second window under sustained strokes), 4.1
+at 200² overall with an idle tail (interval snapshots show ~9–12/sec
+while editing). The draft governor never engaged (compute ≪ 200 ms
+— a truthful absence), zero pump drops, zero worker errors, and the
+2 s staleness bound produced forced refreshes in the idle intervals.
+Hands-off Photoshop is not frameless: ambient repaints (cursor
+blink, panels) keep presenting frames and partially penetrate the
+64² hash — real-content dirty behaviour, unlike a command-driven
+source.
+
+**Validity: the report is formally tainted, and the taint is fully
+explained as harness bookkeeping (M13-DEF-03, filed).** The two
+conservation findings are short by exactly the *earlier* windows'
+client drops (49, then 49+122): `counters.clientDrops` is reassigned
+per window (`bench-browser.ts` — `client.droppedFrames −
+clientDropsBefore`) while `submitted`/`results` accumulate across
+windows, so any second live window after nonzero drops fails the
+cumulative equation and interval deltas go negative (−22, −106
+observed). Whole-sitting totals conserve: 720 submitted = 491
+results + 229 drops + 0 errors. Window 1's own books balance (190 =
+141 + 49). Invisible on every automated run because the driven
+source never drops a frame; `pumpDrops` shares the pattern latently.
+Repro: share a 30 fps surface, run buttons 6, 6, 6b, then 8.
+
+### Part C — the real workflow under trace (app, whole screen + crop)
+
+A 156.2 s DevTools Performance trace over the owner's actual
+geometry — Entire Screen shared, crop drawn over the Photoshop
+document — covering ad-hoc editing, zoom/pan, and Compare/Grid
+toggles (owner-labelled "pretty random, not exhaustive").
+Screenshots off; zero `Screenshot` events confirmed. The app emits
+no bench marks, so the renderer was identified structurally (the
+only page with a `DedicatedWorker` thread); same GC buckets as the
+D133 leg, pauses never summed with marking.
+
+| | Main thread | Worker |
+| --- | --- | --- |
+| Minor GC | 28× 9.9 ms (max 0.54) | 169× 40.9 ms (max 0.68) |
+| Major GC | 502× 1103.5 ms (**max 3.92**) | 157× 84.3 ms (max 0.96) |
+| Stop-the-world share of wall | **0.71 %** | **0.08 %** |
+| Incremental marking (work, not pauses) | 23,256× 1521 ms | 579× 21.7 ms |
+
+**GC is not a pause source on the real-workflow path either** — the
+optional Photoshop-content read D133 left open. No single pause
+exceeds 4 ms; major frequency is 3.2/s, *identical* to the driven
+leg (526 in 162 s), with total pause time ~2× — allocation rate
+scaling under real capture, the same lazy-major mechanism as
+D129/D133, now confirmed in the app. The allocator is the census's
+two crop-sized main-thread copies per frame (D71) — their #1 reuse
+ranking strengthens, unchanged. Main-thread long tasks: 415 at
+≥ 50 ms, 22.5 s total = **14.4 % of wall, max 82 ms** — the harness
+density confirmed under crop geometry, with the worst task still
+under the ~100 ms perception line (owner reported no felt stutter).
+Cross-context caveats: DevTools-recorded (its own overhead and
+config, not the CDP leg's), and these numbers never replace untraced
+canon.
+
+### Adversarial and recovery checks (owner-performed)
+
+Crop move/resize mid-capture, Freeze/Unfreeze, the narrow companion
+layout, export mid-edit, browser-bar stop, and a declined re-prompt
+— owner verdict "all seemed ok", with two itemised confirmations:
+the mid-edit clean PNG exported at full quality (crisp dither, no
+draft leakage), and the browser-bar stop recovered cleanly with the
+designed status line seen and quoted back ("Screen capture ended
+(sharing was stopped)."). No wedge anywhere. The owner initially
+expected a more prominent prompt on external stop — a salience
+observation for M13-ACCEPT-02, not a defect (recovery and truthful
+status are what the sheet requires).
+
+### Owner notes
+
+Human enactment of the six-case schedule is not repeatable
+in-window ("did very badly every time") — the reason the automated
+edit classes own repeatability (D129's design, vindicated). One
+product idea surfaced and was parked to the wish-list: default
+export settings sized for print (≥ 2k px largest dimension, grid
+lines + major numbers included).

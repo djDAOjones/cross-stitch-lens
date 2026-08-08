@@ -18,29 +18,27 @@ line passes and `check` is green. Requirements references are to
 ### Current — M13 Visual processing performance (remainder)
 
 Returned to Current 2026-08-07 (D128, the owner's pick) after M14
-closed (D127). The gestureless evidence is re-baselined on `d7218be`
-(D128) — the 2026-07-23 packs stay as history; the synthesis quotes
-the `d7218be` rows. The remaining halves are owner-session-gated
-(PROF-04/05 rehearsal → the [sign-off] synthesis). Re-measure before
-optimising (D62/D63); `AGENTS.md` hard rules hold.
+closed (D127). Phase 2 profiling is **complete** (D134): gestureless
+evidence re-baselined on `d7218be` (D128), automated capture/trace
+canon on `6e79c78`/`684811a` (D129–D133), and the owner sitting's
+real-Photoshop numbers (D134). The synthesis is next and unblocked.
+Re-measure before optimising (D62/D63); `AGENTS.md` hard rules hold.
 
 #### Phase 2 — Component profiling & defect discovery
 
-Each task files defects for performance-sensitive bugs it uncovers.
+Profiling shipped (PROF-01..05 — see trajectory); open defects only.
 
-- [~] **M13-PROF-04 Live-path profile: capture, scheduling, preview** [detail] (2026-07-22)
-  Intent: the live capture→preview path — pump cadence, dirty-detection cost and small-edit misses, coalescing drops, draft governor, split-compare overhead, preview/UI latency, failure recovery.
-  Done when: an end-to-end latency decomposition at 200²/300² live capture, with dropped/stale-frame behaviour quantified against the ≥ 4 updates/sec promise.
-  Status 2026-08-08: gestureless half published (D70), re-baselined (D128); capture legs automated and canon (D129, A′ held at D131); Part C's trace half landed (D133 — per-window GC + observer long tasks on the controlled source). Remaining: the owner sitting only — Part B Photoshop content and Part C's human residue (Photoshop-content trace, adversarial feel), human by policy.
+- [ ] **INFRA-CHECK-01 `check` flakes all-timeout under desktop load on the synced path** (2026-08-08)
+  Intent: on the OneDrive-synced repo with a loaded desktop (Photoshop + Chrome + the agent app open — and, owner-disclosed, a game active during the aftermath's red runs), full-suite Vitest runs starve — transform/import aggregates inflate 10–25×, heavyweight pipeline tests exceed the 5 s default timeout (16/11/14/8/13 failures across runs, every one a timeout, zero assertion failures; single files green; one full run green at 3.5 s). Composed `check` hits it hardest right after `check:wasm` rewrites `pkg/*`.
+  Done when: the mechanism is pinned and one recorded fix lands — candidates: per-suite `testTimeout` raise for the heavyweight pipeline suites (a gate-rule change, needs its own decision entry), a settle/retry between `check:wasm` and `check:test`, Vite/Vitest `cacheDir` moved off the synced tree, or sync exclusions for `node_modules`/`target`/`pkg` — and `check` passes composed, repeatedly, on this machine. Evidence: 2026-08-08 close of PROF-04/05 (D134).
 
-- [~] **M13-PROF-05 Memory, GC and export contention** [detail] (2026-07-22)
-  Intent: per-frame allocation census, typed-array reuse candidates, live GC pressure, peak export memory, worker blocking during export.
-  Done when: allocation/peak/contention figures published, top candidates ranked; export full-quality isolation re-verified.
-  Status 2026-08-08: gestureless half published (D71), re-run current (D128); idle residue answered — lazy major GC, not retention (D129, artefact D130); live GC pressure closed by the trace leg (D133: ~0.4 % of wall time, max pause 12.5 ms, zero observer long tasks). Remaining: automated evidence complete — residue is conditional or human only (Part D re-arms only on a retention verdict; optional Photoshop-content GC read rides the owner's Part-C trace) → closes with PROF-04 at the owner sitting.
+- [ ] **M13-DEF-03 Manual multi-window bench ledger fails conservation** (2026-08-08)
+  Intent: `bench-browser.ts` reassigns `counters.clientDrops` (and latently `pumpDrops`) per live window while `submitted`/`results` accumulate, so a second window after nonzero drops taints the report (short by exactly the earlier windows' drops; negative interval deltas). Repro: share a 30 fps surface, buttons 6, 6, 6b, 8. Invisible on automated runs (driven source never drops).
+  Done when: cumulative and per-window drop accounting separated so a clean multi-window manual sitting validates untainted; the D134 photoshop report's arithmetic re-checked against the fix. Does not gate SYNTH-01.
 
 #### Phase 3 — Synthesis
 
-- [ ] **M13-SYNTH-01 Performance synthesis: targets, roles, go/no-go** [detail] [sign-off] [blocked: M13-PROF-04, M13-PROF-05] (2026-07-22)
+- [ ] **M13-SYNTH-01 Performance synthesis: targets, roles, go/no-go** [detail] [sign-off] (2026-07-22)
   Intent: decide — proven bottlenecks vs measurement artefacts; binding targets (budget rows, 300² promise, 1024² export, the 1024 cap); which quality-neutral changes proceed; whether an appearance-changing trade-off merits exploring; backend roles and crossovers; which Phase-4 tasks are activated, merged or cut.
   Done when: a maintainer-approved synthesis recorded (decision-log + one shared evidence doc later tickets cite); activated tasks cite their evidence; no speculative speedup encoded as acceptance.
 

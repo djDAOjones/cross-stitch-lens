@@ -19,6 +19,21 @@
 
 ## M13 — Visual processing performance, remainder (in progress)
 
+- M13-PROF-04 (2026-08-08) — live-path profile complete: the owner
+  sitting lands real-Photoshop numbers — promise held (4.1–7.5
+  updates/sec), every cost surface-sized not grid-sized (×1.62
+  surface → ×1.6–1.76 across grab/dirty/compute), main-thread
+  long-task density 11–18 % under a 6.5 MP window (zero on the
+  controlled source), adversarial/recovery checks clean. Files
+  M13-DEF-03 (harness multi-window drop ledger). See D134.
+
+- M13-PROF-05 (2026-08-08) — memory/GC/contention complete: the
+  owner's real-workflow trace confirms GC is not a pause source on
+  the app path (max pause 3.92 ms, 0.71 % of wall, major frequency
+  identical to the driven leg), allocation-rate mechanism and the
+  two crop-sized main-thread copies' #1 reuse ranking confirmed;
+  export isolation stood re-proven since D128. See D134.
+
 - M13-MEAS-04 (2026-08-08) — Part C's trace half automated:
   `bench:trace` drives the flagged bench Chrome over raw CDP (Node
   built-in WebSocket, zero new deps), publishes validated per-window

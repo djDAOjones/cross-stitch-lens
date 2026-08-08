@@ -1282,3 +1282,52 @@ line); machinery, honesty rules and sheet shrink shipped under
 D132's design in commit `684811a`; backlog → M13-MEAS-04 removed,
 PROF-04/05 statuses re-cut; trajectory → M13-MEAS-04 line;
 wish-list → second-slice line; ticket M13-MEAS-04 deleted on ship.
+
+## D134 — the owner sitting closes M13-PROF-04 and M13-PROF-05 (2026-08-08)
+
+**Decision:** both remaining halves close on the sitting's numbers
+plus owner notes, exactly as the shrunk sheet designed. Part B
+(Photoshop window, human by policy): the promise holds on real
+content — 4.7–7.5 updates/sec at 300², 4.1 at 200², draft governor
+truthfully silent, zero pump drops/errors — and every cost scales
+with captured-surface pixels, not grid (×1.62 surface → ×1.6–1.76
+everywhere; grab surface-sized at both grids). The discovery is
+main-thread long-task density under a 6.5 MP window (11–18 % of
+wall vs zero on the controlled source), the headline SYNTH-01
+input. The report is formally tainted by two conservation findings
+explained to the frame as harness bookkeeping — per-window drop
+counters against cumulative submits — filed as **M13-DEF-03**
+(repro: buttons 6, 6, 6b on a 30 fps surface; invisible on
+automated runs where drops are zero; does not gate the synthesis,
+whole-sitting totals conserve). Part C (the owner's real whole
+screen + crop geometry, 156 s DevTools trace): GC is not a pause
+source on the real path either — max pause 3.92 ms, 0.71 % of wall,
+major frequency identical to the driven leg (3.2/s), allocation-
+rate mechanism confirmed; long tasks 14.4 % of wall, max 82 ms,
+matching the harness density; the D71 census's two crop-sized
+main-thread copies keep the #1 reuse ranking. All adversarial
+checks passed ("all seemed ok"; export full-quality and the
+external-stop status line individually confirmed); the owner's
+expectation of a louder end-of-capture prompt is a salience note
+for ACCEPT-02, not a defect. Schedule enactment is human-infeasible
+in-window (owner verbatim) — D129's automation of the edit classes
+vindicated. M13-SYNTH-01 unblocks; acceptance stays M13-ACCEPT-02.
+The close itself surfaced a second infrastructure finding: composed
+`check` runs flake all-timeout on this synced path under the
+post-sitting desktop load (every failure a 5 s timeout, zero
+assertion failures, single files and one full run green) — filed as
+INFRA-CHECK-01 rather than green-washed; the gate for this close
+runs on a settled desktop. The owner disclosed afterwards that a
+game was open in the background throughout — paused during both
+measured legs, actively played only in the aftermath (overlapping
+red gate runs, no measurement) — recorded as the evidence section's
+environment-provenance note rather than hidden.
+
+**Link:** evidence `docs/performance-evidence.md` → D134 section
+(comparison table, GC table, taint arithmetic); procedure
+`docs/browser-measurement.md` → Parts B/C status lines; backlog →
+PROF-04/05 removed, M13-DEF-03 filed, SYNTH-01 unblocked;
+trajectory → PROF-04/05 lines; wish-list → export-settings default
+line; tickets M13-PROF-04/05 deleted on ship. Artefacts local
+(untracked): `bench-reports/…da5d80b-photoshop.json`,
+`bench-reports/traces/…owner-partC.json.gz`.

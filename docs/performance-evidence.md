@@ -1012,3 +1012,59 @@ the scripted-clicks provenance stated. From this point a validated
 twin: the D130 headlines on `6e79c78` (live 300² 40.6 ms, live 200²
 30.7 ms, 4.0 updates/sec) stand as canon, and Part A′ retires from
 the rehearsal sheet until a Chrome update changes flag behaviour.
+
+## The trace leg lands — GC is not a pause source under driven capture (2026-08-08, D133)
+
+`npm run bench:trace` (M13-MEAS-04 — D132's raw-CDP driver over
+Node's built-in WebSocket, zero new dependencies) produced its first
+canonical artefact via the armed quiet-gap path (`--when-quiet`,
+attempt 1) on build `v0.5.0+20260808.684811a` — the committed
+machinery build, clean tree. The report validated whole: page half
+untainted with zero findings, all nine windows paired, the bench
+renderer identified from its own marks, no trace-buffer data loss
+(381,617 events; categories `devtools.timeline,blink.user_timing,v8`).
+Canonical report
+`bench-reports/browser-bench-v0.5.0_20260808.684811a-trace.json`;
+the raw trace stays local under `bench-reports/traces/`.
+
+GC pauses on the bench main thread, per measured window — count ×
+total ms (max ms):
+
+| Window | Major GC | Incremental marking | Observer long tasks |
+| --- | --- | --- | --- |
+| live 300² (30 s) | 101× 118.2 (12.5) | 341× 13.4 (0.2) | 0 |
+| live 200² (30 s) | 121× 129.4 (1.4) | 365× 14.3 (0.1) | 0 |
+| interaction (9 s) | 8× 8.1 (1.1) | 37× 2.6 (0.3) | not observed |
+| edit-hands-off (15 s) | 7× 6.9 (1.1) | 19× 0.8 (0.1) | 0 |
+| edit-pixel-marks (15 s) | 8× 8.3 (1.3) | 26× 1.2 (0.1) | 0 |
+| edit-slow-stroke (15 s) | 136× 135.6 (1.2) | 403× 18.8 (0.2) | 0 |
+| edit-large-fill (15 s) | 15× 16.4 (1.2) | 41× 1.9 (0.1) | 0 |
+| edit-transform (15 s) | 30× 32.5 (1.3) | 74× 3.7 (0.1) | 0 |
+| edit-rapid-scatter (15 s) | 100× 103.4 (1.2) | 246× 13.7 (0.2) | 0 |
+| **whole leg (162 s)** | **526× 558.7 (12.5)** | 1552× 70.5 (0.3) | — |
+
+Minor GC is absent from every window (one 0.7 ms scavenge fell
+between windows and appears only in the whole-leg row — pauses are
+attributed to the window where they began, so the per-window majors
+sum exactly to the whole-leg 526).
+
+**M13-PROF-05's live-GC-pressure question closes: GC is not a pause
+source on this path.** Total main-thread GC time is ~630 ms across
+162.4 s of driven capture (~0.4 % of wall time). The single largest
+pause in the whole leg is 12.5 ms — once, in the 300² steady window,
+still under one 60 Hz frame; every other window's major max is
+≤ 1.4 ms, and incremental-marking steps never exceed 0.3 ms. The
+in-page PerformanceObserver saw **zero long tasks (≥ 50 ms) in all
+eight observed windows** (it does not run over the interaction
+window). Major-GC frequency tracks allocation rate by edit class
+(~100–136 per busy window vs 7–30 per quiet one): V8 collecting
+often and cheaply under load — the same lazy-major mechanism D129
+established for the idle residue.
+
+Honesty notes: controlled-source numbers only, never Photoshop
+behaviour. Timing rows inside this report were recorded under
+tracing and are cross-context evidence — the untraced capture canon
+(D131) stands unchanged; the report's product is the GC accounting.
+Long tasks come from the in-page observer with its source named, not
+from the trace (`toplevel` was probed at ~38 k events / 9.6 MB per
+6 s — an observer effect the leg refuses to buy).

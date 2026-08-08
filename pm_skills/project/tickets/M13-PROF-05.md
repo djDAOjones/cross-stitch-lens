@@ -148,3 +148,16 @@ single stress runs, read as machine load, not regression (export diff
 since the banked build is only the D72 guards + D124 key labels).
 Remaining: unchanged — the snapshot pair + GC-pause trace riding
 Parts C/D.
+
+## Status 2026-08-08 (D129–D133) — automated evidence complete
+
+Both riders resolved. The forced-GC probe answered the idle residue
+in mechanism — lazy major GC, not retention (D129; quiet-desktop
+artefact D130: 172.7 → 11.5 MiB) — retiring the snapshot pair unless
+a run reports real retention. The trace leg closed the GC-pause line
+(D133: ~0.4 % of wall time, one 12.5 ms worst pause in 162 s, zero
+observer long tasks — `docs/performance-evidence.md` → D133).
+Remaining: nothing automated — conditional/optional human residue
+only (Part D re-arms on a retention verdict; the Photoshop-content
+GC read optionally rides the owner's Part-C trace); closes with
+PROF-04 at the owner sitting.

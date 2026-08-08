@@ -28,20 +28,15 @@ optimising (D62/D63); `AGENTS.md` hard rules hold.
 
 Each task files defects for performance-sensitive bugs it uncovers.
 
-- [~] **M13-MEAS-04 Automate Part C: the CDP trace leg** [detail] (2026-08-08)
-  Intent: owner dependency approval (D132) unlocks the Tier-2 half MEAS-03 left untaken — drive the flagged bench Chrome over CDP to record Part-C traces (GC pauses, long tasks, input responsiveness) during driven live capture on the controlled source, shrinking the owner sitting to Part B + feel; raw CDP over Node's built-in WebSocket first, the approved dev dependency held in reserve (ticket has the design sketch and honesty rules).
-  Done when: one command publishes a validated trace report (GC pause count/total/max, long-task windows, input-latency evidence) alongside the capture leg; parsing logic unit-tested; the sheet's Part C shrinks to its genuinely human residue (Photoshop-content trace, adversarial feel).
-  Status 2026-08-08: machinery shipped and proven — `npm run bench:trace` validated end to end on the first engineering run (zero new dependencies; all nine windows paired, GC bucketed per window, observer long tasks quoted, page untainted); a whole-leg span bug found by that run is fixed under test. Remaining: one canonical run on a committed build (`bench:trace`, quiet-desktop rules) + the evidence-doc quote, then the ship entry.
-
 - [~] **M13-PROF-04 Live-path profile: capture, scheduling, preview** [detail] (2026-07-22)
   Intent: the live capture→preview path — pump cadence, dirty-detection cost and small-edit misses, coalescing drops, draft governor, split-compare overhead, preview/UI latency, failure recovery.
   Done when: an end-to-end latency decomposition at 200²/300² live capture, with dropped/stale-frame behaviour quantified against the ≥ 4 updates/sec promise.
-  Status 2026-08-08: gestureless half published (D70), re-baselined (D128); capture legs automated and now canon (D129, A′ held at D131 — ratios 0.98–1.01×). Remaining: Part B Photoshop content (human by policy) and Part C — M13-MEAS-04 automates Part C's trace half (D132), leaving the Photoshop-content trace and adversarial feel human.
+  Status 2026-08-08: gestureless half published (D70), re-baselined (D128); capture legs automated and canon (D129, A′ held at D131); Part C's trace half landed (D133 — per-window GC + observer long tasks on the controlled source). Remaining: the owner sitting only — Part B Photoshop content and Part C's human residue (Photoshop-content trace, adversarial feel), human by policy.
 
 - [~] **M13-PROF-05 Memory, GC and export contention** [detail] (2026-07-22)
   Intent: per-frame allocation census, typed-array reuse candidates, live GC pressure, peak export memory, worker blocking during export.
   Done when: allocation/peak/contention figures published, top candidates ranked; export full-quality isolation re-verified.
-  Status 2026-08-08: gestureless half published (D71), re-run current (D128); the idle residue answered in mechanism — lazy major GC, not retention (forced-GC probe, D129), retiring the snapshot pair unless a run reports otherwise; the quiet-desktop `bench:auto` mem artefact landed (D130: forced GC 172.7 → 11.5 MiB, untainted). Remaining: GC-pause trace — rides M13-MEAS-04's automated Part C (D132).
+  Status 2026-08-08: gestureless half published (D71), re-run current (D128); idle residue answered — lazy major GC, not retention (D129, artefact D130); live GC pressure closed by the trace leg (D133: ~0.4 % of wall time, max pause 12.5 ms, zero observer long tasks). Remaining: automated evidence complete — residue is conditional or human only (Part D re-arms only on a retention verdict; optional Photoshop-content GC read rides the owner's Part-C trace) → closes with PROF-04 at the owner sitting.
 
 #### Phase 3 — Synthesis
 

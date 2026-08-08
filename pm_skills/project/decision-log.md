@@ -1252,3 +1252,33 @@ perceived responsiveness, and every acceptance verdict
 ticket `pm_skills/project/tickets/M13-MEAS-04.md` (design sketch,
 honesty rules, the ported Tier-2 notes); this entry is the recorded
 dependency approval D129 required.
+
+## D133 — M13-MEAS-04 ships: the canonical trace run lands; GC closed as a non-source under driven capture (2026-08-08)
+
+**Decision:** the canonical quiet-desktop artefact landed on the
+first armed attempt — `bench:trace --when-quiet`, build
+`v0.5.0+20260808.684811a` (the committed machinery build, clean
+tree), validated whole: page half untainted with zero findings, all
+nine windows paired, renderer self-identified, no trace-buffer data
+loss, and the per-window GC accounting conserving exactly against
+the whole leg. Verdict quoted to the evidence doc: **GC is not a
+pause source on the driven live-capture path** — ~0.4 % of wall
+time, a single 12.5 ms worst pause in 162 s (every other window's
+major max ≤ 1.4 ms), zero observer long tasks in all eight observed
+windows; major-GC frequency tracks allocation rate by edit class,
+the same lazy-major mechanism as D129. M13-PROF-05's last automated
+line (live GC pressure) closes on it; PROF-04/05 now carry only the
+owner sitting. The ticket's second slice — an app-UI responsiveness
+trace driving `index.html` itself under flag-granted capture —
+deliberately does not ship with the item: the Done-when is met
+without it, and whether that extra controlled-source evidence is
+worth taking is a synthesis-time call, so it is parked on the
+wish-list rather than silently dropped. M13-MEAS-04 closes.
+
+**Link:** evidence `docs/performance-evidence.md` → D133 section
+(the per-window GC table + honesty notes); procedure
+`docs/browser-measurement.md` → trace-leg bullet (canon status
+line); machinery, honesty rules and sheet shrink shipped under
+D132's design in commit `684811a`; backlog → M13-MEAS-04 removed,
+PROF-04/05 statuses re-cut; trajectory → M13-MEAS-04 line;
+wish-list → second-slice line; ticket M13-MEAS-04 deleted on ship.

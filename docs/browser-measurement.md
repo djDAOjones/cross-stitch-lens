@@ -393,6 +393,9 @@ browser) and collects two validated bv2 reports into `bench-reports`:
   never replaces the untraced capture canon; the report's product
   is the GC accounting. The raw trace (large, may embed window
   titles) stays local in a `traces` subfolder of `bench-reports`.
+  First canonical artefact: 2026-08-08 on `684811a` (D133) — GC
+  ~0.4 % of wall time, max pause 12.5 ms, zero observer long tasks;
+  see `docs/performance-evidence.md` → D133.
 
 **Flag-granted capture is a sanctioned variant.** The launch flag
 `--auto-select-window-capture-source-by-title` (probed on Chrome

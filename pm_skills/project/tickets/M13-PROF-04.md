@@ -155,3 +155,14 @@ fixes show up truthfully in the rows. The rehearsal sheet is repaired
 against the shipped M14 surface (pause/resume is now Freeze/Unfreeze;
 harness buttons 4–8/3d verified unchanged). Remaining: unchanged —
 the owner capture session above.
+
+## Status 2026-08-08 (D129–D133) — sitting shrunk to Parts B + C residue
+
+The sheet's automation landed after D128: the capture legs and edit
+classes are `bench:auto` canon (D129; Part A′ held at D131), and
+Part C's trace half is `bench:trace` (D133 — per-window GC with
+observer long tasks quoted, controlled-source only). Remaining: the
+owner sitting — Part B (Photoshop content) and Part C's human
+residue (the Photoshop-content app trace, adversarial/recovery
+checks). Close on that session's numbers plus owner notes;
+acceptance stays M13-ACCEPT-02.

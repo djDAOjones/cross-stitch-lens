@@ -19,6 +19,14 @@
 
 ## M13 — Visual processing performance, remainder (in progress)
 
+- M13-MEAS-04 (2026-08-08) — Part C's trace half automated:
+  `bench:trace` drives the flagged bench Chrome over raw CDP (Node
+  built-in WebSocket, zero new deps), publishes validated per-window
+  GC buckets with observer long tasks quoted alongside, and the
+  first canonical quiet-gap artefact closes PROF-05's live-GC line —
+  GC is not a pause source under driven capture (~0.4 % of wall
+  time, max 12.5 ms, zero long tasks). See D132/D133.
+
 - M13-MEAS-03 (2026-08-08) — the owner session shrinks to its human
   legs: `bench:auto` runs the capture and mem legs unattended
   (flag-granted, content-guarded, validity-gated), `--when-quiet`

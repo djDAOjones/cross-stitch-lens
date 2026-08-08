@@ -1600,3 +1600,45 @@ same menu; it is one word per profile and it is the owner's call.
 curation sheet published; the photo-slot half of the evidence format
 is blocked on owner-supplied images (`public/profile-demo/` is empty);
 the catalogue oddity is wish-listed.
+
+---
+
+## D140 — M15-GALLERY-01 batch 1 signed as-is; two open questions closed by the owner (2026-08-09)
+
+**Decision:** the owner signed all eight batch-1 candidates unchanged
+— Autumn leaves, Golden hour, Winter frost, Deep sea, Neon noir, De
+Stijl primaries, Delft blue, Ukiyo-e woodblock. Names and membership
+stand as drafted (D139). They are now shipped built-ins, not
+provisional, and batch 2 may start.
+
+**All-brands stands.** Rule-shaped profiles keep
+`libraries: allBrands`, matching shipped Sepia/Pastels. The known
+cost is accepted: one eight-colour design can call for thread from
+five brands. The reasoning is that the multi-brand shopping list is a
+*selection* concern — which threads get picked from the eligible set —
+not a membership one, so narrowing the gallery would be working around
+the symptom. It also keeps these eight behaving like the two profiles
+beside them in the same menu.
+
+**Neon noir signed with its residual named.** Its largest area is a
+mid grey-taupe rather than true darkness, after two retunes. A rename
+was recommended and **declined**: the neon poles do read, and the
+catalogue holds too few near-blacks to carry the name any harder. This
+is recorded because the next reader will see the grey and take it for
+an oversight — it is a decision. Changing it needs the owner, not a
+tidy-up.
+
+**Left standing from D139:** the photo-slot half of the evidence
+format is still blocked on owner-supplied images
+(`public/profile-demo/` holds only its README), and the catalogue's
+`ariadna:1650` row — a cyan-white named "heather very light" — is
+still wish-listed for an owner call. Neither gates the signature.
+
+**Scope:** comment text in `src/core/color-profile.ts` recording the
+signature and the Neon noir decision; memory. No recipe, no rule and
+no membership changed — the signature is the whole change. `check`
+green.
+
+**Link:** backlog → M15-GALLERY-01 batch 1 signed, item stays open for
+later batches; trajectory → one line; D139 is the drafting and review
+record and stands unamended.

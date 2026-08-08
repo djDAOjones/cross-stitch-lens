@@ -354,7 +354,7 @@ export function builtInProfiles(catalogue: ThreadCatalogue): ColorProfile[] {
   ].map((reference) => `dmc:${reference}`);
   const dmc = (...references: string[]): string[] =>
     references.map((reference) => `dmc:${reference}`);
-  // M15-GALLERY-01 batch 1 (unsigned until the owner curates — D115).
+  // M15-GALLERY-01 batch 1 — owner-signed 2026-08-09 (D140).
   // Curated membership, in deliberate order: order is identity (D46),
   // so a ladder ships reading light-to-dark rather than as a bag.
   const deStijl = dmc('666', '820', '444', '310', 'B5200');
@@ -380,12 +380,14 @@ export function builtInProfiles(catalogue: ThreadCatalogue): ColorProfile[] {
       ranges: [{ saturation: [0, 45], brightness: [65, 100] }],
     }),
     profile('classic', 'Classic cross stitch', { include: classic }),
-    // --- M15-GALLERY-01 batch 1 -------------------------------------
+    // --- M15-GALLERY-01 batch 1 — owner-signed 2026-08-09 (D140) -----
     // Rule-shaped where the style genuinely is a band of colour space,
     // curated where a rule would lie about it. A range profile is the
     // *eligible universe* the design's colour-count limit then selects
     // from, so hundreds of entries is the shape (Sepia resolves 346,
     // Pastels 965) — narrowness of character matters, not of count.
+    // All eight draw on every brand, signed as such: the multi-brand
+    // shopping list is a selection concern, not a membership one.
     profile('autumn-leaves', 'Autumn leaves', {
       libraries: allBrands,
       ranges: [{ hue: [10, 42], saturation: [45, 100], brightness: [22, 78] }],
@@ -413,6 +415,12 @@ export function builtInProfiles(catalogue: ThreadCatalogue): ColorProfile[] {
     // neutral to read as black, so it is saturation ≤ 12 taken deeper
     // instead (brightness ≤ 35) — 32 near-neutral darks with no greens
     // among them at all. Cyan starts at 188, past green.
+    //
+    // Signed as-is with a known residual (D140): its largest area is a
+    // mid grey-taupe rather than true darkness. A rename was offered
+    // and declined — the catalogue holds too few near-blacks to carry
+    // the name any harder, and the neon poles do read. Do not "fix"
+    // this later without asking; it is a decision, not a defect.
     profile('neon-noir', 'Neon noir', {
       libraries: allBrands,
       ranges: [

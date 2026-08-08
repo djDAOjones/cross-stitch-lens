@@ -74,6 +74,16 @@
 
 ## M15 — Colour & dithering profiles (agent work complete — the two acceptance sessions remain)
 
+- M15-GALLERY-01 batch 1 (2026-08-09) — eight built-in style profiles
+  ship owner-signed: five rule-shaped (Autumn leaves, Golden hour,
+  Winter frost, Deep sea, Neon noir) and three curated (De Stijl
+  primaries, Delft blue, Ukiyo-e woodblock). The batch set the
+  evidence format — each candidate rendered through the real pipeline
+  and reported by the colours it actually selects — which caught two
+  candidates not reading as their names before signature. Later
+  batches continue against the ticket's remaining candidates. See
+  D139 (drafting and review) and D140 (signature).
+
 - M15-DITH-01, M15-DITH-02, M15-DITH-03, M15-DITH-04 (2026-08-07) —
   the dither half ships on the shared shell with zero shell changes:
   presets + structural matching move to core, ditherProfileRef joins

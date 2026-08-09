@@ -18,11 +18,26 @@ import { sampleBuffer } from './sample.ts';
 /** Debounce for draft-driven re-renders. */
 export const PREVIEW_DEBOUNCE_MS = 150;
 
-/** The photo slots: file names under /profile-demo/. */
+/**
+ * The photo slots: file names under /profile-demo/.
+ *
+ * Six owner-supplied images, all 2048², each chosen for a different
+ * way a profile can fail: two landscapes (a palette has to hold up on
+ * more than one), a portrait (skin tones are where a narrow profile
+ * shows first), a flat-colour graphic (banding and posterisation), a
+ * stained-glass frame (saturated colour against black leading — the
+ * hardest case for a rule-shaped profile), and text (legibility
+ * survives or it does not).
+ *
+ * Extensions are part of the contract: the loader fetches this exact
+ * name, so a JPEG here must say `.jpg`.
+ */
 export const PHOTO_SLOTS = [
-  { id: 'landscape', label: 'Landscape photo', file: 'landscape.png' },
-  { id: 'cartoon', label: 'Cartoon object', file: 'cartoon.png' },
-  { id: 'portrait', label: 'Portrait photo', file: 'portrait.png' },
+  { id: 'landscape', label: 'Landscape photo 1', file: 'landscape-1.jpg' },
+  { id: 'landscape2', label: 'Landscape photo 2', file: 'landscape-2.jpg' },
+  { id: 'portrait', label: 'Portrait photo', file: 'portrait.jpg' },
+  { id: 'graphic', label: 'Flat-colour graphic', file: 'graphic.jpg' },
+  { id: 'stained-glass', label: 'Stained glass', file: 'stained-glass.jpg' },
   { id: 'text', label: 'Text in three fonts', file: 'text.png' },
 ] as const;
 

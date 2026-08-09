@@ -32,12 +32,13 @@ build at all — batch 2's eight profiles do not exist there.
 
 ## Before the sitting
 
-1. **Add the four demo photos** (M15-EVID-01) to `public/profile-demo/`:
-   `landscape.png`, `cartoon.png`, `portrait.png`, `text.png`. Without
-   them three of the five test-preview slots read "Image offline", and
-   M15-ACCEPT-02 asks you to judge that preview's usefulness — judging
-   it with three slots dark would produce a false fail. If you have no
-   images, skip the preview-usefulness verdict rather than fail it.
+1. **Demo images — already done** (M15-EVID-01, D147). Six 2048²
+   images sit in `public/profile-demo/` and all six render: two
+   landscapes, portrait, flat-colour graphic, stained glass, text. The
+   editor's Preview select now offers nine views (the design, the six
+   photos, the test card, and all-at-three-resolutions). Nothing to do
+   — just know the preview is real now, so leg 4's verdict on it means
+   something.
 2. **Regenerate the dither gallery** — DITH-05 says `npm run audit`;
    **run only the gallery file instead**:
 
@@ -67,8 +68,8 @@ eye is fresh.
 | --- | --- | --- | --- |
 | 1 | **Still baseline** — frozen source, p64 and p489, no dither then each of the five methods | M13 | M13 sheet case 1 |
 | 2 | **Dither gallery review** — per method: banding, noise, edge damage, isolated stitches, worm artefacts; does the label predict the look | DITH-05 | DITH-05 step 1 |
-| 3 | **Profile judgement** — all **sixteen** built-ins: does the name predict the look, are the basis lines honest, is any profile redundant or missing | DITH-05 + M15 | DITH-05 step 2 |
-| 4 | **Editor comprehension** — build one profile from scratch; duplicate a built-in, tune it, Save; read the unnamed/drift states and the (edited) copy flow; full-RGB shows the named demonstration palette; judge the test preview; settings survive save/reopen | M15 + DITH-05 | M15-ACCEPT-02 intent + DITH-05 step 4 |
+| 3 | **Profile judgement** — all **sixteen** built-ins against the six demo images: does the name predict the look, are the basis lines honest, is any profile redundant or missing | DITH-05 + M15 | DITH-05 step 2 |
+| 4 | **Editor comprehension** — build one profile from scratch; duplicate a built-in, tune it, Save; read the unnamed/drift states and the (edited) copy flow; full-RGB shows the named demonstration palette; judge the test preview across all six images (stained glass is the one that breaks rule-shaped profiles); settings survive save/reopen | M15 + DITH-05 | M15-ACCEPT-02 intent + DITH-05 step 4 |
 | 5 | **Typical live work** — Photoshop at 200² then 300²: brush marks, sustained strokes, fills, layer toggles, transforms; switch profiles and dither methods **while editing** | M13 + DITH-05 | M13 case 2 + DITH-05 step 3 |
 | 6 | **Scheduling and recovery** — forced refresh, crop move/resize, compare toggle and drag, zoom/pan, freeze/unfreeze, draft entry and recovery, capture stop and failure recovery | M13 | M13 case 4 |
 | 7 | **Exports** — clean/enlarged PNG, chart, PDF; at full quality, while draft is visible, after a palette switch, and for at least one diffusion and one threshold profile | M13 + DITH-05 | M13 case 5 + DITH-05 step 5 |
@@ -110,3 +111,14 @@ regardless.
 - Never record raw pixels, project storage, Photoshop filenames or
   personal content. A screen recording stays local; note that it exists
   and its timestamp.
+
+## Known before you start
+
+Neither blocks the sitting; both are recorded, so noticing them again
+is not a finding.
+
+- **M15-UI-05** — in the editor's Libraries list the `Browse` buttons
+  form a ragged column (eight rows, eight left edges), because each
+  follows a variable-width brand name.
+- **ICE-AUDIT-01 / ICE-ROUTE-01** — `npm run audit` fails on two files;
+  use the single gallery command in prep step 2.

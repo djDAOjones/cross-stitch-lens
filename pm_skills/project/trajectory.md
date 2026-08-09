@@ -107,6 +107,12 @@
 
 ## M15 — Colour & dithering profiles (agent work complete — the two acceptance sessions remain)
 
+- M15-EVID-01 (2026-08-09) — six owner 2048² demo images land in
+  `public/profile-demo/` and `PHOTO_SLOTS` grows four → six to use all
+  of them: two landscapes, portrait, flat-colour graphic, stained
+  glass, text. The editor's test preview now judges a profile on real
+  pictures rather than only the generated hue sweep. See D147.
+
 - M15-GALLERY-01 batch 2 (2026-08-09) — eight more built-in style
   profiles ship owner-signed, taking the gallery to sixteen: four
   rule-shaped (Rainforest, Spring meadow, Gemstones, Moorland) and

@@ -68,22 +68,21 @@ against the M13 remainder is the owner's call at pick time.
 - [ ] **M15-ACCEPT-02 Maintainer acceptance session** [maintainer] (2026-08-07)
   Intent: the human half — a live session over the editor: build a profile from scratch, judge the style built-ins, the test preview's usefulness, and the (edited) flow's legibility.
   Done when: owner pass/fail notes recorded; failures route to fix tasks, never silent rework.
-  Status 2026-08-09: runs inside the combined sitting — see `docs/acceptance-combined-session.md` (legs 3, 4). Judging the test preview wants M15-EVID-01's photos in place first.
+  Status 2026-08-09: runs inside the combined sitting — see `docs/acceptance-combined-session.md` (legs 3, 4). The six demo images are in place (D147), so the test preview can actually be judged — all six slots render.
 
 - [~] **M15-GALLERY-01 Profile gallery: culture & nature** [sign-off] [detail] (2026-08-07)
   Intent: owner ask (D115) — many useful and interesting built-in profiles from across culture and nature (absorbs ICE-PRESET-01); agent drafts rule- or membership-based candidates in batches with test-image evidence, the owner curates names and membership per batch; shipped names style-descriptive, never trademarks; batches are owner-paced and interleave freely with the dither half — they never block it (D117). Candidate list in the ticket.
   Done when: each shipped batch has owner-signed membership or rules and honest naming, distinguished from user profiles; the candidate list lives in the ticket, never the select.
-  Status 2026-08-09 (D146): **batches 1 and 2 both signed — 16 built-in style profiles ship.** Batch 1 (D140) and batch 2 (D146) each signed as drafted; three residuals are decisions, not defects, and none may be "fixed" without asking — rule-shaped profiles keep all-brands, Neon noir keeps its grey floor, and Art deco keeps its chrome (43.8 % of the evidence card, whose greyscale ramp flatters it; the 415 → 3799 swap was offered and not taken). The gallery's shipped names are style-descriptive: "Fluoro spot print" is the ticket's "Risograph print" renamed off a trademark, and `riso` now sits in the naming guard. The evidence run is reproducible — `npm run audit` → `tests/audits/profile-gallery.audit.test.ts`; quote it, do not re-derive it. Item stays open for batch 3 against the ticket's remaining ~41 candidates. One carry-over, not gating: the photo-slot half of the evidence format is blocked on owner images, now tracked as M15-EVID-01. The ticket's "blocked on M15-CORE-02" line is stale — CORE-02 (D122) and UI-04 (D123) both shipped.
+  Status 2026-08-09 (D146): **batches 1 and 2 both signed — 16 built-in style profiles ship.** Batch 1 (D140) and batch 2 (D146) each signed as drafted; three residuals are decisions, not defects, and none may be "fixed" without asking — rule-shaped profiles keep all-brands, Neon noir keeps its grey floor, and Art deco keeps its chrome (43.8 % of the evidence card, whose greyscale ramp flatters it; the 415 → 3799 swap was offered and not taken). The gallery's shipped names are style-descriptive: "Fluoro spot print" is the ticket's "Risograph print" renamed off a trademark, and `riso` now sits in the naming guard. The evidence run is reproducible — `npm run audit` → `tests/audits/profile-gallery.audit.test.ts`; quote it, do not re-derive it. Item stays open for batch 3 against the ticket's remaining ~41 candidates. The photo half of the evidence format is unblocked: six owner images landed 2026-08-09 (D147), so the editor's preview judges a profile on real pictures, not only the generated card. The ticket's "blocked on M15-CORE-02" line is stale — CORE-02 (D122) and UI-04 (D123) both shipped.
 
 - [ ] **M15-DATA-01 Verify the thread catalogue's colour listings** [detail] (2026-08-09)
   Intent: sweep all 3,338 rows across the eight brands for listings that are wrong or missing rather than merely surprising — the gallery keeps surfacing them one at a time (`ariadna:1650`, `finca:4368`), which is the slowest possible way to find them. A first scan already has numbers: **21 rows carry no name at all** (every one of them Finca, ~10 % of that brand) and **11 same-brand pairs render an identical hex**; every brand+reference pair is unique and every hex is well formed. Name-versus-colour disagreement is the hard class — a crude probe returns 402 hits that are mostly compound names ("Blue Green", "Antique Violet") sitting legitimately between their two words, so it needs a better probe or eyes, not a threshold.
   Done when: a committed sweep reports each defect class with its rows, the certain classes are listed for the owner, and every accepted correction is made by the owner in `thread-list.csv` (protected user data — the agent never edits it) with `catalogue.json` regenerated.
   Note: verifying the measured hexes against each brand's *published* values is deliberately out of this item — all 3,338 rows carry provenance `measured` and no published source is in the repo, so that is its own piece of work.
 
-- [ ] **M15-EVID-01 Owner photos for the profile test preview** [maintainer] (2026-08-09)
-  Intent: the editor's test preview and the gallery's evidence format both want four owner-supplied images; `public/profile-demo/` holds only its README, so three of the five slots render "Image offline" and every batch so far has been judged on the generated card alone. A style that reads on a synthetic hue sweep is not proof it reads on a face or a landscape.
-  Done when: `landscape.png`, `cartoon.png`, `portrait.png` and `text.png` sit in `public/profile-demo/` (names fixed by `PHOTO_SLOTS` in `src/ui/profile-editor-preview.ts`), and the gallery audit's evidence extends to them.
-  Note: owner action — the agent cannot supply the images. Not gating: batches ship on the card half.
+- [ ] **M15-UI-05 Library rows: the Browse buttons form a ragged column** (2026-08-09)
+  Intent: in the profile editor's Libraries list each `Browse` sits immediately after a variable-width brand name inside a flex `.check-row`, so the eight buttons start at eight different left edges (measured 129–157 px at 1280 px wide). A column of identical actions that never lines up reads as unfinished, and it is the first thing visible in the editor the acceptance sitting judges.
+  Done when: the action column shares one left edge at every width, with the brand-name column taking the slack; no change to what the buttons do.
 
 #### Dither half (D116) — after the colour half ships (owner order)
 
@@ -91,6 +90,18 @@ against the M13 remainder is the owner's call at pick time.
   Intent: the human half — the absorbed M8 visual-quality session (gallery, live capture, comprehension, exports, fallback, access) run once on the final profile surface, judging the five methods and whether profiles and their names predict what the eye sees; the session protocol (incl. the M8-GOLD-01 rider) is in the ticket.
   Done when: owner pass/fail notes per method and per built-in profile are recorded; failures route per the ticket (a method failure reopens D61), never silent rework.
   Status 2026-08-09: runs inside the combined sitting — see `docs/acceptance-combined-session.md`. Note the profile half is now **sixteen** built-ins, not the eight the ticket was written against.
+
+### Later — M16 Export settings for print
+
+Promoted 2026-08-09 (D147) from the owner's ask at the D134 PROF-04/05
+sitting, where they called for it as a milestone rather than a task.
+It had been sitting on the wish-list since. Nothing here is designed
+yet — the milestone is committed, its scope is not.
+
+- [ ] **M16-SCOPE-01 Scope the print-sized export defaults** [sign-off] (2026-08-09)
+  Intent: today's export defaults are sized for the screen; the owner wants them sized for print — an enlarged PNG at least ~2k px on its longest side by default, grid lines and major numbering included rather than opt-in. Establish what "print-ready by default" means across the four exporters (clean PNG, enlarged PNG, chart PNG, PDF) before any of it is built.
+  Done when: the owner signs a scope naming the new defaults per exporter, what stays configurable, and how an existing project's saved export settings migrate.
+  Note: exports must keep re-running the pipeline at full quality (`AGENTS.md`) — this changes defaults and sizing, never the quality rule.
 
 ### Icebox
 

@@ -1910,3 +1910,49 @@ membership changed — the signature is the whole change. `check` green.
 **Link:** backlog → batches 1 and 2 both signed, item stays open for
 batch 3; two items added; trajectory → one line; D144 is the drafting
 record and stands unamended.
+
+---
+
+## D147 — Six demo images land, the slot list grows to six, and M16 opens (2026-08-09)
+
+**Decision:** the owner supplied six 2048² demo images; they are in
+`public/profile-demo/` and `PHOTO_SLOTS` grows from four to six to use
+all of them. M15-EVID-01 closes.
+
+**The slot list was a guess and the images are the fact.** The four
+slots were named before any image existed — `landscape.png`,
+`cartoon.png`, `portrait.png`, `text.png`. What arrived is two
+landscapes, a portrait, a flat-colour graphic, stained glass and text,
+five of them JPEG. Bending six images into four slots would have
+thrown away the two that test a profile hardest: a second landscape is
+what stops one lucky picture reading as proof, and stained glass —
+saturated colour against black leading — is the case a rule-shaped
+profile fails first. So the list took the images' names, extensions
+included, rather than the reverse.
+
+**Verified rather than assumed:** all six fetch with an `image/*`
+content type (the loader's guard rejects anything else, which is how a
+missing file stays an honest "Image offline"), and each renders
+through the real pipeline in the editor — six canvases, no offline
+state. The repo grows 5.3 MB; the images are owner data and were not
+recompressed.
+
+**A defect fell out of looking.** In the editor's Libraries list each
+`Browse` button sits after a variable-width brand name in a flex row,
+so eight buttons start at eight different left edges (129–157 px at
+1280 px wide). Filed as M15-UI-05 — it is the first thing visible in
+the editor the acceptance sitting judges.
+
+**M16 is committed, not scoped.** The owner's export-settings ask from
+the D134 sitting — print-sized defaults, grid lines and numbering on —
+was called a milestone at the time and had been sitting on the
+wish-list since. It becomes **M16**, opening with a `[sign-off]`
+scoping item, because "print-ready by default" spans four exporters
+and a migration and should not be guessed at.
+
+**Scope:** `src/ui/profile-editor-preview.ts`, its test, the
+profile-demo README, six images, memory. `check` green.
+
+**Link:** backlog → M15-EVID-01 removed, M15-UI-05 and the M16 section
+added; wish-list → the export-settings line promoted out; trajectory →
+one line.

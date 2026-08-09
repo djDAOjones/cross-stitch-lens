@@ -104,13 +104,20 @@ describe('preview rig geometry and slots', () => {
     expect(dividedGrid({ width: 40, height: 40 }, 16)).toEqual({ width: 8, height: 8 });
   });
 
-  it('names four photo slots for the profile-demo folder', () => {
+  it('names the six photo slots for the profile-demo folder', () => {
+    // The file names are a contract with `public/profile-demo/`, not a
+    // label: the loader fetches these exact strings, so a renamed or
+    // re-encoded image silently becomes an "Image offline" slot. The
+    // extension is part of it — five of the six are JPEGs.
     expect(PHOTO_SLOTS.map((s) => s.file)).toEqual([
-      'landscape.png',
-      'cartoon.png',
-      'portrait.png',
+      'landscape-1.jpg',
+      'landscape-2.jpg',
+      'portrait.jpg',
+      'graphic.jpg',
+      'stained-glass.jpg',
       'text.png',
     ]);
+    expect(new Set(PHOTO_SLOTS.map((s) => s.id)).size).toBe(PHOTO_SLOTS.length);
   });
 
   it('treats a non-image answer as an absent slot, not a broken one', async () => {

@@ -19,6 +19,125 @@ export const EXPECTED_EDIT_CLASSES = [
   'rapid-scatter',
 ];
 
+/**
+ * The bv2 bindability amendment (M13-IMPL-02, signed at M13-SYNTH-01 —
+ * D135). Before it, no browser row could carry a product target at all:
+ * `docs/measurement-contract.md` bound budgets only to node rows,
+ * because the browser numbers of the day came from hand-run rehearsals
+ * whose environment nobody could re-establish.
+ *
+ * The automated capture leg changed that — a driven **base** window is
+ * reproducible: a controlled same-origin source painting on a fixed
+ * schedule, content-verified before any row is measured, on a
+ * quiet-gated desktop with visibility asserted. Those rows, and only
+ * those, may bind.
+ *
+ * Two kinds of row stay permanently unbindable, and
+ * {@link assertBindable} enforces it rather than trusting the table:
+ *
+ * - `.edit-<class>` rows drive the source at the *class's* own cadence,
+ *   not the promise's, so their medians answer a different question;
+ * - anything measured against real Photoshop, whose content and timing
+ *   nobody controls. Those figures stay M13-ACCEPT-02 corroboration.
+ *
+ * `interaction` is deliberately absent: the double-rAF protocol race
+ * (2–3 of 8 attempts missed) and the absence of a real start mark would
+ * make a bound p95 noise. It stays published, not bound (D135).
+ */
+export const BROWSER_TARGETS = new Map([
+  [
+    'capture.g300.p64.lab.fs-s100-serp|preview-update',
+    { ms: 41.0, tolerance: 1.35, runtime: 'Chrome, Apple M1 Max', taken: 'v0.5.0+20260808.3bfe7ef' },
+  ],
+  [
+    'capture.g200.p64.lab.fs-s100-serp|preview-update',
+    { ms: 31.2, tolerance: 1.35, runtime: 'Chrome, Apple M1 Max', taken: 'v0.5.0+20260808.3bfe7ef' },
+  ],
+]);
+
+/**
+ * The product promise itself, asserted as a sustained rate rather than
+ * a latency percentile: the driven leg commands changes at 4 /sec and
+ * every one of them must produce a visible update. A median that looks
+ * fast while frames are being dropped is not the promise being kept,
+ * which is why the miss counters bind alongside the rate.
+ */
+export const CADENCE_TARGET = { updatesPerSec: 4 };
+
+/** Rows that may never carry a product target, whatever a table says. */
+function assertBindable(key, failures) {
+  if (key.includes('.edit-')) {
+    failures.push(
+      `contract: ${key} is an edit-class row — it is driven at its class's own ` +
+        'cadence and can never carry a product target (bv2 amendment, D135)',
+    );
+  }
+  if (!key.startsWith('capture.')) {
+    failures.push(
+      `contract: ${key} is not a driven capture row — only the automated leg's ` +
+        'base windows are product-target-bindable (bv2 amendment, D135)',
+    );
+  }
+}
+
+/**
+ * Product-target checks over a capture report: the cadence promise on
+ * each driven base window, and the guarded `preview-update` medians.
+ *
+ * A missing counter fails rather than passes — the promise is not
+ * "no misses were reported", it is "misses were counted and there were
+ * none". An absent field means the harness stopped answering, and a
+ * silent zero there is exactly the green-washing D43 forbids.
+ */
+function productTargetFailures(report) {
+  const failures = [];
+  for (const [key, target] of BROWSER_TARGETS) {
+    assertBindable(key, failures);
+    const [workloadId, boundary] = key.split('|');
+    const row = report.rows.find(
+      (r) => r.workloadId === workloadId && r.boundary === boundary,
+    );
+    // Presence is already gated by validateCaptureReport; skip quietly
+    // so one missing row yields one failure, not two.
+    if (row === undefined || row.status !== 'measured' || row.summary === null) continue;
+
+    const ceiling = target.ms * target.tolerance;
+    if (row.summary.median > ceiling) {
+      failures.push(
+        `target: ${key} median ${row.summary.median.toFixed(2)} ms exceeds ` +
+          `${ceiling.toFixed(2)} ms (baseline ${target.ms.toFixed(2)} ms ` +
+          `×${String(target.tolerance)}, ${target.runtime}, ${target.taken})`,
+      );
+    } else if (row.summary.median < target.ms / 2) {
+      failures.push(
+        `target: ${key} median ${row.summary.median.toFixed(2)} ms is over 2× faster ` +
+          `than its baseline ${target.ms.toFixed(2)} ms — good news, but the guard has ` +
+          'gone slack; re-record the baseline',
+      );
+    }
+
+    const rate = row.meta?.['updates/sec over window'];
+    if (typeof rate !== 'number') {
+      failures.push(`target: ${key} has no 'updates/sec over window' reading`);
+    } else if (rate < CADENCE_TARGET.updatesPerSec) {
+      failures.push(
+        `target: ${key} sustained ${String(rate)} updates/sec, below the promised ` +
+          `${String(CADENCE_TARGET.updatesPerSec)} /sec`,
+      );
+    }
+
+    for (const counter of ['rvfc missed callbacks', 'window pump drops', 'window client drops']) {
+      const value = row.meta?.[counter];
+      if (typeof value !== 'number') {
+        failures.push(`target: ${key} has no '${counter}' count`);
+      } else if (value > 0) {
+        failures.push(`target: ${key} recorded ${String(value)} ${counter} — the cadence missed`);
+      }
+    }
+  }
+  return failures;
+}
+
 /** Shared checks: untainted, and the env row saw a visible page. */
 function coreFailures(report) {
   const failures = [];
@@ -67,7 +186,13 @@ function requireMeasured(report, failures, workloadId, boundary, what) {
 /**
  * Validate the capture-leg report: both canonical live windows, the
  * interaction run, and all six edit-class windows measured on a
- * visible, untainted run.
+ * visible, untainted run — then the M13-IMPL-02 product targets on the
+ * two driven base windows.
+ *
+ * This is the leg the product promise binds to, so a target miss exits
+ * the launcher non-zero exactly as a structural failure does. The
+ * report is written before validation either way: a miss is recorded
+ * evidence, never a reason to discard the run.
  */
 export function validateCaptureReport(report) {
   const failures = coreFailures(report);
@@ -86,6 +211,7 @@ export function validateCaptureReport(report) {
       `edit class ${editClass}`,
     );
   }
+  failures.push(...productTargetFailures(report));
   return failures;
 }
 
@@ -94,6 +220,12 @@ export function validateCaptureReport(report) {
  * leg): the three canonical rows on a visible, untainted run. Edit
  * classes are deliberately not required — the cross-check compares the
  * canonical rows only, so the picker leg stays short.
+ *
+ * Product targets are deliberately not asserted here either. The
+ * amendment bound the *automated* leg (D135), and this leg exists to
+ * test that leg's granting path against a hand-picked one (D131) — its
+ * job is agreement with the canon, measured by `bench-cross-check.mjs`,
+ * not a second independent verdict on the promise.
  */
 export function validatePickerCaptureReport(report) {
   const failures = coreFailures(report);

@@ -1697,3 +1697,41 @@ after, `npm run bench` green at 22 passed, nothing in `src/core/` or
 trajectory → one line; `docs/performance-evidence.md` → the D141
 measured section; D138 is the implementation record and stands
 unamended.
+
+## D142 — M13-IMPL-02: the promise becomes an assertion; bindability is enforced in code, not convention (2026-08-09)
+
+**Decision:** M13-IMPL-02 closes. The routing half is **record-only**
+as D135 signed it — categorical `lab → ts` / `rgb → wasm`, no
+thresholds, no selection code touched. The budget half lands in full.
+
+**The promise is now asserted.** Until now "≥ 4 preview updates/sec"
+was a sentence in the brief. It is now a gate: `bench:auto` fails when
+the driven capture leg's sustained rate drops below 4/sec, or any
+frame is missed or dropped. It binds as a **rate with zero misses**,
+never a latency percentile — a fast median while frames are dropped is
+not the promise being kept. A **missing** counter fails rather than
+passes: the claim is not "no misses were reported", it is "misses were
+counted and there were none", which is the only version D43's
+no-green-washing rule can hold.
+
+**Bindability is enforced, not documented.** The bv2 amendment lets
+driven *base* capture rows carry a target, because that environment is
+reproducible. `.edit-<class>` rows (driven at their own cadence) and
+anything measured against real Photoshop (content and timing nobody
+controls) never can. `assertBindable` checks this against the key
+rather than trusting the table, so a future edit cannot quietly bind an
+unbindable row. `interaction` stays published-not-bound (D135).
+
+**The node rebinding is drift, not a win.** All ten rows re-took
+1.7–4.3 % faster on the implementation build — uniformly, so it is
+environment/JIT, not any stage. Nothing here is an IMPL-01 effect: no
+node row observes the capture path (D141). The take is only as good as
+the machine: an earlier one of the same build, minutes after a full
+`check`, put `reduce` at 21.1 ms on a single 65 ms sample — enough to
+fail its own guard, and correctly *not* tainted, since nothing about
+that sample was implausible. The remedy is a settled machine, never a
+widened tolerance.
+
+**Link:** backlog → M13-IMPL-02 removed, M13-ACCEPT-01 unblocked;
+trajectory → one line; ticket deleted; two doc-deltas captured
+(AGENTS.md, DEV-INFRASTRUCTURE.md).

@@ -199,27 +199,38 @@ announced through `LibraryStore.persistent`, never silent.
 ## Performance budgets (measured baselines, asserted by `npm run bench`)
 
 The bar that binds is the product promise: **≥ 4 preview updates/sec at
-≤ 300² in the browser** (measured 11.6–17.4/sec before the M5D wins).
-1024² is an export/finishing grid, not a live-editing one.
+≤ 300² in the browser**. Since M13-IMPL-02 it is *asserted*, not merely
+stated — the driven capture leg of `npm run bench:auto` fails when the
+sustained rate drops below 4/sec or any frame is missed or dropped
+(D135). 1024² is an export/finishing grid, not a live-editing one, and
+the brief's "≤ 100 ms at 1024²" line was **retired** at D135: what
+binds there is correctness plus an honest published median.
 
-Per-stage budgets are **measured baselines, not aspirations**: each row
-records an observed median naming its **runtime, workload ID and
-build**, guarded by a regression multiplier (×1.35) and a staleness
-guard (a row running > 2× faster than recorded fails, so the baseline
-cannot go slack). The canonical rows and the measurement boundaries
-they bind to live in `docs/measurement-contract.md` (boundary contract
-**bv2**); `npm run bench` writes the report, then asserts them. Budgets
-bind to **warm, steady-state** calls — preparation is budgeted
-separately and cache misses publish as their own cold rows.
+Two kinds of bound row, never interchangeable:
+
+- **Regression baselines** — an observed median naming its **runtime,
+  workload ID and build**, guarded ×1.35 plus a staleness guard (a row
+  running > 2× faster than recorded fails, so the baseline cannot go
+  slack). They answer "did this get worse?". All node rows are these.
+- **Product targets** — the promise above, at a browser boundary. Only
+  driven **base** capture rows may carry one; `.edit-<class>` rows and
+  anything measured against real Photoshop are permanently unbindable
+  (the bv2 amendment, enforced in code). `interaction` stays published,
+  not bound.
+
+The canonical rows and the boundaries they bind to live in
+`docs/measurement-contract.md` (boundary contract **bv2**);
+`npm run bench` writes the node report and asserts the baselines,
+`npm run bench:auto` the browser leg and its targets. Budgets bind to
+**warm, steady-state** calls — preparation is budgeted separately and
+cache misses publish as their own cold rows.
 
 Node is **not** a browser proxy (the same TS resize runs ~3.5× slower
 in-browser while dither is ~1.1×), so every row names the runtime it was
-taken on; the `preview-update`, `interaction` and `export` boundaries
-are browser-only and are measured by the manual rehearsal in
-`docs/measurement-contract.md`. The aspirational 5/10/15/100 ms table
-that stood here missed every row but preview-render from the day it was
-written (D43) and was replaced by measured reality at M5C/M5D
-(D47/D48).
+taken on, and node never asserts a browser promise through a multiplier.
+The aspirational 5/10/15/100 ms table that stood here missed every row
+but preview-render from the day it was written (D43) and was replaced by
+measured reality at M5C/M5D (D47/D48).
 
 ## Project file (JSON, versioned)
 

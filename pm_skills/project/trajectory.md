@@ -19,6 +19,17 @@
 
 ## M13 — Visual processing performance, remainder (in progress)
 
+- M13-IMPL-02 (2026-08-09) — the product promise stops being a
+  sentence and becomes a gate: `bench:auto` now fails when the driven
+  capture leg's sustained rate falls under 4 updates/sec or any frame
+  is missed or dropped, with `preview-update` medians bound ×1.35 at
+  300²/200². Carries the bv2 bindability amendment — driven *base*
+  capture rows may bind, `.edit-<class>` and real-Photoshop rows never
+  can, enforced in code. All ten node baselines re-taken on the
+  implementation build (1.7–4.3 % faster: uniform drift, not a win);
+  env rows gain a parsed browser version. Routing confirmed unchanged
+  — no selection code touched. See D142.
+
 - M13-IMPL-01 (2026-08-09) — the two D135-signed candidates ship: one
   reused grab surface per session, and the pump's pre-submit 5.9 MB
   copy replaced by a transfer plus a guarded refill off that surface.

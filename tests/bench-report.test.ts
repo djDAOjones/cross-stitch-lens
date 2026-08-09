@@ -11,6 +11,7 @@ import { BOUNDARIES, BOUNDARY_VERSION, measurableOn } from '../src/bench/boundar
 import { measure, measureInterleaved, planFor, type Clock } from '../src/bench/harness.ts';
 import {
   assessValidity,
+  browserVersion,
   buildReport,
   CLOCK_DRIFT_TOLERANCE_MS,
   formatReport,
@@ -369,5 +370,51 @@ describe('harness', () => {
     expect(order).toEqual(['ts', 'wasm', 'ts', 'wasm', 'ts', 'wasm']);
     expect(samples.get('ts')).toHaveLength(2);
     expect(samples.get('wasm')).toHaveLength(2);
+  });
+});
+
+/**
+ * Env-row browser attribution (M13-IMPL-02, closing D128's gap). The
+ * brand-ordering cases are the point: Chrome and Edge UAs both contain
+ * `Safari/`, so a naive first-match parser labels every Chromium run
+ * "Safari" and the provenance field becomes actively misleading.
+ */
+describe('browserVersion (env-row attribution)', () => {
+  it('reads Chrome past the Safari token it also carries (happy path)', () => {
+    expect(
+      browserVersion(
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
+          '(KHTML, like Gecko) Chrome/151.0.7259.63 Safari/537.36',
+      ),
+    ).toBe('Chrome 151.0.7259.63');
+  });
+
+  it('prefers Edge over the Chrome and Safari tokens in the same UA (boundary)', () => {
+    expect(
+      browserVersion(
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
+          '(KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36 Edg/151.0.3485.14',
+      ),
+    ).toBe('Edge 151.0.3485.14');
+  });
+
+  it('reads real Safari from its Version token', () => {
+    expect(
+      browserVersion(
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 ' +
+          '(KHTML, like Gecko) Version/18.5 Safari/605.1.15',
+      ),
+    ).toBe('Safari 18.5');
+  });
+
+  it('reads Firefox', () => {
+    expect(
+      browserVersion('Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:141.0) Gecko/20100101 Firefox/141.0'),
+    ).toBe('Firefox 141.0');
+  });
+
+  it('says unknown rather than guessing (empty / unrecognised)', () => {
+    expect(browserVersion('')).toBe('unknown');
+    expect(browserVersion('SomeBot/1.0 (+https://example.test)')).toBe('unknown');
   });
 });

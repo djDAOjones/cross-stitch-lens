@@ -10,8 +10,22 @@ export interface ReportLike {
   rows?: unknown;
 }
 
+/** A browser product target: a measured median plus its regression guard. */
+export interface BrowserTarget {
+  /** Measured median in ms on {@link runtime}. */
+  ms: number;
+  /** The target trips above `ms × tolerance`. */
+  tolerance: number;
+  /** Where the figure was taken — never omit. */
+  runtime: string;
+  /** Build id the figure was taken against. */
+  taken: string;
+}
+
 export declare const EXPECTED_EDIT_CLASSES: readonly string[];
 export declare const EXPECTED_TRACE_WINDOWS: readonly string[];
+export declare const BROWSER_TARGETS: ReadonlyMap<string, BrowserTarget>;
+export declare const CADENCE_TARGET: { readonly updatesPerSec: number };
 export declare function validateCaptureReport(report: unknown): string[];
 export declare function validatePickerCaptureReport(report: unknown): string[];
 export declare function validateMemReport(report: unknown): string[];

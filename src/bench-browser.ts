@@ -42,6 +42,7 @@ import { measure, measureAsync } from './bench/harness.ts';
 import { retentionVerdict } from './bench/memory.ts';
 import {
   assessValidity,
+  browserVersion,
   buildReport,
   formatReport,
   measuredRow,
@@ -2860,6 +2861,7 @@ function assembleReport(): BenchReport {
         warmupRuns: 0,
         samples: [0],
         meta: {
+          browser: browserVersion(navigator.userAgent),
           viewport: `${String(innerWidth)}×${String(innerHeight)}`,
           devicePixelRatio,
           visibility: document.visibilityState,

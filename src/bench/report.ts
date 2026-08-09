@@ -100,6 +100,36 @@ export interface EnvironmentIdentity {
 }
 
 /**
+ * Browser name and version, parsed from a user-agent string for the
+ * env row (M13-IMPL-02; D128 named this the one attribution the bv2
+ * comparison wanted). The raw UA already rides in
+ * `EnvironmentIdentity.runtimeVersion`, but reading a version out of it
+ * by eye is the friction that let a cross-build comparison quietly
+ * straddle two Chrome releases.
+ *
+ * Order matters: a Chrome UA also contains `Safari/`, and an Edge UA
+ * contains both — so the most specific brand has to win. Anything
+ * unrecognised returns `unknown`; a wrong confident answer is worse
+ * than an honest gap in a provenance field.
+ *
+ * @param userAgent raw `navigator.userAgent`.
+ * @returns e.g. `Chrome 151.0.7259.63`, or `unknown`.
+ */
+export function browserVersion(userAgent: string): string {
+  const brands: readonly (readonly [string, RegExp])[] = [
+    ['Edge', /Edg(?:e|A|iOS)?\/([\d.]+)/],
+    ['Chrome', /(?:Chrome|CriOS)\/([\d.]+)/],
+    ['Firefox', /(?:Firefox|FxiOS)\/([\d.]+)/],
+    ['Safari', /Version\/([\d.]+).*Safari\//],
+  ];
+  for (const [name, pattern] of brands) {
+    const match = pattern.exec(userAgent);
+    if (match?.[1] !== undefined) return `${name} ${match[1]}`;
+  }
+  return 'unknown';
+}
+
+/**
  * Run-validity verdict (M13-MEAS-01). A research run at e703ed4 carried
  * a single ~5.8-million-ms sample — sleep, suspension or a stall, never
  * established — and the honest response is to mark the whole run

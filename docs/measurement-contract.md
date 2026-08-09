@@ -317,39 +317,90 @@ nature, and a machine-variance failure must never block the gate. The
 deterministic parts — matrix coverage, percentile math, warm-up
 exclusion, schema round-trip — do run in the gate.
 
-### Budget bindings (bv2 baselines, 2026-07-22)
+### Budget bindings (bv2 baselines, 2026-08-09)
 
 Budgets attach to one workload at one boundary (`BUDGETS` in
 `tests/bench/run-node.ts`). An unattached budget number is exactly the
-ambiguity this contract removes. Since D47 these are **measured
-baselines with a ×1.35 regression guard**, not aspirational targets;
-the figures below were re-taken under bv2 on 2026-07-22 (node 24.5,
-Apple M1 Max, build `v0.5.0+20260722.33d021b` — D64, with the bv1→bv2
-comparison in `docs/performance-evidence.md`). Product-target choices
-were signed at M13-SYNTH-01 (D135 — `docs/performance-evidence.md` →
-"M13-SYNTH-01 — the synthesis"); committed rebinding, the browser
-product-target rows and the capture-row bindability amendment wait
-for M13-IMPL-02.
+ambiguity this contract removes.
+
+Two kinds of bound row exist, and they are never interchangeable:
+
+- **Regression baselines** — what the code does today on a named
+  runtime and workload, guarded ×1.35 (D47). They answer "did this get
+  worse?", not "is this good enough". Every node row is one of these.
+- **Product targets** — a promise the product makes to its user,
+  asserted at a browser boundary. Only the capture-leg rows below are
+  targets. Node never asserts a browser promise through a multiplier.
+
+The node figures were re-taken on 2026-08-09 on the implementation
+build (node 24.5, Apple M1 Max, `v0.5.0+20260808.08545db` —
+M13-IMPL-02, applying D135's rebinding clause). They replace the
+2026-07-22 figures (D64), which were green under guard but predated
+~3k churned lines. Every row moved 1.7–4.3 % faster and none by more
+than that — a uniform environment/JIT drift, not a win in any stage.
+The bv1→bv2 comparison stays in `docs/performance-evidence.md`.
 
 Core defaults elided from the IDs below:
 `noise.w1280.opaque.…lab….resize-first.stretch.still`.
 
 | Baseline | Bound to |
 | --- | --- |
-| Resize 24.5 ms | `stage`/`resize` on `g1024.p64` `fs-s100-serp` |
-| Reduce via LUT 13.5 ms | `stage`/`reduce` on `g1024.p64` `nodither` |
-| Floyd–Steinberg 296.7 ms | `stage`/`dither` on `g1024.p64` `fs-s100-serp` |
-| Atkinson 337.9 ms | `stage`/`dither` on `g1024.p64` `atkinson-s100-serp` |
-| Jarvis 331.5 ms | `stage`/`dither` on `g1024.p64` `jarvis-s100-serp` |
-| Ordered 290.8 ms | `stage`/`dither` on `g1024.p64` `ordered-s100` |
-| Blue-noise 289.8 ms | `stage`/`dither` on `g1024.p64` `bluenoise-s100` |
-| Whole pipeline 321.4 ms | `pipeline-compute` on the 1024² `fs-s100-serp` workload |
-| Whole pipeline 37.0 ms | `pipeline-compute` on the 300² `fs-s100-serp` workload (new in bv2 — the grid the product promise binds at, as a node component baseline, **not** a proxy for the in-browser promise) |
-| Whole pipeline 19.8 ms | `pipeline-compute` on the 200² `fs-s100-serp` workload |
-| Preview render | not node-measurable — browser rehearsal below |
+| Resize 23.9 ms | `stage`/`resize` on `g1024.p64` `fs-s100-serp` |
+| Reduce via LUT 12.9 ms | `stage`/`reduce` on `g1024.p64` `nodither` |
+| Floyd–Steinberg 287.5 ms | `stage`/`dither` on `g1024.p64` `fs-s100-serp` |
+| Atkinson 326.6 ms | `stage`/`dither` on `g1024.p64` `atkinson-s100-serp` |
+| Jarvis 320.0 ms | `stage`/`dither` on `g1024.p64` `jarvis-s100-serp` |
+| Ordered 284.6 ms | `stage`/`dither` on `g1024.p64` `ordered-s100` |
+| Blue-noise 284.9 ms | `stage`/`dither` on `g1024.p64` `bluenoise-s100` |
+| Whole pipeline 311.2 ms | `pipeline-compute` on the 1024² `fs-s100-serp` workload — an export/finishing grid. The brief's "≤ 100 ms at 1024²" line was **retired** at D135; this median is published and guarded, never a target |
+| Whole pipeline 35.9 ms | `pipeline-compute` on the 300² `fs-s100-serp` workload (the grid the product promise binds at, as a node component baseline, **not** a proxy for the in-browser promise) |
+| Whole pipeline 19.0 ms | `pipeline-compute` on the 200² `fs-s100-serp` workload |
+| Preview render | not node-measurable — see the product targets below |
 
 Budgets stretch ×3 under `CI=true`. The multiplier is recorded in the
-report, so a CI number is never mistaken for a local one.
+report, so a CI number is never mistaken for a local one. A CI
+tolerance can never turn a local baseline into a target.
+
+**Take these on a quiet machine.** Every row above has a relative
+spread ≤ 0.07. An earlier take of this same build, run minutes after a
+full `check` and `matrix`, put `reduce` at 21.1 ms with a spread of
+2.32 (one 65 ms sample) — enough to fail its own ×1.35 guard. The
+validity gate did not taint it, and should not have: nothing about a
+65 ms sample is implausible, it was just contention. The remedy is a
+settled machine, never a widened tolerance.
+
+### Product targets and the capture-row bindability amendment (bv2, 2026-08-09)
+
+Signed at M13-SYNTH-01 (D135 — `docs/performance-evidence.md` →
+"M13-SYNTH-01 — the synthesis"), applied by M13-IMPL-02. Asserted in
+`BROWSER_TARGETS` / `CADENCE_TARGET` (`scripts/bench-auto-validate.mjs`)
+and enforced by `npm run bench:auto`, which exits non-zero on a miss.
+
+**The amendment.** Before it, no browser row could carry a product
+target: the browser numbers of the day came from hand-run rehearsals
+whose environment nobody could re-establish. The automated capture leg
+changed that — a driven **base** window is reproducible (a controlled
+same-origin source painting on a fixed schedule, content-verified
+before any row is measured, on a quiet-gated desktop with visibility
+asserted). Those rows, and only those, may bind. Permanently
+unbindable, enforced in code rather than by convention:
+
+- `.edit-<class>` rows — driven at the class's own cadence, so their
+  medians answer a different question;
+- anything measured against real Photoshop — content and timing nobody
+  controls. Those figures stay M13-ACCEPT-02 corroboration.
+
+| Target | Bound to |
+| --- | --- |
+| ≥ 4 updates/sec sustained, zero missed callbacks and zero pump/client drops | `preview-update` on both driven base windows. This *is* the product promise; a fast median with dropped frames fails |
+| Median 41.0 ms ×1.35 | `preview-update` on `capture.g300.p64.lab.fs-s100-serp` |
+| Median 31.2 ms ×1.35 | `preview-update` on `capture.g200.p64.lab.fs-s100-serp` |
+| `interaction` | **published, not bound** — the double-rAF protocol race (2–3 of 8 attempts missed) and the absence of a real start mark would make a bound p95 noise (D135) |
+
+Medians taken on `v0.5.0+20260808.3bfe7ef` (Chrome, Apple M1 Max), the
+IMPL-01 build whose clean before/after pair closed D141. A missing
+counter fails rather than passes: the promise is not "no misses were
+reported", it is "misses were counted and there were none".
 
 ---
 

@@ -27,3 +27,5 @@
 - [ ] 2026-08-07 AGENTS.md § The four resolutions — the '"Stitch size" slider' reference is now the Zoom slider (owner rename, D52 collision recorded) (source: D121/M14-EXT-40)
 - [ ] 2026-08-07 UI-STANDARDS.md § Layout model — controls census stale: Design and Advanced retired, Capture is a standing section, the colours table is a "Colours used" content section, the aside box flattened (source: D121/M14-EXT-40/41/44)
 - [ ] 2026-08-07 UI-STANDARDS.md § Conflict and explanation pattern — the three-disjoint-rules anatomy (lock/prefer/exclude) retired by M15: exclude is profile membership, prefer is gone, lock is Must-use; the aria-live sentence pattern itself stands (source: D124/review)
+- [ ] 2026-08-09 AGENTS.md § Performance — budgets are no longer asserted by `npm run bench` alone: the product promise is now a `bench:auto` gate (rate + zero misses) and only driven base capture rows may bind (source: D142/M13-IMPL-02)
+- [ ] 2026-08-09 DEV-INFRASTRUCTURE.md § `bench:auto` — the validation summary ("untainted, visible page, all legs measured") is stale: the leg also asserts product targets and exits non-zero on a miss (source: D142/M13-IMPL-02)

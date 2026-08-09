@@ -1563,3 +1563,95 @@ by construction (D138: the harness pump never had the copy).
 **No regression elsewhere:** 4.0 updates/sec on every row before and
 after, `npm run bench` green at 22 passed, nothing in `src/core/` or
 `src/worker/` touched.
+
+---
+
+## M13-IMPL-02 — the rebinding: baselines refreshed, the promise bound (2026-08-09)
+
+Applies D135's rebinding clause. Routing is untouched — the synthesis
+confirmed it (12/12 cells byte-exact, no size or palette threshold in
+the evidence), so the routing half of the ticket was record-only and
+no selection code changed.
+
+### Node baselines re-taken on the implementation build
+
+`v0.5.0+20260808.08545db`, node 24.5, Apple M1 Max, quiet desktop,
+`CI` unset, wasm pkg built. Report untainted, no findings, every row's
+relative spread ≤ 0.07.
+
+| Row (defaults elided) | 2026-07-22 | 2026-08-09 | Δ |
+| --- | ---: | ---: | ---: |
+| `stage`/`resize` g1024 | 24.5 | 23.9 | −2.5 % |
+| `stage`/`reduce` g1024 nodither | 13.5 | 12.9 | −4.3 % |
+| `stage`/`dither` g1024 FS | 296.7 | 287.5 | −3.1 % |
+| `stage`/`dither` g1024 Atkinson | 337.9 | 326.6 | −3.3 % |
+| `stage`/`dither` g1024 Jarvis | 331.5 | 320.0 | −3.5 % |
+| `stage`/`dither` g1024 ordered | 290.8 | 284.6 | −2.1 % |
+| `stage`/`dither` g1024 blue-noise | 289.8 | 284.9 | −1.7 % |
+| `pipeline-compute` g1024 | 321.4 | 311.2 | −3.2 % |
+| `pipeline-compute` g300 | 37.0 | 35.9 | −2.9 % |
+| `pipeline-compute` g200 | 19.8 | 19.0 | −3.9 % |
+
+Ten of ten rows faster, all within 1.7–4.3 %, none an outlier. That
+uniformity is the finding: it is environment and JIT drift across ~3k
+churned lines, **not** a win in any stage. In particular none of it is
+an M13-IMPL-01 effect — IMPL-01 removed per-frame allocation on the
+capture path, which no node row observes (D141).
+
+The old figures were green under their ×1.35 guard throughout, which
+is exactly why the rebinding was owed: a guard anchored 3 % high is a
+guard with 3 % of free room for the next real regression to hide in.
+
+### A contaminated take, recorded
+
+The first take of this rebinding was measured minutes after a full
+`check` and `matrix` on the same machine. It put `reduce` at 21.1 ms
+— 63 % above the settled figure — on samples
+`[19.4, 32.1, 19.5, 16.3, 23.9, 21.1, 65.3, 20.0, 23.5]`, relative
+spread 2.32. Bound as a baseline it would have failed its own ×1.35
+guard on the very next run, and the temptation at that point is to
+widen the tolerance.
+
+Two things worth keeping from it. First, the validity gate correctly
+did **not** taint the run: no clock drift, no implausible sample. A
+65 ms `reduce` is not implausible, it is contended — machine
+contention is not a shape the taint detector can see, and should not
+be taught to guess at. Second, the budget assertion caught it anyway,
+which is the layering working: the gate proves a run is *readable*,
+the baseline proves a number is *good*.
+
+`reduce` is the row to watch — it is the shortest of the 1024² rows
+and so the most sensitive to contention, and D128 had already recorded
+it swinging ~2.5× on environment alone with `reduce.ts` untouched.
+Re-take on a settled machine; never widen a tolerance to absorb it.
+
+### The product promise, now asserted
+
+The bv2 contract amendment lands with it: driven **base** capture rows
+become product-target-bindable, `.edit-<class>` rows and anything
+measured against real Photoshop never do. `assertBindable`
+(`scripts/bench-auto-validate.mjs`) enforces that in code rather than
+leaving it to the table's author.
+
+Bound on `v0.5.0+20260808.3bfe7ef` (Chrome, Apple M1 Max) — the
+IMPL-01 build whose clean pair closed D141:
+
+| Target | Row | Guard |
+| --- | --- | ---: |
+| ≥ 4 updates/sec, zero missed callbacks, zero pump/client drops | both driven base windows | exact |
+| Median 41.0 ms | `preview-update` g300 | ×1.35 |
+| Median 31.2 ms | `preview-update` g200 | ×1.35 |
+
+`interaction` stays published, not bound (D135). The cadence counters
+bind alongside the medians deliberately: a fast median with dropped
+frames is not the promise being kept, and a **missing** counter fails
+rather than passes — the claim is "misses were counted and there were
+none", never "no misses were reported".
+
+### Attribution gap closed
+
+The env row now carries a parsed `browser` field (`browserVersion` in
+`src/bench/report.ts`), closing the one attribution D128 named as
+missing. The raw UA still rides in `environment.runtimeVersion`; what
+was absent was a version legible at a glance, without which a
+cross-build comparison can quietly straddle two Chrome releases.

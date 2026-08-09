@@ -21,11 +21,10 @@ Returned to Current 2026-08-07 (D128, the owner's pick) after M14
 closed (D127). Phase 2 profiling complete (D134); the synthesis is
 **signed** (D135): promise bound to the driven capture leg, the
 1024² 100 ms line retired (cap stays), routing confirmed unchanged,
-IMPL-03 cut. Phase 4 runs the two activated items in order; the
-signed scope and matrix live in `docs/performance-evidence.md` →
-"M13-SYNTH-01 — the synthesis". `AGENTS.md` hard rules hold.
-Phase 2 is closed out (D137): the bench ledger conserves across
-manual windows, so IMPL-01's before/after rests on sound bookkeeping.
+IMPL-03 cut. Phases 2 and 4 are both closed out (D137, D141, D142);
+the signed scope and matrix live in `docs/performance-evidence.md` →
+"M13-SYNTH-01 — the synthesis". `AGENTS.md` hard rules hold. Only
+Phase 5 acceptance remains, and ACCEPT-01 is now unblocked.
 
 #### Phase 2 — Component profiling & defect discovery
 
@@ -34,17 +33,15 @@ Profiling shipped (PROF-01..05 — see trajectory); defects closed
 
 #### Phase 4 — Evidence-approved implementation (activated by D135)
 
-IMPL-01 shipped (D138 code, D141 evidence — see trajectory).
-
-- [ ] **M13-IMPL-02 Backend routing and budget rebinding** [detail] (2026-07-22)
-  Intent: apply D135 — routing confirmed unchanged (record only; no thresholds); re-take node bv2 on the implementation build and rebind all rows; add the browser product-target rows (driven capture leg, bv2 amendment) and the env browser-version field.
-  Done when: bench green on the rebound rows; the capture-leg target rows assert; contract text updated; fallback intact (correct with WASM and WebGPU both unavailable).
+IMPL-01 shipped (D138 code, D141 evidence); IMPL-02 shipped (D142 —
+the promise is now an assertion). Phase 4 is complete; nothing open.
 
 #### Phase 5 — Integrated acceptance
 
-- [ ] **M13-ACCEPT-01 Automated integrated acceptance** [detail] [blocked: M13-IMPL-02] (2026-07-22)
+- [~] **M13-ACCEPT-01 Automated integrated acceptance** [detail] (2026-07-22)
   Intent: the machine half — refreshed bench budgets, acceptance matrix, backend/feature fallback suites, export correctness, quality gate, green on final code.
   Done when: `npm run check` and `npm run bench` pass on the refreshed rows; matrix, fallback and export byte-identity re-proven.
+  Status 2026-08-09: **node half green on final code** (`08545db` + the IMPL-02 change) — `check` (1090 passed), `matrix` (267), `bench` (22, on the rebound rows, settled machine), TS fallback with both backends disabled, export byte-identity incl. draft-preview isolation, and save→load→save. **Four browser legs remain**, all needing the desktop quiet, awake and visible: `bench:auto` capture (with the new product-target rows), `bench:auto` mem, `bench:trace`, and the backend byte-exactness cells. Do not re-run the node half.
 
 - [ ] **M13-ACCEPT-02 Maintainer live acceptance** [detail] [maintainer] [blocked: M13-ACCEPT-01] (2026-07-22)
   Intent: the human half — real-browser live Photoshop capture at typical grids, visual review wherever M13 could alter appearance, editing feel against the ≥ 4 updates/sec promise.

@@ -72,18 +72,31 @@ export interface Baseline {
 }
 
 /**
- * Node baselines, re-taken 2026-07-22 under the bv2 matrix
- * (M13-MEAS-01, decision-log D64). The bv1-era rows drifted since
- * their pre-M8 2026-07-20 figures — most visibly Floyd–Steinberg at
- * 1024²/p64: 231.9 → 296.7 ms (+28%, inside the ×1.35 guard; D62's
- * flat-kernel fix restored tolerance, not parity). The drift is
- * recorded, not hidden: the bv1→bv2 comparison table lives in
- * docs/performance-evidence.md, and decomposing the cause is
- * M13-PROF-01's job. The 300² pipeline row and the per-method dither
- * rows are new bv2 coverage.
+ * Node baselines, re-taken 2026-08-09 on the implementation build
+ * (M13-IMPL-02, decision-log D135 → the synthesis' rebinding clause).
+ * The 2026-07-22 figures they replace (D64) were green under their
+ * ×1.35 guard but predated ~3k churned lines including M13-IMPL-01,
+ * so the guard had gone slack against work that had already shipped.
+ *
+ * Every row moved 1.7–4.3 % *faster* and none by more than that: a
+ * uniform environment/JIT drift, not a win in any stage. Nothing here
+ * is an IMPL-01 effect — IMPL-01 removed per-frame allocation on the
+ * capture path, which no node row observes (D141).
+ *
+ * Taken on a settled machine, every row's relative spread ≤ 0.07. That
+ * matters for `reduce` in particular: an earlier take of this same
+ * build, run minutes after a full `check` and `matrix`, put it at
+ * 21.1 ms with a spread of 2.32 (one 65 ms sample). The run was not
+ * tainted by the validity gate — nothing about it was implausible —
+ * it was simply measured on a busy machine. Re-take these on a quiet
+ * one; do not widen a tolerance to absorb contention.
+ *
+ * The bv1→bv2 history, and the +28 % pre-M8 → bv2 Floyd–Steinberg
+ * drift that M13-PROF-01 decomposed, stay recorded in
+ * docs/performance-evidence.md rather than in this comment.
  */
 const NODE = 'node 24.5, Apple M1 Max';
-const TAKEN = 'v0.5.0+20260722.33d021b';
+const TAKEN = 'v0.5.0+20260808.08545db';
 
 /**
  * Measured baselines mapped onto specific matrix rows. A baseline
@@ -103,37 +116,39 @@ export const BUDGETS: ReadonlyMap<string, Baseline> = new Map([
   // CPU path reaches it (M5B), and the hoist got it to ~24 ms (D47).
   [
     'noise.w1280.opaque.g1024.p64.lab.fs-s100-serp.resize-first.stretch.still|stage|resize',
-    { ms: 24.5, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
+    { ms: 23.9, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
   ],
   // Palette reduce via LUT at 1024²/64 — memory-bound per-pixel
   // mapping; the old 10 ms row was never met.
   [
     'noise.w1280.opaque.g1024.p64.lab.nodither.resize-first.stretch.still|stage|reduce',
-    { ms: 13.5, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
+    { ms: 12.9, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
   ],
   // Floyd–Steinberg at 1024²/64, lab. Routing sends lab to TS
-  // (M5-PERF-27); the +28% drift from the pre-M8 232 ms is the D64
-  // finding above.
+  // categorically (D69/D135) — this row measures the reference, and
+  // the wasm backend it does not reach is the `rgb` route's.
   [
     'noise.w1280.opaque.g1024.p64.lab.fs-s100-serp.resize-first.stretch.still|stage|dither',
-    { ms: 296.7, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
+    { ms: 287.5, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
   ],
   // Whole pipeline at the 1024² ceiling — an export/finishing grid,
-  // stated plainly as such (D47), not a live-editing grid.
+  // stated plainly as such (D47). The brief's "≤ 100 ms at 1024²"
+  // line was retired at synthesis (D135): what binds here is this
+  // honest published median under its regression guard, not a target.
   [
     'noise.w1280.opaque.g1024.p64.lab.fs-s100-serp.resize-first.stretch.still|pipeline-compute|pipeline',
-    { ms: 321.4, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
+    { ms: 311.2, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
   ],
   // Whole pipeline at the typical 200² grid.
   [
     'noise.w1280.opaque.g200.p64.lab.fs-s100-serp.resize-first.stretch.still|pipeline-compute|pipeline',
-    { ms: 19.8, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
+    { ms: 19.0, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
   ],
   // Whole pipeline at 300² — the grid the product promise binds at,
   // as a node component baseline (new in bv2; M13-MEAS-01).
   [
     'noise.w1280.opaque.g300.p64.lab.fs-s100-serp.resize-first.stretch.still|pipeline-compute|pipeline',
-    { ms: 37.0, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
+    { ms: 35.9, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
   ],
   // The four M8 methods at 1024²/p64 (new in bv2): each shipped
   // method carries its own regression guard, so none can regress
@@ -141,19 +156,19 @@ export const BUDGETS: ReadonlyMap<string, Baseline> = new Map([
   // crate implements only FS at strength 1 (D62).
   [
     'noise.w1280.opaque.g1024.p64.lab.atkinson-s100-serp.resize-first.stretch.still|stage|dither',
-    { ms: 337.9, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
+    { ms: 326.6, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
   ],
   [
     'noise.w1280.opaque.g1024.p64.lab.jarvis-s100-serp.resize-first.stretch.still|stage|dither',
-    { ms: 331.5, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
+    { ms: 320.0, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
   ],
   [
     'noise.w1280.opaque.g1024.p64.lab.ordered-s100.resize-first.stretch.still|stage|dither',
-    { ms: 290.8, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
+    { ms: 284.6, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
   ],
   [
     'noise.w1280.opaque.g1024.p64.lab.bluenoise-s100.resize-first.stretch.still|stage|dither',
-    { ms: 289.8, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
+    { ms: 284.9, runtime: NODE, taken: TAKEN, tolerance: 1.35 },
   ],
 ]);
 

@@ -15,18 +15,18 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 243 file(s) across 11 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 245 file(s) across 11 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 12 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
 - `.github` — 1 file(s)
 - `.windsurf` — 1 file(s)
 - `crates` — 4 file(s)
-- `docs` — 12 file(s)
+- `docs` — 13 file(s)
 - `public` — 1 file(s)
 - `scripts` — 17 file(s)
 - `src` — 94 file(s)
-- `tests` — 99 file(s)
+- `tests` — 100 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -70,6 +70,7 @@
 ## docs
 
 - `docs/acceptance-live-rehearsal.md` — M5-ACCEPT-03 rehearsal checklist: setup, actions, evidence, miss classification
+- `docs/acceptance-m13-live.md` — M13-ACCEPT-02 run sheet: live Photoshop capture legs, the four owner-judgement lines, pinned to the passing build
 - `docs/acceptance-matrix.md` — M5-ACCEPT-01 evidence: generated coverage table, per-row invariants, explicit skips
 - `docs/acceptance-visual-review.md` — M5-ACCEPT-02 review sheet: review set, protocol, verdict record
 - `docs/browser-measurement.md` — browser-only boundary procedure + recorded results (M5-PERF-18)
@@ -216,6 +217,7 @@
 - `tests/audits/m13-stage.audit.test.ts` — M13-PROF-01 node half: stage ranking per grid/palette/method + dither-leader decomposition
 - `tests/audits/m8-dither.audit.test.ts` — M8-SPIKE-01 evaluation (AUDIT=1): quality/structure metrics, timings, HTML gallery artefact
 - `tests/audits/orchestration.audit.test.ts` — M5-PERF-10: palette rebuild, `?? 0` tax, allocation inventory
+- `tests/audits/profile-gallery.audit.test.ts` — M15-GALLERY-01 batch evidence: every built-in rendered on the sample card at the default limit, reported by selected colour and share
 - `tests/audits/resize.audit.test.ts` — M5-PERF-11: candidate timings + byte-equality across the mode matrix
 - `tests/audits/routing.audit.test.ts` — sweeps grid × palette × metric on both dither backends and asserts `routeDither` agrees with the measured winner on every row (M5-PERF-27 evidence)
 - `tests/audits/runtime.audit.test.ts` — M5-PERF-16/17/19: compare cost, gate stalls, dirty sensitivity, export isolation

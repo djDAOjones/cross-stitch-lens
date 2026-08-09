@@ -342,6 +342,12 @@ describe('built-in profiles', () => {
     const forbidden = new RegExp(
       `\\b(?:${[
         'pantone', 'copic', 'dulux', 'farrow', 'ral',
+        // 'riso' earns its place: batch 2 nearly shipped it. The
+        // ticket's own candidate list says "Risograph print", and a
+        // duplicator brand reads as a print technique rather than as
+        // a mark, which is exactly the good-faith failure this guard
+        // is for. It ships as "Fluoro spot print" (D144).
+        'riso', 'risograph',
         'tiffany', 'hermes', 'hermès', 'barbie', 'coca[- ]?cola', 'ferrari',
         'lego', 'disney', 'pokemon', 'pokémon', 'minecraft', 'stardew', 'nintendo',
         'crayola', 'sharpie', 'instagram', 'starbucks', 'ikea',
@@ -353,8 +359,12 @@ describe('built-in profiles', () => {
     // could silently defang it.
     expect(forbidden.test('Pantone 448 C')).toBe(true);
     expect(forbidden.test('RAL 5013 cobalt')).toBe(true);
+    expect(forbidden.test('Risograph print')).toBe(true);
     expect(forbidden.test('Coral reef')).toBe(false);
     expect(forbidden.test('Allegory')).toBe(false);
+    // 'riso' must not eat "Risotto" or a hue named for it; whole-word
+    // anchoring is the only thing standing between the two.
+    expect(forbidden.test('Risotto cream')).toBe(false);
     for (const profile of builtInProfiles(catalogue)) {
       expect(forbidden.test(profile.name), `${profile.name} reads as a trademark`).toBe(false);
     }

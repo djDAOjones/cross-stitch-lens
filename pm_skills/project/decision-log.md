@@ -1777,3 +1777,61 @@ says green on *final* code).
 M13's only open item; trajectory → one line; ticket deleted; run sheet
 `docs/acceptance-m13-live.md` prepared and pinned to the passing build;
 evidence `docs/performance-evidence.md` → the M13-ACCEPT-01 section.
+
+---
+
+## D144 — M15-GALLERY-01 batch 2: eight candidates drafted, unsigned; the evidence run becomes reproducible (2026-08-09)
+
+**Decision:** eight more built-in profiles are drafted into
+`builtInProfiles()` — four rule-shaped (Rainforest, Spring meadow,
+Gemstones, Moorland) and four curated (Art deco, Mid-century modern,
+Fair Isle, Fluoro spot print). They ship as code but are **unsigned**:
+the owner curates names and membership per batch (D115). Curation
+sheet published.
+
+**The batch was picked against gaps, not down the ticket's list.**
+After batch 1 the gallery had no greens at all, nothing that narrows
+on chroma rather than hue, nothing muted, and a culture half entirely
+of pre-war Europe and Japan. Rainforest and Spring meadow are one hue
+arc split at brightness 52 — canopy greens, meadow greens — so neither
+carries a band the other lacks. Gemstones narrows on saturation alone
+and Moorland is its mirror; those two are the first rules in the
+gallery with no hue band, which is the honest shape for "defined by
+chroma".
+
+**Batch 1's evidence could not be regenerated, so it was rebuilt and
+then committed.** D139 set the format but not the method, and the
+published numbers matched none of the obvious readings until dithering
+was included: the app's default Floyd–Steinberg is what turns an edge
+into a mix, so undithered shares describe an image nobody sees. With
+resize → select at the default eight → full pipeline with dither, the
+batch-1 sheet reproduces to within a few tenths of a point on every
+row. That run is now
+`tests/audits/profile-gallery.audit.test.ts`, `AUDIT=1`-gated beside
+the perf audits: batch 3 quotes numbers instead of re-deriving them.
+
+**A trademark nearly shipped from the ticket itself.** The candidate
+list says "Risograph print"; Risograph is Riso Kagaku's mark, and it
+reads as a printing technique, which is exactly the good-faith failure
+D115's naming rule is for. It ships as **Fluoro spot print** and
+`riso` joins the guard list — whole-word anchored, asserted in both
+directions so it bites "Risograph print" and still passes "Risotto
+cream", per the D139 anchoring lesson.
+
+**Left for the owner, both named on the sheet:** Art deco's Pearl Grey
+takes 43.8 % of the card because that card carries a greyscale ramp a
+photograph would not — chrome is a real deco colour, so this may be
+the card flattering it rather than a fault, and the alternative (415 →
+3799) costs Black, which falls to 2.6 %. And `finca:4368` (`#2d6153`)
+has an **empty name** in the catalogue: a second bad row beside
+`ariadna:1650`, surfaced by Rainforest. Owner data, protected,
+wish-listed.
+
+**Scope:** `src/core/color-profile.ts`, its test's naming guard, and a
+new audit file. No UI change, no change to
+`resolveProfileMembership`, no protected file touched. `check` green
+(1091 tests).
+
+**Link:** backlog → M15-GALLERY-01 batch 2 pending signature;
+trajectory → one line on signature, not before; D139 and D140 stand
+unamended.

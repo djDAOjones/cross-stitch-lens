@@ -364,6 +364,30 @@ export function builtInProfiles(catalogue: ThreadCatalogue): ColorProfile[] {
   // two and reads as glaze rather than paper.
   const delft = dmc('3865', '3752', '932', '931', '930', '3750', '336', '823');
   const ukiyoE = dmc('3865', '3046', '3852', '921', '355', '522', '931', '930', '3750', '3781', '310');
+  // M15-GALLERY-01 batch 2 — drafted 2026-08-09 (D144), UNSIGNED.
+  // Same split as batch 1 and the same order-is-identity rule: each
+  // curated list is written the way it should read, light to dark
+  // where the style is a ladder and by ink where it is not.
+  //
+  // Chrome, cream, two golds, jade, black. The chrome is a real deco
+  // colour, not a filler: the style is metal against lacquer. Its
+  // known cost is on the evidence card — Pearl Grey takes 43.8 % of
+  // the sample because that card carries a full greyscale ramp, so
+  // the mid grey wins area a photograph would not give it. Swapping
+  // 415 for 3799 (Pewter Grey very dark) trades that for a deeper
+  // shadow and drops Black to 2.6 %; it is one reference, and it is
+  // an owner call.
+  const artDeco = dmc('712', '415', '3852', '782', '3814', '310');
+  const midCentury = dmc('739', '3820', '921', '3012', '3809', '801');
+  // Undyed wool, then the four traditional dyes: madder red, indigo,
+  // ochre, moss. Shares 930 with Delft blue on purpose — a thread
+  // belongs to as many styles as use it; profiles are not partitions.
+  const fairIsle = dmc('3866', '3045', '3052', '3721', '930', '838');
+  // The ticket calls this candidate "Risograph print". Risograph is
+  // Riso Kagaku's trademark, so the shipped name describes the style
+  // instead (D115's naming rule): fluorescent spot inks overprinted
+  // on off-white stock. Pink, yellow, green, blue, black, paper.
+  const fluoroSpot = dmc('3865', '307', '3805', '996', '912', '310');
   return [
     profile('dmc', 'DMC', { libraries: ['dmc'] }),
     profile('all-threads', 'All threads', { libraries: allBrands }),
@@ -432,6 +456,42 @@ export function builtInProfiles(catalogue: ThreadCatalogue): ColorProfile[] {
     profile('de-stijl', 'De Stijl primaries', { include: deStijl }),
     profile('delft-blue', 'Delft blue', { include: delft }),
     profile('ukiyo-e', 'Ukiyo-e woodblock', { include: ukiyoE }),
+    // --- M15-GALLERY-01 batch 2 — drafted 2026-08-09 (D144) ----------
+    // Four rules and four lists, chosen against the gaps batch 1 left:
+    // the gallery had no greens, no all-hue high chroma and no muted
+    // mid-neutrals, and its culture half was all pre-war Europe and
+    // Japan. All-brands stands per D140.
+    //
+    // Rainforest and Spring meadow are deliberately the same hue arc
+    // split by brightness — the dark canopy greens and the light
+    // meadow greens — which is why neither carries a hue band the
+    // other lacks. The seam is at brightness 52.
+    profile('rainforest', 'Rainforest', {
+      libraries: allBrands,
+      ranges: [{ hue: [75, 165], saturation: [40, 100], brightness: [12, 52] }],
+    }),
+    profile('spring-meadow', 'Spring meadow', {
+      libraries: allBrands,
+      ranges: [{ hue: [70, 150], saturation: [38, 100], brightness: [52, 98] }],
+    }),
+    // No hue band at all, and that is the claim: a gem is defined by
+    // chroma, not by which hue it happens to be. The rule is the one
+    // shape in the gallery that narrows on saturation alone.
+    profile('gemstones', 'Gemstones', {
+      libraries: allBrands,
+      ranges: [{ saturation: [72, 100], brightness: [30, 88] }],
+    }),
+    // The mirror of Gemstones: everything the weather has taken the
+    // colour out of. Heather, peat, bracken and distance all live in
+    // one low-saturation mid-brightness band, so one rule holds them.
+    profile('moorland', 'Moorland', {
+      libraries: allBrands,
+      ranges: [{ saturation: [8, 42], brightness: [18, 58] }],
+    }),
+    profile('art-deco', 'Art deco', { include: artDeco }),
+    profile('mid-century', 'Mid-century modern', { include: midCentury }),
+    profile('fair-isle', 'Fair Isle', { include: fairIsle }),
+    profile('fluoro-spot', 'Fluoro spot print', { include: fluoroSpot }),
   ];
 }
 

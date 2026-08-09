@@ -296,6 +296,63 @@ export function validateTraceReport(merged) {
 }
 
 /**
+ * Validate the backend-comparison report (M13-PROF-03's leg, re-run for
+ * M13-ACCEPT-01): every cell that compares two backends agreed exactly,
+ * and both fallback probes passed.
+ *
+ * Most real defects here already taint the report — the leg pushes
+ * findings on mismatch and `assembleReport` folds findings into
+ * `validity.tainted`. These checks are the second line: they fail a
+ * report whose rows *say* DISAGREES or FAIL even if the finding never
+ * got pushed, and they refuse a leg that measured nothing at all. A
+ * backend suite that silently ran zero comparison cells would otherwise
+ * be indistinguishable from one where every cell agreed.
+ */
+export function validateBackendReport(report) {
+  const failures = coreFailures(report);
+  if (failures.length > 0 && failures[0].startsWith('not a bv2')) return failures;
+
+  // Any row comparing two backends carries its verdict under one of
+  // these keys; all of them must read EXACT.
+  const comparisonKeys = [
+    'output vs other side',
+    'output vs routed ts',
+    'pixel verdict',
+    'verdict',
+  ];
+  let compared = 0;
+  for (const row of report.rows) {
+    for (const key of comparisonKeys) {
+      const value = row.meta?.[key];
+      if (value === undefined) continue;
+      if (value === 'EXACT' || value === 'PASS') {
+        compared++;
+      } else if (value === 'DISAGREES' || value === 'FAIL') {
+        failures.push(
+          `backend: ${String(row.label)} (${String(row.workloadId)}) reports ${key} = ${String(value)}`,
+        );
+      }
+      // Anything else ('not captured', a retention sentence) is not a
+      // comparison verdict — leave it to the leg's own findings.
+    }
+  }
+  if (compared === 0) {
+    failures.push(
+      'backend: no comparison cell reported a verdict — the leg measured nothing',
+    );
+  }
+
+  for (const [what, needle] of [
+    ['unregistered-backend fallback', 'forced unregistered webgpu'],
+    ['non-FS capability clamp', 'forced wasm, non-FS method'],
+  ]) {
+    const row = report.rows.find((r) => String(r.label).includes(needle));
+    if (row === undefined) failures.push(`backend: the ${what} probe row is missing`);
+  }
+  return failures;
+}
+
+/**
  * Validate the mem report: the plateau row carries a numeric forced-GC
  * reading (the whole point of the flagged launch) and the export
  * isolation re-proof held.

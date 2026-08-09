@@ -1655,3 +1655,54 @@ The env row now carries a parsed `browser` field (`browserVersion` in
 missing. The raw UA still rides in `environment.runtimeVersion`; what
 was absent was a version legible at a glance, without which a
 cross-build comparison can quietly straddle two Chrome releases.
+
+---
+
+## M13-ACCEPT-01 — the machine half passes on final code (2026-08-09)
+
+Build `v0.5.0+20260809.b4cf665`, Chrome 151, Apple M1 Max. Every leg
+valid on **attempt 1** — no re-arming, no environmental retry.
+
+### Node half
+
+`check` exit 0 (1090 tests), `matrix` exit 0 (267 rows), `bench`
+exit 0 (22) on the rebound baselines with every row's spread ≤ 0.07.
+
+Named invariants, not a coverage number: TS fallback with **both**
+accelerated backends disabled (three cases, including a stale wasm
+selection still running and reporting `ts`); export byte-identity
+against an independent full-quality run, and again with the preview
+held in draft; `save → load → save` byte-identical across every dither
+algorithm, full-RGB mode, and the v1/v3/v4 migrations.
+
+### Browser legs
+
+| Leg | Verdict |
+| --- | --- |
+| capture | VALID — targets passed on their first *enforced* run |
+| mem | VALID — plateau idle 172.7 MiB → 11.5 MiB forced, isolation EXACT |
+| trace | VALID — nine windows paired, GC accounted |
+| backend | VALID — 66 cells EXACT/PASS, 0 disagreements |
+
+**The promise, measured under its own gate.** 300²: median 37.6 ms
+against a 55.35 ms ceiling. 200²: 29.5 ms against 42.12 ms. Both at
+4.0 updates/sec with zero missed callbacks and zero drops on either
+layer. This is the first run where a miss would have failed the
+command rather than being noticed by a reader.
+
+**GC is not a pause source — confirmed on final code.** Over a 163 s
+leg: 426 major collections totalling 329.8 ms, worst single pause
+**1.8 ms**; 3,341 incremental-marking slices totalling 165.6 ms at max
+0.5 ms. 0.30 % of wall, against D135's ≤ 0.71 % finding, with the
+worst pause 7× smaller than the 12.5 ms previously recorded. Zero
+observer long tasks on every `preview-update` window.
+
+**Routing behaves exactly as D135 signed it.** Every `lab` cell routed
+`ts`, every `rgb` cell routed `wasm`, and the indices sidecar came back
+EXACT in all 66 — thread identity survives every backend path. Both
+fallback probes PASS: a forced unregistered `webgpu` answered and fell
+back to `ts`; a forced `wasm` on a non-FS method hit the capability
+clamp, produced output identical to the routed `ts` run, and correctly
+labelled itself `ts` (M13-DEF-01 has not regressed).
+
+No skipped or not-measured rows in any leg.

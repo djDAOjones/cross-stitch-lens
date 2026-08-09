@@ -19,6 +19,18 @@
 
 ## M13 — Visual processing performance, remainder (in progress)
 
+- M13-ACCEPT-01 (2026-08-09) — the machine half passes on
+  `v0.5.0+20260809.b4cf665`, every leg valid on the first attempt.
+  Node: check 1090, matrix 267, bench 22 on the rebound baselines.
+  Browser: capture, mem, trace and backend all VALID — the promise
+  measured 37.6 ms at 300² and 29.5 ms at 200², 4.0 updates/sec, zero
+  missed callbacks and zero drops, the first run where a miss would
+  have failed the command. GC re-confirmed a non-source (0.30 % of
+  wall, worst pause 1.8 ms). 66 backend cells EXACT with the indices
+  sidecar intact in every one; both fallback probes PASS. The backend
+  leg gained a one-command path (`bench:auto -- --backend`). Only
+  M13-ACCEPT-02 remains. See D143.
+
 - M13-IMPL-02 (2026-08-09) — the product promise stops being a
   sentence and becomes a gate: `bench:auto` now fails when the driven
   capture leg's sustained rate falls under 4 updates/sec or any frame

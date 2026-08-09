@@ -112,8 +112,16 @@ export interface EnvironmentIdentity {
  * unrecognised returns `unknown`; a wrong confident answer is worse
  * than an honest gap in a provenance field.
  *
+ * **Chromium reports a reduced UA**, freezing minor/patch to `0.0.0`
+ * (observed: `Chrome 151.0.0.0`), so in practice this yields the major
+ * version. That is enough for the question D128 asked — whether a
+ * cross-build comparison straddled two Chrome *releases* — and getting
+ * the full version needs `navigator.userAgentData
+ * .getHighEntropyValues()`, which is async and would make report
+ * assembly async for a digit nobody has needed yet.
+ *
  * @param userAgent raw `navigator.userAgent`.
- * @returns e.g. `Chrome 151.0.7259.63`, or `unknown`.
+ * @returns e.g. `Chrome 151.0.0.0`, or `unknown`.
  */
 export function browserVersion(userAgent: string): string {
   const brands: readonly (readonly [string, RegExp])[] = [

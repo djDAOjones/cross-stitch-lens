@@ -38,14 +38,12 @@ the promise is now an assertion). Phase 4 is complete; nothing open.
 
 #### Phase 5 — Integrated acceptance
 
-- [~] **M13-ACCEPT-01 Automated integrated acceptance** [detail] (2026-07-22)
-  Intent: the machine half — refreshed bench budgets, acceptance matrix, backend/feature fallback suites, export correctness, quality gate, green on final code.
-  Done when: `npm run check` and `npm run bench` pass on the refreshed rows; matrix, fallback and export byte-identity re-proven.
-  Status 2026-08-09: **node half green on final code** (`08545db` + the IMPL-02 change) — `check` (1090 passed), `matrix` (267), `bench` (22, on the rebound rows, settled machine), TS fallback with both backends disabled, export byte-identity incl. draft-preview isolation, and save→load→save. **Four browser legs remain**, all needing the desktop quiet, awake and visible: `bench:auto` capture (with the new product-target rows), `bench:auto` mem, `bench:trace`, and the backend byte-exactness cells. Do not re-run the node half.
+ACCEPT-01 shipped (D143 — every leg valid first time; see trajectory).
 
-- [ ] **M13-ACCEPT-02 Maintainer live acceptance** [detail] [maintainer] [blocked: M13-ACCEPT-01] (2026-07-22)
+- [ ] **M13-ACCEPT-02 Maintainer live acceptance** [detail] [maintainer] (2026-08-09)
   Intent: the human half — real-browser live Photoshop capture at typical grids, visual review wherever M13 could alter appearance, editing feel against the ≥ 4 updates/sec promise.
   Done when: owner pass/fail notes recorded (failure routes to the synthesis); live editing usable across dither methods and backends.
+  Status 2026-08-09: **unblocked, and the only thing left in M13.** Run sheet prepared at `docs/acceptance-m13-live.md`, pinned to the passing build `v0.5.0+20260809.b4cf665` — use that build or the pairing with the automated evidence breaks. Carries D135's four owner-judgement lines (small-stroke feel, PDF freeze, eight-brand cold prep, external-stop salience), each needing an explicit pass/fail. Visual review runs in **no-change mode**: everything M13 activated is bit-exact, so it is a confirmation, not a taste decision.
 
 ### Next — M15 Colour & dithering profiles
 

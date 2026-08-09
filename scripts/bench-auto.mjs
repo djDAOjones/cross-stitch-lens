@@ -5,6 +5,8 @@
  *   npm run bench:auto -- --when-quiet    # arm: wait for real user idle, then run
  *   npm run bench:auto -- --trace         # trace leg: capture workloads under CDP
  *                                         # tracing → GC-pause report (M13-MEAS-04)
+ *   npm run bench:auto -- --backend       # backend comparison leg: byte-exactness
+ *                                         # across every cell + fallback probes
  *
  * Builds the production bundle, serves it with `vite preview`, then
  * launches the installed Chrome twice — a dedicated throwaway profile,
@@ -68,6 +70,7 @@ import {
   reportPaths,
 } from './bench-auto-lib.mjs';
 import {
+  validateBackendReport,
   validateCaptureReport,
   validateMemReport,
   validatePickerCaptureReport,
@@ -93,6 +96,7 @@ const WHEN_QUIET =
   process.argv.includes('--when-quiet') || process.env.BENCH_WHEN_QUIET === '1';
 const CROSSCHECK = process.argv.includes('--crosscheck');
 const TRACE = process.argv.includes('--trace');
+const BACKEND = process.argv.includes('--backend');
 const IDLE_SECS = Number(process.env.BENCH_IDLE_SECS ?? 60);
 const ATTEMPTS = Number(process.env.BENCH_ATTEMPTS ?? (WHEN_QUIET ? 3 : 1));
 
@@ -545,6 +549,37 @@ async function finaliseTraceLeg(report, context, stamp) {
 }
 
 /** Compact per-window GC/long-task table for the console. */
+/**
+ * Backend leg summary: every comparison verdict, then the margins.
+ * Verdicts print first and unconditionally — the leg's purpose is
+ * byte-exactness, and a speed table above a buried DISAGREES would
+ * invite reading the wrong number as the result.
+ */
+function printBackendSummary(report) {
+  console.log('\n=== Backend comparison — byte-exactness and fallback ===');
+  const keys = ['output vs other side', 'output vs routed ts', 'pixel verdict', 'verdict'];
+  let exact = 0;
+  for (const row of report.rows) {
+    for (const key of keys) {
+      const value = row.meta?.[key];
+      if (value === 'EXACT' || value === 'PASS') {
+        exact++;
+      } else if (value === 'DISAGREES' || value === 'FAIL') {
+        console.log(`  ✗ ${String(row.label)} — ${key}: ${String(value)}`);
+      }
+    }
+  }
+  console.log(`  ${String(exact)} cell(s) EXACT/PASS, 0 disagreements.`);
+  for (const row of report.rows) {
+    const ratio = row.meta?.['ratio vs ts'] ?? row.meta?.['speedup'];
+    if (ratio !== undefined && row.summary !== null) {
+      console.log(
+        `  ${String(row.label)}: ${row.summary.median.toFixed(2)} ms (${String(ratio)})`,
+      );
+    }
+  }
+}
+
 function printTraceSummary(merged) {
   const bucket = (b) =>
     `${String(b.count)}× ${b.totalMs.toFixed(1)} ms (max ${b.maxMs.toFixed(1)})`;
@@ -643,6 +678,15 @@ async function main() {
           dispose: (context) => context?.client.close(),
         });
         second = null;
+      } else if (BACKEND) {
+        // Backend mode (M13-ACCEPT-01): the M13-PROF-03 comparison leg
+        // re-run on final code. Gestureless — no capture, so no flag
+        // grant is needed — but it still wants a quiet visible desktop,
+        // because it times both sides of every cell and a throttled
+        // page would make the margins meaningless even though the
+        // byte-exactness verdict would survive.
+        capture = await runLeg(collector, 'backend', 'backend', validateBackendReport, stamp);
+        second = null;
       } else {
         capture = await runLeg(collector, 'capture', 'capture,editclasses', validateCaptureReport, stamp);
         // Crosscheck mode (Part A′): instead of the mem leg, rerun just
@@ -662,6 +706,8 @@ async function main() {
       console.log('\n(no summary — a leg produced no report; see failures below)');
     } else if (TRACE) {
       printTraceSummary(capture.report);
+    } else if (BACKEND) {
+      printBackendSummary(capture.report);
     } else if (CROSSCHECK) {
       console.log('\n=== Part A′ cross-check (picker-granted vs flag-granted) ===');
       console.log(formatComparison(compareReports(second.report, capture.report), 'picker'));
@@ -669,18 +715,24 @@ async function main() {
       printSummary(capture, second);
     }
     const secondName = CROSSCHECK ? 'picker' : 'mem';
-    const failures = TRACE
-      ? capture.failures.map((f) => `trace: ${f}`)
-      : [
-          ...capture.failures.map((f) => `capture: ${f}`),
-          ...second.failures.map((f) => `${secondName}: ${f}`),
-        ];
+    let failures;
+    if (TRACE) {
+      failures = capture.failures.map((f) => `trace: ${f}`);
+    } else if (BACKEND) {
+      failures = capture.failures.map((f) => `backend: ${f}`);
+    } else {
+      failures = [
+        ...capture.failures.map((f) => `capture: ${f}`),
+        ...second.failures.map((f) => `${secondName}: ${f}`),
+      ];
+    }
     if (failures.length === 0) {
-      console.log(
-        TRACE
-          ? `\nTrace report valid (untainted page, all windows paired, GC accounted) — attempt ${String(attempt)}.`
-          : `\nBoth reports valid (untainted, visible, all legs measured) — attempt ${String(attempt)}.`,
-      );
+      const verdict = TRACE
+        ? 'Trace report valid (untainted page, all windows paired, GC accounted)'
+        : BACKEND
+          ? 'Backend report valid (untainted, every cell EXACT, fallback probes PASS)'
+          : 'Both reports valid (untainted, visible, all legs measured)';
+      console.log(`\n${verdict} — attempt ${String(attempt)}.`);
       return;
     }
     console.error(`\nAttempt ${String(attempt)} invalid:`);

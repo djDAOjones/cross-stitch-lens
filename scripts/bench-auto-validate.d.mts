@@ -29,4 +29,5 @@ export declare const CADENCE_TARGET: { readonly updatesPerSec: number };
 export declare function validateCaptureReport(report: unknown): string[];
 export declare function validatePickerCaptureReport(report: unknown): string[];
 export declare function validateMemReport(report: unknown): string[];
+export declare function validateBackendReport(report: unknown): string[];
 export declare function validateTraceReport(merged: unknown): string[];

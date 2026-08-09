@@ -1735,3 +1735,45 @@ widened tolerance.
 **Link:** backlog → M13-IMPL-02 removed, M13-ACCEPT-01 unblocked;
 trajectory → one line; ticket deleted; two doc-deltas captured
 (AGENTS.md, DEV-INFRASTRUCTURE.md).
+
+## D143 — M13-ACCEPT-01 passes: the machine half is done, every leg valid first time (2026-08-09)
+
+**Decision:** M13-ACCEPT-01 closes on build
+`v0.5.0+20260809.b4cf665`. M13-ACCEPT-02 is unblocked and is the only
+thing left in M13.
+
+**What passed.** Node: `check` (1090), `matrix` (267), `bench` (22) on
+the rebound baselines. Browser: capture, mem, trace and backend legs
+all VALID on **attempt 1**. The promise measured 37.6 ms at 300² and
+29.5 ms at 200², both at 4.0 updates/sec with zero missed callbacks and
+zero drops — the first time a miss would have failed the command rather
+than needed a reader to notice. GC re-confirmed as a non-source: 0.30 %
+of wall over 163 s, worst pause 1.8 ms, zero observer long tasks.
+Backend: 66 cells EXACT, indices sidecar EXACT in all of them, both
+fallback probes PASS with M13-DEF-01 not regressed.
+
+**A leg became a command.** The backend comparison had no one-command
+path — the leg list was hardcoded to capture/mem/trace — so
+`bench:auto -- --backend` was added with `validateBackendReport`. This
+is ACCEPT-01's own "focused backend commands activated by synthesis",
+not new scope. Its third check earns its place: mismatches already
+taint via the leg's findings, but a suite that measured **zero** cells
+would otherwise look identical to one where everything agreed, so a
+zero-comparison report now fails.
+
+**Attribution is honest about its limit.** The new env `browser` field
+reads `Chrome 151.0.0.0` because Chromium serves a reduced UA with
+minor/patch frozen. That answers what D128 asked — which *release* —
+and the full version would need an async high-entropy call, making
+report assembly async for a digit nobody has needed. Recorded rather
+than dressed up.
+
+**Alternatives rejected:** re-running the browser legs in an embedded
+browser (not a legitimate measurement surface); accepting D69's
+backend evidence as still-current rather than re-taking it (ACCEPT-01
+says green on *final* code).
+
+**Link:** backlog → ACCEPT-01 removed, ACCEPT-02 unblocked and now
+M13's only open item; trajectory → one line; ticket deleted; run sheet
+`docs/acceptance-m13-live.md` prepared and pinned to the passing build;
+evidence `docs/performance-evidence.md` → the M13-ACCEPT-01 section.

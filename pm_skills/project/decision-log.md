@@ -1835,3 +1835,40 @@ new audit file. No UI change, no change to
 **Link:** backlog → M15-GALLERY-01 batch 2 pending signature;
 trajectory → one line on signature, not before; D139 and D140 stand
 unamended.
+
+---
+
+## D145 — M15-DATA-01 opens: the catalogue gets swept once instead of a row per batch (2026-08-09)
+
+**Decision:** the owner's ask for a verification pass over the colour
+listings becomes M15-DATA-01, and the two wish-listed bad rows are
+promoted into it. Rule-shaped profiles read all 3,338 rows, so every
+gallery batch turns up another one — finding them singly is the
+slowest possible route to a clean list.
+
+**A first scan is in the ticket so the item starts with evidence.**
+Two classes are certain: **21 rows carry no name at all**, and every
+one is Finca — about a tenth of that brand, so it reads as one gap in
+that ingest rather than 21 slips. The name column is empty in the
+owner CSV itself, so the generator is innocent. **11 same-brand pairs
+share a hex**; across brands that is normal and deliberate (D55/D56),
+within one brand it is likelier a transcription slip. Every brand+reference pair is
+unique and every hex is well formed.
+
+**The class that matters resists automation, which is the finding.** A
+crude name-versus-hue probe returns 402 hits and is mostly false
+positives: compound names — "Blue Green", "Antique Violet" — sit
+legitimately between their two words, and a near-neutral row's hue
+means little. `ariadna:1650` (a cyan-white named "heather") is
+qualitatively different. So the sweep reports evidence for judgement;
+it must not auto-flag, and it must not gate `check` over data the
+agent may not edit.
+
+**Out of scope, deliberately:** checking the measured hexes against
+each brand's published values. All 3,338 carry provenance `measured`
+and no published source is in the repo — that is its own work, with
+ICE-XREF-01's data problem.
+
+**Link:** backlog → M15-DATA-01 under M15 Next with a `[detail]`
+ticket; wish-list → the two rows promoted out; D144 recorded them as
+wish-listed and stands unamended.

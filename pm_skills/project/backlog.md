@@ -43,7 +43,7 @@ ACCEPT-01 shipped (D143 — every leg valid first time; see trajectory).
 - [ ] **M13-ACCEPT-02 Maintainer live acceptance** [detail] [maintainer] (2026-08-09)
   Intent: the human half — real-browser live Photoshop capture at typical grids, visual review wherever M13 could alter appearance, editing feel against the ≥ 4 updates/sec promise.
   Done when: owner pass/fail notes recorded (failure routes to the synthesis); live editing usable across dither methods and backends.
-  Status 2026-08-09: **unblocked, and the only thing left in M13.** Run sheet prepared at `docs/acceptance-m13-live.md`, pinned to the passing build `v0.5.0+20260809.b4cf665` — use that build or the pairing with the automated evidence breaks. Carries D135's four owner-judgement lines (small-stroke feel, PDF freeze, eight-brand cold prep, external-stop salience), each needing an explicit pass/fail. Visual review runs in **no-change mode**: everything M13 activated is bit-exact, so it is a confirmation, not a taste decision.
+  Status 2026-08-09: **unblocked, and the only thing left in M13.** Runs inside the combined sitting — order in `docs/acceptance-combined-session.md`, detail in `docs/acceptance-m13-live.md`. That sheet pins `v0.5.0+20260809.b4cf665`; the combined session runs on HEAD instead, because no file on the processing path has changed since (only `color-profile.ts`, main-bundle only, and `bench/report.ts`, bench entry only), so the pairing holds. Carries D135's four owner-judgement lines (small-stroke feel, PDF freeze, eight-brand cold prep, external-stop salience), each needing an explicit pass/fail. Visual review runs in **no-change mode**: everything M13 activated is bit-exact, so it is a confirmation, not a taste decision.
 
 ### Next — M15 Colour & dithering profiles
 
@@ -68,7 +68,7 @@ against the M13 remainder is the owner's call at pick time.
 - [ ] **M15-ACCEPT-02 Maintainer acceptance session** [maintainer] (2026-08-07)
   Intent: the human half — a live session over the editor: build a profile from scratch, judge the style built-ins, the test preview's usefulness, and the (edited) flow's legibility.
   Done when: owner pass/fail notes recorded; failures route to fix tasks, never silent rework.
-  Status 2026-08-07: deferred by the owner at the D127 acceptance — runs at their choosing.
+  Status 2026-08-09: runs inside the combined sitting — see `docs/acceptance-combined-session.md` (legs 3, 4). Judging the test preview wants M15-EVID-01's photos in place first.
 
 - [~] **M15-GALLERY-01 Profile gallery: culture & nature** [sign-off] [detail] (2026-08-07)
   Intent: owner ask (D115) — many useful and interesting built-in profiles from across culture and nature (absorbs ICE-PRESET-01); agent drafts rule- or membership-based candidates in batches with test-image evidence, the owner curates names and membership per batch; shipped names style-descriptive, never trademarks; batches are owner-paced and interleave freely with the dither half — they never block it (D117). Candidate list in the ticket.
@@ -90,15 +90,21 @@ against the M13 remainder is the owner's call at pick time.
 - [ ] **M15-DITH-05 Dither acceptance session (absorbs M8-ACCEPT-01)** [maintainer] [detail] (2026-08-07)
   Intent: the human half — the absorbed M8 visual-quality session (gallery, live capture, comprehension, exports, fallback, access) run once on the final profile surface, judging the five methods and whether profiles and their names predict what the eye sees; the session protocol (incl. the M8-GOLD-01 rider) is in the ticket.
   Done when: owner pass/fail notes per method and per built-in profile are recorded; failures route per the ticket (a method failure reopens D61), never silent rework.
+  Status 2026-08-09: runs inside the combined sitting — see `docs/acceptance-combined-session.md`. Note the profile half is now **sixteen** built-ins, not the eight the ticket was written against.
 
 ### Icebox
 
 <!-- Deferred but worth keeping (post-triage). Needs a decision to
      reactivate. Promote into a milestone when committed. -->
 
-- [ ] **ICE-AUDIT-01 Sweep the audit suite's stale assertions** (2026-08-09)
-  Intent: `tests/audits/` carries post-M8 drift — a Boolean-dither draft-isolation check in `runtime.audit`, and "533" labels for what is now a 489-thread DMC palette. The audits run rarely (`AUDIT=1`), so the drift only surfaces when someone needs them, which is the worst moment to find it. Surfaced again 2026-08-09 when M15-GALLERY-01 added `profile-gallery.audit.test.ts` and only that file was run.
-  Done when: `npm run audit` runs clean end to end, with every stale assertion either corrected or deleted with its reason.
+- [ ] **ICE-AUDIT-01 `npm run audit` fails on a stale post-M8 assertion** (2026-08-09)
+  Intent: confirmed by running it 2026-08-09 — the suite is **2 files / 2 tests failed, 48 passed** in 46 s. One failure is certain drift: `runtime.audit` → "the draft governor never reaches exports" asserts `expect(live.dither).toBe(false)` and gets `{ algorithm: 'floyd-steinberg', … }`, because M8 turned `dither` from a boolean into a config object (D61/D62). The assertion is testing the wrong shape, not catching a defect. The "533" palette labels for what is now a 489-thread DMC set are the same class of drift.
+  Done when: `npm run audit` runs clean end to end, with every stale assertion corrected or deleted with its reason. The other failure is ICE-ROUTE-01, not this item.
+
+- [ ] **ICE-ROUTE-01 One routing disagreement in the M5-PERF-27 sweep** (2026-08-09)
+  Intent: `routing.audit` sweeps grid × palette × metric on both dither backends and asserts `routeDither` agrees with the measured winner on every row; it now reports **1 disagreement** (`expect(flips).toBe(0)`, `tests/audits/routing.audit.test.ts:125`). Unknown severity and not to be lumped in with ICE-AUDIT-01's stale assertions: the sweep decides its winner by measured time, so a near-tie row where noise picks the loser looks identical to a real routing regression. It matters because M13-SYNTH-01 (D135) signed off "routing confirmed unchanged".
+  Done when: the row is identified and its `margin` column read — a near-1.0 margin settles it as noise (and the assertion should then tolerate ties), a wide margin makes it a real routing defect with its own fix.
+  Note: does not block the acceptance sitting — the app's router is unchanged; this compares measured timings inside an audit.
 
 Promoted 2026-08-04 (D91) from the owner's third look — both change
 or extend engine/worker outputs, so they sit outside M14's UI-only

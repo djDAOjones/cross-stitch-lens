@@ -15,14 +15,14 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 245 file(s) across 11 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 246 file(s) across 11 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 12 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
 - `.github` — 1 file(s)
 - `.windsurf` — 1 file(s)
 - `crates` — 4 file(s)
-- `docs` — 13 file(s)
+- `docs` — 14 file(s)
 - `public` — 1 file(s)
 - `scripts` — 17 file(s)
 - `src` — 94 file(s)
@@ -69,6 +69,7 @@
 
 ## docs
 
+- `docs/acceptance-combined-session.md` — the combined M13+M15 owner sitting: build decision, prep, nine-leg order, per-item close conditions
 - `docs/acceptance-live-rehearsal.md` — M5-ACCEPT-03 rehearsal checklist: setup, actions, evidence, miss classification
 - `docs/acceptance-m13-live.md` — M13-ACCEPT-02 run sheet: live Photoshop capture legs, the four owner-judgement lines, pinned to the passing build
 - `docs/acceptance-matrix.md` — M5-ACCEPT-01 evidence: generated coverage table, per-row invariants, explicit skips

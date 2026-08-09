@@ -364,19 +364,19 @@ export function builtInProfiles(catalogue: ThreadCatalogue): ColorProfile[] {
   // two and reads as glaze rather than paper.
   const delft = dmc('3865', '3752', '932', '931', '930', '3750', '336', '823');
   const ukiyoE = dmc('3865', '3046', '3852', '921', '355', '522', '931', '930', '3750', '3781', '310');
-  // M15-GALLERY-01 batch 2 — drafted 2026-08-09 (D144), UNSIGNED.
+  // M15-GALLERY-01 batch 2 — owner-signed 2026-08-09 (D146).
   // Same split as batch 1 and the same order-is-identity rule: each
   // curated list is written the way it should read, light to dark
   // where the style is a ladder and by ink where it is not.
   //
   // Chrome, cream, two golds, jade, black. The chrome is a real deco
-  // colour, not a filler: the style is metal against lacquer. Its
-  // known cost is on the evidence card — Pearl Grey takes 43.8 % of
-  // the sample because that card carries a full greyscale ramp, so
-  // the mid grey wins area a photograph would not give it. Swapping
-  // 415 for 3799 (Pewter Grey very dark) trades that for a deeper
-  // shadow and drops Black to 2.6 %; it is one reference, and it is
-  // an owner call.
+  // colour, not a filler: the style is metal against lacquer. Signed
+  // with its residual named, as Neon noir was — Pearl Grey takes
+  // 43.8 % of the evidence card, because that card carries a full
+  // greyscale ramp and so hands the mid grey area a photograph never
+  // would. The alternative was offered and not taken: swapping 415
+  // for 3799 (Pewter Grey very dark) buys a deeper shadow and drops
+  // Black to 2.6 %. Do not "fix" the grey later without asking.
   const artDeco = dmc('712', '415', '3852', '782', '3814', '310');
   const midCentury = dmc('739', '3820', '921', '3012', '3809', '801');
   // Undyed wool, then the four traditional dyes: madder red, indigo,
@@ -456,7 +456,7 @@ export function builtInProfiles(catalogue: ThreadCatalogue): ColorProfile[] {
     profile('de-stijl', 'De Stijl primaries', { include: deStijl }),
     profile('delft-blue', 'Delft blue', { include: delft }),
     profile('ukiyo-e', 'Ukiyo-e woodblock', { include: ukiyoE }),
-    // --- M15-GALLERY-01 batch 2 — drafted 2026-08-09 (D144) ----------
+    // --- M15-GALLERY-01 batch 2 — owner-signed 2026-08-09 (D146) -----
     // Four rules and four lists, chosen against the gaps batch 1 left:
     // the gallery had no greens, no all-hue high chroma and no muted
     // mid-neutrals, and its culture half was all pre-war Europe and

@@ -107,6 +107,18 @@
 
 ## M15 — Colour & dithering profiles (agent work complete — the two acceptance sessions remain)
 
+- M15-GALLERY-01 batch 2 (2026-08-09) — eight more built-in style
+  profiles ship owner-signed, taking the gallery to sixteen: four
+  rule-shaped (Rainforest, Spring meadow, Gemstones, Moorland) and
+  four curated (Art deco, Mid-century modern, Fair Isle, Fluoro spot
+  print), chosen against the gaps batch 1 left — no greens, nothing
+  narrowing on chroma rather than hue, nothing muted. Batch 1's
+  numbers could not be regenerated, so the evidence run was rebuilt
+  from the published sheet and committed as an `AUDIT=1` audit; the
+  ticket's own "Risograph print" turned out to be a trademark and
+  ships renamed, with `riso` added to the naming guard. See D144
+  (drafting) and D146 (signature).
+
 - M15-GALLERY-01 batch 1 (2026-08-09) — eight built-in style profiles
   ship owner-signed: five rule-shaped (Autumn leaves, Golden hour,
   Winter frost, Deep sea, Neon noir) and three curated (De Stijl

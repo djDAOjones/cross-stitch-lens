@@ -1872,3 +1872,41 @@ ICE-XREF-01's data problem.
 **Link:** backlog → M15-DATA-01 under M15 Next with a `[detail]`
 ticket; wish-list → the two rows promoted out; D144 recorded them as
 wish-listed and stands unamended.
+
+---
+
+## D146 — M15-GALLERY-01 batch 2 signed as-is; the gallery reaches sixteen (2026-08-09)
+
+**Decision:** the owner signed all eight batch-2 candidates unchanged —
+Rainforest, Spring meadow, Gemstones, Moorland, Art deco, Mid-century
+modern, Fair Isle, Fluoro spot print. Names and membership stand as
+drafted (D144). They are shipped built-ins, not provisional, and batch
+3 may start.
+
+**Art deco is signed with its residual named**, the same conduct Neon
+noir got at D140. Pearl Grey takes 43.8 % of the evidence card because
+that card carries a full greyscale ramp and hands the mid grey area no
+photograph would. The alternative was offered and not taken: 415 →
+3799 buys a deeper shadow and drops Black to 2.6 %. The next reader
+will see the grey and take it for an oversight — it is a decision, and
+changing it needs the owner.
+
+**The rename stands.** "Fluoro spot print" ships in place of the
+ticket's "Risograph print", and `riso` stays in the naming guard.
+
+**Two findings left the wish-list for the queue**, at the owner's ask
+that findings live in the backlog rather than the inbox: the missing
+profile-demo photos become **M15-EVID-01** (owner action — three of
+the five test-preview slots render "Image offline", so every batch so
+far has been judged on the generated card alone, and a style that
+reads on a synthetic hue sweep is not proof it reads on a face), and
+the audit suite's post-M8 drift becomes **ICE-AUDIT-01**, surfaced
+again when batch 2 added an audit file and ran only that one.
+
+**Scope:** comment text in `src/core/color-profile.ts` recording the
+signature and the Art deco decision; memory. No recipe, no rule and no
+membership changed — the signature is the whole change. `check` green.
+
+**Link:** backlog → batches 1 and 2 both signed, item stays open for
+batch 3; two items added; trajectory → one line; D144 is the drafting
+record and stands unamended.

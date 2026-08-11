@@ -430,6 +430,16 @@ input[type='checkbox']:not(.toggle):disabled {
   margin-bottom: 0;
 }
 
+/* A row's trailing action is a column, not a suffix (M15-UI-05): the
+  library rows put `Browse` after a variable-width brand name, so
+  without this the eight buttons start at eight different left edges.
+  The slack goes to the name, the action keeps one edge at every
+  width. Scoped to .check-row so .thread-row's inline verbs are
+  untouched. */
+.check-row > button {
+  margin-left: auto;
+}
+
 /* Native disclosures: every summary is a ≥ 44 px target (A3b — the
   debug panel had this rule; the palette editor did not). */
 summary {

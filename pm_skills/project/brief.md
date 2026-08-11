@@ -23,9 +23,26 @@ do not duplicate content into memory files).
 ## Who it's for
 
 Primary user: the project owner (personal creative use on macOS).
-Wider distribution planned later — architectural choices must not
-foreclose it (hence web platform, offline-capable, Tauri as a future
-packaging path).
+
+**Widened 2026-08-11 (D149).** The owner intends to publish the app
+online to a broader audience who "could be using it on anything", which
+moves wider distribution from *planned later* to *intended*, and has
+three consequences the roadmap must respect:
+
+- **"macOS-first" is no longer the product**, only where it was first
+  built and measured. Cross-platform behaviour stops being a
+  don't-foreclose-it constraint and becomes a requirement.
+- **No upstream editor can be assumed.** Much of the design rests on
+  the user editing in Photoshop beside the app; a broader audience may
+  have nothing of the kind. This is why controlling the image inside the
+  app — adjustments and colour thresholds as presets (ICE-ADJUST-01) —
+  is product scope rather than duplication of a better tool.
+- **Redistribution changes licence questions**, most immediately M9's
+  symbol font or asset choice: embeddable for personal use in a local
+  web app and redistributable in a published app are different answers.
+
+Architectural choices must not foreclose it (hence web platform,
+offline-capable, Tauri as a future packaging path — ICE-TAURI-01).
 
 ## MVP scope (build this, nothing more)
 

@@ -22,7 +22,6 @@ refer to `docs/requirements.md`.
 
 ## Second stage (spec §25)
 
-- Thorough rename of app/ repository to Pattern Mapper, renaming across files and platforms
 - Full custom processing-order editor (advanced mode, §7)
 - Colour-reduction extras: CIEDE2000, weighting controls,
   merge-similar, min-usage threshold (§6) — max colours and
@@ -52,7 +51,6 @@ refer to `docs/requirements.md`.
 - Manual backend override: debug-panel select + ?backend= URL param forcing ts/wasm/webgpu per stage (architecture already anticipates it) (from: 2026-07-19 M5-SELECT)
 - semi-transparent dither participation: whether an alpha 1-127 cell (which renders as fabric per D9) should take part in error diffusion; M5-ACCEPT-01 fixed alpha===0 only
 - crates/stitch-engine/pkg can go stale silently: no local Rust toolchain means the wasm parity suite runs against whatever pkg was last built, so a Rust source change is only really verified in CI
-- Tick-numbering margin: FIT_MARGIN (24 CSS px) clips 3-digit row labels at fit-width on a narrow window — the labels are drawn centred on the row so they overhang the reserved margin (seen at 420 px, M6-NARROW-01 rehearsal; M11 territory)
 - Companion-window rehearsal in stable Safari / Chrome / Firefox on the maintainer's macOS setup — the leg D53 could not measure from an embedded Chromium; only worth doing if browser placement is reconsidered
 - bv2 per-row taint attribution: one bad window currently taints the whole report even when the same report carries a clean retake of that leg — row-level validity would let a report separate its own good and bad rows (from: 2026-07-23 M13-MEAS-02 run 3)
 - [ ] Remove the retired policy-world resolver (resolvePermitted/resolveProjectPalette in src/core/palette-policy.ts + palette-resolve.ts) and the LCh presets once no migration-era consumer remains — kept post-M15-UI-01 as tested substrate only (D124).
@@ -61,4 +59,11 @@ refer to `docs/requirements.md`.
 - End-of-capture salience: the external-stop status line ("Screen capture ended (sharing was stopped).") is truthful but easy to miss — owner expected a more prominent prompt; consider a toast/banner treatment (from: 2026-08-08 owner sitting, D134 → ACCEPT-02 input)
 - Harness capture leg does not model the app's master-image copy: `src/bench-browser.ts`'s pump submits the grab buffer directly and keeps no master image, so the app's per-frame pre-submit copy (D71 census #2) never existed there and its removal cannot be priced on the automated leg — a fidelity gap for any main-thread-ownership change (from: 2026-08-08 M13-IMPL-01)
 - Synced-tree churn hygiene: relocate the cargo target dir + Vite/Vitest cache off the OneDrive path (CARGO_TARGET_DIR; `test.cacheDir`) — the secondary multiplier behind D136's QoS mechanism (`check:wasm` rewrites 111 MB in-domain right before `check:test`); unverifiable while the sync client idles, so hygiene not fix (from: 2026-08-08 INFRA-CHECK-01, D136)
-- Colour-limit slider: raise the ceiling to 512, put a perceptual (log-ish) scale on it so the midpoint lands near 16, and drop 1 as a selectable value — 2→16 is where the picture changes most and 1 has no definition at all (from: 2026-08-09 combined acceptance sitting, leg 1 p64)
+<!-- Triaged 2026-08-11 (D149): three lines left. The rename promoted to
+     RENAME-01 (Current), the colour-limit slider to ICE-LIMIT-01 (Icebox),
+     and the FIT_MARGIN tick-label clip absorbed into M11's backlog line.
+     Everything above was reviewed and kept parked — none of it belongs in
+     Batch C0 or Track A. Closest to promotion next: "End-of-capture
+     salience" (a real owner-reported UX defect, held back only because
+     toast-versus-banner is a taste call) and the Rust lint/format gate
+     line, which the rename will touch anyway. -->

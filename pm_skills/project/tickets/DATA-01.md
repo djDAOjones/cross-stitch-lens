@@ -1,9 +1,25 @@
-# M15-DATA-01 — Verify the thread catalogue's colour listings
+# DATA-01 — Verify the thread catalogue's colour listings
 
 Owner ask 2026-08-09, after M15-GALLERY-01 batch 2 surfaced a second
 bad row. Rule-shaped profiles read the whole catalogue, so every batch
 turns up another one; finding them one at a time is the slowest
 possible route to a clean list.
+
+**Split at D149** (was M15-DATA-01). This ticket is now the *detection*
+half — the two machine-certain classes, shipped in Batch C0. The other
+two classes became their own backlog items, because the original item
+could not close without a large slice of the owner's time spent on the
+class that matters least:
+
+- **DATA-02** — name-versus-colour disagreement. A thread's *name* is
+  decoration: identity is `brandId:reference` and RGB is display-only
+  (D55/D56), so a wrong name is ugly in the key and nothing more.
+- **DATA-03** — published brand values. This is the class that actually
+  affects output, and the original item explicitly excluded it.
+
+This ticket **survives Batch C0** rather than being deleted with it: the
+sweep is re-runnable after each round of owner corrections, so it
+outlives the run that builds it.
 
 `src/core/palettes/thread-list.csv` is **protected owner data**. The
 agent's half is detection and reporting. Corrections are the owner's,
@@ -69,9 +85,10 @@ ICE-XREF-01's kind of owner-supplied source data.
 
 ## Done when
 
-- The sweep is committed and re-runnable, and reports every class with
-  its rows.
-- The owner has the certain classes as a list and the judgement
-  classes as evidence.
+- The sweep is committed and re-runnable, and reports the two certain
+  classes with their rows (unnamed rows; same-brand identical hex).
+- The owner has them as a list to act on, with evidence beside each
+  same-brand hex pair since only they can say whether it is a slip.
 - Accepted corrections are in `thread-list.csv` by the owner's hand,
   `catalogue.json` regenerated, and `check` green.
+- The name-versus-colour probe is **out of scope here** — DATA-02.

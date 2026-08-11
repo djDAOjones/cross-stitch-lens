@@ -2011,3 +2011,176 @@ decision-log, wish-list, three ticket files deleted, one added,
 **Link:** M15 becomes Current, M16 becomes Next. M15-DATA-01 and
 M16-SCOPE-01 were queued for this session and did not run — the sitting
 took it.
+
+## D149 — Roadmap reorganisation: the output half becomes the critical path, the audience widens, and a fifteen-item batch precedes it (2026-08-11)
+
+**Decision.** A whole-queue review, at the owner's request, with three
+outcomes: a restructured backlog, four owner answers that change scope,
+and a batch built to be run gatelessly.
+
+**The structural finding.** M13, M14 and M15 all shipped work on the
+*input and appearance* side of the app — performance, UI, colour
+profiles. Meanwhile M9–M12 (symbols, multi-page charts, grid styling,
+fabric and thread estimates) had sat deferred since 2026-07-22 (D63).
+The brief's second success criterion — "a stitchable chart PDF can be
+printed from a captured design" — is therefore still unmet: today's PDF
+is one page, colour cells only, screen-sized, no symbols, and its thread
+key prints the hex twice (KEY-01). The app is an excellent lens attached
+to an unfinished pattern. Those five milestones become **Track A, the
+printable pattern**, ordered M9 → M11 → M16 → M10 → M12, and Track A is
+Next.
+
+**M16 demoted from milestone to task.** Its ask — grid lines and major
+numbering on by default — *is* an M11 preset choice, and print-ready
+defaults cannot be settled before M9 decides whether a chart cell
+carries a symbol. It was a defaults change to furniture that does not
+exist yet, sitting in front of the milestones that build the furniture.
+
+**Ship order stops tracking milestone number.** M9–M12 now ship after
+M13–M15, and M16 after M11. The numbers stay because they are greppable
+across ten ticket files and 149 decision entries; renumbering would cost
+that for no gain. The backlog states the order explicitly instead.
+
+**Batch C0 precedes Track A**, and is the argument the owner asked for
+about running a large gateless (auto-jazz) batch. Fifteen items with
+confirmed mechanisms, named acceptance conditions and no taste required:
+the 2026-08-09 sitting's findings plus the tooling debt that made that
+sitting expensive. Three of them run first because they are
+preconditions for *trusting* a gateless run at all:
+
+1. **RENAME-01** — a large run writes prose, decision entries and
+   identifiers; every one written under the old name becomes rename
+   surface. Cheapest now.
+2. **The doc-sync pass**, plus the hot-read drift fixed in this entry.
+3. **AUDIT-01 + ROUTE-01** — `npm run audit` is red (2 files / 2
+   tests), so the audits currently give the agent no signal.
+
+The general principle, worth keeping: before a long gateless run, fix
+the things that make failure legible. A red audit suite, a diagnostics
+buffer that evicts real faults for browser noise (DIAG-01), and export
+helpers that pass while the artefact is wrong (EXPORT-01) are precisely
+the conditions under which an unattended run does damage nobody sees.
+
+**Owner answers that changed scope.**
+
+- **The audience widens.** The owner intends to publish online to a
+  broader audience who "could be using it on anything". "macOS-first,
+  personal creative use" is no longer the product, only where it was
+  built and measured. Recorded in `brief.md`.
+- **ICE-ADJUST-01 survives, and the recommendation against it was
+  wrong.** The review argued for cutting it: tonal sliders duplicate
+  Photoshop, which the user has open beside the app and which does it
+  incomparably better. That argument rested entirely on the upstream
+  editor being there — and a broader audience may have nothing of the
+  kind. The owner also holds that controlling the final image process
+  *is* the point of the app, and asked for colour thresholds as presets.
+  Rescoped rather than kept as-was: build it as a **third profile kind**
+  on M15's kind-agnostic editor shell, beside colour and dither, because
+  "available as presets" is exactly what that shell already does and a
+  third kind is the shape it was built for. It is the presumptive
+  milestone after Track A.
+- **DUR-01 opened.** There is no autosave, no session restore and no
+  unsaved-work guard; `beforeunload` appears nowhere in `src/`.
+  IndexedDB holds *library* data only, localStorage holds accordion
+  state, and the design in progress exists only if you save a file —
+  mitigated by one sentence at `src/main.ts:1971`. M14-AUDIT-02
+  confirmed the silent loss at D75 and it was never opened as work. It
+  is the highest-severity open product defect and it was not in the
+  backlog at all. Ships with SAVE-01: same subject.
+- **The rename is real.** Promoted from the wish-list, where it had sat
+  since 2026-07-20, and sequenced first. Its tier is the one blocking
+  question — the preferences key and the IndexedDB database name need
+  migrations or an existing install loses its accordion state,
+  inventory, palettes and profiles, and the repo/remote/directory tier
+  is the owner's to perform, not the agent's.
+
+**A dependency nobody had noticed.** M9's ticket makes font and asset
+licensing a first-class milestone decision. "Embeddable for personal use
+in a local web app" and "redistributed inside a published app" are
+different licence answers, so ICE-TAURI-01's distribution intent is now
+an *input* to M9 rather than an unrelated spike. Settle it first or pick
+symbol assets twice.
+
+**Splits and narrowings.**
+
+- **M15-DATA-01 split three ways.** As written it chased the cosmetic
+  class and excluded the consequential one. A thread's *name* is
+  decoration (identity is `brandId:reference`, RGB is display-only —
+  D55/D56); a wrong **hex** misrenders the design. DATA-01 keeps the two
+  machine-certain classes and runs in the batch; DATA-02 holds the
+  name-versus-colour probe (402 hits, mostly compound-name false
+  positives); DATA-03 holds the published-values data ask, blocked on
+  owner data.
+- **A11Y-VO-01 split.** A11Y-01 asserts every control *has* an
+  accessible name, hand-rolled over `tests/ui-styles.test.ts` with no
+  new dependency; A11Y-VO-01 keeps the part a person has to hear —
+  whether the announcements are any good. A short VoiceOver crawl
+  instead of a long one.
+- **ICE-VARIANTS-01 narrowed** from four axes (including a 2→256 sweep)
+  to one bounded axis: the five dither methods from a frozen still. It
+  is the best idea in the Icebox — it fixes choosing by memory — but a
+  grid is many pipelines, so let one axis earn the rest.
+
+**Cuts and corrections.**
+
+- **ICE-AUTOMATE-01 cut.** Its deliverable was the
+  automatable/partly/human-only triage, and that triage was already
+  written in the item. It has become the ordering rationale for Batch C0
+  and this entry; keeping the item would have been keeping a finished
+  piece of work in the queue.
+- **ICE-TRANSCRIPT-01's stated blocker was already fixed.** The item
+  claimed `_transcripts/*.md` was absent from `.gitignore`; it is at
+  line 42 with a `!README.md` exception, and the folder and README
+  exist. Only the save-or-retire question remains, as DOCS-01. In 26
+  days the close ritual has produced zero transcripts, so retiring the
+  reminder is a real option: a reminder nobody obeys trains the reader
+  to skim the close.
+- **Hot-read drift corrected, and this is why item 2 runs early.**
+  `architecture.md` claimed "IndexedDB for autosave/session state"
+  (there is none) and schema **v4** (the code is v5). `README.md` said
+  M15's acceptance was pending and the M13 remainder was next (both
+  shipped), and still advertised the settings-panel collapse and
+  preview-focus mode (retired at M14), the capture region as
+  aspect-locked to the pattern (default-off since D107), and
+  lock/**prefer**/exclude (prefer retired, exclude dissolved into
+  membership at M15). Every session hot-reads those files; a gateless
+  run would have built on all of it.
+
+**Memory maintenance, folded in.** Three of four accreting files were
+over budget. `backlog.md` Active: **4,207 words → 2,000** against a
+1,500 budget, by moving fifteen items' traced mechanisms into one shared
+run sheet (`tickets/BATCH-C0.md` — one file, not fifteen, because they
+ship together) and tightening the Icebox to the grammar's two lines.
+The residual overrun is honest rather than green-washed: 36 open items
+at two lines each has a floor near 1,800, and Batch C0's fifteen lines
+evaporate when the run lands. `trajectory.md`: **3,225 → 1,005 words**,
+M13's remainder and all of M14 archived to
+`archive/trajectory/trajectory-0004-2026-08-04-to-2026-08-09.md`, and
+M15's two separate sections — one "in progress", one "agent work
+complete" — merged into one **SHIPPED** section, which was itself drift.
+`decision-log.md` is at 43 live entries against a 20 budget; the archive
+split is **proposed, not performed** — it is the most delicate protected
+file, agents read only the latest ten headings, and splitting it in the
+same commit as everything else would have buried the diff.
+
+**Alternatives rejected.** Renumbering the milestones into ship order
+(breaks greppability across tickets and 149 entries for cosmetic
+tidiness). Keeping M16 as a milestone (it cannot be specified before M9
+and M11). Cutting ICE-ADJUST-01 (the argument depended on an upstream
+editor the new audience may not have — see above). Running the autojazz
+batch immediately (the rename, the doc drift and the red audit suite all
+get more expensive, not less, once a large run has written over them).
+Compressing Batch C0's traced mechanisms away to hit the word budget:
+they were paid for at an expensive sitting and are the difference
+between a twenty-minute fix and a two-hour rediscovery.
+
+**Scope.** `backlog.md` (rewritten), `trajectory.md`, `brief.md`,
+`architecture.md`, `README.md`, `wish-list.md` (triaged, three lines
+left), `doc-deltas.md` (+4, now 9 open), `archive/INDEX.md`,
+`archive/trajectory/trajectory-0004-*.md` (new),
+`tickets/BATCH-C0.md` (new), `tickets/M15-DATA-01.md` →
+`tickets/DATA-01.md`. No source changed; `check` green before and after.
+
+**Link:** Batch C0 becomes Current, Track A becomes Next, Track B and a
+regrouped Icebox follow. RENAME-01's tier is the one answer needed
+before the batch can run.

@@ -19,14 +19,24 @@ WebGPU as profiled drop-in backends.
 
 Pre-MVP. Work is organised into milestones in
 [`pm_skills/project/backlog.md`](pm_skills/project/backlog.md).
-**M14 (UI/UX excellence) is complete** — six review looks shipped
-and the maintainer end review passed (D127). **M15 (colour &
-dithering profiles)** has shipped its agent work whole: colour
-profiles as composition recipes with a kind-agnostic takeover
-editor, schema v5, and dithering profiles on the same shell; its
-maintainer acceptance sessions are pending. The **M13 remainder**
-(owner-session-gated performance work) is queued next.
-**M0–M7 have shipped (v0.5.0)**: the quality-gated scaffold, the full
+**M0–M8, M13, M14 and M15 have all shipped** (v0.5.0). Ship order is
+no longer milestone-number order — next is **Batch C0** (a mechanical
+tooling and defect batch), then **Track A, the printable pattern**:
+M9 symbols and B/W charting → M11 grid and tick styling → M16
+print-sized export defaults → M10 multi-page PDF → M12 fabric and
+thread estimates. That arc is the app's unfinished half: today's chart
+PDF is one page, colour cells only, and sized for the screen.
+
+**M15 (colour & dithering profiles)** closed on both acceptance gates
+(D148): colour profiles as composition recipes with a kind-agnostic
+takeover editor, schema v5, sixteen signed built-in style profiles, and
+dithering profiles on the same shell. **M14 (UI/UX excellence)**
+completed over six review looks plus a maintainer end review (D127).
+**M13 (visual processing performance)** shipped on its maintainer gate:
+the ≥ 4 preview updates/sec promise is now asserted by `bench:auto`,
+not merely stated.
+
+**M0–M7** delivered: the quality-gated scaffold, the full
 TypeScript engine core (resize, CIELAB palette reduction, Floyd–
 Steinberg dithering, stats), still-image import, the preview UI —
 worker-rendered canvas with zoom/pan/fit, grid overlay with row/column
@@ -38,23 +48,28 @@ user-drawn crop rectangle over a live thumbnail, a latest-wins frame
 pump, dirty-frame skipping, pause/resume, and a draft-quality mode
 under load — the **performance backends** (Rust→WASM error diffusion,
 WebGPU colour reduction, automatic per-stage selection, benchmark
-harness) — and the **Photoshop companion layout**: a preview-first
-responsive shell usable from 320 CSS px, a collapsible settings panel,
-a preview-focus mode, fit-to-space/width/height, and four
-independently-settable resolutions (pattern, capture, preview, export)
-with the capture region aspect-locked to the pattern — and the
-**palette & colour strategy**: a thread catalogue of 3,338 threads
-across eight brands, per-brand enable/disable, a cross-project thread
-inventory in IndexedDB with an "only threads I own" restriction, named
-library palettes, algorithmic colour-scheme presets, exact/maximum
-colour-count targets, and lock/prefer/exclude with auto-fill — every
-narrowing explained in words rather than silently applied. **M8
-dithering expansion** has shipped its engine and controls: five dither
-methods as user choices (Floyd–Steinberg, Atkinson, Jarvis, ordered
-Bayer 8×8, blue-noise) behind a discriminated config with per-family
-strength, serpentine where a scan direction exists, and seven
-evidence-based presets (see `docs/dither-evaluation.md`); the
-milestone closes on the maintainer's visual acceptance session.
+harness) — and the **companion layout**: a preview-first responsive
+shell usable from 320 CSS px, accordion sections with persisted
+disclosure, fit-to-space/width/height, and four independently-settable
+resolutions (pattern, capture, preview, export) — and the **palette &
+colour strategy**: a thread catalogue of 3,338 threads across eight
+brands, per-brand enable/disable, a cross-project thread inventory in
+IndexedDB with an "only threads I own" restriction, named library
+palettes, exact/maximum colour-count targets, and Must-use threads with
+auto-fill — every narrowing explained in words rather than silently
+applied. **M8 dithering expansion** shipped five dither methods as user
+choices (Floyd–Steinberg, Atkinson, Jarvis, ordered Bayer 8×8,
+blue-noise) behind a discriminated config with per-family strength and
+serpentine where a scan direction exists, with evidence in
+`docs/dither-evaluation.md`; its visual acceptance closed inside
+M15-DITH-05 (D148).
+
+Later milestones deliberately superseded parts of the above, so read
+this list as the arc rather than the current control surface: the
+settings-panel collapse and preview-focus mode retired at M14, the
+capture region's aspect lock now **defaults off** with both pattern
+dimensions deriving from the region (D107), and M15 retired `prefer`
+and dissolved `exclude` into profile membership (D114/D124).
 
 ## How to run
 

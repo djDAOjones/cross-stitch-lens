@@ -15,7 +15,7 @@
 | Native acceleration | Rust → WASM (`wasm-pack`, SIMD) for error diffusion; WebGPU compute (WGSL) for parallel stages |
 | Capture | `getDisplayMedia` + user-drawn crop rect; frames via `ImageCapture`/`requestVideoFrameCallback` |
 | PDF export | pdf-lib |
-| Persistence | Versioned JSON project files; IndexedDB for autosave/session state |
+| Persistence | Versioned JSON project files (explicit save only); IndexedDB for **library** data — thread inventory, saved palettes, profiles, user colours. **There is no autosave and no session restore**: closing the tab loses the design in progress (DUR-01, corrected at D149 — this row claimed autosave existed) |
 | Tests | Vitest + golden-output fixtures |
 | Future packaging | Tauri v2 (macOS ScreenCaptureKit plugin for arbitrary-region capture) — no code paths assume it |
 
@@ -73,7 +73,7 @@ opaque black would diffuse phantom error into the stitches beside a
 the rule is mirrored bit-for-bit in the TS and Rust dither backends
 (D49).
 
-Dithering is a discriminated **`DitherConfig` union** (project schema
+Dithering is a discriminated **`DitherConfig` union** (added at schema
 v4): `none`; error-diffusion methods (Floyd–Steinberg, Atkinson,
 Jarvis) carrying `serpentine` + `strength` (0–1, fraction of error
 diffused); threshold methods (ordered Bayer 8×8, blue-noise 32×32)
@@ -236,8 +236,11 @@ measured reality at M5C/M5D (D47/D48).
 
 `{ schemaVersion, pipeline, palette, gridStyle, preview, export }` —
 see requirements §20 for the full field inventory. Loading an older
-`schemaVersion` must migrate, never fail (currently v4, with forward
-steps from v1–v3).
+`schemaVersion` must migrate, never fail (currently **v5** —
+`SCHEMA_VERSION` in `src/core/project.ts` — with forward steps from
+v1–v4; v5 added the colour and dither profile refs at M15 under the
+D114 compatibility waiver). A file saved by a *newer* version is
+refused with a message naming both versions, never silently misread.
 
 The `palette` block holds **both** halves, and needs both (D55):
 

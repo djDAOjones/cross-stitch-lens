@@ -15,16 +15,16 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 253 file(s) across 11 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 255 file(s) across 11 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 12 file(s)
-- `.claude` — 1 file(s)
+- `.claude` — 2 file(s)
 - `.githooks` — 1 file(s)
 - `.github` — 1 file(s)
 - `.windsurf` — 1 file(s)
 - `crates` — 4 file(s)
 - `docs` — 15 file(s)
 - `public` — 7 file(s)
-- `scripts` — 17 file(s)
+- `scripts` — 18 file(s)
 - `src` — 94 file(s)
 - `tests` — 100 file(s)
 <!-- /file-map-index -->
@@ -47,6 +47,7 @@
 ## .claude
 
 - `.claude/launch.json` — dev-server launch config for agent browser preview
+- `.claude/settings.json` — project agent settings: the SessionStart hook that provisions cloud sessions
 
 ## .githooks
 
@@ -112,6 +113,7 @@
 - `scripts/check-docs.mjs` — docs gate: backticked path/link validation
 - `scripts/check-secrets.mjs` — report-only credential-shape scan (gate step)
 - `scripts/check-wasm.mjs` — gate step: cargo test + wasm-pack build; toolchain-aware skip (hard-fails in CI)
+- `scripts/cloud-setup.sh` — SessionStart hook body: `npm ci` inside a cloud session only; no-op locally
 - `scripts/gen-golden-hello.mjs` — one-time generator of the M0 hello fixtures
 - `scripts/write-acceptance-matrix.mjs` — regenerates the coverage table (the fixer; `check` only compares)
 

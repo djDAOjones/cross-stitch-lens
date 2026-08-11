@@ -397,9 +397,17 @@ describe('the PDF artefact', () => {
     expect(threadRows.length).toBeGreaterThan(0);
     for (const row of threadRows) {
       // "310" without saying whose 310 sends the stitcher to the wrong
-      // shelf (M7-BRAND-02).
-      expect(row).toMatch(/^DMC \S+ #[0-9a-f]{6}$/);
+      // shelf (M7-BRAND-02). Since M9 a row may go on to name the
+      // thread and always ends in its stitch count.
+      expect(row).toMatch(/^DMC \S+ #[0-9a-f]{6}( · .+)? ×\d+$/);
     }
+  });
+
+  it('quantifies every row: the key ends in a stitch count (M9)', async () => {
+    const runs = pdfTextRuns(await build());
+    const keyRows = runs.filter((r) => r !== 'Artefact test' && !r.startsWith('+ '));
+    expect(keyRows.length).toBeGreaterThan(0);
+    for (const row of keyRows) expect(row).toMatch(/ ×\d+$/);
   });
 
   it('fails the way KEY-01 failed, if it ever regresses', async () => {

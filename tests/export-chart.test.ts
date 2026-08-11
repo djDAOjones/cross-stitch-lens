@@ -8,10 +8,20 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { chartFilename, chartLayout, encodeChartPng, maxCellPx } from '../src/export/chart.ts';
+import {
+  CHART_TEXT,
+  chartFilename,
+  chartLayout,
+  encodeChartPng,
+  maxCellPx,
+  SYMBOL_INK_LIGHT,
+  symbolCoverageProblem,
+  symbolInk,
+} from '../src/export/chart.ts';
 import { MAX_OUTPUT_SIDE } from '../src/export/png.ts';
+import { glyphById } from '../src/core/symbols/glyphs.ts';
 import { DEFAULT_GRID_STYLE, type GridStyle } from '../src/worker/grid.ts';
-import type { PixelBuffer } from '../src/core/types.ts';
+import { EMPTY_INDEX, type PixelBuffer } from '../src/core/types.ts';
 
 const STYLE: GridStyle = { ...DEFAULT_GRID_STYLE }; // majors every 10, ticks on
 
@@ -73,5 +83,57 @@ describe('oversize refusal (M13-DEF-02 regression)', () => {
     await attempt.catch((error: unknown) => {
       expect(String(error)).toContain(String(maxCellPx(1024, 1024, STYLE)));
     });
+  });
+});
+
+describe('symbol coverage (M9 refusal contract)', () => {
+  const dot = glyphById('dot');
+  const circle = glyphById('circle');
+
+  /** 2×1 frame: cell colours + alphas + palette indices as given. */
+  function frame(
+    alphas: [number, number],
+    indices: [number, number] | undefined,
+  ): PixelBuffer {
+    const data = new Uint8ClampedArray([0, 0, 0, alphas[0], 255, 255, 255, alphas[1]]);
+    const buffer: PixelBuffer = { width: 2, height: 1, data };
+    if (indices !== undefined) buffer.indices = Uint16Array.from(indices);
+    return buffer;
+  }
+
+  it('accepts full coverage of the used indices', () => {
+    expect(symbolCoverageProblem(frame([255, 255], [0, 1]), [dot, circle])).toBeNull();
+  });
+
+  it('refuses a frame with no palette-index sidecar', () => {
+    expect(symbolCoverageProblem(frame([255, 255], undefined), [dot, circle])).toMatch(
+      /no thread identities/,
+    );
+  });
+
+  it('refuses when a used index has no glyph, counting the bare colours', () => {
+    expect(symbolCoverageProblem(frame([255, 255], [0, 1]), [dot])).toMatch(/1 colour/);
+  });
+
+  it('ignores fabric: transparent and empty-index cells need no symbol', () => {
+    // Cell 0 is sub-threshold alpha (D9 fabric), cell 1 was never
+    // matched (EMPTY_INDEX) — neither is a stitch, so nothing is bare.
+    expect(symbolCoverageProblem(frame([0, 255], [0, EMPTY_INDEX]), [])).toBeNull();
+  });
+});
+
+describe('symbolInk (symbols over colour)', () => {
+  it('uses light ink on dark cells and chart ink on light cells', () => {
+    expect(symbolInk(0, 0, 0)).toBe(SYMBOL_INK_LIGHT);
+    expect(symbolInk(20, 20, 90)).toBe(SYMBOL_INK_LIGHT);
+    expect(symbolInk(255, 255, 255)).toBe(CHART_TEXT);
+    expect(symbolInk(250, 240, 200)).toBe(CHART_TEXT);
+  });
+
+  it('weights green as the eye does (WCAG luminance, not raw RGB)', () => {
+    // Pure green is bright to the eye; pure blue is dark — a naive
+    // average would call them equal.
+    expect(symbolInk(0, 255, 0)).toBe(CHART_TEXT);
+    expect(symbolInk(0, 0, 255)).toBe(SYMBOL_INK_LIGHT);
   });
 });

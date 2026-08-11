@@ -34,9 +34,9 @@ criterion — a stitchable chart PDF printed from a captured design — is
 still not met. That PDF is one page, colour cells only, screen-sized,
 no symbols.
 
-- [ ] **M9 Symbols & B/W charting** [sign-off] [detail] (2026-07-22, scope signed 2026-08-11)
-  **Scope signed (D160)**: app-owned vector glyphs (~64 reviewed, refusal past the set), overrides from the unused pool with explicit swap, assignment as identity-keyed *persisted state*. Decoupled from ICE-TAURI-01 — no font, no licence surface. The ticket carries the four decisions in full.
-  Remaining: build (assignment model + project-file persistence, chart modes, key) — largely gateless — plus the glyph batches, drafted and **owner-signed on printed evidence** (the [sign-off] that stays).
+- [~] **M9 Symbols & B/W charting** [sign-off] [detail] (2026-07-22, scope signed 2026-08-11, build landed 2026-08-12)
+  **Scope signed (D160); build landed whole (D165)**: 64 drafted glyphs in four batches, identity-keyed persisted assignment (schema v6), three chart modes across chart PNG and PDF, a symbol/name/count key, refusal past the set, and `npm run symbols:evidence`.
+  Remaining: the **owner signs the glyph batches on printed evidence** (the [sign-off] that stays) — print `bench-reports/m9-symbol-evidence.pdf`; a glyph may be redrawn freely before its batch signs, but ids and canonical order are already permanent. The override UI stays a v1-optional slice.
 - [ ] **M11 Grid, ruler & tick styling presets** [detail] (2026-07-22)
   Minor/major grid styling, numbering/rulers, named presets incl. high-contrast, separate screen vs print settings. Absorbs the `FIT_MARGIN` tick-label clip waived at M14-VERIFY-01.
 - [ ] **M16 Print-sized export defaults** [sign-off] (2026-08-09)

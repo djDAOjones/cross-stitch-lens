@@ -49,6 +49,14 @@ function sampleProject(): ProjectFile {
       },
       snapshot: loadDmcPalette().entries.slice(0, 3),
     },
+    symbols: {
+      assigned: [
+        { threadId: 'dmc:310', symbolId: 'dot' },
+        { threadId: 'dmc:817', symbolId: 'circle' },
+      ],
+      queue: ['square-fill', 'square'],
+      overrides: [{ threadId: 'dmc:817', symbolId: 'circle' }],
+    },
     gridStyle: {
       show: true,
       minorInterval: 1,
@@ -65,6 +73,7 @@ function sampleProject(): ProjectFile {
       background: 'solid',
       color: '#ffffff',
       chartCell: 10,
+      chartMode: 'symbols',
       pdf: { pageSize: 'a4', orientation: 'portrait', marginMm: 15, title: 'Test design' },
     },
   };
@@ -86,6 +95,7 @@ describe('serializeProject / parseProject round trip', () => {
       export: file.export,
       preview: file.preview,
       gridStyle: file.gridStyle,
+      symbols: file.symbols,
       palette: file.palette,
       pipeline: file.pipeline,
       schemaVersion: file.schemaVersion,
@@ -605,11 +615,83 @@ describe('migration from schema v4 palette (M15-PERSIST-01, D114 waiver)', () =>
     expect(file.palette?.recipe.include).toEqual([]);
   });
 
-  it('re-saves a migrated v4 file byte-stable at v5', () => {
+  it('re-saves a migrated v4 file byte-stable at the current schema', () => {
     const migrated = serializeProject(parseProject(v4Document(basePolicy, [])));
     expect(serializeProject(parseProject(migrated))).toBe(migrated);
-    expect(migrated).toContain('"schemaVersion": 5');
+    expect(migrated).toContain(`"schemaVersion": ${String(SCHEMA_VERSION)}`);
     // migratedFrom is transient metadata, never serialised.
     expect(migrated).not.toContain('migratedFrom');
+  });
+});
+
+/**
+ * v5 → v6 (M9): symbol assignment and the chart mode arrive. A v5
+ * file never granted a symbol and always painted colour cells — the
+ * migrated defaults state exactly that.
+ */
+describe('migration from schema v5 symbols', () => {
+  function v5Document(): string {
+    const doc = JSON.parse(serializeProject(sampleProject())) as Record<string, unknown>;
+    delete doc['symbols'];
+    delete (doc['export'] as Record<string, unknown>)['chartMode'];
+    doc['schemaVersion'] = 5;
+    return JSON.stringify(doc);
+  }
+
+  it('adds an empty symbols block and the colour chart mode', () => {
+    const loaded = parseProject(v5Document());
+    expect(loaded.migratedFrom).toBe(5);
+    expect(loaded.symbols).toEqual({ assigned: [], queue: [], overrides: [] });
+    expect(loaded.export.chartMode).toBe('color');
+  });
+
+  it('re-saves the migrated file byte-stable at the current schema', () => {
+    const migrated = serializeProject(parseProject(v5Document()));
+    expect(serializeProject(parseProject(migrated))).toBe(migrated);
+  });
+});
+
+describe('symbols block validation (schema v6)', () => {
+  function mutated(mutate: (doc: Record<string, unknown>) => void): string {
+    const doc = JSON.parse(serializeProject(sampleProject())) as Record<string, unknown>;
+    mutate(doc);
+    return JSON.stringify(doc);
+  }
+
+  it('rejects a missing block at the current version, naming the path', () => {
+    expect(() => parseProject(mutated((doc) => delete doc['symbols']))).toThrow('symbols');
+  });
+
+  it('rejects a malformed pair, naming the path', () => {
+    expect(() =>
+      parseProject(
+        mutated(
+          (doc) =>
+            ((doc['symbols'] as Record<string, unknown>)['assigned'] = [{ threadId: 'x' }]),
+        ),
+      ),
+    ).toThrow('symbols.assigned[0].symbolId');
+  });
+
+  it('rejects an unknown chart mode, naming the path', () => {
+    expect(() =>
+      parseProject(
+        mutated((doc) => ((doc['export'] as Record<string, unknown>)['chartMode'] = 'neon')),
+      ),
+    ).toThrow('export.chartMode');
+  });
+
+  it('caps a hostile queue before walking it', () => {
+    expect(() =>
+      parseProject(
+        mutated(
+          (doc) =>
+            ((doc['symbols'] as Record<string, unknown>)['queue'] = Array.from(
+              { length: 5000 },
+              (_, i) => `s${String(i)}`,
+            )),
+        ),
+      ),
+    ).toThrow('symbols.queue');
   });
 });

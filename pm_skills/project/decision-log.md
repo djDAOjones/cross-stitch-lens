@@ -3110,3 +3110,62 @@ DATA-03 landing note), this entry. Docs gate green.
 **Link:** Track C now reads: PUB-01 remainder (in-app notices surface)
 → PUB-02 → DATA-01/04/03 in cluster order → deploy-when-real. No cut
 on the path.
+
+## D165 — M9's build lands whole: one fill-only geometry model, need-based grants, schema v6 (2026-08-12)
+
+**The build half of M9 shipped in one gateless run**, as D160's
+signing intended: the 64-glyph draft catalogue, the assignment model,
+project-file persistence, three chart modes across both chart
+artefacts, the enriched key, the refusal paths, and the print-evidence
+generator. What keeps M9 open is exactly what D160 said would: the
+owner's batch signatures on printed evidence.
+
+**Geometry: one path, no stroke.** Every glyph is a single fill-only
+SVG path (M/L/C/Z, nonzero winding) with outlines carried as
+reverse-wound inner contours — line weight is geometry, so canvas
+`Path2D` and pdf-lib `drawSvgPath` cannot disagree about it, at any
+scale, with zero renderer configuration. That is the strongest
+possible reading of D160's "one geometry model", and it is why the
+evidence sheet (vector, through the same `drawSvgPath` consumer the
+key uses) signs what the artefacts draw.
+
+**Grants happen at first need, not palette arrival.** "First need
+takes the next unused symbol" is read literally: the moment of need is
+a symbol-mode export, sequenced in palette order so frame content
+never steers assignment. A 100-thread palette whose design uses 30
+still exports; the queue only spends on threads that appear. Two
+consequences got their deterministic shape here: departures release to
+the queue **back** in grant order, and D160's "cross-brand replacement
+resets" triggers on **zero surviving grants** — incremental edits
+always have survivors, wholesale replacement never does, so no
+heuristic and no UI wiring is needed.
+
+**Persistence is schema v6**: a `symbols` block carrying grants, the
+queue order (release history is state — it cannot be derived), and
+overrides; plus `export.chartMode`. Migration seeds the empty state.
+The M14 ui-baseline `projectJson` pin moved for the bump — an intended
+schema change, not engine drift; the three engine hashes stand
+untouched, which is the tripwire doing its job.
+
+**Key discipline extended, not restated**: rows gained the glyph,
+thread name, and stitch count; KEY-01's lesson (D152) now also
+suppresses a name that repeats the label (DMC "White" named "White"),
+and truncation spends the name before it may touch identity or count.
+
+**Verification**: 1,198 tests green including the new suites (glyph
+grammar + pinned canonical order, assignment semantics, v5→v6, chart
+coverage refusals, enriched key); live app run confirmed symbol PNG +
+PDF exports and the full-RGB refusal sentence. `check` green.
+
+**Parallel note**: D162–D164 (Track C) landed from a parallel session
+mid-run; this session's claim (symbols, exporters, schema, M9 memory)
+never overlapped, and this entry took the next free number.
+
+**Scope.** `src/core/symbols/*`, `src/core/project.ts` (v6),
+`src/core/stats.ts` (STITCH_ALPHA export), `src/export/{chart,pdf,key-entries}.ts`,
+`src/main.ts`, `scripts/gen-symbol-evidence.mjs` + `symbols:evidence`
+script, tests, `tests/ui-baseline/hashes.json` (projectJson re-pin),
+ticket, backlog, two doc-delta captures.
+
+**Link:** M9 remains `[~]` until the batches sign; M10's page planner
+can start against the same glyph model.

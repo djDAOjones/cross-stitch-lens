@@ -38,6 +38,7 @@ import {
   serializeProject,
   type ProjectFile,
 } from '../../src/core/project.ts';
+import { SYMBOL_IDS } from '../../src/core/symbols/glyphs.ts';
 import { executeRequest } from '../../src/worker/execute.ts';
 import { encodePng, sourceBuffer, SOURCE_SIDE } from './source.ts';
 
@@ -121,12 +122,18 @@ function defaultProject(config: PipelineConfig): ProjectFile {
       ticks: true,
       tickFontPx: 11,
     },
+    // A fresh session has granted nothing: the full catalogue queued in
+    // canonical order, exactly as `initialSymbolState` builds it
+    // (schema v6, M9 — the projectJson pin was refreshed for the bump;
+    // the engine hashes above never moved).
+    symbols: { assigned: [], queue: [...SYMBOL_IDS], overrides: [] },
     preview: { mode: 'space', cssPxPerStitch: 1 },
     export: {
       scale: 1,
       background: 'transparent',
       color: '#ffffff',
       chartCell: 10,
+      chartMode: 'color',
       pdf: { pageSize: 'a4', orientation: 'portrait', marginMm: 15, title: '' },
     },
   };

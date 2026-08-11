@@ -11,7 +11,9 @@
  * the layout works in that space directly.
  */
 
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument, StandardFonts, rgb, type PDFFont } from 'pdf-lib';
+
+import type { SymbolGlyph } from '../core/symbols/glyphs.ts';
 
 /** 72 pt per inch / 25.4 mm per inch. */
 export const MM_TO_PT = 72 / 25.4;
@@ -28,6 +30,14 @@ const KEY_SWATCH = 8;
 const KEY_TEXT_PT = 8;
 /** Key column width — fits "310 #000000" at 8 pt with breathing room. */
 const KEY_COL_W = 90;
+/**
+ * Column width when rows carry the M9 extras (symbol, name, count):
+ * "◆ ▪ DMC 310 #000000 · Black ×1234" wants real room, and three
+ * columns still fit an A4 portrait content box at 15 mm margins.
+ */
+const KEY_COL_W_RICH = 150;
+/** Vector glyph box side in the key, pt (matches the swatch scale). */
+const KEY_GLYPH_PT = 9;
 /** Gap between the key block and the chart above it, pt. */
 const KEY_GAP = 8;
 /** The key may take at most this share of the content height. */
@@ -44,6 +54,22 @@ export interface KeyEntry {
    */
   brand?: string;
   reference?: string;
+  /** Thread display name, when one exists and is not already the label. */
+  name?: string;
+  /** Stitches in this colour (M9: the key quantifies the shopping). */
+  count?: number;
+  /** The assigned glyph, drawn as a vector beside the swatch (M9). */
+  symbol?: SymbolGlyph;
+}
+
+/**
+ * The key column width these entries need: the roomier M9 layout when
+ * any row carries a symbol or a count, the compact original otherwise.
+ * Shared by layout and assembly so they can never disagree.
+ */
+export function keyColumnWidth(entries: readonly KeyEntry[]): number {
+  const rich = entries.some((e) => e.symbol !== undefined || e.count !== undefined);
+  return rich ? KEY_COL_W_RICH : KEY_COL_W;
 }
 
 /**
@@ -125,7 +151,8 @@ export function pdfLayout(
   }
 
   const contentH = top - margin;
-  const columns = Math.max(1, Math.floor(contentW / KEY_COL_W));
+  const colW = keyColumnWidth(entries);
+  const columns = Math.max(1, Math.floor(contentW / colW));
   const maxRows = Math.max(1, Math.floor((contentH * KEY_MAX_SHARE) / KEY_ENTRY_H));
   const shown = entries.slice(0, columns * maxRows);
   const keyOmitted = entries.length - shown.length;
@@ -133,7 +160,7 @@ export function pdfLayout(
   const keyHeight = shown.length > 0 ? rows * KEY_ENTRY_H : 0;
   const keyTop = margin + keyHeight;
   const keyCells: KeyCell[] = shown.map((entry, i) => ({
-    x: contentX + (i % columns) * KEY_COL_W,
+    x: contentX + (i % columns) * colW,
     y: keyTop - (Math.floor(i / columns) + 1) * KEY_ENTRY_H,
     entry,
   }));
@@ -169,6 +196,68 @@ export function pdfLayout(
  */
 export function toWinAnsi(text: string): string {
   return text.replace(/[^\x20-\xff]/gu, '?');
+}
+
+/**
+ * One key row's text: the KEY-01-disciplined label, then the thread
+ * name and stitch count where the entry carries them —
+ * "DMC 310 #000000 · Black ×1234". The label logic stays in
+ * {@link keyLabel} so the D152 no-repeated-token guarantee is one
+ * implementation, not two.
+ */
+export function keyRowText(entry: KeyEntry): string {
+  const label = keyLabel(entry);
+  const parts = [label];
+  const name = keyRowName(entry);
+  if (name !== '') parts.push(`· ${name}`);
+  if (entry.count !== undefined) parts.push(`×${String(entry.count)}`);
+  return parts.join(' ');
+}
+
+/**
+ * The name a key row shows, or '' when it would only repeat the label
+ * — DMC's reference "White" is named "White", and printing it twice is
+ * exactly the repeated-token defect KEY-01 was (D152).
+ */
+function keyRowName(entry: KeyEntry): string {
+  const name = entry.name ?? '';
+  if (name === '') return '';
+  const labelTokens = keyLabel(entry).toLowerCase().split(/\s+/);
+  return labelTokens.includes(name.toLowerCase()) ? '' : name;
+}
+
+/**
+ * Row text fitted to the column. The name yields before the data: a
+ * long thread name truncates (or drops), but the identity label and
+ * the stitch count always print whole. Works on WinAnsi-degraded text
+ * because standard-font width metrics reject anything outside it.
+ */
+function fittedRowText(entry: KeyEntry, font: PDFFont, size: number, maxWidth: number): string {
+  const label = toWinAnsi(keyLabel(entry));
+  const countTail = entry.count === undefined ? '' : ` \xd7${String(entry.count)}`;
+  const name = toWinAnsi(keyRowName(entry));
+  const full = name === '' ? `${label}${countTail}` : `${label} \xb7 ${name}${countTail}`;
+  if (font.widthOfTextAtSize(full, size) <= maxWidth) return full;
+  const frame = `${label} \xb7 ${countTail}`;
+  const room = maxWidth - font.widthOfTextAtSize(frame, size);
+  if (name !== '' && room >= font.widthOfTextAtSize('a...', size)) {
+    return `${label} \xb7 ${fitText(name, font, size, room)}${countTail}`;
+  }
+  return fitText(`${label}${countTail}`, font, size, maxWidth);
+}
+
+/**
+ * Truncate to `maxWidth` at `size` with a "..." tail (WinAnsi-safe —
+ * U+2026 would degrade to "?"). Width checks use the real font
+ * metrics, so a truncated row never overruns its column.
+ */
+export function fitText(text: string, font: PDFFont, size: number, maxWidth: number): string {
+  if (font.widthOfTextAtSize(text, size) <= maxWidth) return text;
+  let keep = text.length;
+  while (keep > 0 && font.widthOfTextAtSize(`${text.slice(0, keep)}...`, size) > maxWidth) {
+    keep -= 1;
+  }
+  return `${text.slice(0, keep).trimEnd()}...`;
 }
 
 /** Download name, e.g. `chart-200x150.pdf` (size in stitches). */
@@ -210,10 +299,23 @@ export async function buildChartPdf(
   const image = await doc.embedPng(chartPng);
   page.drawImage(image, layout.chart);
 
+  const colW = keyColumnWidth(entries);
   for (const cell of layout.keyCells) {
     const [r, g, b] = cell.entry.rgb;
+    let left = cell.x;
+    if (cell.entry.symbol !== undefined) {
+      // drawSvgPath anchors the path's SVG origin at (x, y) and draws
+      // downward (SVG y-down), so the anchor is the glyph box TOP.
+      page.drawSvgPath(cell.entry.symbol.path, {
+        x: left,
+        y: cell.y + KEY_GLYPH_PT - 0.5,
+        scale: KEY_GLYPH_PT / 100,
+        color: INK,
+      });
+      left += KEY_GLYPH_PT + 3;
+    }
     page.drawRectangle({
-      x: cell.x,
+      x: left,
       y: cell.y,
       width: KEY_SWATCH,
       height: KEY_SWATCH,
@@ -221,13 +323,17 @@ export async function buildChartPdf(
       borderColor: INK,
       borderWidth: 0.5,
     });
-    page.drawText(toWinAnsi(keyLabel(cell.entry)), {
-      x: cell.x + KEY_SWATCH + 4,
-      y: cell.y + 1,
-      size: KEY_TEXT_PT,
-      font,
-      color: INK,
-    });
+    const textX = left + KEY_SWATCH + 4;
+    page.drawText(
+      fittedRowText(cell.entry, font, KEY_TEXT_PT, colW - (textX - cell.x) - 4),
+      {
+        x: textX,
+        y: cell.y + 1,
+        size: KEY_TEXT_PT,
+        font,
+        color: INK,
+      },
+    );
   }
   if (layout.keyOmitted > 0) {
     page.drawText(`+ ${layout.keyOmitted} more colours`, {

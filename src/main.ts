@@ -74,8 +74,17 @@ import {
   projectFilename,
   SCHEMA_VERSION,
   serializeProject,
+  type ChartMode,
   type ProjectFile,
 } from './core/project.ts';
+import {
+  effectiveSymbols,
+  grantNeeded,
+  initialSymbolState,
+  reconcileSymbolState,
+  syncPalette,
+} from './core/symbols/assignment.ts';
+import { glyphById, SYMBOL_IDS } from './core/symbols/glyphs.ts';
 import { computeStats } from './core/stats.ts';
 import type { PixelBuffer, Thread } from './core/types.ts';
 import {
@@ -93,7 +102,13 @@ import {
   textField,
   toggleField,
 } from './ui/controls.ts';
-import { chartFilename, chartLayout, encodeChartPng, maxCellPx } from './export/chart.ts';
+import {
+  chartFilename,
+  chartLayout,
+  encodeChartPng,
+  maxCellPx,
+  type ChartSymbols,
+} from './export/chart.ts';
 import {
   buildChartPdf,
   pdfFilename,
@@ -353,6 +368,24 @@ function build(app: HTMLElement): void {
   let captureSectionElement: HTMLElement | null = null;
   let paletteEntriesFingerprint = '';
 
+  /**
+   * Symbol assignment (M9): persisted state, never recomputation
+   * (D160). Grants happen at first need (symbol-mode export); palette
+   * membership changes release or reset via {@link syncSymbolsToPalette};
+   * a loaded project replaces the whole state from its file.
+   */
+  let symbolState = initialSymbolState(SYMBOL_IDS);
+
+  /** Release/reset symbol grants against the current palette. */
+  function syncSymbolsToPalette(): void {
+    const ids = (config.palette?.entries ?? []).map((e) => e.id);
+    // Full-RGB mode (no palette) keeps grants dormant rather than
+    // releasing them: turning Threadify off and on must not re-symbol
+    // the design.
+    if (config.palette === null) return;
+    symbolState = syncPalette(symbolState, ids, SYMBOL_IDS);
+  }
+
   function resolvePalette(): void {
     if (!paletteMode) {
       config.palette = null;
@@ -377,6 +410,9 @@ function build(app: HTMLElement): void {
     if (nextFingerprint !== paletteEntriesFingerprint) {
       paletteEntriesFingerprint = nextFingerprint;
       highlightInvalidated?.();
+      // The entry list is the palette membership: exactly the moment
+      // symbol grants release or reset (M9, D160 decision 4).
+      syncSymbolsToPalette();
     }
   }
 
@@ -1641,6 +1677,8 @@ function build(app: HTMLElement): void {
     background: 'transparent',
     color: '#ffffff',
   };
+  /** How chart exports paint each stitch (M9); persisted per project. */
+  let chartMode: ChartMode = 'color';
   // The Export/Project fieldsets carry no legend: each is
   // its section's only group, so the accordion header is the name
   // (a legend would say it twice — D83).
@@ -1756,6 +1794,20 @@ function build(app: HTMLElement): void {
           refreshSections();
         },
       ),
+      selectField(
+        document,
+        'chart-mode',
+        'Chart style',
+        [
+          ['color', 'Colour cells'],
+          ['symbols', 'Black & white symbols'],
+          ['color-symbols', 'Symbols over colour'],
+        ],
+        chartMode,
+        (value) => {
+          chartMode = value as ChartMode;
+        },
+      ),
     ),
     makeReveal(
       'pdf-options',
@@ -1844,6 +1896,54 @@ function build(app: HTMLElement): void {
     }
   }
 
+  /**
+   * Prepare the per-palette-index glyph table for a symbol-mode
+   * export, granting symbols at first need (D160: assignment is
+   * state, and an export is the moment of need). Returns a refusal
+   * sentence instead when this export cannot carry symbols — no
+   * thread palette, no per-stitch identities (the retired
+   * reduce-first order loses them), or a design past the symbol set.
+   * Refusal is the contract: a symbol chart never repeats a glyph.
+   */
+  function symbolTableFor(frame: PixelBuffer): { symbols: ChartSymbols } | { refusal: string } {
+    const palette = config.palette;
+    if (palette === null) {
+      return {
+        refusal: 'Symbol charts need a thread palette — turn Threadify on, or export the colour chart.',
+      };
+    }
+    if (frame.indices === undefined) {
+      return {
+        refusal:
+          'This processing order cannot say which thread each stitch is, so symbols are unavailable. Use the standard order, or export the colour chart.',
+      };
+    }
+    const used = new Set(
+      computeStats(frame, palette).perColor.flatMap((c) =>
+        c.thread === undefined ? [] : [c.thread.id],
+      ),
+    );
+    // Grant in palette order, so the sequence never depends on stitch
+    // counts or frame content.
+    const needs = palette.entries.map((e) => e.id).filter((id) => used.has(id));
+    const granted = grantNeeded(symbolState, needs);
+    // Grants persist even when a refusal follows: the need happened,
+    // and a later narrower export keeps these symbols stable.
+    symbolState = granted.state;
+    if (granted.unassigned.length > 0) {
+      return {
+        refusal: `This design uses ${String(needs.length)} colours; the symbol set has ${String(SYMBOL_IDS.length)}. Reduce the colour count, or export the colour chart.`,
+      };
+    }
+    const effective = effectiveSymbols(symbolState);
+    return {
+      symbols: palette.entries.map((e) => {
+        const id = effective.get(e.id);
+        return id === undefined ? undefined : glyphById(id);
+      }),
+    };
+  }
+
   async function exportChart(): Promise<void> {
     const still = master();
     if (still === null) return;
@@ -1866,13 +1966,27 @@ function build(app: HTMLElement): void {
         },
         config,
       );
+      let symbols: ChartSymbols = [];
+      if (chartMode !== 'color') {
+        const table = symbolTableFor(frame);
+        if ('refusal' in table) {
+          status.textContent = table.refusal;
+          log.info('export', 'symbol chart refused', { reason: table.refusal });
+          return;
+        }
+        symbols = table.symbols;
+      }
       const filename = chartFilename(frame.width, frame.height);
-      downloadBlob(document, await encodeChartPng(frame, gridStyle, cell), filename);
+      downloadBlob(
+        document,
+        await encodeChartPng(frame, gridStyle, cell, chartMode, symbols),
+        filename,
+      );
       status.textContent =
         cell < wantedCell
           ? `Exported ${filename} (cell size limited to ${cell}).`
           : `Exported ${filename}.`;
-      log.info('export', 'chart png', { filename, cell });
+      log.info('export', 'chart png', { filename, cell, mode: chartMode });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       status.textContent = `Export failed (${message}). Try again after the preview updates.`;
@@ -1906,13 +2020,30 @@ function build(app: HTMLElement): void {
           maxCellPx(config.grid.width, config.grid.height, gridStyle),
         ),
       );
+      let symbols: ChartSymbols = [];
+      if (chartMode !== 'color') {
+        const table = symbolTableFor(frame);
+        if ('refusal' in table) {
+          status.textContent = table.refusal;
+          log.info('export', 'symbol chart refused', { reason: table.refusal });
+          return;
+        }
+        symbols = table.symbols;
+      }
       const chartL = chartLayout(frame.width, frame.height, gridStyle, cell);
-      const chartBlob = await encodeChartPng(frame, gridStyle, cell);
+      const chartBlob = await encodeChartPng(frame, gridStyle, cell, chartMode, symbols);
       const chartPng = new Uint8Array(await chartBlob.arrayBuffer());
       // Thread key: used colours only; full-RGB mode has no key. The
       // assembly lives in export/key-entries.ts so the artefact suite
       // drives this exact code rather than a copy (EXPORT-01, D153).
-      const entries: KeyEntry[] = buildKeyEntries(frame, config.palette, BRAND_NAMES);
+      // In symbol modes the key carries each thread's glyph so it can
+      // explain the chart (M9).
+      const entries: KeyEntry[] = buildKeyEntries(
+        frame,
+        config.palette,
+        BRAND_NAMES,
+        chartMode === 'color' ? undefined : effectiveSymbols(symbolState),
+      );
       const bytes = await buildChartPdf(chartPng, chartL.width, chartL.height, entries, {
         ...pdfOptions,
       });
@@ -1927,6 +2058,7 @@ function build(app: HTMLElement): void {
         page: pdfOptions.pageSize,
         orientation: pdfOptions.orientation,
         keyEntries: entries.length,
+        mode: chartMode,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -2004,6 +2136,13 @@ function build(app: HTMLElement): void {
             snapshot: config.palette?.entries ?? [],
           }
         : null,
+      // Assignment is state, not recomputation (D160): the grants, the
+      // queue order, and any overrides all persist verbatim.
+      symbols: {
+        assigned: [...symbolState.assigned],
+        queue: [...symbolState.queue],
+        overrides: [...symbolState.overrides],
+      },
       gridStyle: {
         show: gridStyle.show,
         minorInterval: gridStyle.minorInterval,
@@ -2023,6 +2162,7 @@ function build(app: HTMLElement): void {
         background: exportState.background === 'solid' ? 'solid' : 'transparent',
         color: exportState.color,
         chartCell: scales.export.chartCellPx,
+        chartMode,
         pdf: {
           pageSize: pdfOptions.pageSize,
           orientation: pdfOptions.orientation,
@@ -2067,6 +2207,7 @@ function build(app: HTMLElement): void {
     setFieldValue('export-background', exportState.background);
     setFieldValue('export-bg-color', exportState.color);
     setFieldValue('chart-cell', String(scales.export.chartCellPx));
+    setFieldValue('chart-mode', chartMode);
     setFieldValue('pdf-page', pdfOptions.pageSize);
     setFieldValue('pdf-orientation', pdfOptions.orientation);
     setFieldValue('pdf-margin', String(pdfOptions.marginMm));
@@ -2152,6 +2293,10 @@ function build(app: HTMLElement): void {
       config.preset = file.pipeline.preset;
       config.grid = { ...file.pipeline.grid };
       config.resizeMode = file.pipeline.resizeMode;
+      // Symbol grants are the file's state, reconciled against this
+      // build's glyph catalogue — restored before the palette applies
+      // so the membership sync sees the design's own grants (M9).
+      symbolState = reconcileSymbolState(file.symbols, SYMBOL_IDS);
       applyLoadedPalette(file.palette);
       config.metric = file.pipeline.metric;
       config.dither = file.pipeline.dither;
@@ -2176,6 +2321,7 @@ function build(app: HTMLElement): void {
       scales = withPreview(scales, file.preview);
       exportState.background = file.export.background;
       exportState.color = file.export.color;
+      chartMode = file.export.chartMode;
       pdfOptions.pageSize = file.export.pdf.pageSize;
       pdfOptions.orientation = file.export.pdf.orientation;
       pdfOptions.marginMm = file.export.pdf.marginMm;

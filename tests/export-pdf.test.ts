@@ -9,7 +9,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildChartPdf,
+  fitText,
+  keyColumnWidth,
   keyLabel,
+  keyRowText,
   MM_TO_PT,
   pdfFilename,
   pdfLayout,
@@ -17,6 +20,7 @@ import {
   type KeyEntry,
   type PdfOptions,
 } from '../src/export/pdf.ts';
+import { glyphById } from '../src/core/symbols/glyphs.ts';
 
 const OPTIONS: PdfOptions = {
   pageSize: 'a4',
@@ -120,6 +124,77 @@ describe('buildChartPdf', () => {
 describe('pdfFilename', () => {
   it('names by stitch size', () => {
     expect(pdfFilename(200, 150)).toBe('chart-200x150.pdf');
+  });
+});
+
+describe('key rows with symbols, names, and counts (M9)', () => {
+  const dot = glyphById('dot');
+  if (dot === undefined) throw new Error('the dot glyph left the catalogue');
+  const rich: KeyEntry = {
+    hex: '#000000',
+    rgb: [0, 0, 0],
+    brand: 'DMC',
+    reference: '310',
+    name: 'Black',
+    count: 1234,
+    symbol: dot,
+  };
+
+  it('says name and count after the KEY-01-disciplined label', () => {
+    expect(keyRowText(rich)).toBe('DMC 310 #000000 · Black ×1234');
+  });
+
+  it('skips a name that only repeats the label', () => {
+    // DMC's reference "White" is named "White": printing it twice is
+    // the KEY-01 defect shape (D152), so the name must stay silent.
+    expect(
+      keyRowText({
+        hex: '#fcfbf8',
+        rgb: [252, 251, 248],
+        brand: 'DMC',
+        reference: 'White',
+        name: 'White',
+        count: 9,
+      }),
+    ).toBe('DMC White #fcfbf8 ×9');
+  });
+
+  it('keeps a plain entry exactly its label', () => {
+    const plain: KeyEntry = { hex: '#123456', rgb: [18, 52, 86] };
+    expect(keyRowText(plain)).toBe(keyLabel(plain));
+  });
+
+  it('widens the key column only when rows carry the extras', () => {
+    expect(keyColumnWidth(ENTRIES)).toBe(90);
+    expect(keyColumnWidth([rich])).toBe(150);
+    // Fewer, wider columns: the layout must follow the same width.
+    const manyPlain: KeyEntry[] = Array.from({ length: 40 }, (_, i) => ({
+      hex: `#${String(i).padStart(6, '0')}`,
+      rgb: [0, 0, 0],
+    }));
+    const manyRich = manyPlain.map((e) => ({ ...e, count: 5 }));
+    const plainCols = new Set(pdfLayout(100, 100, manyPlain, OPTIONS).keyCells.map((c) => c.x));
+    const richCols = new Set(pdfLayout(100, 100, manyRich, OPTIONS).keyCells.map((c) => c.x));
+    expect(richCols.size).toBeLessThan(plainCols.size);
+  });
+
+  it('builds a parseable PDF when rows carry vector glyphs', async () => {
+    const bytes = await buildChartPdf(PNG_1PX, 100, 100, [rich], OPTIONS);
+    const doc = await PDFDocument.load(bytes);
+    expect(doc.getPageCount()).toBe(1);
+  });
+});
+
+describe('fitText', () => {
+  it('leaves fitting text alone and truncates the rest within width', async () => {
+    const doc = await PDFDocument.create();
+    const font = await doc.embedFont('Helvetica');
+    expect(fitText('short', font, 8, 200)).toBe('short');
+    const long = 'A very long thread name that cannot possibly fit the key column';
+    const fitted = fitText(long, font, 8, 60);
+    expect(fitted.endsWith('...')).toBe(true);
+    expect(font.widthOfTextAtSize(fitted, 8)).toBeLessThanOrEqual(60);
+    expect(fitted.length).toBeLessThan(long.length);
   });
 });
 

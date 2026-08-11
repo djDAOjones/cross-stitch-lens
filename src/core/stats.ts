@@ -53,8 +53,12 @@ export interface DesignStats {
   identified: boolean;
 }
 
-/** Alpha at or above this counts as a stitch (50% of 255, D9). */
-const STITCH_ALPHA = 128;
+/**
+ * Alpha at or above this counts as a stitch (50% of 255, D9). Exported
+ * so the chart's symbol pass keeps the same stitch/fabric boundary as
+ * the counts it must agree with.
+ */
+export const STITCH_ALPHA = 128;
 
 function toHex(r: number, g: number, b: number): string {
   return `#${((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;

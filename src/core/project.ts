@@ -21,10 +21,11 @@ import type { ColorProfileRecipe, HsbRangeRule } from './color-profile.ts';
 import type { CountMode } from './palette-policy.ts';
 import type { DitherConfig, OrderPreset } from './pipeline/config.ts';
 import type { ResizeMode } from './pipeline/resize.ts';
+import type { SymbolPair } from './symbols/assignment.ts';
 import type { Provenance, Thread, ThreadStatus } from './types.ts';
 
 /** Current project-file schema version. Bump with a forward migration. */
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 /**
  * Hard ceiling on a persisted palette snapshot.
@@ -101,6 +102,28 @@ export interface ProjectPalette {
 }
 
 /**
+ * The symbol-assignment block (schema v6, M9/D160): grants, the
+ * unused-symbol queue, and standing overrides, verbatim from
+ * `SymbolAssignmentState`. Assignment is **state, not recomputation**
+ * — persisting it is what makes symbols deterministic and stable
+ * across palette edits and reloads. An empty block is a design that
+ * has never granted a symbol; the app reconciles the queue against
+ * its own glyph catalogue on load (`reconcileSymbolState`).
+ */
+export interface ProjectSymbols {
+  assigned: SymbolPair[];
+  queue: string[];
+  overrides: SymbolPair[];
+}
+
+/**
+ * How chart exports paint each stitch (M9): colour cells, black and
+ * white symbols, or symbols over colour. Applies to the chart PNG and
+ * the PDF's embedded chart alike.
+ */
+export type ChartMode = 'color' | 'symbols' | 'color-symbols';
+
+/**
  * Grid/chart styling as stored (§15–§16 subset), in CSS px. The
  * theme-derived tick text colour is intentionally not persisted —
  * it is recomputed from the page colour scheme at render time.
@@ -150,6 +173,8 @@ export interface ProjectExport {
   color: string;
   /** Chart-PNG cell size, pixels per stitch. */
   chartCell: number;
+  /** How chart exports paint each stitch (schema v6, M9). */
+  chartMode: ChartMode;
   pdf: {
     pageSize: 'a4' | 'letter';
     orientation: 'portrait' | 'landscape';
@@ -170,6 +195,8 @@ export interface ProjectFile {
   pipeline: ProjectPipeline;
   /** `null` = full-RGB mode: no colour reduction, no dithering (§5.1). */
   palette: ProjectPalette | null;
+  /** Symbol grants, queue, and overrides (schema v6, M9). */
+  symbols: ProjectSymbols;
   gridStyle: ProjectGridStyle;
   preview: ProjectPreview;
   export: ProjectExport;
@@ -239,6 +266,20 @@ function canonicalPalette(palette: ProjectPalette): ProjectPalette {
   };
 }
 
+/** Canonical field order for one thread → symbol pair. */
+function canonicalPairs(pairs: SymbolPair[]): SymbolPair[] {
+  return pairs.map((p) => ({ threadId: p.threadId, symbolId: p.symbolId }));
+}
+
+/** Canonical field order for the symbols block (schema v6). */
+function canonicalSymbols(symbols: ProjectSymbols): ProjectSymbols {
+  return {
+    assigned: canonicalPairs(symbols.assigned),
+    queue: [...symbols.queue],
+    overrides: canonicalPairs(symbols.overrides),
+  };
+}
+
 /** Canonical field order for the dither union, per algorithm family. */
 function canonicalDither(dither: DitherConfig): DitherConfig {
   if (dither.algorithm === 'none') return { algorithm: 'none' };
@@ -270,6 +311,7 @@ export function serializeProject(file: ProjectFile): string {
             },
     },
     palette: file.palette === null ? null : canonicalPalette(file.palette),
+    symbols: canonicalSymbols(file.symbols),
     gridStyle: {
       show: file.gridStyle.show,
       minorInterval: file.gridStyle.minorInterval,
@@ -289,6 +331,7 @@ export function serializeProject(file: ProjectFile): string {
       background: file.export.background,
       color: file.export.color,
       chartCell: file.export.chartCell,
+      chartMode: file.export.chartMode,
       pdf: {
         pageSize: file.export.pdf.pageSize,
         orientation: file.export.pdf.orientation,
@@ -490,6 +533,36 @@ function parsePalette(value: unknown): ProjectPalette | null {
   };
 }
 
+/** Validate one thread → symbol pair list (grants or overrides). */
+function asSymbolPairs(value: unknown, path: string): SymbolPair[] {
+  if (!Array.isArray(value)) fail(path, 'an array of thread–symbol pairs');
+  if (value.length > MAX_PALETTE_ENTRIES) {
+    fail(path, `at most ${String(MAX_PALETTE_ENTRIES)} entries`);
+  }
+  return value.map((entry, i) => {
+    const raw = asRecord(entry, `${path}[${String(i)}]`);
+    const threadId = asString(raw['threadId'], `${path}[${String(i)}].threadId`);
+    const symbolId = asString(raw['symbolId'], `${path}[${String(i)}].symbolId`);
+    if (threadId.length === 0 || threadId.length > 128) {
+      fail(`${path}[${String(i)}].threadId`, 'a thread id of 1–128 characters');
+    }
+    if (symbolId.length === 0 || symbolId.length > 128) {
+      fail(`${path}[${String(i)}].symbolId`, 'a symbol id of 1–128 characters');
+    }
+    return { threadId, symbolId };
+  });
+}
+
+/** Validate the v6 symbols block. */
+function parseSymbols(value: unknown): ProjectSymbols {
+  const raw = asRecord(value, 'symbols');
+  return {
+    assigned: asSymbolPairs(raw['assigned'], 'symbols.assigned'),
+    queue: asIdList(raw['queue'], 'symbols.queue'),
+    overrides: asSymbolPairs(raw['overrides'], 'symbols.overrides'),
+  };
+}
+
 /** Validate the optional dither profile reference (absent = null). */
 function parseDitherRef(value: unknown): { id: string; revision: number } | null {
   if (value === null || value === undefined) return null;
@@ -571,6 +644,11 @@ function migrateProject(raw: Record<string, unknown>, version: number): Record<s
     // brands when the file never ran; a prefer-mode preset keeps its
     // open universe (the steering half retired with the prefer rule).
     if (at === 5) doc = migrateV4Palette(doc);
+    // v5 → v6: symbol assignment and the chart mode arrive (M9). Older
+    // files never granted a symbol, which the empty block states
+    // exactly — the app's reconcile fills the queue from its own
+    // catalogue. Charts painted colour cells, so that is the mode.
+    if (at === 6) doc = migrateV5Symbols(doc);
     doc = { ...doc, schemaVersion: at };
   }
   return doc;
@@ -612,6 +690,20 @@ function migrateV4Palette(doc: Record<string, unknown>): Record<string, unknown>
       },
       snapshot,
     },
+  };
+}
+
+/**
+ * Add the v6 symbols block and chart mode to a v5 document. Defaults
+ * fill only what is absent, so a document that somehow already carries
+ * either field keeps it (and the validator then judges it).
+ */
+function migrateV5Symbols(doc: Record<string, unknown>): Record<string, unknown> {
+  const exportPrefs = { chartMode: 'color', ...asRecord(doc['export'], 'export') };
+  return {
+    symbols: { assigned: [], queue: [], overrides: [] },
+    ...doc,
+    export: exportPrefs,
   };
 }
 
@@ -701,6 +793,7 @@ export function parseProject(json: string): ProjectFile {
       ditherProfileRef: parseDitherRef(pipeline['ditherProfileRef']),
     },
     palette: parsePalette(doc['palette']),
+    symbols: parseSymbols(doc['symbols']),
     gridStyle: {
       show: asBool(gridStyle['show'], 'gridStyle.show'),
       minorInterval: asInt(gridStyle['minorInterval'], 'gridStyle.minorInterval', 1, 1000),
@@ -728,6 +821,11 @@ export function parseProject(json: string): ProjectFile {
       ]),
       color: asHexColor(exportPrefs['color'], 'export.color'),
       chartCell: asInt(exportPrefs['chartCell'], 'export.chartCell', 1, 256),
+      chartMode: asOneOf(exportPrefs['chartMode'], 'export.chartMode', [
+        'color',
+        'symbols',
+        'color-symbols',
+      ]),
       pdf: {
         pageSize: asOneOf(pdf['pageSize'], 'export.pdf.pageSize', ['a4', 'letter']),
         orientation: asOneOf(pdf['orientation'], 'export.pdf.orientation', [

@@ -12,6 +12,7 @@
 
 import { computeStats } from '../core/stats.ts';
 import { nonThreadLabel } from '../core/color-sources.ts';
+import { glyphById } from '../core/symbols/glyphs.ts';
 import type { Palette, PixelBuffer } from '../core/types.ts';
 import type { KeyEntry } from './pdf.ts';
 
@@ -29,24 +30,43 @@ export type BrandNames = ReadonlyMap<string, string>;
  * never shows a raw namespace id. Real threads carry brand **and**
  * reference together: a key that says "310" without saying whose sends
  * the stitcher to the wrong shelf (M7-BRAND-02).
+ *
+ * Since M9, rows quantify themselves: every entry carries its stitch
+ * count, real threads carry their display name (synthetics already
+ * *are* their name), and — when the caller passes the assignment map,
+ * which it does exactly for symbol-mode exports — the glyph the thread
+ * wears, so the key can explain the chart.
  */
 export function buildKeyEntries(
   frame: PixelBuffer,
   palette: Palette | null,
   brandNames: BrandNames,
+  symbolIds?: ReadonlyMap<string, string>,
 ): KeyEntry[] {
   if (palette === null) return [];
   return computeStats(frame, palette).perColor.map((c) => {
-    if (c.thread === undefined) return { hex: c.hex, rgb: c.rgb };
+    if (c.thread === undefined) return { hex: c.hex, rgb: c.rgb, count: c.count };
+    const symbolId = symbolIds?.get(c.thread.id);
+    const symbol = symbolId === undefined ? undefined : glyphById(symbolId);
     const synthetic = nonThreadLabel(c.thread);
     if (synthetic !== null) {
-      return { hex: c.hex, rgb: c.rgb, brand: synthetic, reference: '' };
+      return {
+        hex: c.hex,
+        rgb: c.rgb,
+        brand: synthetic,
+        reference: '',
+        count: c.count,
+        ...(symbol === undefined ? {} : { symbol }),
+      };
     }
     return {
       hex: c.hex,
       rgb: c.rgb,
       brand: brandNames.get(c.thread.brandId) ?? c.thread.brandId,
       reference: c.thread.reference,
+      name: c.thread.name,
+      count: c.count,
+      ...(symbol === undefined ? {} : { symbol }),
     };
   });
 }

@@ -15,18 +15,19 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 255 file(s) across 11 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
-- `(root)` — 12 file(s)
+<!-- 275 file(s) across 12 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+- `(root)` — 13 file(s)
 - `.claude` — 2 file(s)
 - `.githooks` — 1 file(s)
 - `.github` — 1 file(s)
 - `.windsurf` — 1 file(s)
+- `_transcripts` — 1 file(s)
 - `crates` — 4 file(s)
-- `docs` — 15 file(s)
+- `docs` — 16 file(s)
 - `public` — 7 file(s)
-- `scripts` — 18 file(s)
-- `src` — 94 file(s)
-- `tests` — 100 file(s)
+- `scripts` — 20 file(s)
+- `src` — 97 file(s)
+- `tests` — 112 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -34,6 +35,7 @@
 - `AGENTS.md` — operative agent contract: hard rules, data model, read tiers
 - `DEV-INFRASTRUCTURE.md` — build/run/test/version/deploy rulebook
 - `README.md` — project front door: what it is, how to run it
+- `THIRD-PARTY-NOTICES.md` — verbatim third-party licence texts (pdf-lib, wasm-bindgen, libm) plus the trademark/colour-data notice for public distribution (D161)
 - `UI-STANDARDS.md` — Carbon-first UI + WCAG 2.2 AAA rulebook
 - `bench-source.html` — entry for the controlled capture source the harness's interaction rows share (M13-MEAS-02)
 - `bench.html` — entry for the production-build browser measurement harness; built by Vite alongside the app so its figures are not dev-server artefacts
@@ -61,6 +63,10 @@
 
 - `.windsurf/workflows/next.md` — `/next` wiring to the pm-skills loop
 
+## _transcripts
+
+- `_transcripts/README.md` — explains the gitignored chat-transcript store and its redaction rule (GUIDE → "Saving session transcripts")
+
 ## crates
 
 - `crates/stitch-engine/.cargo/config.toml` — simd128 rustflags for the wasm target only
@@ -77,6 +83,7 @@
 - `docs/acceptance-matrix.md` — M5-ACCEPT-01 evidence: generated coverage table, per-row invariants, explicit skips
 - `docs/acceptance-visual-review.md` — M5-ACCEPT-02 review sheet: review set, protocol, verdict record
 - `docs/browser-measurement.md` — browser-only boundary procedure + recorded results (M5-PERF-18)
+- `docs/catalogue-sweep.md` — DATA-01 owner worklist written by the committed sweep: unnamed catalogue rows and same-brand hex pairs (D155)
 - `docs/dither-evaluation.md` — M8-SPIKE-01 evidence: method, findings, committed set, control surface (D61)
 - `docs/measurement-contract.md` — boundary contract (bv2): workload ID grammar, matrix blocks, report schema + run validity, budget bindings, browser rehearsal
 - `docs/performance-evidence.md` — measured evidence: bv1 history (M5 audits, M5C decisions) + the bv2 re-baseline (M13-MEAS-01)
@@ -115,6 +122,8 @@
 - `scripts/check-wasm.mjs` — gate step: cargo test + wasm-pack build; toolchain-aware skip (hard-fails in CI)
 - `scripts/cloud-setup.sh` — SessionStart hook body: `npm ci` inside a cloud session only; no-op locally
 - `scripts/gen-golden-hello.mjs` — one-time generator of the M0 hello fixtures
+- `scripts/gen-symbol-evidence.mjs` — M9 print-evidence generator: renders the glyph catalogue as a vector PDF (batch pages + distinctness page) to bench-reports/ for owner signature (`symbols:evidence`)
+- `scripts/save-transcript.mjs` — saves a chat-session transcript into _transcripts/ (`npm run transcript`)
 - `scripts/write-acceptance-matrix.mjs` — regenerates the coverage table (the fixer; `check` only compares)
 
 ## src
@@ -168,12 +177,15 @@
 - `src/core/pipeline/threshold-tiles.ts` — Bayer + void-and-cluster blue-noise threshold tiles: fixed data, documented provenance, memoised
 - `src/core/project.ts` — project file v1 (§20): schema, migration, canonical (de)serialisation
 - `src/core/stats.ts` — design stats §11 subset: counts, %, thread refs
+- `src/core/symbols/assignment.ts` — symbol assignment as persisted state (D160-4): need-based grants, release-to-back queue, survivor-free reset, overrides, load reconcile
+- `src/core/symbols/glyphs.ts` — the app-owned 64-glyph catalogue in canonical append-only order; fill-only M/L/C/Z paths rendered identically by Path2D and drawSvgPath (D165)
 - `src/core/thread-catalogue.ts` — brands, threads, stable `brandId:reference` identity
 - `src/core/thread-equivalents.ts` — nearest cross-brand equivalent (curated over computed)
 - `src/core/types.ts` — core contracts: PixelBuffer, Palette, Stage
 - `src/diagnostics/bundle.ts` — copy-diagnostics bundle: pure builder + fail-closed redaction
 - `src/diagnostics/log.ts` — structured logger: console + ring buffer + global capture
 - `src/export/chart.ts` — styled PNG chart (§14 subset): pure margin/
+- `src/export/key-entries.ts` — assembles the chart/PDF thread key from stats + palette (+ symbol map since M9) — the real assembly the artefact suite drives (D153)
 - `src/export/pdf.ts` — single-page PDF chart (§18 subset): pure
 - `src/export/png.ts` — clean PNG export (§13 subset): pure nearest-
 - `src/library/records.ts` — Pure library file formats: canonical inventory/palette JSON, validation, additive merge, id-collision rename
@@ -216,11 +228,13 @@
 
 ## tests
 
+- `tests/a11y-names.test.ts` — accessible-name tripwire over the control surface (D156)
 - `tests/acceptance-matrix.test.ts` — M5-ACCEPT-01 driver: per-row invariants through the worker entry, tie-break oracles, coverage-table staleness gate
 - `tests/audits/audit.ts` — audit harness: AUDIT=1 gate, timed/counted rows, JSON artefacts
 - `tests/audits/candidates/dither-candidates.ts` — dither prototypes: exact pruning table, hoisted scan, rounded conversion
 - `tests/audits/candidates/m8-dither-candidates.ts` — M8-SPIKE-01 prototypes: kernel-as-data diffusion, threshold tiles, candidate registry — never imported by src/
 - `tests/audits/candidates/resize-candidates.ts` — resize prototypes: hoisted (bit-exact), separable, summed-area
+- `tests/audits/catalogue.audit.test.ts` — catalogue data sweep behind `npm run audit`: unnamed rows and same-brand hex pairs feed docs/catalogue-sweep.md (D155)
 - `tests/audits/dither.audit.test.ts` — M5-PERF-13/14: conversion decomposition + exact-pruning proof
 - `tests/audits/lut-reduce.audit.test.ts` — M5-PERF-12: LUT build vs map, stale-cache-key repro
 - `tests/audits/m13-prep.audit.test.ts` — M13-PROF-02 node half: policy/selection/build timings per palette size, counter-proven cache behaviour
@@ -259,10 +273,12 @@
 - `tests/debug-menu.test.ts` — Debug-menu pure halves: mailto redaction boundary, announced outcomes (M14-EXT-26)
 - `tests/debug-panel.test.ts` — timing-window aggregation, cap, stage-change reset, ms formatting
 - `tests/diagnostics-bundle.test.ts` — redaction (secret keys/values, fail-closed, caps), bundle shape, status text
+- `tests/diagnostics-log.test.ts` — diagnostics logger/ring-buffer contract, including fault retention (D152)
 - `tests/dither-algorithms.test.ts` — M8 method invariants: determinism, membership+sidecar, boundaries, distinctness, tile validity
 - `tests/dither-model.test.ts` — dither-control state matrix: families, strength semantics, preset↔custom, per-method memory
 - `tests/dither-pruning.test.ts` — pruning exactness over 138,688 adversarial values × 5 palettes, dither byte-equality with and without a table, and the shared f32 work-buffer reuse guards (M5-PERF-22/25)
 - `tests/dither.test.ts` — dither golden + determinism/mean/serpentine invariants
+- `tests/export-artefacts.test.ts` — end-to-end export artefact suite over the real key assembly and PDF build, parsed back under Node (D153)
 - `tests/export-chart.test.ts` — chart layout: label margin + edge pad,
 - `tests/export-pdf.test.ts` — PDF layout (page sizes, aspect fit, key
 - `tests/export-png.test.ts` — export transforms: k×k block replication,
@@ -270,6 +286,11 @@
 - `tests/golden/dither-8x8.input.json` — golden fixture: dither input (protected)
 - `tests/golden/hello-4x4.expected.json` — golden fixture: identity expected output (protected)
 - `tests/golden/hello-4x4.input.json` — golden fixture: 4x4 gradient input (protected)
+- `tests/golden/m8-atkinson-8x8.expected.json` — M8 golden: Atkinson over the difficulty crop (D154)
+- `tests/golden/m8-blue-noise-8x8.expected.json` — M8 golden: blue-noise over the difficulty crop (D154)
+- `tests/golden/m8-crop-8x8.input.json` — M8 golden input: the 8×8 crop chosen for difficulty (D154)
+- `tests/golden/m8-jarvis-8x8.expected.json` — M8 golden: Jarvis over the difficulty crop (D154)
+- `tests/golden/m8-ordered-8x8.expected.json` — M8 golden: ordered Bayer over the difficulty crop (D154)
 - `tests/golden/reduce-2x2.expected.json` — golden fixture: reduce expected, hand-derived (protected)
 - `tests/golden/reduce-2x2.input.json` — golden fixture: reduce input, hand-derived (protected)
 - `tests/golden/resize-9x5-contain-4x4.expected.json` — golden fixture: resize expected, TS-generated (protected)
@@ -296,9 +317,12 @@
 - `tests/project.test.ts` — project file: byte-identical round trip, validation errors, version refusal
 - `tests/reduce.test.ts` — reduce golden + invariants (membership, fixed point, LUT↔exact)
 - `tests/resize.test.ts` — resize golden + geometry/average/bounds invariants
+- `tests/save-transcript.test.ts` — transcript-save script behaviour (paths, redaction guard)
 - `tests/scales.test.ts` — The 4×4 independence matrix (identity, not equality) plus the label-distinctness checks.
 - `tests/shell.test.ts` — Shell visibility composition, panel/focus label state, and preference fallback including a throwing storage.
 - `tests/stats.test.ts` — stats partition/sum/sort/reference invariants
+- `tests/symbols-assignment.test.ts` — assignment-model semantics: grants, release-to-back, disjoint reset, overrides, exhaustion, reconcile (D165)
+- `tests/symbols-glyphs.test.ts` — glyph catalogue invariants: pinned canonical order (append-only tripwire), path grammar, bounds (D165)
 - `tests/thread-equivalents.test.ts` — Nearest cross-brand equivalent: ordering, labelling, curated over computed
 - `tests/ui-baseline/baseline.test.ts` — M14 byte-identity tripwire: pins fixture/pipeline/project hashes inside check
 - `tests/ui-baseline/exports/chart-200x200.pdf` — M14 baseline capture: chart PDF (compare date-normalised, D74)

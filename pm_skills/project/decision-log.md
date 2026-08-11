@@ -3027,3 +3027,45 @@ entry. Docs gate green.
 **Link:** order of operations in the data cluster is now DATA-01
 corrections → DATA-04 schema sign-off → DATA-03 finalisation, all
 owner-paced; DATA-02 remains independent.
+
+## D163 — PUB-03 opens: publication cuts from a clean initial commit, and DATA-04 gains the source-of-truth question (2026-08-12)
+
+**Decision.** Two additions shaping how the project goes public.
+
+**PUB-03.** At publication, the public repository will start from its
+release state — one fresh initial commit of the finished tree — and
+this repository, with its full development history, goes **private as
+the permanent archive**. Privatise, never delete: the history remains
+the owner's working record, including every decision entry's commit
+references, which become archaeology rather than public links. This is
+a common release pattern for projects developed personally and
+published deliberately, and it has a concrete side benefit: PUB-02's
+history residue (the encumbered demo image in old commits) ends at the
+cut, because the new repository never contains it — which is exactly
+why PUB-02 is a hard blocker: cutting first would re-inherit the
+problem into the clean start.
+
+Division of labour mirrors RENAME-02: the owner privatises the old
+repository and creates the new one; the agent prepares the release
+tree, cuts the initial commit, swaps `origin`, and verifies push and
+gate from the unchanged working directory.
+
+**DATA-04 widens by one question**: where the owner CSV's source of
+truth lives — in-repo as today, or as a private owner-held master with
+the repository carrying derived data. Owner data is owner data either
+way; the question is what the published artefact derives from, and the
+protected-files list and generator contract would both follow the
+answer. It must be settled before DATA-03 finalises values, which is
+already DATA-04's position in the cluster.
+
+**Sequencing across the cluster and Track C now reads:** DATA-01
+corrections → DATA-04 schema + source-of-truth sign-off → DATA-03
+finalisation → PUB-02 image replacement → PUB-03 clean cut →
+deploy-when-real. Owner-paced throughout; the agent halves of PUB-03
+are mechanical once the owner's two steps are done.
+
+**Scope.** `backlog.md` (PUB-03 new, DATA-04 widened), this entry.
+Docs gate green.
+
+**Link:** Track C is now a complete path from today's tree to a
+publishable one.

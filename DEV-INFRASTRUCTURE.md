@@ -48,6 +48,7 @@ Package manager: **npm** (Node LTS).
 | `bench:auto -- --crosscheck` | (mode of `bench:auto`) | The whole Part A′ in one command: flag-granted leg, then a picker-granted leg (real picker; scripted tile+Share click via System Events when Accessibility allows, else one human click), then the comparison table | The zero-or-one-click Part A′ — same build guaranteed by construction |
 | `bench:trace` | `node scripts/bench-auto.mjs --trace` | Part-C trace leg (M13-MEAS-04): the capture workloads re-run under raw-CDP tracing (Node built-in WebSocket, zero new deps) → validated GC-pause report per window, observer long tasks quoted alongside | Refreshing the GC-pause evidence — same quiet-desktop rules as `bench:auto`; its timing rows are cross-context (traced), never capture canon |
 | `check` | 8 non-mutating steps: types, lint, wasm, test, build, docs, contrast, secrets | **Quality gate** | Before calling a task done |
+| `transcript` | `node scripts/save-transcript.mjs` | List this project's Claude Code sessions; with an id prefix, export one to `_transcripts/` as **redacted** markdown (DOCS-01) | Saving session evidence for prompt-tuning — output stays gitignored, read before sharing |
 | `lint:fix` | `eslint . --fix` | Auto-fix (separate from the gate) | Cleanup, never the CI pass/fail |
 
 Do not add scripts without updating this table.

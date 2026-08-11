@@ -776,9 +776,13 @@ function build(app: HTMLElement): void {
   // owner's rename of "Colours by usage" and the one-hierarchy pass):
   // the D99 fold anatomy retires, its collapsed-by-default choice
   // survives as the spec default, and a remembered fold choice seeds
-  // the new key (the EXT-30 fallback precedent). Lives in the content
-  // column under the preview, exactly where the fold sat; visibility
-  // composes shell state with has-rows through one writer below.
+  // the new key (the EXT-30 fallback precedent). Since UI-06 (D156) it
+  // lives INSIDE the Colour section's panel — it is a readout *of* the
+  // colour choices, and a separate top-level home split one subject
+  // across two places and lengthened the shell (owner ask at the
+  // 2026-08-09 sitting). It keeps its own disclosure (headingLevel 3:
+  // nested, so the outline stays honest); visibility composes shell
+  // state with has-rows through one writer below.
   let coloursHasRows = false;
   const coloursSection = createSection(document, {
     id: 'colours-used-section',
@@ -787,6 +791,7 @@ function build(app: HTMLElement): void {
     onToggle: (open) => {
       setDisclosure('colours-used-section', open);
     },
+    headingLevel: 3,
   });
   coloursSection.panel.append(info.element);
   coloursSection.element.hidden = true;
@@ -1298,6 +1303,22 @@ function build(app: HTMLElement): void {
   /** Re-resolve, refresh the section, and run the pipeline once. */
   function applyColour(): void {
     ensureSelectionSource();
+    // FLICKER-01 (D158): while a fresh selection source is in flight,
+    // hold the previous palette and frame instead of resolving against
+    // nothing. A count limit with no source resolves to the full
+    // permitted set (the documented first-frame two-step), and
+    // reprocessing with it painted the near-unreduced picture between
+    // two limited values — the owner's flicker. The fetch's completion
+    // handler re-resolves and reprocesses the moment the source lands,
+    // so the swap is old-reduced → new-reduced, never through wide.
+    // Source *replacements* (new artwork) bypass this on purpose: they
+    // reprocess directly, because showing the new picture with the old
+    // palette beats holding a stale picture.
+    if (selectionPending) {
+      colourSection.update(sectionState());
+      refreshSections();
+      return;
+    }
     resolvePalette();
     // Dithering only applies when reducing to a palette.
     ditherControls.update();
@@ -2318,6 +2339,11 @@ function build(app: HTMLElement): void {
   // moved whole. Spec default closed — the default-8 conversion needs
   // no colour decision first, and Stats carries the count.
   const colourAccordion = section('section-colour', 'Colour', false, colourGroup, inventoryInput);
+  // The colour key mounts at the foot of the Colour panel (UI-06,
+  // D156): choices above, readout of those choices below, one subject
+  // in one place. Its own disclosure and its shell×has-rows visibility
+  // writer are unchanged.
+  colourAccordion.panel.append(coloursSection.element);
   // "Processing" (M14-EXT-30): the Appearance rename, reduced to the
   // Dither group — the grid geometry moved to the view strip's
   // reveal. The stored open/closed preference migrates by fallback:
@@ -2556,7 +2582,7 @@ function build(app: HTMLElement): void {
   // docked↔undocked flap (owner's live session, 2026-08-05). The
   // preview is simply sticky now; its height comes from the design
   // (the hug in PreviewController, M14-FIX-03) and never from scroll.
-  content.append(previewSection, coloursSection.element, importSection);
+  content.append(previewSection, importSection);
   if (debugPanel !== null) content.append(debugPanel.element);
   const layout = document.createElement('div');
   layout.className = 'app-layout';

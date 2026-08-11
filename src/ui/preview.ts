@@ -138,11 +138,25 @@ export class PreviewController {
     if (this.imgW > 0) this.applyMode();
   }
 
-  /** A new processed frame arrived (stitch dimensions). */
+  /**
+   * A new processed frame arrived (stitch dimensions).
+   *
+   * Re-derives the view only when the dimensions actually changed
+   * (ZOOM-01, D158). It used to re-derive on every frame, and the
+   * manual branch of `applyMode` re-centres via `scaledView` — so
+   * under live capture, every arriving frame threw away the wheel
+   * zoom's pointer anchor (and any pan) within one frame interval:
+   * the zoom landed anchored, then visibly snapped to centre. A
+   * same-size frame now leaves the user's view exactly where they put
+   * it; host resizes are the ResizeObserver's job, and a genuine
+   * dimension change (a new pattern) still re-derives — there is no
+   * meaningful anchor to preserve across a different stitch grid.
+   */
   onFrame(width: number, height: number): void {
+    const changed = width !== this.imgW || height !== this.imgH;
     this.imgW = width;
     this.imgH = height;
-    this.applyMode();
+    if (changed || this.view === null) this.applyMode();
   }
 
   /**

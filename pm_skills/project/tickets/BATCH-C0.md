@@ -284,6 +284,30 @@ it, and nothing about what it lists changes.
 
 ## DITH-06 — Name the built-in dither profiles after their method
 
+**Drafted 2026-08-11 (D158), awaiting the owner's signature.** The
+method leads; the qualifier is the setting, never a mood word; and per
+D149's broader-audience note the qualifier stays in plain words. The
+basis lines in `dither-presets.ts` are unchanged and remain the
+evidence.
+
+| id | today | drafted name | the fact it states |
+| --- | --- | --- | --- |
+| `none` | None | **None** | unchanged — not a method |
+| `subtle` | Subtle | **Atkinson (half strength)** | `atkinson`, strength 0.5 |
+| `balanced` | Balanced | **Floyd–Steinberg** | the plain method at full strength |
+| `strong` | Strong | **Blue noise (boosted)** | `blue-noise` at 1.75× base amplitude |
+| `photograph` | Photograph | **Jarvis** | the plain method at full strength |
+| `graphic` | Graphic | **Ordered (Bayer 8×8)** | `ordered`, the 8×8 Bayer tile |
+| `limited-palette` | Very limited palette | **Floyd–Steinberg (damped)** | strength 0.6 — "damped" is the basis line's own word |
+
+Confirmed before drafting: `sameDither`/`matchBuiltInDither`
+(`dither-presets.ts:67/:80`) match on config alone — algorithm,
+strength, serpentine — never on label or preset id, so a signed rename
+is a label-only edit and every existing project or profile reference
+still resolves. At apply time, re-check the Processing select's width
+at the narrow floor: two drafted names are longer than the mood words
+they replace.
+
 Owner ask at the combined sitting: "Subtle", "Balanced", "Strong",
 "Photograph", "Graphic", "Very limited palette" hide which algorithm
 is running, and the gallery's own naming discipline

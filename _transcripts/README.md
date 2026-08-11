@@ -6,6 +6,17 @@ and prompt-tuning. **Cold tier — never auto-loaded** (`AGENTS.md` →
 `pm_skills/prompts/end-of-task.md` offers to save one, and it never
 gates a close.
 
+Saving is one command since DOCS-01 (D159):
+
+```sh
+npm run transcript
+```
+
+lists this project's Claude Code sessions; run it again with an id
+prefix to export one here as **redacted** markdown. Sessions from
+before the D150 rename live under the old directory slug — reach them
+with `--dir`.
+
 The `.md` files here are **gitignored**, deliberately. A transcript
 carries whatever was on screen during a working session — captured
 content, file paths, project names — so it stays local unless it has

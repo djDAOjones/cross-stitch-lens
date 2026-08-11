@@ -35,28 +35,19 @@ the lines below are pointers only.
 **Shipped so far** (2026-08-11): RENAME-01/02 (D150); the doc-sync pass
 (9 deltas → 1, the survivor deferred until DUR-01 answers it), AUDIT-01
 and ROUTE-01 (D151); DIAG-01 and KEY-01 (D152); EXPORT-01 (D153);
-M8-GOLD-02 (D154); DATA-01's detection half (D155 — the corrections half
-moves to the Icebox as `[maintainer]`, worklist in
-`docs/catalogue-sweep.md`). The three preconditions are met — the rename
-is complete, the hot-read docs are true, and **`npm run audit` is
-green**, so the audits give the rest of the batch a real signal. The
-remaining **seven** are order-free.
+M8-GOLD-02 (D154); DATA-01's detection half (D155 — corrections stay
+[maintainer], worklist in `docs/catalogue-sweep.md`); UI-06 and A11Y-01
+(D156); FLICKER-01 and ZOOM-01 (D157 — both mechanisms confirmed before
+fixing, and ZOOM's real mechanism was *not* the ticket's suspect);
+STALE-01 closed as accepted and DOCS-01 landed as `npm run transcript`
+(D158). **All that remains is DITH-06's signature** — the seven names
+are drafted in `tickets/BATCH-C0.md`; matching is structural
+(`sameDither` on config, never label), so applying is label-only.
 
 Closes on `check` **and** `audit` green.
 
-- [ ] **UI-06 Move "Colours used" under the Colour section** [detail] (2026-08-11)
-- [ ] **DITH-06 Name the built-in dither profiles after their method** [detail] (2026-08-11)
-  The run drafts seven names carrying method + plain qualifier; the owner signs.
-- [ ] **FLICKER-01 Changing the colour count flickers through the source** [detail] (2026-08-11)
-  Confirm the mechanism before fixing — the two candidate fixes are different changes.
-- [ ] **ZOOM-01 The canvas jumps on the first wheel zoom** [detail] (2026-08-11)
-  Confirm the mechanism before fixing; the suspect is the fit→manual handover, not the zoom curve.
-- [ ] **A11Y-01 The automatable half of the screen-reader pass** [detail] (2026-08-11)
-  Hand-rolled over `tests/ui-styles.test.ts`; no new dependency.
-- [ ] **STALE-01 Close the small-edit staleness reservation** [detail] (2026-08-11)
-  Close as accepted. Do **not** lower `DIRTY_MAX_STALE_MS` gatelessly — it trades an asserted promise for a comfort already accepted.
-- [ ] **DOCS-01 Retire or automate the transcript-saving ritual** [detail] (2026-08-11)
-  Its stated `.gitignore` blocker was already fixed; only the save-or-retire question remains.
+- [ ] **DITH-06 Name the built-in dither profiles after their method** [sign-off] [detail] (2026-08-11)
+  Drafted 2026-08-11 (D158): the seven names are in `tickets/BATCH-C0.md` → DITH-06, awaiting the owner's signature. Applying is label-only — `sameDither`/`matchBuiltInDither` confirmed to match on config, never label.
 
 ### Next — Track A The printable pattern
 

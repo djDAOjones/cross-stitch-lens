@@ -28,6 +28,55 @@
   move — renaming it would mean copying hand-curated user data to change
   a string no user sees. Archives and `bench-reports/` untouched: they
   are history. See D150.
+- DOCS-01 (2026-08-11) — the transcript ritual becomes one command:
+  `npm run transcript` lists this project's Claude Code sessions
+  (`~/.claude/projects/<slug>/*.jsonl` — the investigation found the
+  sessions were always locally readable; the *Desktop* app's storage is
+  the unusable one) and exports a chosen session to `_transcripts/` as
+  redacted markdown. Redaction is applied, not promised — key shapes,
+  binary payloads, tool-result truncation, home paths — and pinned by
+  6 tests. First transcript ever saved landed during the smoke test,
+  which also caught `package.json`'s description still reading "Cross
+  Stitch Lens" (the D150 residue). See D158.
+- STALE-01 (2026-08-11) — the small-edit staleness reservation closes
+  **as accepted**, on the owner's recorded "a bit sluggish but can live
+  with". The remedy stays on file — lower `DIRTY_MAX_STALE_MS`
+  (`src/capture/dirty.ts:54`) with bench evidence that ≥ 4 updates/sec
+  holds — and was deliberately not taken gatelessly. See D158.
+- ZOOM-01 (2026-08-11) — the wheel-zoom snap is fixed, and the
+  confirmed mechanism was **neither of the ticket's suspects**: every
+  processed frame re-derived the view, and manual mode re-centres via
+  `scaledView`, so under live capture the next frame (≤ 250 ms) threw
+  away the wheel's pointer anchor — and any pan. `onFrame` now
+  re-derives only when the stitch dimensions change; resizes stay the
+  ResizeObserver's. Engaged-only wheel contract (M14-EXT-27) untouched.
+  Feel-check at the next sitting. See D157.
+- FLICKER-01 (2026-08-11) — stepping the colour count no longer shows
+  the un-reduced picture: `setCount` invalidates the selection source,
+  and resolving with no source falls back to the full permitted set —
+  the interim frame *was* that wide render. `applyColour` now holds the
+  previous palette and frame while the fresh source is in flight; the
+  fetch's completion handler swaps old-reduced → new-reduced. Verified
+  live: stepping 24→8 samples as `24 · limit 8` → `8 · limit 8`, no
+  wide frame between. Source *replacements* keep their documented
+  two-step on purpose. See D157.
+- A11Y-01 (2026-08-11) — every control's accessible name is now a
+  gate assertion: a source-scan tripwire over all 66 raw
+  interactive-element creation sites (no DOM environment exists and no
+  new dependency was allowed), recognising the codebase's real wiring
+  patterns — textContent, aria-label, id↔htmlFor by literal,
+  identifier or template, appended named spans. Zero exceptions;
+  mutation-verified (an unnamed probe button fails, named by file and
+  line). A11Y-VO-01 narrows to announcement *quality* plus the
+  colour-only check. See D156.
+- UI-06 (2026-08-11) — "Colours used" moves inside the Colour
+  section's panel: choices above, readout below, one subject in one
+  place, and the shell shortens by a top-level section (the
+  ICE-WIDTH-01 pairing). It keeps its own disclosure at headingLevel 3
+  (a nested section, so the outline stays honest — `createSection`
+  gained the option), and its shell×has-rows visibility writer is
+  unchanged. Verified in the running app: nested panel, independent
+  toggles, identical rows, zero console errors. See D156.
 - DATA-01 detection half (2026-08-11) — the catalogue sweep ships as a
   committed `AUDIT=1` audit plus a generated, deliberately timestamp-free
   worklist (`docs/catalogue-sweep.md`), so a re-run after corrections

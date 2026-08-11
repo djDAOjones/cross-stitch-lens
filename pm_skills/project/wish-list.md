@@ -59,6 +59,8 @@ refer to `docs/requirements.md`.
 - End-of-capture salience: the external-stop status line ("Screen capture ended (sharing was stopped).") is truthful but easy to miss — owner expected a more prominent prompt; consider a toast/banner treatment (from: 2026-08-08 owner sitting, D134 → ACCEPT-02 input)
 - Harness capture leg does not model the app's master-image copy: `src/bench-browser.ts`'s pump submits the grab buffer directly and keeps no master image, so the app's per-frame pre-submit copy (D71 census #2) never existed there and its removal cannot be priced on the automated leg — a fidelity gap for any main-thread-ownership change (from: 2026-08-08 M13-IMPL-01)
 - Synced-tree churn hygiene: relocate the cargo target dir + Vite/Vitest cache off the OneDrive path (CARGO_TARGET_DIR; `test.cacheDir`) — the secondary multiplier behind D136's QoS mechanism (`check:wasm` rewrites 111 MB in-domain right before `check:test`); unverifiable while the sync client idles, so hygiene not fix (from: 2026-08-08 INFRA-CHECK-01, D136)
+- Audit-after-check flake: `npm run audit` intermittently reports 2 failures when run immediately after a full `check` (observed twice, 2026-08-11, both green on the very next run; failing pair never captured — grab `/tmp/audit.log` while red to name it) (from: Batch C0 close)
+
 <!-- Triaged 2026-08-11 (D149): three lines left. The rename promoted to
      RENAME-01 (Current), the colour-limit slider to ICE-LIMIT-01 (Icebox),
      and the FIT_MARGIN tick-label clip absorbed into M11's backlog line.

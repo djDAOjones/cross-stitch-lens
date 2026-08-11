@@ -42,6 +42,13 @@ export interface SectionOptions {
   open: boolean;
   /** User toggles only (not programmatic setOpen). */
   onToggle: (open: boolean) => void;
+  /**
+   * Heading level, default 2. A section nested inside another
+   * section's panel passes 3 so the document outline stays honest
+   * (UI-06 — the "Colours used" key inside the Colour section is the
+   * one current case).
+   */
+  headingLevel?: 2 | 3;
 }
 
 /** Build one Carbon accordion section. */
@@ -49,7 +56,7 @@ export function createSection(doc: Document, options: SectionOptions): Accordion
   const element = doc.createElement('section');
   element.className = 'accordion-section';
 
-  const heading = doc.createElement('h2');
+  const heading = doc.createElement(`h${String(options.headingLevel ?? 2)}`);
   heading.className = 'accordion-heading';
   const button = doc.createElement('button');
   button.type = 'button';

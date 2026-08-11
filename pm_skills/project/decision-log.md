@@ -2653,3 +2653,185 @@ audit suite now runs 55 tests across 12 files.
 uncommitted work (cloud-session provisioning + a `check-docs` CI-parity
 fix) was found in the tree during this close and deliberately left
 unstaged — its own session commits it.
+
+## D156 — UI-06 and A11Y-01: the colour key joins its subject, and accessible names become a tripwire (2026-08-11)
+
+**UI-06.** "Colours used" moves from its top-level home in the content
+column into the **Colour section's panel** — it is a readout *of* the
+colour choices, and a separate section split one subject across two
+places while lengthening the shell (the owner's ask at the 2026-08-09
+sitting; pairs with ICE-WIDTH-01). It keeps its own accordion
+disclosure, so it still opens and closes independently, and nothing
+about what it lists changed. `createSection` gained an optional
+`headingLevel` (default 2) and the nested section passes 3, so the
+document outline stays honest rather than nesting an h2 inside another
+h2's region. The shell×has-rows visibility writer is untouched.
+Verified in the running app: the key renders inside
+`#section-colour-panel` with an h3, toggles independently, carries the
+same rows (`DMC 310 Black …`), and the console is clean. No test
+pinned the old placement, so none moved.
+
+**A11Y-01.** The automatable half of the screen-reader pass, split
+from A11Y-VO-01 by D149's triage. With no DOM environment installed
+and a new dependency forbidden, the honest node-shape is a
+**source-scan tripwire** (`tests/a11y-names.test.ts`, the
+`ui-styles.test.ts` lineage): every raw
+`createElement('button'|'input'|'select'|'textarea')` site — 66 across
+the product UI — must carry a recognised name-wiring signal beside it.
+The signals were derived from the codebase's real patterns, not
+imagined: `textContent`, `aria-label and aria-labelledby`, id↔`htmlFor` association
+matched textually so literals, shared identifiers and template
+literals all count, appended named spans (the accordion's shape), and
+the tree-removing exemptions (`hidden`, `aria-hidden`). Zero
+exceptions were needed — every current site's wiring is visible to the
+scanner — and the exceptions list is asserted against rot.
+
+Three things keep it from being hollow: a **mutation test** (an
+unnamed probe button fails the suite, named by file and line), a
+**self-test** floor (a scan matching under 50 sites means the scanner
+broke, not that the controls left), and the explicit statement of what
+it is: a tripwire that forces new controls to wire a name where the
+scanner can see it, never a proof of name *quality* — which is
+precisely the half A11Y-VO-01 keeps for VoiceOver.
+
+**Alternatives rejected.** A DOM environment (jsdom/happy-dom — not
+installed, and the no-new-dependency rule is A11Y-01's own text). A
+window-only heuristic without identifier tracking (the first prototype
+flagged 20 of 66 sites; identifier-tracked signals got it to 8, and
+reading those 8 by hand showed all were wired — the flags were scanner
+blindness, so the scanner learned the patterns rather than the code
+gaining exceptions). Asserting builder usage only (main.ts creates
+controls raw, legitimately).
+
+**Scope.** `src/main.ts`, `src/ui/accordion.ts`,
+`tests/a11y-names.test.ts` (new, 3 tests). Gate green.
+
+**Link:** Batch C0 continues.
+
+## D157 — FLICKER-01 and ZOOM-01: both mechanisms confirmed before fixing, and one ticket suspect was wrong (2026-08-11)
+
+Both items carried the same instruction — confirm the mechanism before
+proposing a fix — and the instruction earned its keep twice: one
+suspicion confirmed precisely, one overturned.
+
+**FLICKER-01, confirmed as suspected.** `setCount` calls
+`invalidateSelectionSource()` and then `applyColour()` resolves
+**synchronously with no selection source** while the replacement is
+fetched async; `resolveProfilePalette` with no source resolves a count
+limit to the **full permitted set** (the documented first-frame
+two-step), and `reprocess()` painted it. That interim wide render *is*
+the owner's "original high-colour picture between values". Observed
+live before fixing: a single count event produced `24 → 17 → 24` in
+the Colours-in-use stat — an intermediate frame under a different
+palette.
+
+The fix is the run sheet's named conservative option: **hold the
+previous reduced frame**. `applyColour` now returns early while
+`selectionPending`, keeping the old palette and frame; the fetch's
+completion handler re-resolves and reprocesses the moment the source
+lands, so the swap is old-reduced → new-reduced and never passes
+through wide. Verified live after: stepping 24→8 samples as
+`24 · limit 8` → `8 · limit 8` with no intermediate. Deliberately
+bypassed by source *replacements* (new artwork reprocesses immediately
+with the old palette — showing the new picture beats holding a stale
+one, and that two-step stays documented behaviour). The draft
+governor's honesty is untouched.
+
+**ZOOM-01, suspect overturned.** The ticket suspected the fit→manual
+handover freezing the host height at a rounded value. Reading the
+geometry disproved it — `goManual()` never resizes the host,
+`zoomAt` is continuous, `clampPan` is loose — and the real mechanism
+sat one layer up: **`onFrame` re-derived the view on every processed
+frame**, and manual-mode `applyMode` re-derives through `scaledView`,
+which **re-centres**. Under live capture (~4 frames/sec), the wheel
+zoom landed anchored at the pointer and the next frame threw the
+anchor away within ≤ 250 ms — the visible snap. The same mechanism
+was quietly discarding **pans** under live capture too, a worse defect
+hiding under the same line.
+
+Fix: `onFrame` re-derives only when the stitch dimensions actually
+changed (a new pattern has no meaningful anchor to preserve);
+same-size frames leave the user's view alone; host resizes were
+already the ResizeObserver's job. The engaged-only wheel contract
+(M14-EXT-27) is untouched — the acceptance condition names it. The
+"moves smoothly by feel" half is a one-line human check at the next
+sitting; the mechanism fix is complete.
+
+**Worth keeping.** A traced-and-named suspect is still a hypothesis.
+FLICKER's suspect survived contact with the code; ZOOM's did not, and
+fixing the named suspect would have shipped a no-op "fix" while the
+real defect stayed. The run sheet's confirm-first instruction is the
+cheap insurance that caught it.
+
+**Scope.** `src/main.ts` (applyColour), `src/ui/preview.ts` (onFrame).
+Gate green; behavioural verification live in the running app for
+FLICKER, by mechanism for ZOOM.
+
+**Link:** Batch C0 continues.
+
+## D158 — STALE-01 closes as accepted; DOCS-01 lands as one command instead of a retired reminder (2026-08-11)
+
+**STALE-01.** Closed **as accepted**, the run sheet's conservative
+default, on the owner's own recorded words ("a bit sluggish but can
+live with", D148). Sub-2 px edits are invisible to dirty detection by
+design and surface via the staleness bound; that is the accepted
+trade. The remedy stays on file, not taken: lowering
+`DIRTY_MAX_STALE_MS` (`src/capture/dirty.ts:54`, 2000 ms) requires
+bench evidence that the extra full-frame comparisons keep the
+≥ 4 updates/sec promise — a promise that is now *asserted* by
+`bench:auto`, which is exactly why a gateless run must not trade it
+for a comfort already accepted.
+
+**DOCS-01.** The investigation flipped the expected outcome. The
+item's original suspicion — the macOS Claude *Desktop* app's storage
+is unusable — is true (Chromium blobs). But these sessions run on
+**Claude Code**, whose transcripts persist as plain JSONL under
+`~/.claude/projects/<cwd-slug>/`, fully readable: 52 sessions under
+the pre-rename slug alone. So the ritual's failure was never a missing
+data source — it was the absence of one command. Retiring the
+reminder would have recorded the wrong conclusion.
+
+`npm run transcript` now lists the project's sessions and exports a
+chosen one to `_transcripts/` as **redacted** markdown. Redaction is
+applied, not promised: the check-secrets key shapes are scrubbed (not
+merely reported), data-URIs and base64 runs elide, tool results
+truncate to a head — the dialogue is the evidence; full tool dumps
+are where screen content hides — thinking blocks and sidechains drop
+entirely, and the home path collapses to `~`. Six tests pin the scrub
+rules, because a redaction regression is a leak into whatever chat
+window a transcript gets pasted into. The output stays gitignored
+regardless — redaction here is a floor, and the read-before-sharing
+rule stands (`_transcripts/README.md`, updated with the command;
+DEV-INFRASTRUCTURE's command table gained the row its own standing
+rule requires).
+
+The live smoke test exported this project's *other* current session —
+the first transcript ever saved — and caught a D150 residue in
+passing: `package.json`'s `description` still opened "Cross Stitch
+Lens" (the third of that file's three occurrences; D150 fixed name
+and repository URL). Fixed. Pre-rename sessions stay reachable via
+`--dir` with the old slug.
+
+**DITH-06 drafted, not applied.** The seven method-led names are in
+`tickets/BATCH-C0.md` awaiting signature — method first, the setting
+as the qualifier, no mood words ("Atkinson (half strength)",
+"Floyd–Steinberg (damped)", "Ordered (Bayer 8×8)"…). Confirmed before
+drafting: `sameDither`/`matchBuiltInDither` match on config alone, so
+a signed rename is label-only and every existing reference resolves.
+The one open flag: two drafted names are longer than the mood words
+they replace — re-check the Processing select at the narrow floor at
+apply time.
+
+**Also parked:** the audit-after-check flake (2 intermittent failures
+when `npm run audit` runs immediately after a full `check`; observed
+twice, green on every immediate re-run, failing pair not yet captured)
+— one wish-list line with the capture instruction, so the next
+occurrence gets named instead of re-run.
+
+**Scope.** `scripts/save-transcript.mjs` (new),
+`tests/save-transcript.test.ts` (new, 6 tests), `package.json`
+(description fix + `transcript` script), `DEV-INFRASTRUCTURE.md`
+(command-table row), `_transcripts/README.md`, wish-list. Gate green.
+
+**Link:** Batch C0's queue is empty but for DITH-06's signature. The
+batch's close condition (`check` and `audit` green) is met.

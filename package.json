@@ -3,7 +3,7 @@
   "version": "0.5.0",
   "private": true,
   "type": "module",
-  "description": "Cross Stitch Lens — converts visual artwork into cross-stitch designs in real time.",
+  "description": "Pattern Mapper — converts visual artwork into cross-stitch designs in real time.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -32,6 +32,7 @@
     "docs:editorconfig": "editorconfig-checker",
     "docs:fix": "markdownlint-cli2 --fix \"**/*.md\"",
     "lint:fix": "eslint . --fix",
+    "transcript": "node scripts/save-transcript.mjs",
     "prepare": "git config core.hooksPath .githooks"
   },
   "devDependencies": {

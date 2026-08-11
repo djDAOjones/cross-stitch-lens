@@ -32,18 +32,15 @@ debt that made that sitting expensive.
 sheet, not one file per item, since they ship together. Read it first;
 the lines below are pointers only.
 
-**Shipped so far** (2026-08-11): RENAME-01 and RENAME-02 (D150), the
-doc-sync pass (9 deltas → 1, the survivor deferred until DUR-01 answers
-it), AUDIT-01 and ROUTE-01 (D151). The three preconditions are
-therefore met — the rename is complete, the hot-read docs are true, and
+**Shipped so far** (2026-08-11): RENAME-01/02 (D150); the doc-sync pass
+(9 deltas → 1, the survivor deferred until DUR-01 answers it), AUDIT-01
+and ROUTE-01 (D151); DIAG-01 and KEY-01 (D152). The three preconditions
+are met — the rename is complete, the hot-read docs are true, and
 **`npm run audit` is green**, so the audits give the rest of the batch a
-real signal. The remaining eleven are order-free.
+real signal. The remaining nine are order-free.
 
 Closes on `check` **and** `audit` green.
 
-- [ ] **DIAG-01 Benign browser noise is logged as an uncaught error** [detail] (2026-08-11)
-- [ ] **KEY-01 The PDF thread key prints the hex twice** [detail] (2026-08-11)
-  Regression fixture must be an **unnamed** generated colour — the existing green unit test uses the flattering named case.
 - [ ] **EXPORT-01 Assert the exported artefacts, not just the helpers** [detail] (2026-08-11)
 - [ ] **M8-GOLD-02 Golden fixtures for the four M8 methods** [detail] (2026-08-11)
   Owner-approved 2026-08-09. Source is a small JSON crop of `landscape-1.jpg` in the 8×8 house style, never the JPEG.

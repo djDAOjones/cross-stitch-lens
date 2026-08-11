@@ -2396,3 +2396,72 @@ measurement rewrites history (D150's principle).
 
 **Link:** Batch C0's three preconditions are met; the remaining eleven
 items are order-free.
+
+## D152 — DIAG-01 and KEY-01: the diagnostics buffer keeps faults, and the PDF key stops repeating itself (2026-08-11)
+
+**Decision.** Two independent defects from the 2026-08-09 sitting, both
+with mechanisms already traced, both fixed with the regression fixture
+the finding named.
+
+**DIAG-01 — three separate things, not one.** The item read as "downgrade
+a noisy message", but its acceptance condition asked for three, and each
+needed its own change:
+
+1. **Known-benign notifications are downgraded, not dropped.** The
+   ResizeObserver loop message — both wordings, since engines differ —
+   is logged at `debug` with its reason stated in code beside a list
+   that is explicitly a silencer, so anything added to it must be
+   genuinely benign rather than merely inconvenient. Matched by prefix,
+   and a real fault whose message merely *contains* the phrase still
+   lands at error (there is a test for exactly that, because a silencer
+   that over-matches is worse than the noise).
+2. **Real faults keep their evidence.** `installGlobalCapture` recorded
+   `message` and `source` but no **stack**, so an uncaught error said
+   something broke without saying where. Both the error and the
+   unhandled-rejection paths now carry one when the payload is an
+   `Error`, and omit the field rather than inventing it when it is not.
+3. **Eviction prefers noise over faults.** This is the part the item's
+   last clause asked for and the one a quick reading would skip. The
+   buffer used `shift()`, so a burst of routine chatter evicts the very
+   error you opened the diagnostics for — downgrading the ResizeObserver
+   message reduces that pressure but does not remove it, because debug
+   records still consume slots. `evictOne` now drops the oldest
+   **non-error** record and falls back to the oldest only once the
+   buffer is all errors. Bounded stays bounded; errors are simply last
+   to go.
+
+**KEY-01 — fixed in `keyLabel`, not at the call site.** The traced path
+was right: for a generated colour with no CSS name, `entry.name` *is*
+the hex, so `nonThreadLabel` returns "Web-safe #cccccc" and `keyLabel`
+appended the hex a second time. The tempting fix is to stop passing
+`reference: ''` from the export assembly, but that makes `keyLabel`
+return the bare hex and throws away the honest "Web-safe" label D114
+introduced. Suppressing the trailing hex when the label already carries
+one fixes every row regardless of who builds the label, which is what
+the acceptance condition ("never prints the same token twice") actually
+asks for. Real threads are untouched: "DMC 310" cannot contain its own
+hex, so "DMC 310 #000000" still reads correctly, and the suppression is
+conditional so a *named* synthetic ("Retro 16 Lime") still gets its hex.
+
+**The fixture is the point.** `keyLabel` was already unit-tested and
+green, because the fixture used "Web-safe Lime" — a named colour. The
+unnamed majority is the broken one, and that gap is precisely why the
+defect reached an owner's printed export. The regression case is an
+unnamed generated colour, plus a case-mismatch variant, plus a sweep
+asserting no generated-map row repeats its hex. This is the same lesson
+EXPORT-01 exists to institutionalise: a green unit test over a
+flattering fixture proves less than it appears to.
+
+**Alternatives rejected.** Filtering benign notifications out entirely
+(they would vanish from the record, and "it did not happen" is a
+different claim from "it happened and was harmless"). Token-level
+deduplication in `keyLabel` (it would collapse legitimate repeats in a
+brand name; the defect is specifically the appended hex). Bumping
+`BUFFER_CAPACITY` instead of prioritising eviction (a bigger buffer
+delays the loss, it does not stop it).
+
+**Scope.** `src/diagnostics/log.ts`, `src/export/pdf.ts`,
+`tests/diagnostics-log.test.ts` (new, 10 tests),
+`tests/export-pdf.test.ts` (+5). `check` and `audit` green.
+
+**Link:** Batch C0 continues; nine items remain, all order-free.

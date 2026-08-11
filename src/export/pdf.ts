@@ -55,7 +55,15 @@ export interface KeyEntry {
  */
 export function keyLabel(entry: KeyEntry): string {
   if (entry.reference === undefined) return entry.hex;
-  return `${entry.brand ?? ''} ${entry.reference} ${entry.hex}`.replace(/\s+/g, ' ').trim();
+  const head = `${entry.brand ?? ''} ${entry.reference}`.replace(/\s+/g, ' ').trim();
+  // A generated colour with no CSS name is *named by its hex*, so its
+  // brand already ends in one: `nonThreadLabel` builds "Web-safe
+  // #cccccc" (color-sources.ts), and appending the hex again printed
+  // rows like "Web-safe #cccccc #cccccc" (KEY-01, D152). Real threads
+  // are untouched — "DMC 310" never contains its own hex, so
+  // "DMC 310 #000000" still reads correctly.
+  if (head.toLowerCase().includes(entry.hex.toLowerCase())) return head;
+  return `${head} ${entry.hex}`.trim();
 }
 
 export interface PdfOptions {

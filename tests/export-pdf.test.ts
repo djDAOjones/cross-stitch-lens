@@ -135,4 +135,48 @@ describe('key labels (M15-ACCEPT-01, D114)', () => {
     ).toBe('Web-safe Lime #00ff00');
     expect(keyLabel({ hex: '#123456', rgb: [18, 52, 86] })).toBe('#123456');
   });
+
+  // KEY-01 (D152). The case above passes and always did, because
+  // "Web-safe Lime" is a *named* colour — the flattering fixture. Most
+  // generated colours have no CSS name, so `nonThreadLabel` names them
+  // by their hex and the brand already ends in one. Those are the rows
+  // an owner actually saw printed twice.
+  describe('an unnamed generated colour — the broken majority', () => {
+    it('does not print the hex twice', () => {
+      expect(
+        keyLabel({ hex: '#cccccc', rgb: [204, 204, 204], brand: 'Web-safe #cccccc', reference: '' }),
+      ).toBe('Web-safe #cccccc');
+    });
+
+    it('holds when the label cases the hex differently', () => {
+      expect(
+        keyLabel({ hex: '#cccccc', rgb: [204, 204, 204], brand: 'Web-safe #CCCCCC', reference: '' }),
+      ).toBe('Web-safe #CCCCCC');
+    });
+
+    it('still appends the hex when the label does not already carry it', () => {
+      // The suppression must be conditional, not a blanket removal —
+      // a named synthetic still needs its hex on the chart.
+      expect(
+        keyLabel({ hex: '#00ff00', rgb: [0, 255, 0], brand: 'Retro 16 Lime', reference: '' }),
+      ).toBe('Retro 16 Lime #00ff00');
+    });
+
+    it('leaves a real thread whose reference is not its hex alone', () => {
+      expect(
+        keyLabel({ hex: '#000000', rgb: [0, 0, 0], brand: 'DMC', reference: '310' }),
+      ).toBe('DMC 310 #000000');
+    });
+
+    it('never repeats a token in any generated-map row', () => {
+      // The acceptance condition as written: no row prints the same
+      // token twice. Swept across the shapes the assembly can produce.
+      for (const brand of ['Web-safe #cccccc', 'Custom — #ff0000', 'Retro 16 #00ff00']) {
+        const hex = `#${brand.slice(-6)}`;
+        const label = keyLabel({ hex, rgb: [0, 0, 0], brand, reference: '' });
+        const occurrences = label.toLowerCase().split(hex.toLowerCase()).length - 1;
+        expect({ label, occurrences }).toEqual({ label, occurrences: 1 });
+      }
+    });
+  });
 });

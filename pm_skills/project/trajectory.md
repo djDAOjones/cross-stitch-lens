@@ -28,6 +28,19 @@
   move — renaming it would mean copying hand-curated user data to change
   a string no user sees. Archives and `bench-reports/` untouched: they
   are history. See D150.
+- KEY-01 (2026-08-11) — the PDF thread key stops printing the hex
+  twice. `keyLabel` now suppresses the trailing hex when the label
+  already carries one, which is the case for every generated colour
+  with no CSS name (`nonThreadLabel` names those by their hex). Real
+  threads unaffected. The regression fixture is an **unnamed**
+  generated colour — the old green test used the flattering named case,
+  which is why the defect shipped. See D152.
+- DIAG-01 (2026-08-11) — the diagnostics buffer stops losing faults to
+  noise: the ResizeObserver loop notification (both engines' wordings)
+  is downgraded to debug with its reason in code, real uncaught errors
+  and unhandled rejections now carry a **stack**, and buffer eviction
+  drops the oldest non-error first so chatter cannot evict the error you
+  opened the bundle for. 10 tests. See D152.
 - ROUTE-01 (2026-08-11) — the routing disagreement is **noise, not a
   defect**: on a quiet machine all sixteen rows separate by 1.35×–4.02×
   with zero disagreements, and under deliberate 10-core load the

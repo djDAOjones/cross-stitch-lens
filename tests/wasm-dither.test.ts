@@ -2,7 +2,7 @@
  * WASM dither backend: registration through the real adapter, then
  * bit-exact parity vs the TS reference (AGENTS.md: deterministic
  * stages must match exactly, tolerance 0) — the committed golden
- * fixture, both metrics, both scan modes, the full 533-colour DMC
+ * fixture, both metrics, both scan modes, the full 489-colour DMC
  * palette under CIELAB (the libm-parity bet, decision-log D39), and
  * alpha passthrough. Skips (visibly) when the pkg has not been built;
  * the gate runs check:wasm before check:test so a toolchain-equipped

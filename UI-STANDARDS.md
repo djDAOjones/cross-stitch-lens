@@ -55,10 +55,27 @@ the Carbon/WCAG/Nielsen defaults above do not.
 
 ### Layout model
 
-- Single-window app: large preview canvas; Carbon side panel for
-  controls grouped as **Pattern / Grid / Colour / Dither / Pipeline /
-  Export / Project**; info strip (stitch & colour stats) docked below
-  the preview.
+- Single-window app: large preview canvas plus a settings aside, both
+  built from the same accordion section primitive. The section census
+  as of M14's sixth look (D121) is **Preview / Colours used / Stats /
+  Capture / Colour / Processing / Export / Project**, with `main.ts`
+  authoritative for the order.
+  - **Capture** is a standing section holding size and zoom; it took
+    the retired Design section's slot after Stats (M14-EXT-40).
+  - **Colours used** is a content section in its own right, not a
+    panel of Colour — though UI-06 is queued to move it under Colour,
+    since it is a readout of Colour's choices.
+  - **Design** and **Advanced** are both retired (M14-EXT-40/44). The
+    Processing-order select was Advanced's only occupant and retired
+    with it; the stale disclosure keys are left unread rather than
+    migrated.
+  - **Pattern / Grid / Dither / Pipeline** no longer exist as sections:
+    grid geometry moved into the view strip's reveal, Dither became
+    **Processing**, and the settings aside flattened to one hierarchy
+    (M14-EXT-30/44).
+  - The info strip is not docked below the preview — stats are a
+    **Stats** section (M14-EXT-22), and the scroll-linked dock was
+    deleted at M14-FIX-06+03 (D103).
 - The preview canvas is the product. It collapses like any other
   region — from its own accordion header, disclosure persisted, and
   starting a capture session re-expands it (D107/D110).
@@ -150,9 +167,24 @@ carrying a severity and a full sentence naming the way out (D55).
   itself programmatically, not only visually.
 - Severity is carried by a **word** ("blocked", "warning"), never by
   colour alone — the app-wide no-colour-only rule applies.
-- Keep the three per-thread rules (lock / prefer / exclude) **disjoint
-  controls** in the UI, so a "locked and excluded" contradiction can
-  only come from a hand-edited file, never from clicking.
+The **three-disjoint-rules anatomy retired at M15** (D114/D124). It read:
+"keep lock / prefer / exclude as disjoint controls so a 'locked and
+excluded' contradiction can only come from a hand-edited file". All
+three concepts moved:
+
+- **exclude** dissolved into **profile membership** — a colour is
+  either in the profile's resolved table or it is not, so the
+  contradiction it guarded against is now unrepresentable rather than
+  merely unclickable.
+- **prefer** was **removed outright**, with the machinery deleted.
+- **lock** became **Must use**, a per-design choice with guaranteed
+  seats in selection.
+
+What survives unchanged is everything above it: conflicts as an
+`aria-live` list, a severity word never carried by colour alone, and a
+full sentence per narrowing. The *principle* — make a contradiction
+impossible to express rather than validating it after the fact — is
+what M15 strengthened; only the three-control shape is gone.
 
 ---
 

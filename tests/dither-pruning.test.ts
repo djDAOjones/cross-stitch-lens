@@ -110,7 +110,7 @@ describe('candidate pruning — exactness against the full scan', () => {
 
   for (const [label, palette] of [
     ['64-colour DMC slice', dmc64],
-    ['533-colour DMC', dmc],
+    ['489-colour DMC', dmc],
     // Duplicate colours make ties reachable: the reference keeps the
     // FIRST minimum, so a table that reordered candidates would differ.
     [
@@ -211,9 +211,13 @@ describe('candidate pruning — exactness against the full scan', () => {
     // own guard.
     const mean64 = buildCandidateTable(dmc64).candidates.length / LUT_SIZE;
 
-    const mean533 = buildCandidateTable(dmc).candidates.length / LUT_SIZE;
+    // Bound derived from the palette rather than a literal (AUDIT-01,
+    // D151). It read `533 / 5` — a count the DMC set never had, which
+    // made the guard ~9% slacker than intended. Deriving it means the
+    // bound cannot drift again when the catalogue changes.
+    const meanFull = buildCandidateTable(dmc).candidates.length / LUT_SIZE;
     expect(mean64).toBeLessThan(64 / 2);
-    expect(mean533).toBeLessThan(533 / 5);
+    expect(meanFull).toBeLessThan(dmc.entries.length / 5);
   });
 });
 
@@ -251,7 +255,7 @@ describe('candidate pruning — dither output is unchanged', () => {
 
   for (const [label, palette] of [
     ['64 colours', dmc64],
-    ['533 colours', dmc],
+    ['489 colours', dmc],
   ] as const) {
     for (const serpentine of [true, false]) {
       it(`byte-identical with and without the table — ${label}, serpentine=${String(

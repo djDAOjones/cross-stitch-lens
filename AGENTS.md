@@ -303,12 +303,23 @@ asks — capturing the one line is the whole interaction.
 ### Performance
 
 - No processing on the main thread. Main thread = capture + UI.
-- The benchmark budgets (`architecture.md`) are asserted by
-  `npm run bench` (`BENCH=1`-gated, deliberately outside `check`, which
-  runs only the bench machinery tests — D43/D44). A change that
-  regresses a budget row does not merge; either fix it or bring a
-  decision-log entry proposing the new budget, and run `bench` on any
-  perf-sensitive change.
+- The benchmark budgets (`architecture.md`) are asserted at **two**
+  boundaries, and they are not interchangeable (D142):
+  - `npm run bench` (`BENCH=1`-gated, deliberately outside `check`,
+    which runs only the bench machinery tests — D43/D44) asserts the
+    **node regression baselines** — observed medians guarded ×1.35 with
+    a staleness guard. They answer "did this get worse?".
+  - `npm run bench:auto` asserts the **product promise** in a browser:
+    the driven capture leg fails when the sustained rate drops below
+    4 preview updates/sec at ≤ 300² or any frame is missed or dropped.
+    Since M13-IMPL-02 the promise is enforced in code, not stated in
+    prose.
+  Only driven **base** capture rows may carry a product target;
+  `.edit-<class>` rows and anything measured against real Photoshop are
+  permanently unbindable (the bv2 amendment, enforced in code). A change
+  that regresses a budget row does not merge; either fix it or bring a
+  decision-log entry proposing the new budget, and run the relevant
+  command on any perf-sensitive change.
 - Never optimise ahead of the profiler. Adding WebAssembly, shaders,
   SharedArrayBuffer, etc. without a profile is out of scope by
   definition.
@@ -332,6 +343,13 @@ asks — capturing the one line is the whole interaction.
   committed milestone goes to the wish-list via "Park it" — including
   tempting spec sections (§25 second-stage features are the main drift
   risk).
+- **Ship order is not milestone-number order** (D149). Shipped: M0–M8,
+  M13, M14, M15. The committed fence is now **Batch C0** (a mechanical
+  tooling and defect batch) and then **Track A, the printable pattern** —
+  M9 → M11 → M16 → M10 → M12 — followed by Track B (durability). The
+  numbers persist because they are greppable across the tickets and the
+  decision log; they no longer imply sequence. `backlog.md` is
+  authoritative for what is committed.
 - No new runtime dependencies without approval. Current allowlist:
   Carbon web components, pdf-lib. (Dev deps per `DEV-INFRASTRUCTURE.md`.)
 - UXP / Photoshop-plugin approaches are rejected (decision-log D2); do
@@ -370,7 +388,14 @@ legitimately changes the output stitch count.
 
 - Never introduce a shared `scale` or `resolution` type, field, or
   label: a single name for four things is how they get wired together.
-  Field names carry their unit.
+  Field names carry their unit. A bare `scale` label stays banned.
+- **One named collision exists, deliberately** (M14-EXT-40, D121): the
+  region↔design control is labelled "Zoom" (source px per stitch) while
+  the preview strip also speaks of zoom (preview CSS px per stitch — a
+  different D52 resolution). The owner chose the label; the helper text
+  ("Source pixels per stitch") is the disambiguation. It is recorded
+  rather than silently renamed, and it is not a precedent — the rule
+  above still holds for everything else.
 - Preview scale crosses persistence in **CSS** px per stitch, never
   device px, so a project reopens the same size at any DPR.
 - The capture region's invariant splits on the session-only "Lock
@@ -379,7 +404,9 @@ legitimately changes the output stitch count.
   default, or during a shift-drag), pins move freely through
   `clampRect`/`resizeRect` and **both pattern dimensions derive** from
   the region through one held source-px-per-stitch scale
-  (`deriveGridSize`, the "Stitch size" slider) — stitches always
+  (`deriveGridSize`, the **"Zoom"** slider — renamed from "Stitch size"
+  on the owner's word at M14-EXT-40, D121; "Stitch size" survives only
+  as the Stats _readout_ of the same ratio) — stitches always
   square, both Size fields disabled with a reason while derived, and a
   mid-session project load re-seeds the scale from the loaded width
   (D101's width-honoured semantics); **locked**, every crop mutation

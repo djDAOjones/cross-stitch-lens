@@ -73,7 +73,7 @@ conditions:
 | `noise.g1024x1024.p64.lab.dither.serp.resize-first.stretch.opaque` | 1024×1024 | p64 | lab | floyd-steinberg | serpentine | resize-first | stretch | opaque | MAX_GRID: the export/finishing ceiling (D47) *(MATRIX_FULL only)* |
 | `noise.g32x32.rgb.lab.nodither.serp.resize-first.stretch.opaque` | 32×32 | rgb | — | none | serpentine | resize-first | stretch | opaque | full-RGB mode runs no colour stage and keeps source colours |
 | `noise.g32x32.p2.lab.dither.serp.resize-first.stretch.opaque` | 32×32 | p2 | lab | floyd-steinberg | serpentine | resize-first | stretch | opaque | two-colour palette — maximal quantisation error |
-| `noise.g32x32.p533.lab.dither.serp.resize-first.stretch.opaque` | 32×32 | p533 | lab | floyd-steinberg | serpentine | resize-first | stretch | opaque | full DMC set — the 533-entry scan and pruning path |
+| `noise.g32x32.p489.lab.dither.serp.resize-first.stretch.opaque` | 32×32 | p489 | lab | floyd-steinberg | serpentine | resize-first | stretch | opaque | full DMC set — the 489-entry scan and pruning path |
 | `noise.g32x32.dup.lab.dither.serp.resize-first.stretch.opaque` | 32×32 | dup | lab | floyd-steinberg | serpentine | resize-first | stretch | opaque | duplicate palette entries resolve to the FIRST index, both paths |
 | `noise.g32x32.neartie.lab.dither.serp.resize-first.stretch.opaque` | 32×32 | neartie | lab | floyd-steinberg | serpentine | resize-first | stretch | opaque | near-ties are decided identically by the LUT and exact paths |
 | `noise.g32x32.nodark.lab.dither.serp.resize-first.contain.letterbox` | 32×32 | nodark | lab | floyd-steinberg | serpentine | resize-first | contain | letterbox | the empty-cell diffusion defect: no near-black to absorb a phantom error |

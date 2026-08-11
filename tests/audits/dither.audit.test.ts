@@ -4,7 +4,7 @@
  * bv1 established the split from the outside: `metric: lab` costs
  * 424.5 ms against `metric: rgb` 125.1 ms at 1024²/64, so conversion is
  * ~70% of dither; and cost grows ~1.44 ms per palette entry, so the scan
- * is ~22% at 64 colours but dominant at 533. This audit measures the
+ * is ~22% at 64 colours but dominant at 489. This audit measures the
  * inside: each sub-operation of sRGB→Lab timed separately over values
  * captured from the real diffusion loop, and a *provably exact* candidate
  * pruning table whose winner and tie behaviour are verified against the
@@ -97,7 +97,7 @@ describe.skipIf(!AUDIT)('M5-PERF-13/14 dither audit (AUDIT=1)', () => {
   const rows: AuditRow[] = [];
   const findings: string[] = [];
   let table64: CandidateTable | null = null;
-  let table533: CandidateTable | null = null;
+  let table489: CandidateTable | null = null;
 
   it('M5-PERF-13: decomposes sRGB→Lab over captured work values', () => {
     // Values from the real loop at 300²: fractional, spatially
@@ -258,11 +258,11 @@ describe.skipIf(!AUDIT)('M5-PERF-13/14 dither audit (AUDIT=1)', () => {
   it('M5-PERF-14: builds and proves the exact candidate table', () => {
     for (const [name, palette] of [
       ['p64', palette64()],
-      ['p533', loadDmcPalette()],
+      ['p489', loadDmcPalette()],
     ] as const) {
       const table = buildCandidateTable(palette);
       if (name === 'p64') table64 = table;
-      else table533 = table;
+      else table489 = table;
 
       let total = 0;
       let max = 0;
@@ -327,15 +327,15 @@ describe.skipIf(!AUDIT)('M5-PERF-13/14 dither audit (AUDIT=1)', () => {
 
   it('M5-PERF-14: measures pruned dither end to end', () => {
     const table64Local = table64;
-    const table533Local = table533;
+    const table489Local = table489;
     expect(table64Local).not.toBeNull();
-    expect(table533Local).not.toBeNull();
-    if (table64Local === null || table533Local === null) return;
+    expect(table489Local).not.toBeNull();
+    if (table64Local === null || table489Local === null) return;
 
     for (const [name, grid, palette, table, expected] of [
       ['1024²/64', 1024, palette64(), table64Local, 900] as const,
       ['300²/64', 300, palette64(), table64Local, 70] as const,
-      ['300²/533', 300, loadDmcPalette(), table533Local, 400] as const,
+      ['300²/489', 300, loadDmcPalette(), table489Local, 400] as const,
     ]) {
       const buffer = gridBuffer(grid);
       const oracle = reference(buffer, params(palette));
@@ -398,7 +398,7 @@ describe.skipIf(!AUDIT)('M5-PERF-13/14 dither audit (AUDIT=1)', () => {
         'of the palette loop". Decomposed against the verbatim pre-M5D matcher, the hoist is ' +
         'worth 0.96–1.11× — i.e. nothing, and slightly negative at the ceiling grid. The ' +
         'entire large term is INLINING the `deltaE76Sq(labScratch, 0, palLab, i*3)` call ' +
-        '(2.85–4.31×): a cross-module call made 64–533 times per pixel that V8 does not ' +
+        '(2.85–4.31×): a cross-module call made 64–489 times per pixel that V8 does not ' +
         'inline. M5B\'s candidate bundled the two changes and attributed the result to the ' +
         'wrong one. The totals it reported stand — 858 ms → 225 ms at 1024²/64 — only the ' +
         'cause differs.',
@@ -407,7 +407,7 @@ describe.skipIf(!AUDIT)('M5-PERF-13/14 dither audit (AUDIT=1)', () => {
         'any future TS micro-optimisation lead as call-boundary-first until a decomposition ' +
         'says otherwise, and decompose one change at a time.',
       'Per-bin candidate pruning is the real algorithmic win and it scales with palette ' +
-        'size: 1.2× at 64 colours, 3.38× at 533. Byte-identical on every workload measured, ' +
+        'size: 1.2× at 64 colours, 3.38× at 489. Byte-identical on every workload measured, ' +
         'so it needs no tolerance decision and no golden regeneration.',
       'The pruning table build is a per-palette one-off and belongs in the LUT cache beside ' +
         'the reduce LUT, not on the frame path — its build cost is the same order as the ' +

@@ -47,7 +47,7 @@ Package manager: **npm** (Node LTS).
 | `bench:crosscheck` | `node scripts/bench-cross-check.mjs` | Part-A′ arithmetic: manual capture report vs the automated canonical one, side by side (same-build guarded) | Once, after the owner's manual Part-A′ run — the verdict stays human and is recorded in the decision log |
 | `bench:auto -- --crosscheck` | (mode of `bench:auto`) | The whole Part A′ in one command: flag-granted leg, then a picker-granted leg (real picker; scripted tile+Share click via System Events when Accessibility allows, else one human click), then the comparison table | The zero-or-one-click Part A′ — same build guaranteed by construction |
 | `bench:trace` | `node scripts/bench-auto.mjs --trace` | Part-C trace leg (M13-MEAS-04): the capture workloads re-run under raw-CDP tracing (Node built-in WebSocket, zero new deps) → validated GC-pause report per window, observer long tasks quoted alongside | Refreshing the GC-pause evidence — same quiet-desktop rules as `bench:auto`; its timing rows are cross-context (traced), never capture canon |
-| `check` | 7 non-mutating steps: types, lint, wasm, test, build, docs, secrets | **Quality gate** | Before calling a task done |
+| `check` | 8 non-mutating steps: types, lint, wasm, test, build, docs, contrast, secrets | **Quality gate** | Before calling a task done |
 | `lint:fix` | `eslint . --fix` | Auto-fix (separate from the gate) | Cleanup, never the CI pass/fail |
 
 Do not add scripts without updating this table.
@@ -297,7 +297,15 @@ is overwritten on every build.
   in-page before any row is measured) and once for the memory leg
   under `--js-flags=--expose-gc` (the forced-GC retention probe).
   Validates both reports (untainted, visible page, all legs measured
-  — `scripts/bench-auto-validate.mjs`) and writes every attempt to a
+  — `scripts/bench-auto-validate.mjs`) **and asserts the product
+  targets** (M13-IMPL-02, D142): the driven capture leg fails when the
+  sustained rate drops below 4 preview updates/sec or any frame is
+  missed or dropped, with `preview-update` medians bound ×1.35 at
+  300²/200². Only driven **base** capture rows may bind a target —
+  `.edit-<class>` rows and anything measured against real Photoshop are
+  permanently unbindable, enforced in code. So the command is no longer
+  only a report writer: **it exits non-zero on a missed promise**, not
+  just on an invalid run. It writes every attempt to a
   **timestamped** file in `bench-reports`, copying a leg to its
   canonical unstamped name only when it validated — the canonical
   artefact can never hold a tainted run. An invalid run exits

@@ -112,7 +112,7 @@ describe.skipIf(!AUDIT)('M5-PERF-12 LUT/reduce audit (AUDIT=1)', () => {
   it('separates LUT build from per-pixel mapping', () => {
     for (const [name, palette] of [
       ['p64', palette64()],
-      ['p533', loadDmcPalette()],
+      ['p489', loadDmcPalette()],
     ] as const) {
       const build = timed(
         `LUT build (cold) — ${name}`,
@@ -154,7 +154,7 @@ describe.skipIf(!AUDIT)('M5-PERF-12 LUT/reduce audit (AUDIT=1)', () => {
       'The bv1 `reduce` row (13.6 ms vs a 10 ms budget at 1024²/64) is almost entirely ' +
         'per-pixel mapping: the LUT build is a cache miss paid once per palette+metric, and ' +
         'the map row is a flat array lookup whose cost is memory-bound, not palette-bound — ' +
-        'p64 and p533 map at the same speed, as the rows above show. That means a bigger ' +
+        'p64 and p489 map at the same speed, as the rows above show. That means a bigger ' +
         'palette does not make reduce slower, and no search-side optimisation can move this ' +
         'row. Only fewer bytes touched (or a GPU map) can.',
     );

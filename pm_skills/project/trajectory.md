@@ -27,7 +27,34 @@
   and five tests; the IndexedDB database name deliberately did **not**
   move — renaming it would mean copying hand-curated user data to change
   a string no user sees. Archives and `bench-reports/` untouched: they
-  are history. Two owner steps remain as RENAME-02. See D150.
+  are history. See D150.
+- ROUTE-01 (2026-08-11) — the routing disagreement is **noise, not a
+  defect**: on a quiet machine all sixteen rows separate by 1.35×–4.02×
+  with zero disagreements, and under deliberate 10-core load the
+  narrowest row (200²/64/lab) collapses 1.77× → 1.24× — the row with the
+  least headroom, and the one that flipped. The sweep now tolerates
+  near-ties below 1.25× (reported, not failed) and still fails a
+  decisive disagreement. D135's "routing confirmed unchanged" stands.
+  See D151.
+- AUDIT-01 (2026-08-11) — `npm run audit` goes green: the draft-governor
+  assertion stopped testing the pre-M8 boolean and now mirrors
+  `liveConfig()`'s real `DitherConfig` substitution and its guard, and
+  the `p533` axis label became the truthful `p489` across the matrix and
+  audit surfaces — including one genuinely slack bound
+  (`533 / 5` → `dmc.entries.length / 5`, ~9% tighter). Recorded evidence
+  and archives left alone. See D151.
+- Doc-sync (2026-08-11) — the protected-doc ledger drains 9 open → 1:
+  the four-resolutions Zoom rename and its named D52 collision, the
+  two-boundary performance contract, the ship-order fence, the UI
+  section census, the retired three-disjoint-rules anatomy, and
+  `bench:auto`'s target assertion. Caught in passing: `check` was
+  documented as 7 steps and is 8. The survivor is deferred by its own
+  terms until DUR-01 decides it. See D151.
+- RENAME-02 (2026-08-11) — the platform half closes: the owner renamed
+  the GitHub repo and the OneDrive directory, the agent repointed the
+  git remote and `package.json`. The repo survived the synced-path move
+  intact — clean tree, no conflict copies, `fsck` showing only ordinary
+  dangling objects. No new decision; the why is D150.
 
 ## M15 — Colour & dithering profiles (SHIPPED 2026-08-09)
 

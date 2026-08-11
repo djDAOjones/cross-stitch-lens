@@ -2265,3 +2265,134 @@ consistency (it would make append-only history untrue).
 
 **Link:** RENAME-02 carries the two owner steps. Batch C0 continues at
 the doc-sync pass, then AUDIT-01 → ROUTE-01.
+
+## D151 — The doc-sync drains, AUDIT-01 corrects a stale shape and a slack bound, and ROUTE-01 is settled as noise (2026-08-11)
+
+**Decision.** The three preconditions Batch C0 named for trusting a
+gateless run are met: the rename is complete (D150), the hot-read and
+protected docs are true again, and `npm run audit` is green.
+
+**The doc-sync pass: 9 open deltas → 1.** Applied, each against the
+source entry rather than a stored instruction (the DOC-1 lesson):
+
+- **AGENTS.md § The four resolutions** — the derive-scale control is the
+  **Zoom** slider, renamed from "Stitch size" at M14-EXT-40; "Stitch
+  size" survives only as the Stats readout of the same ratio. The D52
+  collision is now recorded *in the contract* rather than only in
+  `scales.ts`: "Zoom" means source px per stitch here and preview CSS px
+  per stitch in the view strip, the helper text is the disambiguation,
+  and it is explicitly **not** a precedent — a bare `scale` label stays
+  banned.
+- **AGENTS.md § Performance** — budgets bind at **two** boundaries now,
+  and conflating them is the error the entry guards against: `bench`
+  asserts node regression baselines (×1.35, staleness-guarded), while
+  `bench:auto` asserts the **product promise** in a browser and exits
+  non-zero on a missed rate or a dropped frame (D142). Only driven base
+  capture rows may bind a target.
+- **AGENTS.md § Scope guards** — the committed fence is Batch C0 → Track
+  A → Track B, and ship order is not milestone-number order (D149).
+- **UI-STANDARDS.md § Layout model** — the controls census was three
+  milestones stale. It listed Pattern/Grid/Colour/Dither/Pipeline as
+  sections and an info strip docked below the preview; none of that is
+  true. Replaced with the real census, each retirement named.
+- **UI-STANDARDS.md § Conflict and explanation pattern** — the
+  three-disjoint-rules anatomy retired at M15: exclude dissolved into
+  profile membership, prefer was removed outright, lock became Must use.
+  Recorded so the *principle* survives its shape — M15 made the
+  contradiction unrepresentable rather than merely unclickable, which is
+  a strengthening, not a loss.
+- **DEV-INFRASTRUCTURE.md § `bench:auto`** — the validation summary
+  described a report writer; the command now also asserts product
+  targets and fails on a missed promise.
+
+Caught in passing and fixed: the command table called `check` **7
+non-mutating steps** and listed seven, omitting `check:contrast`. It is
+eight. A gate census that cannot count its own steps is exactly the
+drift a doc-sync exists to catch.
+
+The one survivor is deferred **by its own terms**: AGENTS.md's
+persistence checklist reads as though project state persists
+automatically, and DUR-01 is about to change what the true answer is.
+Syncing it now would mean syncing it twice.
+
+**AUDIT-01 — two different faults under one item.**
+
+The failing assertion was not catching a defect, it was testing a shape
+the app stopped producing. `runtime.audit` hand-simulated the draft
+substitution as `{ ...config, dither: false }` and asserted a boolean;
+M8 made dither a discriminated `DitherConfig` union (D61/D62). Rather
+than fix the literal, the audit now mirrors what `liveConfig()`
+*actually does* — `{ algorithm: 'none' }`, behind its real guard (a
+palette is set and dithering is on) — and asserts the guard fires before
+asserting the invariant, so the audit cannot silently prove nothing on a
+workload the substitution declines. The invariant itself is unchanged
+and still holds: draft turns dithering off in a **copy**, and the
+original the exporter uses is untouched.
+
+The `p533` labels were the same class. `loadDmcPalette()` returns 489
+and always has; the bench axis corrected this at bv2 (M13-MEAS-01) and
+the matrix and audit axes never followed. Renamed across the live test
+surfaces, and the regenerated `docs/acceptance-matrix.md` follows from
+`rows.ts`, not by hand.
+
+**One of those labels was load-bearing.** `dither-pruning` asserted
+`mean < 533 / 5` on the real DMC palette — a bound ~9 % slacker than
+intended, derived from a count the catalogue never had. It is now
+`dmc.entries.length / 5`, so it cannot drift again when the catalogue
+changes. A mislabel that had quietly become a weaker test is the best
+argument for treating label drift as real work.
+
+**ROUTE-01 — settled as noise, with the mechanism identified.** The item
+insisted this not be lumped in with AUDIT-01's stale assertions, and it
+was right to. Reading the `margin` column, as its Done-when asks:
+
+- **Quiet machine:** all sixteen rows separate by **1.35×–4.02×**, zero
+  disagreements. The router's metric-based policy (lab → ts, rgb →
+  wasm) is correct across the entire matrix.
+- **Under deliberate 10-core load** (the sweep ran 39 % slower): still
+  zero disagreements, but the narrowest row — `200²/64/lab` — collapsed
+  from **1.77× to 1.24×**. That is the row with the least headroom, and
+  it is almost certainly the one that flipped when the failure was first
+  seen.
+
+So the disagreement was the measurement, not the router: the sweep picks
+its winner by comparing two medians, and a load-inflated median is
+indistinguishable from a real regression. The fix is the one ROUTE-01
+prescribed — tolerate ties. A disagreement now fails only when the
+margin is **≥ 1.25×**; below that the row is reported as a near tie and
+not counted. The threshold is evidence-derived (every quiet row clears
+1.35×), not picked. Verified both ways: green quiet, and green under the
+load that previously broke it, with `200²/64/lab` correctly classified.
+
+This matters beyond the audit: **M13-SYNTH-01 (D135) signed off "routing
+confirmed unchanged"**, and that claim now rests on a sweep that no
+longer flips with machine load. Near-tie disagreements are still
+published in the findings, so nothing is swept away — a genuine policy
+break shows the *opposite* winner at a decisive margin and still fails.
+
+**Alternatives rejected.** Fixing the audit's literal `dither: false` to
+`{ algorithm: 'none' }` without mirroring the real guard (it would keep
+a simulation that can drift from `liveConfig()` again). Re-running
+ROUTE-01 until it passed and calling it fixed — it *did* pass on the
+first re-run, which is precisely the trap: an intermittent assertion
+trains you to re-run rather than to look. Renaming `533` inside
+`performance-evidence.md`, `browser-measurement.md`, `bench-reports/`
+and the archives: those are recorded measurements, and renaming a
+measurement rewrites history (D150's principle).
+
+**Scope.** `AGENTS.md`, `UI-STANDARDS.md`, `DEV-INFRASTRUCTURE.md`,
+`doc-deltas.md` (9 → 1 open), `tests/audits/runtime.audit.test.ts`,
+`tests/audits/routing.audit.test.ts`,
+`tests/audits/orchestration.audit.test.ts`,
+`tests/audits/dither.audit.test.ts`,
+`tests/audits/lut-reduce.audit.test.ts`,
+`tests/audits/m8-dither.audit.test.ts`,
+`tests/audits/wasm-boundary.audit.test.ts`,
+`tests/audits/candidates/dither-candidates.ts`, `tests/matrix/rows.ts`,
+`tests/acceptance-matrix.test.ts`, `tests/dither-pruning.test.ts`,
+`tests/backend-select.test.ts`, `tests/wasm-dither.test.ts`,
+`tests/benchmark.test.ts`, `docs/acceptance-matrix.md` (regenerated).
+`check` and `audit` both green.
+
+**Link:** Batch C0's three preconditions are met; the remaining eleven
+items are order-free.

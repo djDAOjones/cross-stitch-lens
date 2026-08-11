@@ -5,7 +5,7 @@
  * Two independent axes are prototyped, because bv1 showed they are
  * different sizes of problem: the sRGB→Lab conversion (~70% of dither
  * cost at 64 colours) and the nearest-colour scan (~1.44 ms per palette
- * entry, so the dominant term only at 533).
+ * entry, so the dominant term only at 489).
  */
 
 import { srgbToLab } from '../../../src/core/color/convert.ts';

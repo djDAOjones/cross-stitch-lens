@@ -24,12 +24,12 @@
 
 ## Open
 
-- [ ] 2026-08-07 AGENTS.md § The four resolutions — the '"Stitch size" slider' reference is now the Zoom slider (owner rename, D52 collision recorded) (source: D121/M14-EXT-40)
-- [ ] 2026-08-07 UI-STANDARDS.md § Layout model — controls census stale: Design and Advanced retired, Capture is a standing section, the colours table is a "Colours used" content section, the aside box flattened (source: D121/M14-EXT-40/41/44)
-- [ ] 2026-08-07 UI-STANDARDS.md § Conflict and explanation pattern — the three-disjoint-rules anatomy (lock/prefer/exclude) retired by M15: exclude is profile membership, prefer is gone, lock is Must-use; the aria-live sentence pattern itself stands (source: D124/review)
-- [ ] 2026-08-09 AGENTS.md § Performance — budgets are no longer asserted by `npm run bench` alone: the product promise is now a `bench:auto` gate (rate + zero misses) and only driven base capture rows may bind (source: D142/M13-IMPL-02)
-- [ ] 2026-08-09 DEV-INFRASTRUCTURE.md § `bench:auto` — the validation summary ("untainted, visible page, all legs measured") is stale: the leg also asserts product targets and exits non-zero on a miss (source: D142/M13-IMPL-02)
+- [x] 2026-08-07 AGENTS.md § The four resolutions — the '"Stitch size" slider' reference is now the Zoom slider (owner rename, D52 collision recorded) (source: D121/M14-EXT-40) — applied at D151
+- [x] 2026-08-07 UI-STANDARDS.md § Layout model — controls census stale: Design and Advanced retired, Capture is a standing section, the colours table is a "Colours used" content section, the aside box flattened (source: D121/M14-EXT-40/41/44) — applied at D151
+- [x] 2026-08-07 UI-STANDARDS.md § Conflict and explanation pattern — the three-disjoint-rules anatomy (lock/prefer/exclude) retired by M15: exclude is profile membership, prefer is gone, lock is Must-use; the aria-live sentence pattern itself stands (source: D124/review) — applied at D151
+- [x] 2026-08-09 AGENTS.md § Performance — budgets are no longer asserted by `npm run bench` alone: the product promise is now a `bench:auto` gate (rate + zero misses) and only driven base capture rows may bind (source: D142/M13-IMPL-02) — applied at D151
+- [x] 2026-08-09 DEV-INFRASTRUCTURE.md § `bench:auto` — the validation summary ("untainted, visible page, all legs measured") is stale: the leg also asserts product targets and exits non-zero on a miss (source: D142/M13-IMPL-02) — applied at D151
 - [ ] 2026-08-11 AGENTS.md § Persistence checklist / Core data model — no autosave or session restore exists; the checklist reads as though project state persists automatically. DUR-01 will change the answer, so sync after it ships, not before (source: D149/DUR-01)
-- [ ] 2026-08-11 AGENTS.md § Scope guards — the committed-milestone list is stale: M13/M14/M15 shipped, ship order is no longer number order, and the fence is now Batch C0 → Track A (source: D149)
+- [x] 2026-08-11 AGENTS.md § Scope guards — the committed-milestone list is stale: M13/M14/M15 shipped, ship order is no longer number order, and the fence is now Batch C0 → Track A (source: D149) — applied at D151
 - [x] 2026-08-11 AGENTS.md § Product identity — "macOS-first" and the edits-in-Photoshop premise both widen: the owner intends to publish online to a broader audience on any platform, so no upstream editor can be assumed (source: D149/brief.md) — applied at D150
 - [x] 2026-08-11 AGENTS.md + UI-STANDARDS.md — product name renamed to Pattern Mapper; DEV-INFRASTRUCTURE.md carried no occurrence (source: D150/RENAME-01) — applied at D150

@@ -155,10 +155,10 @@ describe.skipIf(!AUDIT)('M5-PERF-15 wasm boundary audit (AUDIT=1)', () => {
     // `routing.audit.test.ts`. Kept as a pointer rather than deleted so
     // the lead's resolution is discoverable from where it was raised.
     findings.push(
-      'CLOSED by M5-PERF-27. D42 calibrated on a single 96²/533 lab frame and applied the ' +
+      'CLOSED by M5-PERF-27. D42 calibrated on a single 96²/489 lab frame and applied the ' +
         'winner to every workload. That is unsound in shape, and after M5-PERF-22 it is also ' +
         'wrong in fact: the dither winner is decided by METRIC (lab → ts, rgb → wasm) across ' +
-        'the whole 96²–1024² × 64–533 matrix. The calibration has been removed, not retuned. ' +
+        'the whole 96²–1024² × 64–489 matrix. The calibration has been removed, not retuned. ' +
         'Evidence: tests/audits/routing.audit.test.ts.',
     );
     expect(findings.length).toBeGreaterThan(0);

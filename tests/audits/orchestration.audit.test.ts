@@ -85,16 +85,16 @@ describe.skipIf(!AUDIT)('M5-PERF-10 orchestration audit (AUDIT=1)', () => {
 
   it('measures per-stage-call palette derivation', () => {
     const p64 = palette64();
-    const p533 = loadDmcPalette();
+    const p489 = loadDmcPalette();
 
     rows.push(
-      timed('loadDmcPalette() — 533 entries, object map', () => loadDmcPalette(), 1, {
-        entries: 533,
+      timed('loadDmcPalette() — full DMC set, object map', () => loadDmcPalette(), 1, {
+        entries: p489.entries.length,
       }),
       timed('paletteRgb(64)', () => paletteRgb(p64), 0.1, { entries: 64 }),
-      timed('paletteRgb(533)', () => paletteRgb(p533), 0.1, { entries: 533 }),
+      timed('paletteRgb(489)', () => paletteRgb(p489), 0.1, { entries: p489.entries.length }),
       timed('paletteLab(64)', () => paletteLab(p64), 0.1, { entries: 64 }),
-      timed('paletteLab(533)', () => paletteLab(p533), 1, { entries: 533 }),
+      timed('paletteLab(489)', () => paletteLab(p489), 1, { entries: p489.entries.length }),
     );
 
     // What a dither stage call pays before it touches a pixel.
@@ -106,15 +106,15 @@ describe.skipIf(!AUDIT)('M5-PERF-10 orchestration audit (AUDIT=1)', () => {
       },
       0.1,
     );
-    const perCall533 = timed(
-      'dither prologue: paletteRgb+paletteLab (533)',
+    const perCall489 = timed(
+      'dither prologue: paletteRgb+paletteLab (489)',
       () => {
-        paletteRgb(p533);
-        paletteLab(p533);
+        paletteRgb(p489);
+        paletteLab(p489);
       },
       1,
     );
-    rows.push(perCall64, perCall533);
+    rows.push(perCall64, perCall489);
 
     const frame1024 = pipelineMs(W1024);
     const frame200 = pipelineMs(W200);
@@ -132,7 +132,7 @@ describe.skipIf(!AUDIT)('M5-PERF-10 orchestration audit (AUDIT=1)', () => {
     findings.push(
       `Palette derivation is rebuilt per stage call but is immaterial at 64 colours: ` +
         `${String(round(prologue, 3))} ms, ${String(round((100 * prologue) / frame200, 2))}% of the 200² frame. ` +
-        `At 533 it costs ${String(round(perCall533.summary?.median ?? 0, 3))} ms — still ` +
+        `At 489 it costs ${String(round(perCall489.summary?.median ?? 0, 3))} ms — still ` +
         `far below the per-pixel term. Caching it is correctness hygiene (it needs a ` +
         `content-correct key, same hazard as M5-PERF-12), not a performance lever.`,
     );

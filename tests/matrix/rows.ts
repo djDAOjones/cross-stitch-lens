@@ -42,8 +42,10 @@ export type PaletteAxis =
   | 'p2'
   /** First 64 DMC threads. */
   | 'p64'
-  /** The full 533-entry DMC set. */
-  | 'p533'
+  /** The full DMC set — 489 entries. Named `p533` until AUDIT-01 (D151)
+   *  after a count the catalogue never had; the bench axis had already
+   *  made the same correction at bv2 (M13-MEAS-01). */
+  | 'p489'
   /** 64 threads with entry 0 repeated at index 40 — tie-break bait. */
   | 'dup'
   /** Colours one unit apart, so ΔE ties are reachable in f32. */
@@ -231,7 +233,7 @@ function expansions(): MatrixRow[] {
       proves: 'full-RGB mode runs no colour stage and keeps source colours',
     }),
     row({ ...base, palette: 'p2', proves: 'two-colour palette — maximal quantisation error' }),
-    row({ ...base, palette: 'p533', proves: 'full DMC set — the 533-entry scan and pruning path' }),
+    row({ ...base, palette: 'p489', proves: 'full DMC set — the 489-entry scan and pruning path' }),
     row({
       ...base,
       palette: 'dup',
@@ -356,7 +358,7 @@ export function paletteFor(spec: Pick<MatrixRow, 'palette'>): Palette | null {
       ]);
     case 'p64':
       return palette64();
-    case 'p533':
+    case 'p489':
       return loadDmcPalette();
     case 'dup': {
       // Entry 0 repeated at index 40. Every pixel that matches it must

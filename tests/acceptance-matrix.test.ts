@@ -85,7 +85,7 @@ describe('matrix definition', () => {
     const seen = <K extends keyof MatrixRow>(key: K): Set<unknown> =>
       new Set(MATRIX.map((r) => r[key]));
     expect(seen('palette')).toEqual(
-      new Set(['rgb', 'p2', 'p64', 'p533', 'dup', 'neartie', 'nodark']),
+      new Set(['rgb', 'p2', 'p64', 'p489', 'dup', 'neartie', 'nodark']),
     );
     expect(seen('alpha')).toEqual(new Set(['opaque', 'letterbox', 'ramp', 'empty']));
     expect(seen('resizeMode')).toEqual(new Set(['stretch', 'contain', 'cover', 'fit']));

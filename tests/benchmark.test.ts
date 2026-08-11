@@ -44,7 +44,7 @@ const BENCH = process.env['BENCH'] === '1';
 /** CI runners are slow and noisy; stretch every budget ×3 there. */
 const MULT = process.env['CI'] ? 3 : 1;
 
-/** The matrix at 1024²/533 takes minutes; give the hook room. */
+/** The matrix at 1024²/489 takes minutes; give the hook room. */
 const MATRIX_TIMEOUT_MS = 900_000;
 
 let report: BenchReport | null = null;

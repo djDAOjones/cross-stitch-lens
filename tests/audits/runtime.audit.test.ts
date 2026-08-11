@@ -255,21 +255,40 @@ describe.skipIf(!AUDIT)('M5-PERF-16/17/19 runtime audit (AUDIT=1)', () => {
     governor.sample(500);
     expect(governor.isDraft).toBe(true);
     // The draft substitution is applied in main.ts's liveConfig(), which
-    // returns a COPY with dither off; the project config object it is
-    // derived from is untouched, and exportFrame is called with that
-    // original. Pin the property the export invariant depends on.
+    // returns a COPY with dither switched off; the project config object
+    // it is derived from is untouched, and exportFrame is called with
+    // that original. Pin the property the export invariant depends on.
+    //
+    // Mirrors liveConfig() as it actually is (AUDIT-01, D151). Until
+    // then this simulated `dither: false` and asserted a boolean —
+    // the pre-M8 shape. M8 made dither a discriminated DitherConfig
+    // union (D61/D62), so the assertion was testing a shape the app
+    // stopped producing, not catching a defect. "Off" is now
+    // `{ algorithm: 'none' }`, and the substitution carries a guard:
+    // it only fires when a palette is set and dithering is actually on.
     const config = configFor(workloadById(W300));
-    const live = governor.isDraft ? { ...config, dither: false } : config;
+    const substitutes =
+      governor.isDraft && config.palette !== null && config.dither.algorithm !== 'none';
+    const live = substitutes ? { ...config, dither: { algorithm: 'none' as const } } : config;
     rows.push(
       counted('draft isolation', {
         'governor in draft': 'yes',
-        'live config dither': String(live.dither),
-        'project config dither': String(config.dither),
+        'substitution fires': substitutes ? 'yes' : 'no — guard declined',
+        'live config dither': live.dither.algorithm,
+        'project config dither': config.dither.algorithm,
         'project config mutated': live === config ? 'YES — BUG' : 'no',
       }),
     );
-    expect(config.dither).toBe(true);
-    expect(live.dither).toBe(false);
+    // The workload must be one the substitution applies to, or this
+    // audit proves nothing about isolation.
+    expect(config.palette).not.toBeNull();
+    expect(config.dither.algorithm).not.toBe('none');
+    expect(substitutes).toBe(true);
+    // The invariant itself: draft turns dithering off in the copy, and
+    // the original the exporter uses is untouched.
+    expect(live.dither.algorithm).toBe('none');
+    expect(config.dither.algorithm).toBe('floyd-steinberg');
+    expect(live).not.toBe(config);
   }, AUDIT_TIMEOUT_MS);
 
   // -------------------------------------------------------------- 19

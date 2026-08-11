@@ -23,7 +23,7 @@ entries; they no longer imply sequence.
 
 ### Current — Batch C0 Sharpen the tools
 
-Opened 2026-08-11 (D149). Fifteen mechanical items (one shipped) — confirmed
+Opened 2026-08-11 (D149). Fifteen mechanical items — confirmed
 mechanism, named acceptance, no taste — as one gateless **autojazz**
 batch. Nothing new: the 2026-08-09 sitting's findings plus the tooling
 debt that made that sitting expensive.
@@ -32,19 +32,15 @@ debt that made that sitting expensive.
 sheet, not one file per item, since they ship together. Read it first;
 the lines below are pointers only.
 
-Order: **RENAME-01 shipped 2026-08-11 (D150)** — its agent half is done;
-what remains is two owner steps, tracked as RENAME-02 below. Next: the
-doc-sync pass (`doc-deltas.md`, not an item) → AUDIT-01 → ROUTE-01 →
-the rest in any order. `npm run audit` is red, so it runs early or the
-audits give the rest of the batch no signal. Closes on `check` **and**
-`audit` green.
+**Shipped so far** (2026-08-11): RENAME-01 and RENAME-02 (D150), the
+doc-sync pass (9 deltas → 1, the survivor deferred until DUR-01 answers
+it), AUDIT-01 and ROUTE-01 (D151). The three preconditions are
+therefore met — the rename is complete, the hot-read docs are true, and
+**`npm run audit` is green**, so the audits give the rest of the batch a
+real signal. The remaining eleven are order-free.
 
-- [ ] **RENAME-02 Finish the rename: the two platform steps** [maintainer] (2026-08-11)
-  Intent: the code, docs and user-facing strings all read Pattern Mapper (D150). Two steps need the owner's hands: rename the GitHub repo `cross-stitch-lens` → `pattern-mapper`, and rename the OneDrive project directory (with **no agent session running against the path** — hostile-filesystem guard). The agent then updates the git remote URL and `package.json`'s `repository.url`, which are deliberately left pointing at the old name until the repo actually moves.
-  Done when: `git remote -v` and `package.json` name the new repo, `git push` works, and `check` is green.
-- [ ] **AUDIT-01 `npm run audit` fails on a stale post-M8 assertion** [detail] (2026-08-11)
-- [ ] **ROUTE-01 One routing disagreement in the M5-PERF-27 sweep** [detail] (2026-08-11)
-  Read the `margin` column first: near-1.0 is noise and the assertion should tolerate ties; wide is a real defect. Not the same class as AUDIT-01.
+Closes on `check` **and** `audit` green.
+
 - [ ] **DIAG-01 Benign browser noise is logged as an uncaught error** [detail] (2026-08-11)
 - [ ] **KEY-01 The PDF thread key prints the hex twice** [detail] (2026-08-11)
   Regression fixture must be an **unnamed** generated colour — the existing green unit test uses the flattering named case.

@@ -88,12 +88,11 @@ describe('workload routing (M5-PERF-27)', () => {
    * The policy is derived from the sweep in
    * `tests/audits/routing.audit.test.ts`: under lab the TS path carries
    * per-bin pruning that Rust does not, and under rgb the Rust loop
-   * wins. Measured on every combination of 96²–1024² and 64/533
-   * colours, the metric decided all sixteen.
+   * wins. Measured on every combination of 96²–1024² and 64/489   * colours, the metric decided all sixteen.
    */
   it('routes lab to ts and rgb to wasm, at every grid and palette size', () => {
     for (const grid of [96, 200, 300, 1024]) {
-      for (const paletteSize of [2, 64, 533]) {
+      for (const paletteSize of [2, 64, 489]) {
         expect(routeDither({ grid, paletteSize, metric: 'lab', ...FS })).toBe('ts');
         expect(routeDither({ grid, paletteSize, metric: 'rgb', ...FS })).toBe('wasm');
       }

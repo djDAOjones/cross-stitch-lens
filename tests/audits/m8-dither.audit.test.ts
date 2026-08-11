@@ -517,7 +517,7 @@ describe.skipIf(!AUDIT)('M8-SPIKE-01 dither evaluation (AUDIT=1)', () => {
 
   it('times every candidate at the benchmark boundaries', () => {
     const pal = palette64();
-    const pal533 = loadDmcPalette();
+    const pal489 = loadDmcPalette();
     const noise = noiseFixture(GRID);
     for (const candidate of candidates) {
       rows.push(
@@ -530,8 +530,8 @@ describe.skipIf(!AUDIT)('M8-SPIKE-01 dither evaluation (AUDIT=1)', () => {
       );
       rows.push(
         timed(
-          `time ${candidate.name} · noise 300² · p533 · lab`,
-          () => candidate.run(noise, params(pal533)),
+          `time ${candidate.name} · noise 300² · p489 · lab`,
+          () => candidate.run(noise, params(pal489)),
           40,
           { family: candidate.family },
         ),
@@ -591,7 +591,7 @@ describe.skipIf(!AUDIT)('M8-SPIKE-01 dither evaluation (AUDIT=1)', () => {
         'untouched, which diffusion cannot do (near-palette: ordered damages it, ' +
         '~15% px changed vs FS 0.45%; keep threshold methods for graphic content).',
       'Cost is not a differentiator: every candidate lands within ~10–20% of the ' +
-        'no-dither reduce loop at 300² (25.8–34.1 ms p64, ~101–113 ms p533 in node); ' +
+        'no-dither reduce loop at 300² (25.8–34.1 ms p64, ~101–113 ms p489 in node); ' +
         'the palette scan dominates. No backend work is justified by this evidence; ' +
         'ordered/blue-noise are pointwise and WebGPU-shaped if a profile ever asks.',
       'Strength is a real control for both families: diffusion strength (fraction of ' +

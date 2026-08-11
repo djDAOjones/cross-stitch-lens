@@ -142,7 +142,7 @@ describe('redaction — fail closed', () => {
 describe('bundle', () => {
   it('carries build identity, environment and active backends', () => {
     const bundle = buildDiagnosticsBundle(ENV, [record()], () => new Date('2026-07-20T12:34:56Z'));
-    expect(bundle.app).toBe('Cross Stitch Lens');
+    expect(bundle.app).toBe('Pattern Mapper');
     expect(bundle.appVersion).toBe('v0.5.0');
     expect(bundle.buildId).toBe('v0.5.0+20260720.abc1234');
     expect(bundle.capturedAt).toBe('2026-07-20T12:34:56.000Z');

@@ -21,7 +21,7 @@ describe('devEmailUrl', () => {
     appVersion: 'v0.5.0',
     buildId: '20260806.abc1234',
     records: 12,
-    filename: 'cross-stitch-lens-log.txt',
+    filename: 'pattern-mapper-log.txt',
   };
 
   it('is a mailto URL addressed to the placeholder constant', () => {

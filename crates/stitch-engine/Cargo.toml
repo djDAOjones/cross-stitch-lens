@@ -2,7 +2,7 @@
 name = "stitch-engine"
 version = "0.1.0"
 edition = "2021"
-description = "Cross Stitch Lens native engine: Floyd-Steinberg error diffusion (WASM backend)"
+description = "Pattern Mapper native engine: Floyd-Steinberg error diffusion (WASM backend)"
 license = "UNLICENSED"
 publish = false
 

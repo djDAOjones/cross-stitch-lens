@@ -668,7 +668,7 @@ export function parseProject(json: string): ProjectFile {
   const version = asInt(root['schemaVersion'], 'schemaVersion', 1, Number.MAX_SAFE_INTEGER);
   if (version > SCHEMA_VERSION) {
     throw new Error(
-      `schemaVersion ${version} was saved by a newer version of Cross Stitch Lens (this app reads up to ${SCHEMA_VERSION})`,
+      `schemaVersion ${version} was saved by a newer version of Pattern Mapper (this app reads up to ${SCHEMA_VERSION})`,
     );
   }
   const doc = migrateProject(root, version);

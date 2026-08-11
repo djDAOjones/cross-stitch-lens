@@ -19,7 +19,19 @@
  */
 
 /** Storage key. Bumped only if the shape changes incompatibly. */
-export const PREFERENCES_KEY = 'cross-stitch-lens.shell';
+export const PREFERENCES_KEY = 'pattern-mapper.shell';
+
+/**
+ * The pre-rename key (RENAME-01, D150). Read as a fallback so an
+ * install that predates the rename keeps its disclosure choices instead
+ * of silently resetting to first-run defaults.
+ *
+ * Deliberately **not** deleted after a successful read. It costs a few
+ * hundred bytes, and leaving it means a downgrade to an older build
+ * still finds its preferences — the failure mode of removing it is
+ * worse than the tidiness of removing it.
+ */
+export const LEGACY_PREFERENCES_KEY = 'cross-stitch-lens.shell';
 
 /** Current preferences schema version. */
 export const PREFERENCES_VERSION = 1;
@@ -89,11 +101,19 @@ export interface PreferenceStore {
 }
 
 /** Read preferences; a storage that throws (private mode, quota) is
- *  treated exactly like an empty one. */
+ *  treated exactly like an empty one.
+ *
+ *  Falls back to the pre-rename key when the current one is absent
+ *  (RENAME-01, D150). The current key wins whenever it holds anything at
+ *  all, so a post-rename write is never overridden by a stale legacy
+ *  record; the fallback only fills a genuine gap. The next
+ *  `savePreferences` migrates the value forward by writing the new key. */
 export function loadPreferences(store: PreferenceStore | null): ShellPreferences {
   if (store === null) return defaultPreferences();
   try {
-    return parsePreferences(store.getItem(PREFERENCES_KEY));
+    const current = store.getItem(PREFERENCES_KEY);
+    if (current !== null) return parsePreferences(current);
+    return parsePreferences(store.getItem(LEGACY_PREFERENCES_KEY));
   } catch {
     return defaultPreferences();
   }

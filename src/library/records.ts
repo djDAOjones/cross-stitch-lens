@@ -120,7 +120,7 @@ export function parseInventory(json: string): InventoryFile {
   }
   if (version > LIBRARY_SCHEMA_VERSION) {
     throw new Error(
-      `inventory.schemaVersion ${String(version)} was written by a newer version of Cross Stitch Lens (this app reads up to ${String(LIBRARY_SCHEMA_VERSION)})`,
+      `inventory.schemaVersion ${String(version)} was written by a newer version of Pattern Mapper (this app reads up to ${String(LIBRARY_SCHEMA_VERSION)})`,
     );
   }
   return {

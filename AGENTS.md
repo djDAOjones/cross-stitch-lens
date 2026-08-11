@@ -2,13 +2,30 @@
 
 ## Product identity
 
-**Cross Stitch Lens** — a macOS-first TypeScript web app that converts
-visual artwork into cross-stitch designs in real time. The user edits
-artwork in another application (typically Photoshop); Cross Stitch Lens
-captures a chosen screen region via `getDisplayMedia` and continuously
-renders a live cross-stitch interpretation through two reductions:
-spatial (source → fixed stitch grid) and colour (source colours → a
-selected thread palette, with dithering as a first-class tool).
+**Pattern Mapper** — a TypeScript web app that converts visual artwork
+into cross-stitch designs in real time. The user edits artwork in
+another application (typically Photoshop); Pattern Mapper captures a
+chosen screen region via `getDisplayMedia` and continuously renders a
+live cross-stitch interpretation through two reductions: spatial
+(source → fixed stitch grid) and colour (source colours → a selected
+thread palette, with dithering as a first-class tool).
+
+Renamed from **Pattern Mapper** at RENAME-01 (D150). The old name
+survives in two places on purpose: the IndexedDB database identifier
+(renaming it would mean copying hand-curated user data to change a
+string no user sees — see `src/library/store.ts`) and all archived
+history, which is append-only.
+
+**The audience widened at D149**, and two long-standing premises went
+with it. The app is intended for publication online to a broader
+audience who may be on any platform, so **"macOS-first" is no longer
+the product** — only where it was first built and measured — and **no
+upstream editor may be assumed**. Much of the design rests on the user
+having Photoshop open beside the app; a broader audience may have
+nothing of the kind, which is why controlling the image _inside_ the
+app (adjustments and colour thresholds as presets) is product scope
+rather than duplication of a better tool. Redistribution also changes
+licence questions — most immediately M9's symbol assets.
 
 The canonical mental model is a **pure staged image-processing
 pipeline** running in a Web Worker: ordered stages
@@ -404,7 +421,7 @@ stage's presence in a run is conditional (D48).
 This is a clean rebuild, not a fork, of an earlier prototype
 (**Photoshop-Live-Ditherer**). That prototype ran inside Photoshop via
 UXP and dithered at document scale; it was slow for exactly those two
-reasons. Cross Stitch Lens keeps none of its code and deliberately
+reasons. Pattern Mapper keeps none of its code and deliberately
 reverses both choices: screen capture instead of a plugin (D2), and
 resize-to-grid before per-pixel work (D3). Do not treat the prototype
 as a design reference.
@@ -457,7 +474,7 @@ hot path framework- and bus-free.
 
 ## Code documentation
 
-<!-- Cross Stitch Lens is TypeScript; JSDoc on every exported symbol is
+<!-- Pattern Mapper is TypeScript; JSDoc on every exported symbol is
      the standard. Engine functions additionally document units and value
      ranges (e.g. "0–255 sRGB", "Lab, D65"). See conventions.md. -->
 

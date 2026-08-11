@@ -15,6 +15,7 @@ import { describe, expect, it } from 'vitest';
 import {
   defaultPreferences,
   parsePreferences,
+  LEGACY_PREFERENCES_KEY,
   PREFERENCES_KEY,
   PREFERENCES_VERSION,
   loadPreferences,
@@ -143,6 +144,58 @@ describe('shell preferences', () => {
     expect(() => {
       savePreferences(null, defaultPreferences());
     }).not.toThrow();
+  });
+
+  // RENAME-01 (D150): the storage key moved from the old product name.
+  // These pin the one thing the rename could destroy — an existing
+  // install's disclosure choices.
+  describe('the pre-rename storage key (RENAME-01)', () => {
+    /** Multi-key store, so legacy and current keys are distinguishable. */
+    function keyedStore(seed: Record<string, string> = {}): PreferenceStore {
+      const map = new Map(Object.entries(seed));
+      return {
+        getItem: (key) => map.get(key) ?? null,
+        setItem: (key, next) => {
+          map.set(key, next);
+        },
+      };
+    }
+
+    const legacyRecord = '{"version":1,"disclosures":{"section-export":true}}';
+
+    it('reads the legacy key when the current one is absent', () => {
+      const store = keyedStore({ [LEGACY_PREFERENCES_KEY]: legacyRecord });
+      expect(loadPreferences(store).disclosures).toEqual({ 'section-export': true });
+    });
+
+    it('prefers the current key over a stale legacy record', () => {
+      // A post-rename write must never be overridden by what the old
+      // build left behind.
+      const store = keyedStore({
+        [LEGACY_PREFERENCES_KEY]: legacyRecord,
+        [PREFERENCES_KEY]: '{"version":1,"disclosures":{"section-export":false}}',
+      });
+      expect(loadPreferences(store).disclosures).toEqual({ 'section-export': false });
+    });
+
+    it('migrates forward on the next write, leaving the legacy record intact', () => {
+      const store = keyedStore({ [LEGACY_PREFERENCES_KEY]: legacyRecord });
+      savePreferences(store, loadPreferences(store));
+      // The value is now under the new key...
+      expect(store.getItem(PREFERENCES_KEY)).toContain('section-export');
+      // ...and the old one is deliberately not deleted, so a downgrade
+      // to a pre-rename build still finds its preferences.
+      expect(store.getItem(LEGACY_PREFERENCES_KEY)).toBe(legacyRecord);
+    });
+
+    it('still falls back to defaults when neither key holds anything', () => {
+      expect(loadPreferences(keyedStore())).toEqual(defaultPreferences());
+    });
+
+    it('keeps the two keys distinct', () => {
+      expect(PREFERENCES_KEY).not.toBe(LEGACY_PREFERENCES_KEY);
+      expect(PREFERENCES_KEY).toBe('pattern-mapper.shell');
+    });
   });
 
   it('stamps the current version on write', () => {

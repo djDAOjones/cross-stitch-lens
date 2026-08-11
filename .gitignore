@@ -12,7 +12,7 @@ Thumbs.db
 node_modules/
 npm-debug.log*
 
-# Cross Stitch Lens build output & generated artifacts (from M0/M5).
+# Pattern Mapper build output & generated artifacts (from M0/M5).
 dist/
 .vite/
 crates/stitch-engine/pkg/

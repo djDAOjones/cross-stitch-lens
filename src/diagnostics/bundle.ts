@@ -163,7 +163,7 @@ export interface DiagnosticsBundle {
   redaction: string;
 }
 
-const APP_NAME = 'Cross Stitch Lens';
+const APP_NAME = 'Pattern Mapper';
 
 const REDACTION_NOTICE =
   'Redacted by default: secret-shaped keys and values are replaced, ' +

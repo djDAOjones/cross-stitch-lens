@@ -48,7 +48,7 @@ colours into either.
 
 ---
 
-## Cross Stitch Lens specifics
+## Pattern Mapper specifics
 
 A canvas-centric, live image-processing app. These additions cover what
 the Carbon/WCAG/Nielsen defaults above do not.

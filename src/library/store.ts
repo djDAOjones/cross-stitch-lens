@@ -118,6 +118,22 @@ export class MemoryStore implements LibraryStore {
 }
 
 /** Database and store names. Bump `DB_VERSION` with an upgrade step. */
+/**
+ * **Deliberately NOT renamed at RENAME-01** (D150), and not an oversight.
+ *
+ * IndexedDB has no rename: changing this string does not move a
+ * database, it points at a different, empty one. Migrating would mean
+ * opening both, copying four object stores — including the owner's
+ * hand-curated thread inventory and their saved profiles — and keeping
+ * that copy path forever, all to change an identifier no user ever sees.
+ * A data-copy migration over hand-curated data cannot be justified by
+ * tidiness, so the storage identifier keeps the app's original name.
+ *
+ * This is the ordinary practice for storage keys: they outlive product
+ * names. If it is ever renamed, the copy must be verified before the old
+ * database is dropped — and it should be dropped in a later release, not
+ * the same one.
+ */
 const DB_NAME = 'cross-stitch-lens';
 /** v3 (M15-PERSIST-01): the kind-aware profiles store + My colours.
  *  (v2 existed only as a dev-session intermediate; the idempotent
@@ -178,7 +194,7 @@ export class IdbStore implements LibraryStore {
       req.onblocked = () => {
         reject(
           new Error(
-            'Another tab of Cross Stitch Lens is holding the library database open. Close it and reload.',
+            'Another tab of Pattern Mapper is holding the library database open. Close it and reload.',
           ),
         );
       };

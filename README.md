@@ -1,8 +1,8 @@
-# Cross Stitch Lens
+# Pattern Mapper
 
-A macOS-first web app that converts visual artwork into cross-stitch
-designs in real time. You edit artwork in another application (typically
-Photoshop); Cross Stitch Lens captures a chosen screen region via
+A web app that converts visual artwork into cross-stitch designs in
+real time. You edit artwork in another application (typically
+Photoshop); Pattern Mapper captures a chosen screen region via
 `getDisplayMedia` and continuously renders a live cross-stitch
 interpretation — reducing the source both **spatially** (to a fixed
 stitch grid) and in **colour** (to a selected thread palette, with

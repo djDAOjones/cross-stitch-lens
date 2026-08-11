@@ -1,14 +1,16 @@
-# Brief — Cross Stitch Lens
+# Brief — Pattern Mapper
 
 <!-- Hot whole-file read. See pm_skills/memory-policy.md for limits. -->
 
 ## What we're building
 
-A macOS-first web application that converts visual artwork into
-cross-stitch designs in real time. The user edits artwork in another
-application (typically Photoshop); Cross Stitch Lens continuously
-captures a selected screen region and renders a live cross-stitch
-interpretation.
+A web application that converts visual artwork into cross-stitch
+designs in real time. The user edits artwork in another application
+(typically Photoshop); Pattern Mapper continuously captures a selected
+screen region and renders a live cross-stitch interpretation.
+
+Built and measured on macOS first; since D149 that is where it started,
+not what it targets — see "Who it's for".
 
 Two core reductions define the product:
 

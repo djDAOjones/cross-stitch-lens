@@ -78,9 +78,9 @@ export interface DevEmailContext {
  * far inside mail clients' URL-length limits.
  */
 export function devEmailUrl(context: DevEmailContext): string {
-  const subject = `Cross Stitch Lens ${context.appVersion} (${context.buildId}) — diagnostics`;
+  const subject = `Pattern Mapper ${context.appVersion} (${context.buildId}) — diagnostics`;
   const body = [
-    `Diagnostics from Cross Stitch Lens ${context.appVersion} (build ${context.buildId}).`,
+    `Diagnostics from Pattern Mapper ${context.appVersion} (build ${context.buildId}).`,
     '',
     `The redacted log was just downloaded as ${context.filename} — please attach that file to this email before sending (email links cannot attach files themselves).`,
     '',
@@ -118,7 +118,7 @@ export interface DiagnosticsControl {
 }
 
 const COPY_LABEL = 'Copy diagnostics';
-const LOG_FILENAME = 'cross-stitch-lens-log.txt';
+const LOG_FILENAME = 'pattern-mapper-log.txt';
 
 /**
  * Build the Debug menu. The status element is `role="status"`

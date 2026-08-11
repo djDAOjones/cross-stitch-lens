@@ -2184,3 +2184,84 @@ left), `doc-deltas.md` (+4, now 9 open), `archive/INDEX.md`,
 **Link:** Batch C0 becomes Current, Track A becomes Next, Track B and a
 regrouped Icebox follow. RENAME-01's tier is the one answer needed
 before the batch can run.
+
+## D150 — RENAME-01: the product becomes Pattern Mapper; two storage identifiers are treated differently on purpose (2026-08-11)
+
+**Decision.** The rename ships at the owner's chosen tier 3 ("everything
+you can"). Every user-facing string, both HTML titles, the diagnostics
+bundle and email, three error messages, the Rust crate description,
+`package.json`, the launch config, all live docs including the protected
+trio, and the localStorage key now read **Pattern Mapper**. Two things
+deliberately do not.
+
+**The IndexedDB database name stays `cross-stitch-lens`.** This is the
+substantive decision in the entry, and it is a refusal, not an
+oversight. IndexedDB has no rename operation: changing `DB_NAME` does
+not move a database, it points at a different, empty one. Migrating
+would mean opening both connections and copying four object stores —
+`inventory`, `palettes`, `profiles`, `user-colors`, which between them
+hold the owner's hand-curated thread inventory and every profile they
+have signed — then carrying that copy path forever, all to change an
+identifier no user will ever see. The value is zero and the downside is
+losing curated data to a migration that fails halfway. Storage keys
+outliving product names is ordinary practice. The reasoning is written
+onto the constant so the next agent does not "finish the job".
+
+**The localStorage key *was* renamed**, and the asymmetry is the point:
+`cross-stitch-lens.shell` → `pattern-mapper.shell` with a legacy
+fallback read is three lines inside a pure function whose worst failure
+mode is falling back to defaults. A data-copy across four async object
+stores is a different kind of change. One is safe, so it happened; the
+other is not, so it did not. `loadPreferences` prefers the current key
+whenever it holds anything, so a post-rename write is never overridden
+by a stale legacy record, and the legacy key is **not deleted** after a
+successful read — it costs a few hundred bytes and means a downgrade to
+an older build still finds its preferences. Five tests pin all of it:
+legacy read, current-wins, forward migration on write, legacy record
+left intact, and both-absent falling back to defaults.
+
+**Deliberately untouched.** `pm_skills/project/archive/**` and every
+existing `decision-log.md` entry (append-only history — the app *was*
+called Cross Stitch Lens, and rewriting that would make the record
+lie), and `bench-reports/**` (recorded measurements carry the name in
+provenance strings; renaming a measurement rewrites history).
+`docs/requirements.md` had its prose renamed and its section numbers
+left alone, since the memory files cite it by number.
+
+**The git remote and `repository.url` still name the old repo**, because
+the repo has not been renamed. Pointing them at a URL that does not
+exist yet would be worse than leaving them accurate. Tracked as
+RENAME-02 with the owner's two steps: rename the GitHub repo, and rename
+the OneDrive directory with no session running against the path
+(hostile-filesystem guard). The agent finishes the remote afterwards.
+
+**Doc-deltas.** Two ticked and applied in the same sitting, as the D149
+capture line required: AGENTS.md § Product identity (the name, plus the
+audience widening — "macOS-first" retired and the
+no-upstream-editor-assumed premise recorded) and the protected-doc
+rename sweep, where DEV-INFRASTRUCTURE.md turned out to carry no
+occurrence. Two "macOS-first" leads in `README.md` and `brief.md` were
+corrected while there, since they now contradicted the widened audience
+two paragraphs below them.
+
+**Alternatives rejected.** Renaming the database with a copy migration
+(above). Deleting the legacy preferences key after reading it (a
+downgrade would then silently reset the user's disclosure choices).
+Hand-editing `package-lock.json` (it is a managed file; `npm install
+--package-lock-only` regenerated it). Renaming the archives for
+consistency (it would make append-only history untrue).
+
+**Scope.** `src/main.ts`, `src/diagnostics/bundle.ts`,
+`src/ui/diagnostics-button.ts`, `src/ui/preferences.ts`,
+`src/ui/styles/tokens.css`, `src/core/project.ts`,
+`src/library/records.ts`, `src/library/store.ts`, `tests/shell.test.ts`
+(+5 tests), `tests/diagnostics-bundle.test.ts`,
+`tests/debug-menu.test.ts`, `index.html`, `bench.html`,
+`bench-source.html`, `crates/stitch-engine/Cargo.toml`, `package.json`,
+`package-lock.json`, `.claude/launch.json`, `.gitignore`,
+`.windsurf/workflows/next.md`, `AGENTS.md`, `UI-STANDARDS.md`,
+`README.md`, `docs/measurement-contract.md`,
+`docs/browser-measurement.md`, and the memory files. `check` green.
+
+**Link:** RENAME-02 carries the two owner steps. Batch C0 continues at
+the doc-sync pass, then AUDIT-01 → ROUTE-01.

@@ -1,5 +1,5 @@
 ---
-description: Pick and ship the next Cross Stitch Lens backlog item
+description: Pick and ship the next Pattern Mapper backlog item
 ---
 
 Run `pm_skills/integrations/next.md` as written (standard consuming

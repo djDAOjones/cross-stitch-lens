@@ -179,7 +179,7 @@ entry, so `npm run build` minifies it exactly like the app.
 
 ```sh
 npm run build
-npx vite preview --port 4173     # or preview_start "cross-stitch-lens-preview"
+npx vite preview --port 4173     # or preview_start "pattern-mapper-preview"
 # open http://localhost:4173/bench.html
 ```
 

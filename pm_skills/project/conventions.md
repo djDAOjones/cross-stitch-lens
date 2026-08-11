@@ -1,4 +1,4 @@
-# Conventions — Cross Stitch Lens
+# Conventions — Pattern Mapper
 
 <!-- Hot whole-file read. See pm_skills/memory-policy.md for limits. -->
 

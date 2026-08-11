@@ -2,7 +2,7 @@
 
 ## Outcome
 
-Decide whether a Tauri package materially improves Cross Stitch Lens's
+Decide whether a Tauri package materially improves Pattern Mapper's
 Photoshop-companion workflow enough to justify a second application surface.
 Produce a go/no-go recommendation, evidence for the difficult capabilities, and
 a delivery/security outline. Do not begin packaging or add dependencies during

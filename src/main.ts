@@ -140,7 +140,7 @@ import { PipelineClient } from './worker/client.ts';
 import { DEFAULT_GRID_STYLE, type GridStyle } from './worker/grid.ts';
 
 installGlobalCapture(window);
-log.info('boot', `Cross Stitch Lens ${__APP_VERSION__} (${__BUILD_ID__})`);
+log.info('boot', `Pattern Mapper ${__APP_VERSION__} (${__BUILD_ID__})`);
 
 const CATALOGUE = loadCatalogue();
 /** Brand id → display name, for thread labels in stats and exports. */
@@ -156,7 +156,7 @@ function toolbarButton(text: string, onClick: () => void): HTMLButtonElement {
 
 function build(app: HTMLElement): void {
   const heading = document.createElement('h1');
-  heading.textContent = 'Cross Stitch Lens';
+  heading.textContent = 'Pattern Mapper';
 
   const version = document.createElement('p');
   version.className = 'meta';

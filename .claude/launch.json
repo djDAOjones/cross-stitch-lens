@@ -2,7 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "cross-stitch-lens-dev",
+      "name": "pattern-mapper-dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": [
         "run",
@@ -12,7 +12,7 @@
       "autoPort": true
     },
     {
-      "name": "cross-stitch-lens-preview",
+      "name": "pattern-mapper-preview",
       "runtimeExecutable": "npx",
       "runtimeArgs": [
         "vite",

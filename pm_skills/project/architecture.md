@@ -1,4 +1,4 @@
-# Architecture — Cross Stitch Lens
+# Architecture — Pattern Mapper
 
 <!-- Hot whole-file read. See pm_skills/memory-policy.md for limits. -->
 <!-- Describe current structure only. Move historical batch notes to decision-log.md. -->

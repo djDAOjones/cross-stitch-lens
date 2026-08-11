@@ -1,6 +1,6 @@
 # Measurement contract (bv2)
 
-What every Cross Stitch Lens performance number means, what it is taken
+What every Pattern Mapper performance number means, what it is taken
 over, and how to reproduce it. Written for M5A (`M5-PERF-01/02/03`) as
 bv1; revised to **bv2** by M13-MEAS-01 for the shipped M7/M8 product.
 Every later performance claim — audits, optimisations, the M13

@@ -32,13 +32,31 @@ Everything after that is order-free.
 
 ---
 
-## RENAME-01 — Rename the product to Pattern Mapper
+## RENAME-01 — Rename the product to Pattern Mapper — SHIPPED (D150)
 
 Owner confirmed real at the D149 review; promoted from the wish-list,
-where it had been sitting since 2026-07-20.
+where it had been sitting since 2026-07-20. Owner picked **tier 3**
+("everything you can") on 2026-08-11 and the agent half shipped the
+same day.
 
-**Needs one scope answer before it runs** (see the backlog line). The
-three tiers, cheapest first:
+**Two deliberate exceptions**, both recorded in code:
+
+- **The IndexedDB database name stays `cross-stitch-lens`.** IndexedDB
+  has no rename — changing the string points at a different, empty
+  database. Migrating means copying four object stores including the
+  owner's hand-curated thread inventory and saved profiles, and keeping
+  that copy path forever, to change an identifier no user ever sees. A
+  data-copy migration over hand-curated data is not justified by
+  tidiness. See the comment on `DB_NAME` in `src/library/store.ts`.
+- **The git remote and `package.json` `repository.url` still name the
+  old repo**, because the repo has not been renamed yet. Tracked as
+  RENAME-02 (owner steps).
+
+The localStorage key *was* renamed, with a legacy fallback read and
+five tests — that migration is three lines of pure function and cannot
+lose anything, which is the distinction from the database.
+
+Historical record of the tier options as presented:
 
 - **Product name only** — user-facing strings, `<title>`, the app bar,
   export metadata, docs prose. Repo, package name and directory keep

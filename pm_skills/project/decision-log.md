@@ -2594,3 +2594,62 @@ than committing (that is not a golden, it is a tautology).
 `check` green, 1139 tests.
 
 **Link:** Batch C0 continues; seven items remain.
+
+## D155 — DATA-01: the sweep becomes a committed audit, and the owner's worklist becomes a diffable document (2026-08-11)
+
+**Decision.** The thread-catalogue sweep ships as
+`tests/audits/catalogue.audit.test.ts` — `AUDIT=1`, beside the gallery
+audit whose pattern it follows — reporting exactly the two
+machine-certain classes from D151's split, with the judgement classes
+left to DATA-02/DATA-03 by design. The sweep **validates the ticket's
+hand-counted numbers**: 21 unnamed rows, every one Finca (9.6 % of that
+brand, one ingest gap rather than 21 slips), and 11 same-brand
+identical-hex groups covering 22 rows. Every brand+reference pair is
+unique and every hex is well formed.
+
+**Two rankings the ticket did not ask for**, added because "eleven
+groups to inspect" is a chore and a ranked list is a decision aid: four
+of the eleven pairs are **consecutive references** (45175/45176,
+45312/45313, 45199/45200, 45001/45002 — the shape a copied-down
+spreadsheet cell makes, and all Sullivans), and 6 of 11 groups sit in
+that one brand — the same concentration shape as class 1's Finca rows.
+Both point at per-brand ingest defects, not scattered typos, which
+changes how the owner should attack the list.
+
+**The worklist is a generated document, not a buried artefact.** The
+JSON report lands in `bench-reports/`, which is gitignored — correct for
+measurements, useless for a worklist the owner must act on across
+sessions. So the sweep also writes `docs/catalogue-sweep.md`: generated,
+hand-edit-forbidden, and **deliberately timestamp-free**, so re-running
+after a round of corrections produces a byte-identical file unless the
+data changed — the delta is a plain git diff. Verified: the audit re-run
+regenerated it byte-identical.
+
+**Gating philosophy, stated in the file.** The two data classes are
+reported, never gated — a failing assertion over owner data the agent
+may not edit would block every unrelated task. What *is* asserted are
+the generator's own promises (unique `brandId:reference`, well-formed
+lower-case hex): a breach there means `build-palette.mjs` broke, which
+is agent-fixable and should fail loudly.
+
+**Alternatives rejected.** Gating on the findings (above). Committing
+the JSON artefact instead of a doc (bench-reports stays untracked by
+policy, and JSON is not a worklist). Timestamping the generated doc
+(kills the diff signal). Folding the name-versus-colour probe back in
+(D151 split it precisely because its 402-hit noise floor needs its own
+design or the owner's eyes).
+
+**Lifecycle.** DATA-01 stays open as a `[maintainer]` item in the
+Icebox: the detection half is done, the corrections half is the owner's
+(`thread-list.csv` → regenerate → re-run the sweep). The ticket file
+survives per its own D149 note — the sweep outlives the run that built
+it.
+
+**Scope.** `tests/audits/catalogue.audit.test.ts` (new, 5 tests),
+`docs/catalogue-sweep.md` (generated). `check` and `audit` green — the
+audit suite now runs 55 tests across 12 files.
+
+**Link:** Batch C0 continues; seven items remain. A parallel session's
+uncommitted work (cloud-session provisioning + a `check-docs` CI-parity
+fix) was found in the tree during this close and deliberately left
+unstaged — its own session commits it.

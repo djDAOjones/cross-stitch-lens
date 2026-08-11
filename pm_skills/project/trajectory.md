@@ -28,6 +28,18 @@
   move — renaming it would mean copying hand-curated user data to change
   a string no user sees. Archives and `bench-reports/` untouched: they
   are history. See D150.
+- DATA-01 detection half (2026-08-11) — the catalogue sweep ships as a
+  committed `AUDIT=1` audit plus a generated, deliberately timestamp-free
+  worklist (`docs/catalogue-sweep.md`), so a re-run after corrections
+  shows the delta as a plain git diff. Confirmed the ticket's hand
+  numbers exactly: 21 unnamed rows (all Finca, 9.6% of the brand) and 11
+  same-brand identical-hex pairs — with two rankings the ticket did not
+  ask for: four pairs are **consecutive** references (the copied-down
+  spreadsheet-cell shape, all Sullivans) and 6 of 11 groups are one
+  brand, the same single-ingest shape as class 1. Findings reported,
+  never gated; only the generator's own promises (unique identity,
+  well-formed hex) assert. Corrections stay open as [maintainer]. See
+  D155.
 - M8-GOLD-02 (2026-08-11) — the four unpinned M8 methods gain committed
   golden fixtures (Atkinson, Jarvis, ordered/Bayer 8×8, blue noise),
   asserted bit-exactly beside the pre-M8 Floyd–Steinberg case. Source is

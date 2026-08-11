@@ -2926,3 +2926,70 @@ their now-false coupling.
 
 **Link:** M9's build can start gateless up to the first glyph batch;
 PUB-01 waits on decision (a).
+
+## D161 — The IP is protected today, the graphic becomes the owner's item, and the catalogue's provenance is corrected (2026-08-11)
+
+**Decision (a) executed: proprietary, now.** "Protect the app IP for
+now" is the owner's answer to PUB-01's licence question, and it shipped
+the same hour: a `LICENSE` declaring all rights reserved with the
+source publicly viewable and contributions unacceptable-by-construction
+(no licence exists to merge them under), and `THIRD-PARTY-NOTICES.md`
+carrying the three bundled components' verbatim MIT texts — pdf-lib
+(© 2019 Andrew Dillon), wasm-bindgen (© 2014 Alex Crichton, MIT elected
+from the dual), libm (MIT elected) — sourced from the installed
+packages, not retyped from memory. `package.json` and `Cargo.toml`
+already both said `UNLICENSED`, so every machine-readable field now
+agrees with the human-readable one. The choice is the reversible one:
+proprietary-now keeps every option open, including open-sourcing later;
+the reverse move does not exist. PUB-01's remainder is the small in-app
+surface that makes the notices reachable, plus shipping them with the
+deploy when deploying becomes real.
+
+**PUB-02 opens as the owner's item.** `graphic.jpg` is fan art of the
+Amiga logo by DeviantArt user zgodzinski — the artist's copyright plus
+the Amiga mark beneath it, which is not the artist's to license, so
+even permission could not fully clear it. The owner replaces rather
+than clears, on their own schedule; the slot needs only a flat-colour
+hard-edged graphic, the `PHOTO_SLOTS` filename contract makes the swap
+a zero-code change, and fixing HEAD without rewriting history is the
+proportionate remedy (the D150 principle). The item gates public
+deploy. The five photographs' owner-provenance still needs its one
+explicit yes — load-bearing twice, since `landscape-1.jpg` seeded the
+M8 golden crop.
+
+**The provenance correction, and what it changed.** The owner
+corrected the record: the catalogue's colour values are **compiled
+from publicly circulating reference material, uncalibrated** — not
+owner-measured, despite every row's `provenance: "measured"` field and
+this log's own repetitions of that claim (D145/D155 among them, which
+stand as written history). Three consequences, all applied:
+
+- The **notices posture** was rewritten before it shipped: approximate
+  compiled sRGB representations, not manufacturer specifications, not
+  calibrated measurements, check a physical card before buying. That
+  posture is honest *and* defensible — facts and approximations carry
+  little protectable weight, the use is free and non-competing, and
+  nothing manufacturer-published sits in the repo.
+- **DATA-03 reshaped** from "verify measured against published"
+  (void — the values were never measured) into finalisation: the
+  owner finalises the values post-corrections and the provenance
+  label is made honest at that point. Any change to the shipped
+  values carries a test cascade — the `p489` matrix rows, the
+  gallery evidence audit, and any catalogue-derived expectations
+  re-pin under the golden-approval rule.
+- The **standing constraint** the correction makes sharper:
+  manufacturer-published lists stay out of the repo regardless — a
+  committed copy of a brand's own colour card is the one thing that
+  would turn a defensible posture into an extraction claim.
+
+Calibrated own-measurement stays what the owner called it: a distant
+task in the unlikely commercial event — at which point it also becomes
+the clean-room answer to this entire paragraph.
+
+**Scope.** `LICENSE` (new), `THIRD-PARTY-NOTICES.md` (new),
+`cspell.json` (notices ignored as verbatim third-party text),
+`backlog.md` (PUB-01 decided, PUB-02 new, DATA-03 reshaped),
+`tickets/DATA-01.md` (correction block). `check` green.
+
+**Link:** PUB-01's remainder is one small UI task; PUB-02 and DATA-03
+are owner-paced; M9's build remains the open invitation.

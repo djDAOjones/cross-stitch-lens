@@ -7,7 +7,8 @@
     "package-lock.json",
     "_user-guff/**",
     "docs/requirements.md",
-    "src/core/palettes/**"
+    "src/core/palettes/**",
+    "THIRD-PARTY-NOTICES.md"
   ],
   "ignoreRegExpList": [
     "/\\b[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+\\b/g"
@@ -41,6 +42,7 @@
     "descope",
     "descoped",
     "deserialisation",
+    "DeviantArt",
     "diffable",
     "DITH",
     "Dockerfiles",
@@ -91,6 +93,7 @@
     "pointerup",
     "posterisation",
     "previewable",
+    "protectable",
     "pyproject",
     "quietable",
     "readback",
@@ -147,6 +150,7 @@
     "trufflehog",
     "Ukiyo",
     "unbindable",
+    "uncalibrated",
     "unclickable",
     "undithered",
     "undock",
@@ -171,6 +175,7 @@
     "WGSL",
     "worklist",
     "worktree",
+    "zgodzinski",
     "zoomable"
   ]
 }

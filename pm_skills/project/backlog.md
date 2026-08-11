@@ -72,10 +72,12 @@ fonts (referenced, not embedded), and `Cargo.toml` already declares
 `UNLICENSED`. **The repo is public on GitHub with no licence** — all
 rights reserved by default while fully visible.
 
-- [ ] **PUB-01 Licences and notices for public distribution** [sign-off] (2026-08-11)
-  Intent: make the app publishable on the owner's website with its obligations met and its own rights stated. Three owner decisions: (a) **the repo licence** — stay proprietary with an explicit all-rights-reserved LICENSE (or go private), or open-source (MIT/Apache/GPL — taste and intent); (b) confirm the six `public/profile-demo/` images are the owner's own or licensed for public redistribution (they already sit in the public repo); (c) the thread-catalogue posture — owner-measured values, brand names as nominative use, stated in a notice rather than assumed.
-  Done when: a LICENSE (or privacy switch) matches the decision, `package.json` carries the matching `license` field, a THIRD-PARTY-NOTICES file ships with the deploy carrying pdf-lib/wasm-bindgen/libm texts and is reachable from the app, and the trademark/provenance posture is written down.
-  Note: the notices file and app surface are agent-buildable the moment (a) is decided; hosting/deploy itself is a separate future item.
+- [ ] **PUB-01 Licences and notices for public distribution** (2026-08-11, decided 2026-08-11)
+  **Decision (a) made and executed (D161)**: proprietary — "protect the app IP for now". `LICENSE` (all rights reserved, source-visible, no contributions) and `THIRD-PARTY-NOTICES.md` (pdf-lib, wasm-bindgen, libm verbatim MIT texts + the trademark/colour-data notice) are committed; `package.json` and `Cargo.toml` both declare `UNLICENSED`. Reversible later — proprietary-now keeps every option open; open-sourcing cannot be undone.
+  Remaining: the notices become **reachable from the app** (a small UI surface — placement is a taste call), and ship with the deploy when deploying becomes real.
+- [ ] **PUB-02 Replace `graphic.jpg` and confirm the photo provenance** [maintainer] (2026-08-11)
+  Intent: the flat-graphic demo slot is fan art of the Amiga logo by DeviantArt user zgodzinski — a two-layer rights problem (the artist's copyright, and the Amiga mark underneath, which is not the artist's to license). The owner replaces it rather than clearing it; the slot needs any flat-colour hard-edged graphic, and the `PHOTO_SLOTS` filename contract means the replacement keeps the name `graphic.jpg` with zero code changes (`tests/profile-editor.test.ts` pins the list). History keeps the old file — fixing HEAD is the proportionate remedy (the D150 no-history-rewrite principle); the item **gates public deploy**.
+  Done when: `graphic.jpg` at HEAD is rights-clean, and the five photographs are confirmed as the owner's own (load-bearing twice: `landscape-1.jpg` seeded the M8 golden crop).
 
 ### Icebox
 
@@ -120,9 +122,10 @@ defeats the "Photoshop does it better" case against adjustments.
 - [ ] **DATA-02 Name-versus-colour disagreement in the catalogue** (2026-08-11)
   Intent: the class DATA-01 parks. A crude probe returns 402 hits dominated by compound names ("Blue Green") legitimately sitting between their two words; real cases look different (`ariadna:1650` is a cyan-white named "heather very light").
   Done when: a probe with a defensible false-positive rate ships, or the class closes as cosmetic — a wrong name is ugly in the key, since identity is `brandId:reference` and RGB is display-only (D55/D56).
-- [ ] **DATA-03 Published brand colour values** [blocked: owner data] (2026-08-11)
-  Intent: the class that affects output. All 3,338 rows are provenance `measured` with no published source in the repo, so no hex can be checked against what the brand says. The item this was split out of (D149) excluded it while chasing the cosmetic class.
-  Done when: at least one brand's published values are in the repo as owner data with provenance recorded, and the measured rows are diffed against them.
+- [ ] **DATA-03 Finalise the catalogue values before publication** [maintainer] (2026-08-11, reshaped 2026-08-11)
+  Intent: reshaped by D161's provenance correction — the values are **compiled from publicly circulating reference material, uncalibrated** (the catalogue's `provenance: "measured"` field is inaccurate and gets an honest label here). The owner finalises the values once DATA-01's corrections land; calibrated own-measurement is a distant possibility only if the app ever turns commercial.
+  Done when: the owner finalises the values, the provenance label tells the truth, and the regeneration cascade is run with approvals — the acceptance-matrix `p489` rows, the gallery evidence audit, and any catalogue-derived expectations re-pin (golden regeneration needs its stated-reason approval).
+  Constraint, standing: manufacturer-published colour lists stay **out of the repo** regardless — the compiled-approximate posture in `THIRD-PARTY-NOTICES.md` is the defensible one, and a committed copy of a brand's own list is what would break it.
 - [ ] **ICE-XREF-01 Curated cross-reference ingestion** [blocked: owner data + no consumer] [detail] (2026-07-21)
   Owner-reviewed equivalences so "nearest equivalent" answers from published conversions, not colour distance. The real block is the missing consumer — do not start before ICE-EXPLORER-01.
 - [ ] **ICE-EXPLORER-01 Colour explorer** [detail] (2026-07-21)

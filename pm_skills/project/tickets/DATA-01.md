@@ -75,6 +75,17 @@ compound names and near-neutrals, or the report is noise.
 - No test gates on the findings: a failing gate over owner data the
   agent may not edit would block every unrelated task.
 
+## Provenance correction (2026-08-11, D161)
+
+The owner corrected the record: the colour values are **compiled from
+publicly circulating reference material and are not calibrated
+measurements** — the catalogue's `provenance: "measured"` field is
+inaccurate and will be relabelled honestly when the data is finalised
+(DATA-03). Statements below about "measured" values predate the
+correction and are kept as written history; the sweep's findings are
+unaffected (unnamed rows and same-brand hex pairs are defects in any
+provenance story).
+
 ## Explicitly out of scope
 
 Verifying the measured hexes against each brand's **published** colour

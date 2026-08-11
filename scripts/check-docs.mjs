@@ -66,8 +66,21 @@ const SAFE_PATH_RE = /^[\w./-]+$/;
  * Path patterns that are documented templates/examples, not real files
  * in this repo: on-demand memory stores that ship blank — archives and
  * per-item ticket detail files.
+ *
+ * `bench-reports/` is a third class: machine-specific measurement output
+ * that .gitignore keeps out of the repo on purpose ("never commit the raw
+ * files"), so the evidence docs cite reports that exist only on the
+ * machine that ran them. A clean checkout — CI, or a cloud session — has
+ * no `bench-reports/`, so checking those citations asserted the checkout
+ * was the author's laptop and broke the CI-parity rule. Generated output
+ * the gate itself produces earlier in the run (`dist/`, from `check:build`)
+ * stays checked: it is present by the time this step runs.
  */
-const IGNORE = [/(^|\/)archive(\/|$)/, /(^|\/)tickets(\/|$)/];
+const IGNORE = [
+  /(^|\/)archive(\/|$)/,
+  /(^|\/)tickets(\/|$)/,
+  /^bench-reports(\/|$)/,
+];
 
 /**
  * Source files whose backticked paths are NOT checked (append-only

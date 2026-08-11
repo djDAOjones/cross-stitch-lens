@@ -69,8 +69,13 @@ the shipped surface is unusually clean: **one** npm runtime dependency
 (wasm-bindgen, libm — MIT/Apache-2.0), blue-noise tiles generated
 in-house, no Carbon code or icon assets shipped, PDF uses standard
 fonts (referenced, not embedded), and `Cargo.toml` already declares
-`UNLICENSED`. **The repo is public on GitHub with no licence** — all
-rights reserved by default while fully visible.
+`UNLICENSED`. ~~The repo is public on GitHub with no licence~~ —
+`LICENSE` landed at D161. **Publication proceeds in this repository**
+(D164): the owner weighed a clean-cut republication (D163) against
+keeping the one continuous public record and chose continuity — the
+development history has portfolio value, and the protections that
+matter rest on the stated posture and on the replacement items below,
+which fix the tree that visitors and the deployed app actually see.
 
 - [ ] **PUB-01 Licences and notices for public distribution** (2026-08-11, decided 2026-08-11)
   **Decision (a) made and executed (D161)**: proprietary — "protect the app IP for now". `LICENSE` (all rights reserved, source-visible, no contributions) and `THIRD-PARTY-NOTICES.md` (pdf-lib, wasm-bindgen, libm verbatim MIT texts + the trademark/colour-data notice) are committed; `package.json` and `Cargo.toml` both declare `UNLICENSED`. Reversible later — proprietary-now keeps every option open; open-sourcing cannot be undone.
@@ -78,11 +83,6 @@ rights reserved by default while fully visible.
 - [ ] **PUB-02 Replace `graphic.jpg` and confirm the photo provenance** [maintainer] (2026-08-11)
   Intent: the flat-graphic demo slot is fan art of the Amiga logo by DeviantArt user zgodzinski — a two-layer rights problem (the artist's copyright, and the Amiga mark underneath, which is not the artist's to license). The owner replaces it rather than clearing it; the slot needs any flat-colour hard-edged graphic, and the `PHOTO_SLOTS` filename contract means the replacement keeps the name `graphic.jpg` with zero code changes (`tests/profile-editor.test.ts` pins the list). History keeps the old file — fixing HEAD is the proportionate remedy (the D150 no-history-rewrite principle); the item **gates public deploy**.
   Done when: `graphic.jpg` at HEAD is rights-clean, and the five photographs are confirmed as the owner's own (load-bearing twice: `landscape-1.jpg` seeded the M8 golden crop).
-
-- [ ] **PUB-03 Publish from a clean initial commit; this repository becomes the private archive** [maintainer] [blocked: PUB-02 + DATA-03] (2026-08-12)
-  Intent: at publication, the public repository starts from its release state — a fresh initial commit of the finished tree — while this repository, with its full development history, goes private as the permanent archive (privatise, never delete: the history stays the owner's). A common release pattern; it also resolves PUB-02's history residue in one stroke, which is why PUB-02 must land **before** the cut or the new repository re-inherits the problem.
-  Done when: the old repository is private under an archive name, the new public one carries the release tree with `LICENSE` and `THIRD-PARTY-NOTICES.md` in its first commit, the local working copy's `origin` points at it, and `git push` + `check` are green from the same directory.
-  Owner steps: privatise/rename the old repository, create the new one. Agent steps: prepare the release tree, cut the initial commit, swap `origin`, verify.
 
 ### Icebox
 
@@ -133,6 +133,7 @@ defeats the "Photoshop does it better" case against adjustments.
   Done when: the owner signs the target schema with migration notes, ripple list attached — `build-palette.mjs`, the `Thread` type in core, every catalogue consumer, and palette snapshots inside saved project files (schema v5 embeds ordered thread entries, so new fields cross into user data and meet the byte-identical round-trip rule).
 - [ ] **DATA-03 Finalise the catalogue values before publication** [maintainer] (2026-08-11, reshaped 2026-08-11)
   Intent: reshaped by D161's provenance correction — the values are **compiled from publicly circulating reference material, uncalibrated** (the catalogue's `provenance: "measured"` field is inaccurate and gets an honest label here). The owner finalises the values once DATA-01's corrections land; calibrated own-measurement is a distant possibility only if the app ever turns commercial.
+  Landing note (D164): the finalisation lands as **one catalogue rebuild** together with DATA-04's schema outcome and DATA-01's corrections — one data revision, one cascade, one commit that says what it is.
   Done when: the owner finalises the values, the provenance label tells the truth, and the regeneration cascade is run with approvals — the acceptance-matrix `p489` rows, the gallery evidence audit, and any catalogue-derived expectations re-pin (golden regeneration needs its stated-reason approval).
   Constraint, standing: manufacturer-published colour lists stay **out of the repo** regardless — the compiled-approximate posture in `THIRD-PARTY-NOTICES.md` is the defensible one, and a committed copy of a brand's own list is what would break it.
 - [ ] **ICE-XREF-01 Curated cross-reference ingestion** [blocked: owner data + no consumer] [detail] (2026-07-21)
@@ -141,6 +142,10 @@ defeats the "Photoshop does it better" case against adjustments.
   A browse view over the 3,338-thread catalogue with cross-brand equivalents and their provenance. The engine half exists; this is the view.
 
 **Platform and packaging.**
+
+- [ ] **PUB-03 Clean-cut republication — dormant contingency** [blocked: a named trigger] (2026-08-12, demoted 2026-08-12)
+  Intent: the D163 plan (publish from a fresh initial commit; this repository goes private as the archive), kept as an option rather than a step. Two triggers wake it: a rights complaint touching anything in this repository's history, or the app turning commercial — at which point the calculus on history changes and, for the catalogue, first-party measurement of physical threads supersedes the compiled values entirely (DATA-03's recorded long-term path).
+  Done when: dormant — it closes only by being triggered and executed per D163's steps, or by being cut when publication is behind us and neither trigger ever fired.
 
 - [ ] **ICE-TAURI-01 Tauri desktop packaging feasibility** [spike] [detail] (2026-07-20)
   **Raised by D149**: the owner intends to publish to a broader audience on any platform, so "macOS-first" is no longer the product and this spike is the input to M9's licence decision.

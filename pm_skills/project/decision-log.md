@@ -3069,3 +3069,44 @@ Docs gate green.
 
 **Link:** Track C is now a complete path from today's tree to a
 publishable one.
+
+## D164 — Publication stays in this repository; the clean cut becomes a dormant contingency (2026-08-12)
+
+**Decision.** The owner weighed D163's clean-cut republication against
+keeping this repository as the one continuous public record, and chose
+continuity. PUB-03 is demoted from a Track C step to a dormant Icebox
+contingency; PUB-02 and DATA-03 — which were always the items that fix
+the tree itself — carry the publication path unchanged.
+
+**The reasoning, on the record.** Three things tipped it. The
+development history has real portfolio value: a hundred and seventy
+commits of decision-logged, gate-verified work is a public
+demonstration of how the project is built, and the cut would hide it.
+Operationally, one repository is simpler than a swap. And the
+protections that matter for the app's data and assets rest where they
+have rested since D161 — on the stated posture in
+`THIRD-PARTY-NOTICES.md` and on the replacement items themselves,
+which fix what repository visitors and the deployed app actually see.
+The residual that the cut would have addressed — that history remains
+history — is accepted knowingly, as proportionate for a free personal
+application, rather than overlooked.
+
+**Two triggers wake the contingency**, named in the item so the
+decision does not need re-deriving under pressure: a rights complaint
+touching anything in this repository's history, or the app turning
+commercial. On the commercial trigger the catalogue has its own
+recorded endgame — first-party measurement of physical threads, which
+supersedes the compiled values entirely and retires the provenance
+question at the source.
+
+**DATA-03 gains a landing note**: the finalisation lands as one
+catalogue rebuild together with DATA-04's schema outcome and DATA-01's
+corrections — one data revision, one regeneration cascade, one commit
+that says what it is.
+
+**Scope.** `backlog.md` (Track C intro, PUB-03 demoted to Icebox,
+DATA-03 landing note), this entry. Docs gate green.
+
+**Link:** Track C now reads: PUB-01 remainder (in-app notices surface)
+→ PUB-02 → DATA-01/04/03 in cluster order → deploy-when-real. No cut
+on the path.

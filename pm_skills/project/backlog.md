@@ -15,27 +15,28 @@ line passes and `check` is green. Requirements references are to
 
 **Ship order is no longer milestone-number order** (D149). Shipped:
 M0–M8, M13, M14, M15, and **Batch C0** (D149–D159, 2026-08-11).
-Remaining: **Track A** (M9 → M11 → M16 → M10 → M12), then **Track B**.
-The numbers stay because they are greppable across the tickets and the
-decision log; they no longer imply sequence.
+Remaining: **Track A** (M9 → M11 → M16 → M10 → M12), then **Track B**,
+with **Track C — Publication** owner-paced alongside. The numbers stay
+because they are greppable across the tickets and the decision log;
+they no longer imply sequence.
 
 ## Active
 
 ### Current — Track A The printable pattern
 
-Committed 2026-08-11 (D149); became Current 2026-08-11 (D159) when
-Batch C0 shipped whole. **The first move is M9's scope sitting** —
-symbol visual language, the asset/font licence (which now depends on
-the distribution intent, D149), manual-override scope — a human
-sign-off, not agent work. The product's unfinished half: M13–M15 all
+Committed 2026-08-11 (D149); became Current at D159 when Batch C0
+shipped whole; **M9's scope signed the same day (D160)** — the four
+owner decisions are made and recorded in the ticket, so the build can
+start gateless up to the first glyph batch. The product's unfinished
+half: M13–M15 all
 improved the input and appearance side, and the brief's second success
 criterion — a stitchable chart PDF printed from a captured design — is
 still not met. That PDF is one page, colour cells only, screen-sized,
 no symbols.
 
-- [ ] **M9 Symbols & B/W charting** [sign-off] [detail] (2026-07-22)
-  Automatic distinct-symbol assignment (stable, reassignable, collision-handled), chart modes, full sortable colour key with brand + reference + stitch count.
-  Owner decisions first: symbol visual language, asset/font licence, manual-override scope, whether assignments survive palette replacement. **The licence answer now depends on distribution (D149)** — settle ICE-TAURI-01's intent first or pick symbol assets twice.
+- [ ] **M9 Symbols & B/W charting** [sign-off] [detail] (2026-07-22, scope signed 2026-08-11)
+  **Scope signed (D160)**: app-owned vector glyphs (~64 reviewed, refusal past the set), overrides from the unused pool with explicit swap, assignment as identity-keyed *persisted state*. Decoupled from ICE-TAURI-01 — no font, no licence surface. The ticket carries the four decisions in full.
+  Remaining: build (assignment model + project-file persistence, chart modes, key) — largely gateless — plus the glyph batches, drafted and **owner-signed on printed evidence** (the [sign-off] that stays).
 - [ ] **M11 Grid, ruler & tick styling presets** [detail] (2026-07-22)
   Minor/major grid styling, numbering/rulers, named presets incl. high-contrast, separate screen vs print settings. Absorbs the `FIT_MARGIN` tick-label clip waived at M14-VERIFY-01.
 - [ ] **M16 Print-sized export defaults** [sign-off] (2026-08-09)
@@ -58,6 +59,23 @@ cannot tell two designs apart.
 - [ ] **SAVE-01 A saved project has no name of its own** (2026-08-09)
   Intent: `projectFilename` names the file from the grid alone (`src/main.ts:2032`), so every 200 × 200 design saves identically and a folder of projects is indistinguishable. A `Design title` field already exists, so the question is whether it drives the filename, whether there is a dialogue, and what load does.
   Done when: a project carries a name the owner chose, it survives save/load, and two designs never collide by default. Ships with DUR-01.
+
+### Track C — Publication
+
+Opened 2026-08-11 (D160) from the owner's ask: the app is intended for
+the owner's personal website, public use. Audited the same day —
+the shipped surface is unusually clean: **one** npm runtime dependency
+(pdf-lib, MIT), two crates compiled into the shipped wasm
+(wasm-bindgen, libm — MIT/Apache-2.0), blue-noise tiles generated
+in-house, no Carbon code or icon assets shipped, PDF uses standard
+fonts (referenced, not embedded), and `Cargo.toml` already declares
+`UNLICENSED`. **The repo is public on GitHub with no licence** — all
+rights reserved by default while fully visible.
+
+- [ ] **PUB-01 Licences and notices for public distribution** [sign-off] (2026-08-11)
+  Intent: make the app publishable on the owner's website with its obligations met and its own rights stated. Three owner decisions: (a) **the repo licence** — stay proprietary with an explicit all-rights-reserved LICENSE (or go private), or open-source (MIT/Apache/GPL — taste and intent); (b) confirm the six `public/profile-demo/` images are the owner's own or licensed for public redistribution (they already sit in the public repo); (c) the thread-catalogue posture — owner-measured values, brand names as nominative use, stated in a notice rather than assumed.
+  Done when: a LICENSE (or privacy switch) matches the decision, `package.json` carries the matching `license` field, a THIRD-PARTY-NOTICES file ships with the deploy carrying pdf-lib/wasm-bindgen/libm texts and is reachable from the app, and the trademark/provenance posture is written down.
+  Note: the notices file and app surface are agent-buildable the moment (a) is decided; hosting/deploy itself is a separate future item.
 
 ### Icebox
 

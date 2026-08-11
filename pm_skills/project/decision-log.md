@@ -2880,3 +2880,49 @@ this entry. `check` green.
 
 **Link:** Track A is Current. Next session: Start A on M9's scope
 sitting, full mode — it is a [sign-off] milestone.
+
+## D160 — M9's scope signs in-session, and publication gets its licence baseline (2026-08-11)
+
+**M9 scope signed.** The owner accepted the agent's four
+recommendations whole ("accepted"), making the async exchange the
+scope sitting. The decisions, recorded in full in `tickets/M9.md`:
+**app-owned vector glyphs** (a reviewed ~64-set signed in batches
+through the gallery process, refusal past the set — no silent reuse);
+the **licence question dissolved** by that choice, decoupling M9 from
+ICE-TAURI-01; **overrides from the unused pool only** with explicit
+swap (collisions unrepresentable — the M15 membership lesson applied);
+and **assignment as identity-keyed persisted state**, which dissolves
+the stable-algorithm problem into the project-file pattern the app
+already has. The standard-font route died on the ticket's own
+machine-independence rule (the chart raster renders with *system*
+fonts); the embedded-font route on the fontkit runtime dependency plus
+a permanent licence surface. What keeps M9 `[sign-off]` is the glyph
+batches — printed-evidence signatures, the D139/D146 process.
+
+**PUB-01 opens, on an audit rather than a worry.** The owner's ask —
+licences for public use on their website — was grounded the same hour:
+one npm runtime dependency (pdf-lib, MIT © 2019 Andrew Dillon), two
+crates in the shipped wasm (wasm-bindgen, libm, both MIT/Apache-2.0 —
+libm carries the fdlibm lineage its own licence covers), blue noise
+generated in-house (D61: nothing stochastic ships), no Carbon code or
+copied icon paths, PDF standard fonts referenced not embedded, demo
+images owner-supplied (confirmation of rights is one of the three
+owner decisions). `Cargo.toml` already declares `UNLICENSED`;
+`package.json` now matches, so the proprietary *default* is explicit
+everywhere pending the real decision. **The headline finding: the
+GitHub repo is public with no licence** — all rights reserved by
+default while fully visible, which is a fine holding position only if
+it is chosen rather than accidental. That choice, the demo-image
+confirmation, and the catalogue's nominative-use posture are PUB-01's
+three owner decisions; the notices file and its in-app surface are
+agent work the moment the first is made.
+
+**Structural.** Track C — Publication opens as the home for this and
+future deploy/hosting work; M9's and ICE-TAURI-01's backlog lines drop
+their now-false coupling.
+
+**Scope.** `tickets/M9.md`, `backlog.md`, `package.json`
+(`license: "UNLICENSED"`), this entry. `check` green.
+
+**Link:** M9's build can start gateless up to the first glyph batch;
+PUB-01 waits on decision (a).

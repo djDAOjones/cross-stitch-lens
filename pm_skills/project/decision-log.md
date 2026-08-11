@@ -2534,3 +2534,63 @@ robust to that.
 22 tests). `check` and `audit` green, 1133 tests.
 
 **Link:** Batch C0 continues; eight items remain.
+
+## D154 — M8-GOLD-02: the four M8 methods get golden fixtures, over a crop chosen for difficulty (2026-08-11)
+
+**Decision.** Atkinson, Jarvis, ordered (Bayer 8×8) and blue noise now
+carry committed golden fixtures under `tests/golden/`, asserted
+bit-exactly alongside the Floyd–Steinberg golden that has existed since
+M1. They pin today's owner-signed output so a future WASM or WebGPU
+backend cannot drift silently — the entire reason the FS golden exists.
+
+Owner-approved 2026-08-09 at the combined sitting, after judging all
+five methods: the best-evidenced moment that decision would get.
+`tests/golden/**` remains protected — any later regeneration needs its
+own approval with a stated algorithm reason, never to make a failing
+test pass. `dither-algorithms.test.ts`'s docstring said M8 fixtures
+could not be added without that approval; it now records that they were.
+
+**The source, and why it is not the JPEG.** The owner asked for
+`landscape-1`, then agreed the reasoning: a small crop *derived from*
+`public/profile-demo/landscape-1.jpg`, committed as a JSON pixel buffer
+in the existing 8×8 house style. A golden fixture must stay diffable
+when it fails — a 2048² expected buffer is four million pixels of
+unreadable diff — and JPEG decoding varies across platforms and library
+versions, which would break bit-exactness for reasons that have nothing
+to do with the dither maths. Real photographic colour, tiny artefact.
+
+**The crop was chosen, not picked.** The first attempt took a plausible
+region by eye and produced a nearly flat beige patch: 12 near-identical
+colours. Dither methods barely diverge on a flat patch, so those
+fixtures would have pinned almost nothing while looking like real
+coverage. The committed crop comes from scanning the whole image for the
+8×8 window with the widest channel spread — (320, 768), where all 64
+pixels are distinct and the range is 6–255. Extracted 1:1 through the
+browser (Node cannot decode JPEG without a dependency), so no scaling
+filter is in the fixture; the JSON is what ships and the extraction is
+not part of the build.
+
+**Proven to discriminate, not merely to exist.** Two extra assertions
+carry that: the four fixtures are pairwise distinct (5–11 of 64 pixels
+differ between any pair) and every fixture pixel is a palette colour. A
+fixture set where two methods agreed would pin nothing about either, and
+that failure is invisible unless something checks for it.
+
+**One shared input, four expected buffers.** The ticket says "an
+`.input.json`/`.expected.json` pair" per method; committing the same
+input bytes four times would be worse in every respect. Each method has
+an input and an expected — the input is simply shared, and named
+`m8-crop-8x8.input.json` so its role is legible.
+
+**Alternatives rejected.** Committing the JPEG (above). A synthetic
+gradient — `dither-algorithms.test.ts` already generates those for its
+invariants; the owner asked for real photographic colour, and the
+distinction is the point of this item. Regenerating on the fly rather
+than committing (that is not a golden, it is a tautology).
+
+**Scope.** `tests/golden/m8-crop-8x8.input.json`,
+`tests/golden/m8-{atkinson,jarvis,ordered,blue-noise}-8x8.expected.json`
+(all new), `tests/dither-algorithms.test.ts` (+7 tests, docstring).
+`check` green, 1139 tests.
+
+**Link:** Batch C0 continues; seven items remain.

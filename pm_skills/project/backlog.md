@@ -34,15 +34,13 @@ the lines below are pointers only.
 
 **Shipped so far** (2026-08-11): RENAME-01/02 (D150); the doc-sync pass
 (9 deltas → 1, the survivor deferred until DUR-01 answers it), AUDIT-01
-and ROUTE-01 (D151); DIAG-01 and KEY-01 (D152); EXPORT-01 (D153). The
+and ROUTE-01 (D151); DIAG-01 and KEY-01 (D152); EXPORT-01 (D153); M8-GOLD-02 (D154). The
 three preconditions are met — the rename is complete, the hot-read docs
 are true, and **`npm run audit` is green**, so the audits give the rest
-of the batch a real signal. The remaining **eight** are order-free.
+of the batch a real signal. The remaining **seven** are order-free.
 
 Closes on `check` **and** `audit` green.
 
-- [ ] **M8-GOLD-02 Golden fixtures for the four M8 methods** [detail] (2026-08-11)
-  Owner-approved 2026-08-09. Source is a small JSON crop of `landscape-1.jpg` in the 8×8 house style, never the JPEG.
 - [ ] **DATA-01 Sweep the thread catalogue: the two certain classes** [detail] (2026-08-11)
   Agent detects and reports; `thread-list.csv` is protected owner data and only the owner corrects it.
 - [ ] **UI-06 Move "Colours used" under the Colour section** [detail] (2026-08-11)

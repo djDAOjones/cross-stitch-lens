@@ -28,6 +28,15 @@
   move — renaming it would mean copying hand-curated user data to change
   a string no user sees. Archives and `bench-reports/` untouched: they
   are history. See D150.
+- M8-GOLD-02 (2026-08-11) — the four unpinned M8 methods gain committed
+  golden fixtures (Atkinson, Jarvis, ordered/Bayer 8×8, blue noise),
+  asserted bit-exactly beside the pre-M8 Floyd–Steinberg case. Source is
+  an 8×8 JSON crop of `landscape-1.jpg` taken 1:1, **not** the JPEG —
+  a golden must stay diffable when it fails, and JPEG decoding varies by
+  platform. The crop was chosen by scanning for the widest channel
+  spread: all 64 pixels distinct, 6–255. Fixtures proven pairwise
+  distinct and strictly palette-valid, so they discriminate between the
+  methods rather than merely existing. See D154.
 - EXPORT-01 (2026-08-11) — the exported artefacts get asserted, not
   just their helpers: 22 tests driving a real `executeRequest` frame
   through the real export assembly. The clean PNG is the grid exactly;

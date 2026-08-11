@@ -1956,3 +1956,58 @@ profile-demo README, six images, memory. `check` green.
 **Link:** backlog → M15-EVID-01 removed, M15-UI-05 and the M16 section
 added; wish-list → the export-settings line promoted out; trajectory →
 one line.
+
+## D148 — M13 ships on its maintainer gate; M15's acceptance closes with it (2026-08-09)
+
+**Context.** The combined sitting (`docs/acceptance-combined-session.md`)
+ran nine legs in one sitting to close M13-ACCEPT-02, M15-ACCEPT-02,
+M15-DITH-05 and the M8-GOLD-01 rider. It ran on HEAD
+(`v0.5.0+20260809.0642be5`), not the sheet's pinned `b4cf665`: no file
+on the processing path had changed since that build, so the pairing
+with ACCEPT-01's automated evidence held, and M15 could not run on the
+pinned build at all.
+
+**Decisions.**
+
+- **M13 ships.** Live editing at 200² and 300² was judged responsive;
+  no gap at or below 300², so M13-SYNTH-01 was never reopened. All four
+  D135 agenda lines signed — three accepted outright, cold prep
+  **accepted at this workload only** at a measured **6 s**, roughly
+  double D135's 1.3–3.3 s estimate. The estimate was wrong, not the
+  behaviour; the line is now triggered rather than hypothetical.
+- **The gallery closes at sixteen**, and its forty unbuilt candidates
+  are *kept*, not cut — the owner asked for them to survive the close,
+  so they became ICE-PROFILES-02 with the signed-batch process attached.
+  Closing an item does not have to destroy its queue.
+- **Golden fixtures approved** (M8-GOLD-01, standing since 2026-07-22)
+  — with all five methods freshly judged, this was the best-evidenced
+  moment the decision would get. The owner's suggested source
+  (`landscape-1.jpg`) was declined *as a file* and kept *as content*: a
+  golden fixture must stay diffable when it fails, and JPEG decoding
+  varies across platforms, which would break bit-exactness for reasons
+  unrelated to the dither maths. M8-GOLD-02 carries a small JSON crop
+  in the existing 8×8 house style.
+- **The access leg was part-deferred** rather than guessed. Keyboard,
+  focus, 200 % zoom and the narrow width passed; the screen-reader half
+  became A11Y-VO-01. An open gap recorded honestly beats a pass nobody
+  performed.
+
+**The sitting's own findings.** Nine were captured, all iceboxed:
+ICE-ZOOM-01 (canvas jump on first wheel zoom), ICE-KEY-01 (the PDF key
+prints the hex twice), ICE-EXPORT-01, ICE-GLOBALERR-01, ICE-STALE-01,
+ICE-SAVE-01, ICE-FLICKER-01, ICE-VARIANTS-01, ICE-WIDTH-01/02. Two are
+worth remembering together: **ICE-KEY-01's function was already unit
+tested and green**, because the fixture used a *named* web-safe colour
+while the broken majority are named by their hex — which is the whole
+argument for ICE-EXPORT-01, asserting the artefact rather than the
+helper. And the run sheet's own step 5 turned out unrunnable: it asks
+for the diagnostics bundle on a build its step 2 requires be
+production, where that control is dev-only.
+
+**Scope.** `src/ui/styles/base.css` (M15-UI-05), backlog, trajectory,
+decision-log, wish-list, three ticket files deleted, one added,
+`docs/acceptance-combined-record.md` added.
+
+**Link:** M15 becomes Current, M16 becomes Next. M15-DATA-01 and
+M16-SCOPE-01 were queued for this session and did not run — the sitting
+took it.

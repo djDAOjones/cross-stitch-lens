@@ -17,8 +17,37 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
-## M13 — Visual processing performance, remainder (in progress)
+## M15 — Colour & dithering profiles (in progress; both acceptance gates closed)
 
+- M15-UI-05 (2026-08-09) — the library rows' `Browse` buttons become a
+  column: one `margin-left: auto` scoped to `.check-row > button`, the
+  brand name takes the slack, one left edge at every width. See D148.
+- M15-GALLERY-01 (2026-08-09) — closed at **sixteen** signed built-in
+  style profiles on the owner's call; the forty unbuilt candidates were
+  kept rather than cut, as ICE-PROFILES-02. See D148.
+- M15-ACCEPT-02 (2026-08-09) — the maintainer half passes: building a
+  profile from scratch, the style built-ins, the test preview across
+  six real photographs, and the (edited)-copy flow all signed. See D148.
+- M15-DITH-05 (2026-08-09) — all five dither methods and all sixteen
+  profiles pass; D61 stays closed. Rider M8-GOLD-01 **approved** —
+  fixtures for the four unpinned methods become M8-GOLD-02. See D148.
+
+## M13 — Visual processing performance (SHIPPED 2026-08-09)
+
+**Outcome:** the milestone closes on its maintainer gate. Live
+Photoshop editing at 200² and 300² judged responsive by the owner, all
+four D135 agenda lines signed, exports and recovery clean, and the
+TypeScript-only fallback correct at ~8 updates/sec. No performance gap
+at or below 300², so M13-SYNTH-01 stayed closed.
+
+- M13-ACCEPT-02 (2026-08-09) — the human half passes on
+  `v0.5.0+20260809.0642be5` (HEAD, not the pinned `b4cf665` — nothing
+  on the processing path had changed). Nine legs, eight completed;
+  agenda verdicts: small-stroke **accept** (2 s, reservation kept as
+  ICE-STALE-01), PDF freeze **accept** (0.5–1 s), external-stop
+  **accept**, cold prep **accept at this workload only** (6 s with all
+  eight brands — double the D135 estimate). Access leg part-deferred
+  (A11Y-VO-01). Record in `docs/acceptance-combined-record.md`. See D148.
 - M13-ACCEPT-01 (2026-08-09) — the machine half passes on
   `v0.5.0+20260809.b4cf665`, every leg valid on the first attempt.
   Node: check 1090, matrix 267, bench 22 on the rebound baselines.

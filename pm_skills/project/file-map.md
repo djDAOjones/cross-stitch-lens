@@ -15,15 +15,15 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 246 file(s) across 11 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 253 file(s) across 11 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 12 file(s)
 - `.claude` — 1 file(s)
 - `.githooks` — 1 file(s)
 - `.github` — 1 file(s)
 - `.windsurf` — 1 file(s)
 - `crates` — 4 file(s)
-- `docs` — 14 file(s)
-- `public` — 1 file(s)
+- `docs` — 15 file(s)
+- `public` — 7 file(s)
 - `scripts` — 17 file(s)
 - `src` — 94 file(s)
 - `tests` — 100 file(s)
@@ -69,6 +69,7 @@
 
 ## docs
 
+- `docs/acceptance-combined-record.md` — the evidence record of the M13 + M15 combined maintainer sitting: leg verdicts, the four D135 agenda lines, per-method and per-profile results, and what was deliberately not proven (D148).
 - `docs/acceptance-combined-session.md` — the combined M13+M15 owner sitting: build decision, prep, nine-leg order, per-item close conditions
 - `docs/acceptance-live-rehearsal.md` — M5-ACCEPT-03 rehearsal checklist: setup, actions, evidence, miss classification
 - `docs/acceptance-m13-live.md` — M13-ACCEPT-02 run sheet: live Photoshop capture legs, the four owner-judgement lines, pinned to the passing build
@@ -87,6 +88,12 @@
 ## public
 
 - `public/profile-demo/README.md` — names the four owner-supplied preview photos the editor rig looks for (M15-UI-04)
+- `public/profile-demo/graphic.jpg` — demo slot: flat-colour graphic, the banding and posterisation case.
+- `public/profile-demo/landscape-1.jpg` — demo slot: first landscape; also the agreed source for M8-GOLD-02's golden crop.
+- `public/profile-demo/landscape-2.jpg` — demo slot: second landscape, so a palette must hold up on more than one.
+- `public/profile-demo/portrait.jpg` — demo slot: portrait; skin tones are where a narrow profile fails first.
+- `public/profile-demo/stained-glass.jpg` — demo slot: saturated colour against black leading, the hardest case for a rule-shaped profile.
+- `public/profile-demo/text.png` — demo slot: text in three fonts; legibility survives the reduction or it does not.
 
 ## scripts
 

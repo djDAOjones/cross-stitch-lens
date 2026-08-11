@@ -33,3 +33,11 @@ bench-reports/
 # Not a project deliverable; the canonical palette data lives tracked in
 # src/core/palettes/. Kept on disk, out of version control and linting.
 _user-guff/
+
+# Saved chat-session transcripts (AGENTS.md → read tiers; GUIDE.md →
+# "Saving session transcripts"). Evidence for prompt-tuning, kept
+# local: a transcript carries whatever was on screen during the
+# session, so it never lands in the repo unredacted. The folder and
+# its README are tracked; the transcripts themselves are not.
+_transcripts/*.md
+!_transcripts/README.md

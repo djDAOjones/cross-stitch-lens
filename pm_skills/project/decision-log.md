@@ -2465,3 +2465,72 @@ delays the loss, it does not stop it).
 `tests/export-pdf.test.ts` (+5). `check` and `audit` green.
 
 **Link:** Batch C0 continues; nine items remain, all order-free.
+
+## D153 — EXPORT-01: the artefacts get asserted, and the suite refuses its own flattering fixture (2026-08-11)
+
+**Decision.** An artefact-level export suite (22 tests) now runs inside
+`check`. It takes a real pipeline output from `executeRequest` — the
+same worker entry `acceptance-matrix` uses, so the LUT cache, candidate
+cache and routing are all in the loop — and pushes it through the real
+export assembly, asserting properties of what comes out.
+
+**The key assembly moved to make this honest.** It was inline in
+`main.ts`, so a test could only *reimplement* it — and two copies
+agreeing proves nothing, which is the same failure that let KEY-01
+ship. `buildKeyEntries` now lives in `src/export/key-entries.ts` and
+both the app and the suite call it. This is the one production change in
+the item, and it is what makes the rest of it mean anything.
+
+**What is asserted, and why each earns its place.**
+
+- **Clean PNG** — the frame is the grid exactly, so 1 stitch = 1 px.
+- **Enlarged PNG** — dimensions are an exact integer multiple *and*
+  every output pixel is a verbatim copy of its source pixel at ×2, ×3
+  and ×7. Restated as a property: the enlargement invents no colour the
+  frame did not contain. An interpolating resampler would blend across
+  cell edges, and a stitch chart that blends is not a stitch chart.
+- **Chart raster** — larger than the bare cells (grid and numbering need
+  room), growing in both axes with cell size, and its own `maxCellPx`
+  stays inside the canvas limit.
+- **PDF** — parsed, not string-matched. One page; the requested box in
+  points for A4, Letter and landscape; the image drawn with its aspect
+  preserved and fitted inside the margins; the title present; and every
+  key row carrying **exactly one hex and no repeated token**.
+
+**Node cannot run the canvas encoders, and the suite says so rather
+than pretending.** `encodePngBlob` and `encodeChartPng` need
+`OffscreenCanvas`. Their *inputs* are pure and are asserted directly;
+the PDF assembly is plain pdf-lib and runs whole, which is why the PDF
+gets byte-level treatment and the PNGs get input-level treatment. The
+test-only PNG encoder (node's built-in `zlib`, no new dependency) exists
+solely to hand pdf-lib the bytes a browser would; nothing about the
+app's own encoding is asserted through it.
+
+**The suite caught itself repeating the mistake it exists to catch.**
+First draft used a DMC palette for the realistic path. Mutation-testing
+it — reverting the KEY-01 fix — showed only the *dedicated* guard
+failing, because every DMC row is a real thread ("DMC 310 #000000") and
+real threads never had the defect. The realistic case was the flattering
+case. A second pipeline run over a **generated** colour map (`websafe`,
+whose entries are named by their hex) now covers the shape that actually
+broke, and the revert fails two tests instead of one.
+
+That is the general lesson worth keeping: an artefact suite is only as
+good as the *inputs* it drives, and "realistic" is not the same as
+"covers the failure mode". Mutation-testing a new suite against the bug
+it was written for is cheap and is the only way to know.
+
+**Alternatives rejected.** Copying the key assembly into the test (two
+copies agreeing is not evidence). Adding a PNG-decoding dependency to
+assert the chart raster's pixels (the canvas encoders cannot run in Node
+at all, so the dependency would buy nothing the layout assertions do not
+already give). String-matching `/Type /Page` and the MediaBox numbers in
+the PDF bytes — it failed, because pdf-lib compresses the object
+structure, and parsing with `PDFDocument.load` is both correct and
+robust to that.
+
+**Scope.** `src/export/key-entries.ts` (new), `src/main.ts` (calls it;
+`nonThreadLabel` import retired), `tests/export-artefacts.test.ts` (new,
+22 tests). `check` and `audit` green, 1133 tests.
+
+**Link:** Batch C0 continues; eight items remain.

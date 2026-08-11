@@ -28,6 +28,17 @@
   move — renaming it would mean copying hand-curated user data to change
   a string no user sees. Archives and `bench-reports/` untouched: they
   are history. See D150.
+- EXPORT-01 (2026-08-11) — the exported artefacts get asserted, not
+  just their helpers: 22 tests driving a real `executeRequest` frame
+  through the real export assembly. The clean PNG is the grid exactly;
+  the enlarged PNG is proven pixel-verbatim at ×2/×3/×7 and invents no
+  colour; the chart reserves its furniture and stays inside the canvas
+  limit; and the **PDF is parsed as bytes** — one page, the right box in
+  points, aspect preserved, and every key row carrying exactly one hex
+  with no repeated token. The key assembly moved out of `main.ts` into
+  `export/key-entries.ts` so the suite drives production code rather
+  than a copy of it. Mutation-verified: reverting the KEY-01 fix fails
+  two of these tests. See D153.
 - KEY-01 (2026-08-11) — the PDF thread key stops printing the hex
   twice. `keyLabel` now suppresses the trailing hex when the label
   already carries one, which is the case for every generated colour

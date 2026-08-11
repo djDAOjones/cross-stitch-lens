@@ -53,7 +53,7 @@ import {
   paletteToProfile,
   type ColorProfileRecipe,
 } from './core/color-profile.ts';
-import { generateColorMap, nonThreadLabel, userColor } from './core/color-sources.ts';
+import { generateColorMap, userColor } from './core/color-sources.ts';
 import type { CountMode, PaletteConflict } from './core/palette-policy.ts';
 import { paletteOf } from './core/palette.ts';
 import { resolveProfilePalette } from './core/palette-resolve.ts';
@@ -100,6 +100,7 @@ import {
   type KeyEntry,
   type PdfOptions,
 } from './export/pdf.ts';
+import { buildKeyEntries } from './export/key-entries.ts';
 import {
   downloadBlob,
   encodePngBlob,
@@ -1887,27 +1888,10 @@ function build(app: HTMLElement): void {
       const chartL = chartLayout(frame.width, frame.height, gridStyle, cell);
       const chartBlob = await encodeChartPng(frame, gridStyle, cell);
       const chartPng = new Uint8Array(await chartBlob.arrayBuffer());
-      // Thread key: used colours only; full-RGB mode has no key.
-      const entries: KeyEntry[] =
-        config.palette === null
-          ? []
-          : computeStats(frame, config.palette).perColor.map((c) => {
-              if (c.thread === undefined) return { hex: c.hex, rgb: c.rgb };
-              // Non-thread entries keep provenance-honest labels in
-              // the export key (D114): a chart row with nothing to
-              // buy says so — "Web-safe Lime", "Custom — Crimson" —
-              // never a raw namespace id.
-              const synthetic = nonThreadLabel(c.thread);
-              if (synthetic !== null) {
-                return { hex: c.hex, rgb: c.rgb, brand: synthetic, reference: '' };
-              }
-              return {
-                hex: c.hex,
-                rgb: c.rgb,
-                brand: BRAND_NAMES.get(c.thread.brandId) ?? c.thread.brandId,
-                reference: c.thread.reference,
-              };
-            });
+      // Thread key: used colours only; full-RGB mode has no key. The
+      // assembly lives in export/key-entries.ts so the artefact suite
+      // drives this exact code rather than a copy (EXPORT-01, D153).
+      const entries: KeyEntry[] = buildKeyEntries(frame, config.palette, BRAND_NAMES);
       const bytes = await buildChartPdf(chartPng, chartL.width, chartL.height, entries, {
         ...pdfOptions,
       });

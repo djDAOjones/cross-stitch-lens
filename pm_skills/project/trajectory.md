@@ -17,8 +17,32 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
-## Batch C0 — Sharpen the tools (in progress)
+## Batch C0 — Sharpen the tools (SHIPPED 2026-08-11)
 
+**Outcome:** the whole fifteen-item batch shipped in one day as the
+gateless autojazz run it was designed to be (D149–D159): the product
+renamed end to end, the memory and protected docs made true again, the
+audits green and load-tolerant, the diagnostics buffer honest, the PDF
+key fixed with the artefact suite that would have caught it, golden
+fixtures for all five dither methods, the catalogue swept into a
+diffable worklist, the shell shortened, accessible names machine-
+checked, two live-preview defects fixed with mechanisms confirmed
+first (one ticket suspect overturned), the staleness reservation
+closed as accepted, the transcript ritual turned into one command, and
+the dither presets renamed to their methods on the owner's signature.
+Closed at `check` 1,148 tests and `audit` 55, both green. Residues, on
+record: DATA-01's corrections ([maintainer], worklist in
+`docs/catalogue-sweep.md`), A11Y-VO-01's human half, ZOOM-01's
+feel-check at the next sitting, and the audit-after-check flake on the
+wish-list.
+
+- DITH-06 (2026-08-11) — the seven built-in dither profiles are named
+  after their methods, owner-signed: None · Atkinson (half strength) ·
+  Floyd–Steinberg · Blue noise (boosted) · Jarvis · Ordered (Bayer
+  8×8) · Floyd–Steinberg (damped). Label-only by construction —
+  matching is structural (`sameDither`) — and verified live in the
+  select with every ref resolving and no overflow at width: 100%. The
+  basis lines stay. See D159.
 - RENAME-01 (2026-08-11) — the product becomes **Pattern Mapper**
   across user-facing strings, both HTML titles, diagnostics, error
   messages, the Rust crate description, `package.json` (lock

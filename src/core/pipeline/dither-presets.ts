@@ -17,7 +17,15 @@ export interface DitherPreset {
   basis: string;
 }
 
-/** The shipped presets, in display order. */
+/**
+ * The shipped presets, in display order.
+ *
+ * Labels lead with the method, owner-signed at DITH-06 (D159): the
+ * algorithm is the fact, the parenthetical is the setting in plain
+ * words, and mood words ("Subtle", "Balanced") are retired. Ids are
+ * identity and never change with a label; matching is structural
+ * (`sameDither`), so relabelling cannot orphan a saved reference.
+ */
 export const DITHER_PRESETS: readonly DitherPreset[] = [
   {
     id: 'none',
@@ -27,37 +35,37 @@ export const DITHER_PRESETS: readonly DitherPreset[] = [
   },
   {
     id: 'subtle',
-    label: 'Subtle',
+    label: 'Atkinson (half strength)',
     config: { algorithm: 'atkinson', serpentine: true, strength: 0.5 },
     basis: 'Atkinson at half strength: calmest texture, fewest isolated stitches',
   },
   {
     id: 'balanced',
-    label: 'Balanced',
+    label: 'Floyd–Steinberg',
     config: { algorithm: 'floyd-steinberg', serpentine: true, strength: 1 },
     basis: 'the pre-M8 default: best general tone fidelity',
   },
   {
     id: 'strong',
-    label: 'Strong',
+    label: 'Blue noise (boosted)',
     config: { algorithm: 'blue-noise', strength: 1.75 },
     basis: 'blue-noise past its base amplitude: pronounced grain everywhere',
   },
   {
     id: 'photograph',
-    label: 'Photograph',
+    label: 'Jarvis',
     config: { algorithm: 'jarvis', serpentine: true, strength: 1 },
     basis: 'Jarvis: smoothest tone on organic content, fewer isolated stitches than FS',
   },
   {
     id: 'graphic',
-    label: 'Graphic',
+    label: 'Ordered (Bayer 8×8)',
     config: { algorithm: 'ordered', strength: 1 },
     basis: 'ordered leaves flat and near-palette areas untouched (isolation 2.3% vs FS 18.5%)',
   },
   {
     id: 'limited-palette',
-    label: 'Very limited palette',
+    label: 'Floyd–Steinberg (damped)',
     config: { algorithm: 'floyd-steinberg', serpentine: true, strength: 0.6 },
     basis: 'damped diffusion improves tiny-palette tone (FS 27.9 → 23.9 tone ΔE at p8)',
   },

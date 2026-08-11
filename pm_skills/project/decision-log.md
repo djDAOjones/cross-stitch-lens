@@ -2835,3 +2835,48 @@ occurrence gets named instead of re-run.
 
 **Link:** Batch C0's queue is empty but for DITH-06's signature. The
 batch's close condition (`check` and `audit` green) is met.
+
+## D159 — DITH-06 signs, and Batch C0 closes whole (2026-08-11)
+
+**Decision.** The owner signed the seven drafted names as presented
+("great, commit and push" on the drafted table), and they are applied:
+**None · Atkinson (half strength) · Floyd–Steinberg · Blue noise
+(boosted) · Jarvis · Ordered (Bayer 8×8) · Floyd–Steinberg (damped)**.
+The method leads, the parenthetical is the setting in plain words, and
+the mood words retire — the gallery's own naming discipline
+(style-descriptive, honest) applied to the place where the method *is*
+the fact. The `basis` evidence lines are untouched.
+
+**Label-only by construction, and verified anyway.** Ids are identity
+and did not change; `sameDither`/`matchBuiltInDither` match on config
+alone, so no saved project or profile reference can be orphaned by a
+label. Verified live in the running app: the `dither-profile` select
+reads all seven new names with each ref resolving to its "(built-in)"
+profile, and the page shows no horizontal overflow — the two longer
+names truncate inside the `width: 100%` field rather than widening the
+narrow column, which was the one flag raised at drafting.
+
+**Batch C0 closes.** Fifteen items in one day, all shipped, both gates
+green (`check` 1,148 tests, `audit` 55). The run sheet
+(`tickets/BATCH-C0.md`) is deleted per its own lifecycle; everything
+that outlives the batch already lives elsewhere — DATA-01's
+corrections half ([maintainer], `tickets/DATA-01.md`,
+`docs/catalogue-sweep.md`), A11Y-VO-01's human half, ZOOM-01's
+one-line feel-check for the next sitting, and the audit-after-check
+flake on the wish-list with capture instructions.
+
+**What the batch was for, settled.** It existed to make a gateless run
+trustworthy before Track A: the rename happened before the run wrote
+prose, the hot-read docs were made true before anything built on them,
+and the audits went green before they were needed as a signal. The
+close makes **Track A Current**, and its first move is a human one —
+M9's scope sitting (symbol language, the licence question that now
+depends on distribution intent, manual-override scope).
+
+**Scope.** `src/core/pipeline/dither-presets.ts` (labels + provenance
+note), `tickets/BATCH-C0.md` (deleted), backlog (Batch C0 section
+retired, Track A promoted), trajectory (batch outcome + DITH-06),
+this entry. `check` green.
+
+**Link:** Track A is Current. Next session: Start A on M9's scope
+sitting, full mode — it is a [sign-off] milestone.

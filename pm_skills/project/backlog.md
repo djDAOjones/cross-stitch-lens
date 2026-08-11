@@ -14,44 +14,20 @@ line passes and `check` is green. Requirements references are to
 `docs/requirements.md`.
 
 **Ship order is no longer milestone-number order** (D149). Shipped:
-M0–M8, M13, M14, M15. Remaining: **Batch C0**, then **Track A**
-(M9 → M11 → M16 → M10 → M12), then **Track B**. The numbers stay
-because they are greppable across the tickets and 149 decision
-entries; they no longer imply sequence.
+M0–M8, M13, M14, M15, and **Batch C0** (D149–D159, 2026-08-11).
+Remaining: **Track A** (M9 → M11 → M16 → M10 → M12), then **Track B**.
+The numbers stay because they are greppable across the tickets and the
+decision log; they no longer imply sequence.
 
 ## Active
 
-### Current — Batch C0 Sharpen the tools
+### Current — Track A The printable pattern
 
-Opened 2026-08-11 (D149). Fifteen mechanical items — confirmed
-mechanism, named acceptance, no taste — as one gateless **autojazz**
-batch. Nothing new: the 2026-08-09 sitting's findings plus the tooling
-debt that made that sitting expensive.
-
-**Scope and traced mechanisms are in `tickets/BATCH-C0.md`** — one run
-sheet, not one file per item, since they ship together. Read it first;
-the lines below are pointers only.
-
-**Shipped so far** (2026-08-11): RENAME-01/02 (D150); the doc-sync pass
-(9 deltas → 1, the survivor deferred until DUR-01 answers it), AUDIT-01
-and ROUTE-01 (D151); DIAG-01 and KEY-01 (D152); EXPORT-01 (D153);
-M8-GOLD-02 (D154); DATA-01's detection half (D155 — corrections stay
-[maintainer], worklist in `docs/catalogue-sweep.md`); UI-06 and A11Y-01
-(D156); FLICKER-01 and ZOOM-01 (D157 — both mechanisms confirmed before
-fixing, and ZOOM's real mechanism was *not* the ticket's suspect);
-STALE-01 closed as accepted and DOCS-01 landed as `npm run transcript`
-(D158). **All that remains is DITH-06's signature** — the seven names
-are drafted in `tickets/BATCH-C0.md`; matching is structural
-(`sameDither` on config, never label), so applying is label-only.
-
-Closes on `check` **and** `audit` green.
-
-- [ ] **DITH-06 Name the built-in dither profiles after their method** [sign-off] [detail] (2026-08-11)
-  Drafted 2026-08-11 (D158): the seven names are in `tickets/BATCH-C0.md` → DITH-06, awaiting the owner's signature. Applying is label-only — `sameDither`/`matchBuiltInDither` confirmed to match on config, never label.
-
-### Next — Track A The printable pattern
-
-Committed 2026-08-11 (D149). The product's unfinished half: M13–M15 all
+Committed 2026-08-11 (D149); became Current 2026-08-11 (D159) when
+Batch C0 shipped whole. **The first move is M9's scope sitting** —
+symbol visual language, the asset/font licence (which now depends on
+the distribution intent, D149), manual-override scope — a human
+sign-off, not agent work. The product's unfinished half: M13–M15 all
 improved the input and appearance side, and the brief's second success
 criterion — a stitchable chart PDF printed from a captured design — is
 still not met. That PDF is one page, colour cells only, screen-sized,

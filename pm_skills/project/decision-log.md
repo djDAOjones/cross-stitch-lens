@@ -2993,3 +2993,37 @@ the clean-room answer to this entire paragraph.
 
 **Link:** PUB-01's remainder is one small UI task; PUB-02 and DATA-03
 are owner-paced; M9's build remains the open invitation.
+
+## D162 — DATA-04 opens: the catalogue's structure gets reviewed before its values finalise (2026-08-12)
+
+**Decision.** A bounded data-structure review of the thread catalogue
+is added ahead of DATA-03, so the shape is settled before the values
+are — one schema decision, one finalisation, one run of the
+regeneration cascade instead of two.
+
+**Why now.** DATA-03's finalisation is the natural moment to change
+shape and values together, and the structural questions already exist
+rather than being invented for the review: the `provenance` field is
+recorded-inaccurate (D161) and needs an honest vocabulary; DATA-01's
+21 unnamed rows pose a schema question (is an empty `name` legal, or
+does display fall back?); the 3,338 → 2,830 distinct-colour figure
+quoted in the protected docs is value-dependent and would drift with
+any value change; M12's ticket explicitly anticipates per-brand
+catalogue metadata (skein length as data, not formula branches);
+`mappedFrom` sits null everywhere while ICE-XREF-01 proposes a
+separate long/tidy equivalence table; and the generated catalogue
+carries no data version for cache and snapshot hygiene.
+
+**The ripple list is the point of doing it as a review.** Any schema
+change touches `build-palette.mjs`, the `Thread` type, every
+catalogue consumer — and, the subtle one, palette snapshots inside
+saved project files: schema v5 embeds the ordered thread entries, so
+a new field crosses into user data and meets the byte-identical
+round-trip rule, with migration care to match.
+
+**Scope.** `backlog.md` (DATA-04, sequenced before DATA-03), this
+entry. Docs gate green.
+
+**Link:** order of operations in the data cluster is now DATA-01
+corrections → DATA-04 schema sign-off → DATA-03 finalisation, all
+owner-paced; DATA-02 remains independent.

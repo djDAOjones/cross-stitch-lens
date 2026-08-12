@@ -54,26 +54,25 @@ they no longer imply sequence.
 
 ### Current — Track A The printable pattern
 
-Committed at D149; Current since Batch C0 shipped (D159). The
-product's unfinished half: the brief's second success criterion — a
-stitchable chart printed from a captured design — is still unmet.
+Committed at D149; Current since Batch C0 shipped (D159). **Track A is
+build-complete** — M9, M11, M10 and M12 all shipped (D165–D170), so
+the brief's second success criterion is mechanically met. One
+owner-gated item remains.
 
-- [~] **M9 Symbols & B/W charting** [sign-off] [detail] (2026-07-22, scope signed 2026-08-11, build landed 2026-08-12)
-  **Scope signed (D160); build landed whole (D165)**: 64 drafted glyphs in four batches, identity-keyed persisted assignment (schema v6), three chart modes, a symbol/name/count key, refusal past the set, and `npm run symbols:evidence`.
-  Remaining: the **owner signs the glyph batches on printed evidence** (the [sign-off] that stays) — print `bench-reports/m9-symbol-evidence.pdf`. The override UI stays a v1-optional slice.
 - [ ] **M16 Print-sized export defaults** [sign-off] (2026-08-09)
-  Intent: export defaults sized for print, not screen — enlarged PNG ~2k px on its longest side, grid and numbering on by default, across all four exporters (demoted at D149; waits on M9's symbol decision).
+  Intent: export defaults sized for print, not screen — enlarged PNG ~2k px on its longest side, grid and numbering on by default, across all four exporters (demoted at D149; waits on M9's symbol decision — now landed).
   Done when: the owner signs the defaults per exporter, what stays configurable, and how saved projects' export settings migrate.
+  Absorbs, on one sitting (D170): M9's remaining print inspection (every chart mode at minimum and typical cell sizes, grayscale/low-ink, key↔chart agreement) and M12's estimate defaults-and-wording review.
 
 ### Track B Durability & identity
 
 Opened 2026-08-11 (D149). One subject: the app loses your work and
 cannot tell two designs apart.
 
-- [ ] **DUR-01 Nothing survives closing the tab** [sign-off] (2026-08-11)
-  Intent: no autosave, session restore, or unsaved-work guard; IndexedDB holds **library** data only — a design exists only if saved to a file (D75/D149).
-  Done when: the owner signs what is restored and when, closing and reopening returns the design in progress without an explicit save, explicit saves still mean what they mean, and the round-trip invariant holds.
-  Scope questions: one slot or a history; restore vs `Save project`; references the library lost; whether the source image persists.
+- [ ] **DUR-01 Work survives closing the tab** [sign-off] [detail] (2026-08-11, scope signed 2026-08-12)
+  **Scope signed (D170)**: restore on reopen, a **history** of recent designs with the UI steering to explicit save, the source image restored **and embedded in saved files** (a live capture freezes to a still on save), bounded storage with an eviction warning and an opt-in to persist.
+  Done when: reopening returns the design in progress without an explicit save, explicit saves still mean what they mean (portable, shareable, survives a storage clear-out), and the round-trip invariant holds.
+  Open at the option gate: how images ride in a saved file — the format decision that follows from "picture files part of saves".
 - [ ] **SAVE-01 A saved project has no name of its own** (2026-08-09)
   Intent: `projectFilename` names the file from the grid alone, so every 200 × 200 design saves identically. A `Design title` field already exists — does it drive the filename, and what does load do.
   Done when: a project carries a name the owner chose, it survives save/load, and two designs never collide by default. Ships with DUR-01.
@@ -90,11 +89,16 @@ clean cut; protections rest on the stated posture and the items below.
 - [ ] **PUB-02 Replace `graphic.jpg` and confirm the photo provenance** [maintainer] (2026-08-11)
   Intent: the flat-graphic demo slot is third-party fan art with a two-layer rights problem (the artist's copyright, and the underlying mark). The owner replaces it; the `PHOTO_SLOTS` contract keeps the name `graphic.jpg`, zero code changes. The item **gates public deploy** (D150: fix HEAD, keep history).
   Done when: `graphic.jpg` at HEAD is rights-clean, and the five photographs are confirmed as the owner's own (`landscape-1.jpg` is load-bearing twice: it seeded the M8 golden crop).
+  Owner's replacement plan (2026-08-12): render it — a cube in Blender lit by three RGB lights aimed at the visible corners, giving both a colour spread and a luminance ramp across flat faces, which is exactly what the slot tests. Wholly self-produced from primitives, so the two-layer rights problem dissolves rather than being swapped for another.
 
 ### Icebox
 
 <!-- Deferred but worth keeping (post-triage). Needs a decision to
      reactivate. Promote into a milestone when committed. -->
+
+- [ ] **ICE-SYMBOL-UI-01 Manual symbol override picker** (2026-08-12)
+  Intent: M9's declared v1-optional slice, deferred whole at its close (D170). Pick from *unused* glyphs only; taking another thread's symbol is an explicit swap, never a conflict state (D160-3).
+  Done when: a thread's symbol can be reassigned from the unused pool and the override survives save/load. The model and persistence already exist — this is the UI alone.
 
 **Presumptive milestone after Track A** (D149): controlling the final
 image *is* the point of the app, and a broader audience may have no

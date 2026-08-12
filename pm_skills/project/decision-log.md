@@ -1346,3 +1346,91 @@ count, and the v9 file carries the block.
 **Link:** Track A's remainder is human: M9's glyph signatures and
 M16's print-defaults sitting — where the estimator's wording review
 belongs too.
+
+## D170 — M9 closes on the owner's signature; Track A is build-complete (2026-08-12)
+
+**The owner signed all four glyph batches** on printed evidence
+(`bench-reports/m9-symbol-evidence.pdf`, four batch pages plus the
+all-64 distinctness page at 3.5 mm). That was the `[sign-off]` D160
+reserved and the last gate on M9, so **M9 closes** — and with M11,
+M10 and M12 already shipped today, **Track A is build-complete**. The
+64 glyph ids and their canonical order were already permanent from
+D165; the signature makes the *shapes* final too.
+
+**Two declared residues, placed rather than dropped:**
+
+- The **override UI** was named a v1-optional slice at scope
+  (D160-3) and is deferred whole to the Icebox as ICE-SYMBOL-UI-01.
+  The model, persistence and swap semantics all exist — only the
+  picker is missing, so this is a UI-alone item, not a reopening.
+- The **manual print inspection** (every chart mode at minimum and
+  typical cell sizes, grayscale/low-ink, key↔chart agreement) folds
+  into **M16's sitting** rather than standing alone. M16 is already a
+  print-judgement sitting with paper in hand, and it now has real
+  multi-page output (M10) and estimate wording (M12) to judge in the
+  same pass — three inspections that want one printer session, not
+  three.
+
+**PUB-02 gained the owner's replacement plan** (not yet executed):
+render the flat-graphic slot as a Blender cube lit by three RGB lights
+aimed at the visible corners. That yields both a hue spread and a
+luminance ramp across flat faces — precisely the banding-and-
+posterisation case the slot exists to test — and being built from
+primitives it is wholly self-produced, so the two-layer rights problem
+(artist's copyright plus the underlying mark) dissolves rather than
+being exchanged for a different one.
+
+**Scope.** `backlog.md` (M9 removed, Track A note rewritten, M16
+absorbs the inspection, PUB-02 plan, ICE-SYMBOL-UI-01 opened),
+`trajectory.md`, `tickets/M9.md` deleted.
+
+**Link:** what remains of Track A is one owner sitting (M16). Track B
+opens next — DUR-01's scope signed the same day (D171).
+
+## D171 — DUR-01's scope signs: restore quietly, steer to save, and put the picture in the file (2026-08-12)
+
+**The owner signed DUR-01's shape**, answering the four scope
+questions and adding a fifth the questions had not reached. Track B's
+premise — "the app loses your work" — is now a committed change, not
+an accepted state.
+
+**Signed:**
+
+1. **Reopening restores the design in progress.** No explicit save
+   required, no dialog — the work is simply there.
+2. **A history, not one slot** — several recent designs, recoverable.
+3. **Explicit save stays the primary act, and the UI steers to it.**
+   The owner's reasoning is the durable part and is why the history
+   does not make saving redundant: a saved file **survives a system
+   clear-out** (the OS may evict browser storage; a file on disk it
+   cannot touch) and **is the sharing unit**. Restore is a safety net;
+   saving is the act that means something.
+4. **The source picture is restored too** — settings alone would
+   return a design that cannot be re-rendered.
+5. **The picture becomes part of saved files** (the addition): a
+   project file carries its own source, so it opens the same design
+   anywhere. **A live screen capture freezes** to a still at save time
+   — a capture has no file to reference, so the frame becomes one.
+6. **Storage is bounded and honest about it**: a limit per project,
+   a **warning before a stored picture is evicted**, and an **opt-in
+   to keep more** (persistent storage) rather than silent loss.
+
+**Consequences recorded, not yet decided.** Embedding a source changes
+what a project file *is* — today it is small readable settings JSON
+(§20's premise). The format question is deliberately left to the
+option gate: it is user-visible, it is what people hand to each other,
+and it is the hard-to-reverse half. One constraint is already fixed by
+an existing invariant: **source bytes are stored verbatim, never
+re-encoded**, or save → load → save stops being byte-identical.
+
+**Architecture note:** design snapshots get their own IndexedDB store,
+separate from library data. `architecture.md`'s persistence row states
+the current no-autosave contract and is a protected-doc delta once
+this ships — captured, not edited (the existing DUR-01 ledger line
+already reserves it).
+
+**Scope.** `backlog.md` (DUR-01 rewritten, `[detail]` added),
+`tickets/DUR-01.md` (new).
+
+**Link:** SAVE-01 ships with it (a design's title names its file).
+Build starts at the option gate — the file-format pick.

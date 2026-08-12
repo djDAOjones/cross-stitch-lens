@@ -19,11 +19,20 @@
 
 ## Track A — The printable pattern (IN PROGRESS)
 
-**Outcome so far:** the chart's furniture became print-real. M9's
-build landed whole at D165 (open pending the owner's glyph signatures
-on printed evidence — not listed here until it ships); M11 gives grid
-styling its presets and its screen/print split.
+**Outcome:** the chart became a printable pattern. Four milestones
+shipped in one day — symbols and B/W charting, grid styling presets,
+multi-page pagination, and fabric/thread estimates — carrying the
+project file from schema v5 to v9. The brief's second success
+criterion (a stitchable chart printed from a captured design) is
+mechanically met; what remains of the track is M16's owner sitting.
 
+- M9 (2026-08-12) — symbols and black-and-white charting close on the
+  owner's signature: 64 app-owned vector glyphs in four signed
+  batches, identity-keyed assignment persisted as state (schema v6),
+  three chart modes across both chart artefacts, a symbol/name/count
+  key, and refusal rather than silent repetition past the set. The
+  override UI deferred to ICE-SYMBOL-UI-01; the print inspection
+  folded into M16. See D165 (build) and D170 (signature, close).
 - M12 (2026-08-12) — fabric sizing and thread estimates ship
   disclosed: a pure estimator (front geometry, named routing and
   waste factors, strands-of-six conversion, per-colour skein

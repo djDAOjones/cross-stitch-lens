@@ -11,8 +11,10 @@ import { EMPTY_INDEX } from '../core/types.ts';
 import {
   DEFAULT_GRID_STYLE,
   gridLines,
+  minorDashPattern,
   snapSpan,
   tickLabels,
+  type GridLine,
   type GridStyle,
 } from './grid.ts';
 
@@ -140,24 +142,80 @@ function drawGrid(
   img: ImageBitmap,
   v: View,
 ): void {
-  const lines = [
-    { axis: 'x' as const, all: gridLines(img.width, grid, v.scale) },
-    { axis: 'y' as const, all: gridLines(img.height, grid, v.scale) },
-  ];
-  if (lines.every((l) => l.all.length === 0)) return;
-  const w = img.width * v.scale;
-  const h = img.height * v.scale;
+  const xs = gridLines(img.width, grid, v.scale);
+  const ys = gridLines(img.height, grid, v.scale);
+  // The border ignores line-class legibility: two lines per axis can
+  // never smear, so a bordered design stays bounded at any zoom.
+  const borderOn = grid.show && img.width > 0 && grid.borderThickness > 0;
+  if (xs.length === 0 && ys.length === 0 && !borderOn) return;
+  const w = Math.round(img.width * v.scale);
+  const h = Math.round(img.height * v.scale);
+  const top = Math.round(v.ty);
+  const left = Math.round(v.tx);
+  // An active border owns the boundary — edge lines drop from their
+  // class pass rather than double-drawing underneath it.
+  const classOf = (lines: GridLine[], major: boolean) =>
+    lines.filter((l) => l.major === major && !(borderOn && l.edge));
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.fillStyle = grid.color;
-  for (const { axis, all } of lines) {
-    for (const line of all) {
-      const thickness = line.major ? grid.majorThickness : grid.minorThickness;
-      const origin = axis === 'x' ? v.tx : v.ty;
-      const span = snapSpan(origin + line.offset, thickness);
-      if (axis === 'x') ctx.fillRect(span.start, Math.round(v.ty), span.size, Math.round(h));
-      else ctx.fillRect(Math.round(v.tx), span.start, Math.round(w), span.size);
+  // Opacity applies to line paint only; the numbering (drawTicks)
+  // stays fully opaque so coordinates survive a faded grid.
+  ctx.globalAlpha = Math.min(1, Math.max(0, grid.opacity));
+  if (grid.minorDash) {
+    // Dashed minors: one batched stroke per redraw — per-segment
+    // fillRects would cost tens of thousands of calls per frame.
+    const path = new Path2D();
+    for (const line of classOf(xs, false)) {
+      const span = snapSpan(v.tx + line.offset, grid.minorThickness);
+      const x = span.start + span.size / 2;
+      path.moveTo(x, top);
+      path.lineTo(x, top + h);
+    }
+    for (const line of classOf(ys, false)) {
+      const span = snapSpan(v.ty + line.offset, grid.minorThickness);
+      const y = span.start + span.size / 2;
+      path.moveTo(left, y);
+      path.lineTo(left + w, y);
+    }
+    ctx.strokeStyle = grid.color;
+    ctx.lineWidth = Math.max(1, Math.round(grid.minorThickness));
+    ctx.setLineDash(minorDashPattern(grid.minorThickness));
+    ctx.stroke(path);
+    ctx.setLineDash([]);
+  } else {
+    ctx.fillStyle = grid.color;
+    for (const line of classOf(xs, false)) {
+      const span = snapSpan(v.tx + line.offset, grid.minorThickness);
+      ctx.fillRect(span.start, top, span.size, h);
+    }
+    for (const line of classOf(ys, false)) {
+      const span = snapSpan(v.ty + line.offset, grid.minorThickness);
+      ctx.fillRect(left, span.start, w, span.size);
     }
   }
+  // Majors above minors so a distinct major colour reads at crossings.
+  ctx.fillStyle = grid.majorColor;
+  for (const line of classOf(xs, true)) {
+    const span = snapSpan(v.tx + line.offset, grid.majorThickness);
+    ctx.fillRect(span.start, top, span.size, h);
+  }
+  for (const line of classOf(ys, true)) {
+    const span = snapSpan(v.ty + line.offset, grid.majorThickness);
+    ctx.fillRect(left, span.start, w, span.size);
+  }
+  if (borderOn) {
+    ctx.fillStyle = grid.borderColor;
+    const x0 = snapSpan(v.tx, grid.borderThickness);
+    const x1 = snapSpan(v.tx + w, grid.borderThickness);
+    const y0 = snapSpan(v.ty, grid.borderThickness);
+    const y1 = snapSpan(v.ty + h, grid.borderThickness);
+    const frameH = y1.start + y1.size - y0.start;
+    const frameW = x1.start + x1.size - x0.start;
+    ctx.fillRect(x0.start, y0.start, x0.size, frameH);
+    ctx.fillRect(x1.start, y0.start, x1.size, frameH);
+    ctx.fillRect(x0.start, y0.start, frameW, y0.size);
+    ctx.fillRect(x0.start, y1.start, frameW, y1.size);
+  }
+  ctx.globalAlpha = 1;
 }
 
 function drawTicks(

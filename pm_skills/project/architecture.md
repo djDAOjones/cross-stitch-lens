@@ -234,13 +234,24 @@ measured reality at M5C/M5D (D47/D48).
 
 ## Project file (JSON, versioned)
 
-`{ schemaVersion, pipeline, palette, gridStyle, preview, export }` —
-see requirements §20 for the full field inventory. Loading an older
-`schemaVersion` must migrate, never fail (currently **v5** —
-`SCHEMA_VERSION` in `src/core/project.ts` — with forward steps from
-v1–v4; v5 added the colour and dither profile refs at M15 under the
-D114 compatibility waiver). A file saved by a *newer* version is
-refused with a message naming both versions, never silently misread.
+`{ schemaVersion, pipeline, palette, symbols, gridStyle, preview,
+export, estimates }` — see requirements §20 for the full field
+inventory. Loading an older `schemaVersion` must migrate, never fail
+(currently **v9** — `SCHEMA_VERSION` in `src/core/project.ts` — with
+forward steps from v1–v8; v5 added the colour and dither profile refs
+at M15 under the D114 compatibility waiver, v6 the symbol-assignment
+block and chart mode at M9, v7 the grid-styling split at M11, v8 the
+PDF pagination fields at M10, v9 the fabric/estimation settings at
+M12). A file saved by a *newer* version is refused with a message
+naming both versions, never silently misread.
+
+The `gridStyle` block (v7, M11) is `{ screen, print, preset }`: one
+style-values shape (`src/core/grid-style.ts`) persisted twice —
+screen in CSS px driving the preview overlay, print in raster px
+driving the chart PNG and the PDF's embedded chart — plus preset
+provenance (`src/core/grid-presets.ts`; null = custom). Canonical
+values always win: the preset id records where the values came from
+and can never restyle a saved design.
 
 The `palette` block holds **both** halves, and needs both (D55):
 

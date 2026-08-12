@@ -17,6 +17,39 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
+## Track A — The printable pattern (IN PROGRESS)
+
+**Outcome so far:** the chart's furniture became print-real. M9's
+build landed whole at D165 (open pending the owner's glyph signatures
+on printed evidence — not listed here until it ships); M11 gives grid
+styling its presets and its screen/print split.
+
+- M12 (2026-08-12) — fabric sizing and thread estimates ship
+  disclosed: a pure estimator (front geometry, named routing and
+  waste factors, strands-of-six conversion, per-colour skein
+  round-up — colours cannot share a skein), Stats rows for fabric
+  size, cut size, centre, and total thread beside a Fabric fieldset,
+  and the assumptions sentence rendered wherever a result shows.
+  Schema v9 persists the whole model. Verified against hand
+  calculation live. See D169.
+- M10 (2026-08-12) — the chart PDF paginates: a pure, exhaustively
+  tested page planner (half-open bounds, leading-edge overlap,
+  row-major), tiles rendered through the one chart encoder with
+  **global** grid classification and numbering, a cover page with the
+  tiling drawn over a colour overview map plus the key, one shared
+  scale so a taped assembly is ruler-true, alignment marks, dashed
+  trim lines, and range-naming footers. Schema v8 adds `single`/`grid`
+  paging to `export.pdf` (single stays the default). Verified live:
+  200×200 at 60/page → 17 pages. See D168.
+- M11 (2026-08-12) — grid, ruler & tick styling ships preset-led: six
+  built-ins over paired screen + print style blocks (schema v7,
+  appearance-preserving migration), per-class colour, opacity, dashed
+  minors, an outer border, and the label gutter sized from the
+  numbering font — closing the A17 `FIT_MARGIN` clip in preview and
+  the chart's own 4-digit variant. Custom is a computed state; the
+  file stores canonical values with the preset id as provenance only.
+  Verified live including an in-app save→load round trip. See D167.
+
 ## Batch C0 — Sharpen the tools (SHIPPED 2026-08-11)
 
 **Outcome:** the whole fifteen-item batch shipped in one day as the

@@ -1214,3 +1214,135 @@ files, `archive/INDEX.md`. `check` green.
 
 **Link:** the next session's Start B picks up a lean queue: M9 waits
 only on glyph signatures; M11 is the next unstarted build.
+
+## D167 — M11 ships: preset-led grid styling with a screen/print split (2026-08-12)
+
+**M11 shipped in one checkpoint run** — scope and the option pick
+signed in-session, stages 3–4 gateless per the mode. Grid furniture is
+now preset-led: six built-ins (No grid, Fine, Every 5, Every 10,
+Traditional, High-contrast print) applying paired **screen + print**
+style blocks, with "Custom" a computed state, never a choice — the
+option stays disabled and provenance recomputes on every edit, so
+values landing back on a built-in relabel honestly.
+
+**The shape that won (Option A):** flat extension of the one style
+model plus immutable in-code presets — over B (grouped model with
+per-target overrides: generality M11 didn't need, at real migration
+risk) and C (a third kind on the M15 profile shell: disproportionate
+for cheap per-design state, and it would widen the draft-then-save
+§5.4 exception). Presets live in `src/core/grid-presets.ts` so the
+migration can label a file whose values byte-match a built-in; the
+project file always stores canonical values — the preset id is
+provenance only, so a preset changing in a later release can never
+restyle a saved design.
+
+**Schema v7:** `gridStyle` splits into `{ screen, print, preset }`;
+migration seeds both halves from the one v6 block (appearance
+preserved exactly; untouched files label Every 10). The print half
+ends the unit conflation — chart and PDF now read persisted raster-px
+style, never DPR-scaled screen values. New fields: per-class colour,
+opacity, dashed minors (one batched stroke), an outer border that owns
+the boundary (edge-tagged lines).
+
+**A17 closed:** the fixed 24 px preview gutter became `labelGutterPx`
+(font size + digit count), shared with the chart margin — which was
+itself one digit short at 1024².
+
+**Verification:** `check` green at 1,219 tests (21 new: geometry,
+presets-as-signing, v6→v7, layout); ui-baseline `projectJson`
+re-pinned for the intended bump with the engine hashes untouched; live
+run verified preset application, dash rendering, and a full in-app
+save→load round trip carrying `fine` provenance.
+
+**Scope.** `worker/grid.ts`, new `core/grid-style.ts` +
+`core/grid-presets.ts`, both renderers, `ui/preview.ts` gutter, the
+grid modal in `main.ts`, `core/project.ts` (v7), `shell.css` modal
+scroll, tests, ticket deleted.
+
+**Link:** M10 must decide dash phase and repeated numbering across
+tiled pages; §16's residue (origins, edges, tick facing, fonts) stays
+in requirements for a later slice.
+
+## D168 — M10 ships: the chart PDF paginates from a pure planner (2026-08-12)
+
+**M10 shipped in the autojazz run**, planner-first exactly as its
+ticket drew the boundary. `planPages` (new `src/export/pages.ts`) is
+pure and exhaustively tested: half-open global bounds, leading-edge
+overlap repeated from the previous page, row-major order, impossible
+settings returned as user-facing sentences — never thrown.
+
+**Global coordinates, one geometry model:** `gridLines`/`tickLabels`
+gained a `startStitch` origin and the chart encoder an `origin`, so a
+tile classifies majors and numbers rows by **global** stitch — pages
+agree at their joins, and `chartLayout` sizes margins for the largest
+global label a tile can carry.
+
+**Assembly:** a cover page (title, colour overview map with the
+tiling drawn over it and page numbers in grey, thread key once — the
+key drawing extracted to one shared `drawKey`), then one page per
+tile at **one shared scale** so a taped-up assembly is ruler-true,
+with corner alignment marks, dashed trim lines where leading overlap
+repeats, and footers naming page, position, and global range.
+
+**Modes:** `single` (the unchanged default) and `grid` (fixed fresh
+stitches per page). Fixed-physical-mm scale is deferred to M16, which
+owns print sizing. Schema **v8** adds the paging fields to
+`export.pdf`; migration seeds `single`. The `[blocked: M9 for symbol
+charts]` qualifier was treated as mechanism-satisfied per D165's own
+Link line — glyph signatures affect artwork, never assembly; symbol
+tiles reuse `drawSymbols` verbatim.
+
+**Deferred, on record:** vector tile furniture (raster tiles stand),
+per-page key policy, A3/custom sizes, fixed-mm scale (M16).
+
+**Verification:** `check` green at 1,240 tests (+21: planner, global
+offsets, assembly parsed under node, v8 migration); live run exported
+a 200×200 design at 60/page as 17 pages (16 tiles + cover) and the
+saved v8 file carries the paging; ui-baseline `projectJson` re-pinned
+for the intended bump, engine hashes untouched.
+
+**Scope.** `export/pages.ts` (new), `export/pdf.ts`, `worker/grid.ts`,
+`export/chart.ts`, `main.ts`, `core/project.ts` (v8), five test
+suites, ticket deleted.
+
+**Link:** the physical tape-and-ruler assembly rehearsal folds into
+M16's sign-off sitting; M12 is Track A's remainder.
+
+## D169 — M12 ships: fabric sizing and qualified thread estimates (2026-08-12)
+
+**M12 shipped in the autojazz run**, closing Track A's build half. A
+pure estimator (`src/core/estimates.ts`) carries the ticket's model
+verbatim: fabric count as stitches per inch over one square, front
+geometry `2·√2 × pitch`, a named ×1.2 routing factor for back travel,
+a 10% waste share, working strands purchased as `strands/6` of
+six-strand floss, and 8 m skeins rounded up **per colour** — colours
+cannot share a skein, so the total is the shopping answer, not
+`ceil(total/skein)`. No magic constants: every factor is a persisted
+setting, and `estimateAssumptions` renders them as the disclosure
+sentence the Stats panel shows beside the results ("plan with them,
+don't promise by them").
+
+**Surface:** the Stats section gains Fabric size, Cut size, Centre,
+and Thread estimate rows plus a Fabric fieldset (count, cut margin,
+working strands — routing/waste/skein persist with documented
+defaults, hand-editable until a sitting asks for controls). Full-RGB
+output says "needs the palette applied" rather than pricing fictional
+identities. Per-colour counts ride the existing stats pass.
+
+**Schema v9** adds the `estimates` block; migration seeds the
+documented defaults. Deferred, on record: per-colour skeins in the
+PDF key and Colours-used rows, an inches/cm display preference, and a
+stitcher's review of defaults and wording.
+
+**Verification:** `check` green at 1,255 tests (+15: hand-calculated
+sizes, skein boundaries, the per-colour round-up invariant, v9
+migration); live run confirmed 200×200 at 18-count reads 28.2 cm and
+≈70.2 m — matching the hand calculation — updating live with the
+count, and the v9 file carries the block.
+
+**Scope.** `core/estimates.ts` (new), `core/project.ts` (v9),
+`main.ts` (Stats rows + Fabric fieldset), tests, ticket deleted.
+
+**Link:** Track A's remainder is human: M9's glyph signatures and
+M16's print-defaults sitting — where the estimator's wording review
+belongs too.

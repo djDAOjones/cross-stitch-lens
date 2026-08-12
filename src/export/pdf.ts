@@ -11,9 +11,10 @@
  * the layout works in that space directly.
  */
 
-import { PDFDocument, StandardFonts, rgb, type PDFFont } from 'pdf-lib';
+import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
 
 import type { SymbolGlyph } from '../core/symbols/glyphs.ts';
+import { pageRangeLabel, type PagePlan, type PageSlice } from './pages.ts';
 
 /** 72 pt per inch / 25.4 mm per inch. */
 export const MM_TO_PT = 72 / 25.4;
@@ -265,40 +266,248 @@ export function pdfFilename(width: number, height: number): string {
   return `chart-${width}x${height}.pdf`;
 }
 
-/** Chart ink colour (matches chart.ts CHART_TEXT, #161616). */
-const INK = rgb(0x16 / 255, 0x16 / 255, 0x16 / 255);
+/** Footer text size and reserved band on tile pages, pt (M10). */
+const FOOTER_PT = 8;
+const FOOTER_H = 14;
+/** Join/trim line style: dashed, chart ink, slightly transparent. */
+const JOIN_DASH: [number, number] = [4, 3];
+/** Alignment-mark arm length and offset from the cell area, pt. */
+const MARK_LEN = 8;
+const MARK_GAP = 3;
+
+/** One rendered chart tile ready for assembly (M10). */
+export interface ChartPageTile {
+  /** Tile raster from the chart encoder (print style, global origin). */
+  png: Uint8Array;
+  pxW: number;
+  pxH: number;
+  /** Raster px per stitch the tile was rendered at. */
+  cellPx: number;
+  /** Top-left of the stitch-cell area inside the raster, px. */
+  cellOriginX: number;
+  cellOriginY: number;
+  slice: PageSlice;
+}
+
+/** The cover page's whole-design miniature (M10). */
+export interface OverviewArt {
+  png: Uint8Array;
+  pxW: number;
+  pxH: number;
+  cellPx: number;
+  cellOriginX: number;
+  cellOriginY: number;
+  gridW: number;
+  gridH: number;
+}
+
+/** Mid-grey for page numbers over the overview map. */
+const PAGE_LABEL_GREY = rgb(0.42, 0.42, 0.42);
 
 /**
- * Assemble the one-page PDF: embedded chart raster + vector title and
- * thread key. `chartPng` must come from a full-quality pipeline re-run
- * (the chart.ts encoder), never the preview surface.
+ * The uniform pt-per-raster-px scale for tile pages: the largest tile
+ * must fit the content box above the footer band, and every page then
+ * uses the same scale — a stitch measures the same on page 1 and page
+ * 12, which is what makes a taped-up assembly ruler-true.
  */
-export async function buildChartPdf(
-  chartPng: Uint8Array,
-  chartPxW: number,
-  chartPxH: number,
+export function tileScale(
+  tiles: readonly ChartPageTile[],
+  options: PdfOptions,
+): number {
+  const base = PAGE_PT[options.pageSize];
+  const landscape = options.orientation === 'landscape';
+  const pageWidth = landscape ? base[1] : base[0];
+  const pageHeight = landscape ? base[0] : base[1];
+  const margin = options.marginMm * MM_TO_PT;
+  const contentW = pageWidth - 2 * margin;
+  const contentH = pageHeight - 2 * margin - FOOTER_H;
+  if (contentW <= 0 || contentH <= 0) {
+    throw new Error('margins leave no room for the chart');
+  }
+  const maxW = Math.max(...tiles.map((t) => t.pxW));
+  const maxH = Math.max(...tiles.map((t) => t.pxH));
+  return Math.min(contentW / maxW, contentH / maxH);
+}
+
+/** Draw one L-shaped alignment mark pair at a cell-area corner. */
+function drawCornerMarks(
+  page: PDFPage,
+  x: number,
+  y: number,
+  dirX: 1 | -1,
+  dirY: 1 | -1,
+): void {
+  page.drawLine({
+    start: { x: x + dirX * MARK_GAP, y },
+    end: { x: x + dirX * (MARK_GAP + MARK_LEN), y },
+    thickness: 0.6,
+    color: INK,
+  });
+  page.drawLine({
+    start: { x, y: y + dirY * MARK_GAP },
+    end: { x, y: y + dirY * (MARK_GAP + MARK_LEN) },
+    thickness: 0.6,
+    color: INK,
+  });
+}
+
+/**
+ * Assemble the multi-page chart PDF (M10): a cover page — title,
+ * whole-design overview with the page tiling drawn over it, thread
+ * key — then one page per planned tile at one shared physical scale,
+ * each with global coordinates baked into its raster, corner
+ * alignment marks, a dashed trim line where leading overlap repeats
+ * the previous page, and a footer naming page, position, and global
+ * stitch range. Runs under plain Node, so tests parse the result.
+ */
+export async function buildMultiPagePdf(
+  tiles: readonly ChartPageTile[],
+  plan: PagePlan,
+  overview: OverviewArt,
   entries: KeyEntry[],
   options: PdfOptions,
 ): Promise<Uint8Array> {
-  const layout = pdfLayout(chartPxW, chartPxH, entries, options);
+  const cover = pdfLayout(overview.pxW, overview.pxH, entries, options);
   const doc = await PDFDocument.create();
-  const page = doc.addPage([layout.pageWidth, layout.pageHeight]);
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const page = doc.addPage([cover.pageWidth, cover.pageHeight]);
 
-  if (layout.titleY !== undefined) {
+  if (cover.titleY !== undefined) {
     page.drawText(toWinAnsi(options.title), {
-      x: layout.margin,
-      y: layout.titleY,
+      x: cover.margin,
+      y: cover.titleY,
       size: TITLE_PT,
       font: bold,
       color: INK,
     });
   }
+  const overviewImage = await doc.embedPng(overview.png);
+  page.drawImage(overviewImage, cover.chart);
 
-  const image = await doc.embedPng(chartPng);
-  page.drawImage(image, layout.chart);
+  // Page tiling over the overview's cell area. The raster is embedded
+  // aspect-preserved, so one px→pt factor serves both axes; PDF y is
+  // bottom-up, raster y is top-down.
+  const s = cover.chart.width / overview.pxW;
+  const cellLeft = cover.chart.x + overview.cellOriginX * s;
+  const cellTop = cover.chart.y + cover.chart.height - overview.cellOriginY * s;
+  const stitchPt = overview.cellPx * s;
+  const gridRight = cellLeft + overview.gridW * stitchPt;
+  const gridBottom = cellTop - overview.gridH * stitchPt;
+  const cutsX = [...new Set(tiles.filter((t) => t.slice.col > 0).map((t) => t.slice.freshX0))];
+  const cutsY = [...new Set(tiles.filter((t) => t.slice.row > 0).map((t) => t.slice.freshY0))];
+  for (const cut of cutsX) {
+    const x = cellLeft + cut * stitchPt;
+    page.drawLine({
+      start: { x, y: cellTop },
+      end: { x, y: gridBottom },
+      thickness: 0.8,
+      color: INK,
+      dashArray: [...JOIN_DASH],
+    });
+  }
+  for (const cut of cutsY) {
+    const y = cellTop - cut * stitchPt;
+    page.drawLine({
+      start: { x: cellLeft, y },
+      end: { x: gridRight, y },
+      thickness: 0.8,
+      color: INK,
+      dashArray: [...JOIN_DASH],
+    });
+  }
+  for (const tile of tiles) {
+    const label = String(tile.slice.index + 1);
+    const cx = cellLeft + ((tile.slice.freshX0 + tile.slice.x1) / 2) * stitchPt;
+    const cy = cellTop - ((tile.slice.freshY0 + tile.slice.y1) / 2) * stitchPt;
+    const size = 9;
+    page.drawText(label, {
+      x: cx - font.widthOfTextAtSize(label, size) / 2,
+      y: cy - size / 2,
+      size,
+      font: bold,
+      color: PAGE_LABEL_GREY,
+    });
+  }
 
+  drawKey(page, cover, entries, font);
+
+  // Tile pages, one shared scale, chart anchored top-left so joins
+  // line up when pages are stacked edge to edge.
+  const scale = tileScale(tiles, options);
+  for (const tile of tiles) {
+    const sheet = doc.addPage([cover.pageWidth, cover.pageHeight]);
+    const image = await doc.embedPng(tile.png);
+    const left = cover.margin;
+    const top = cover.pageHeight - cover.margin;
+    const width = tile.pxW * scale;
+    const height = tile.pxH * scale;
+    sheet.drawImage(image, { x: left, y: top - height, width, height });
+
+    const cellL = left + tile.cellOriginX * scale;
+    const cellT = top - tile.cellOriginY * scale;
+    const cellR = cellL + (tile.slice.x1 - tile.slice.x0) * tile.cellPx * scale;
+    const cellB = cellT - (tile.slice.y1 - tile.slice.y0) * tile.cellPx * scale;
+    drawCornerMarks(sheet, cellL, cellT, -1, 1);
+    drawCornerMarks(sheet, cellR, cellT, 1, 1);
+    drawCornerMarks(sheet, cellL, cellB, -1, -1);
+    drawCornerMarks(sheet, cellR, cellB, 1, -1);
+
+    // Trim lines: leading overlap repeats the previous page — the
+    // dashed line is where the fresh content of THIS page begins.
+    if (tile.slice.freshX0 > tile.slice.x0) {
+      const x = cellL + (tile.slice.freshX0 - tile.slice.x0) * tile.cellPx * scale;
+      sheet.drawLine({
+        start: { x, y: cellT },
+        end: { x, y: cellB },
+        thickness: 0.8,
+        color: INK,
+        dashArray: [...JOIN_DASH],
+      });
+    }
+    if (tile.slice.freshY0 > tile.slice.y0) {
+      const y = cellT - (tile.slice.freshY0 - tile.slice.y0) * tile.cellPx * scale;
+      sheet.drawLine({
+        start: { x: cellL, y },
+        end: { x: cellR, y },
+        thickness: 0.8,
+        color: INK,
+        dashArray: [...JOIN_DASH],
+      });
+    }
+
+    const head = options.title === '' ? '' : `${toWinAnsi(options.title)} — `;
+    const footer =
+      `${head}page ${String(tile.slice.index + 2)} of ${String(plan.pages.length + 1)} ` +
+      `(chart ${String(tile.slice.index + 1)}, row ${String(tile.slice.row + 1)}, ` +
+      `column ${String(tile.slice.col + 1)}) — ${pageRangeLabel(tile.slice)}`;
+    sheet.drawText(fitText(footer, font, FOOTER_PT, cover.pageWidth - 2 * cover.margin), {
+      x: cover.margin,
+      y: cover.margin - FOOTER_PT / 2,
+      size: FOOTER_PT,
+      font,
+      color: INK,
+    });
+  }
+
+  return doc.save();
+}
+
+/** Chart ink colour (matches chart.ts CHART_TEXT, #161616). */
+const INK = rgb(0x16 / 255, 0x16 / 255, 0x16 / 255);
+
+/**
+ * Draw the thread key cells (and the omission note) computed by
+ * {@link pdfLayout} onto a page. One implementation for the
+ * single-page chart and the M10 cover page — the key must read the
+ * same wherever it appears.
+ */
+function drawKey(
+  page: PDFPage,
+  layout: PdfLayout,
+  entries: KeyEntry[],
+  font: PDFFont,
+): void {
   const colW = keyColumnWidth(entries);
   for (const cell of layout.keyCells) {
     const [r, g, b] = cell.entry.rgb;
@@ -344,6 +553,40 @@ export async function buildChartPdf(
       color: INK,
     });
   }
+}
+
+/**
+ * Assemble the one-page PDF: embedded chart raster + vector title and
+ * thread key. `chartPng` must come from a full-quality pipeline re-run
+ * (the chart.ts encoder), never the preview surface.
+ */
+export async function buildChartPdf(
+  chartPng: Uint8Array,
+  chartPxW: number,
+  chartPxH: number,
+  entries: KeyEntry[],
+  options: PdfOptions,
+): Promise<Uint8Array> {
+  const layout = pdfLayout(chartPxW, chartPxH, entries, options);
+  const doc = await PDFDocument.create();
+  const page = doc.addPage([layout.pageWidth, layout.pageHeight]);
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+
+  if (layout.titleY !== undefined) {
+    page.drawText(toWinAnsi(options.title), {
+      x: layout.margin,
+      y: layout.titleY,
+      size: TITLE_PT,
+      font: bold,
+      color: INK,
+    });
+  }
+
+  const image = await doc.embedPng(chartPng);
+  page.drawImage(image, layout.chart);
+
+  drawKey(page, layout, entries, font);
 
   return doc.save();
 }

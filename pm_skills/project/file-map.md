@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 275 file(s) across 12 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 282 file(s) across 12 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 13 file(s)
 - `.claude` — 2 file(s)
 - `.githooks` — 1 file(s)
@@ -26,8 +26,8 @@
 - `docs` — 16 file(s)
 - `public` — 7 file(s)
 - `scripts` — 20 file(s)
-- `src` — 97 file(s)
-- `tests` — 112 file(s)
+- `src` — 101 file(s)
+- `tests` — 115 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -157,6 +157,9 @@
 - `src/core/color/convert.ts` — sRGB↔linear↔Lab conversions (D65, CIE 1976)
 - `src/core/color/lut.ts` — 15-bit RGB→palette-index LUT builder + exact nearest
 - `src/core/color/metrics.ts` — squared colour distances: Euclidean RGB, ΔE76
+- `src/core/estimates.ts` — pure fabric sizing + thread/skein estimator (M12): named factors only, per-colour skein round-up, and the disclosure sentence
+- `src/core/grid-presets.ts` — six built-in grid styling presets (paired screen/print halves) + exact-match provenance detector; in core so the v6→v7 migration can label files
+- `src/core/grid-style.ts` — the persisted grid style-values shape + appearance-preserving defaults; single source for the worker style, both project-file halves, and the presets
 - `src/core/palette-policy.ts` — brands/source/inventory/locks → permitted set + explained conflicts
 - `src/core/palette-presets.ts` — built-in algorithmic colour-scheme presets (LCh rules)
 - `src/core/palette-resolve.ts` — the one policy → ordered palette entry point
@@ -186,6 +189,7 @@
 - `src/diagnostics/log.ts` — structured logger: console + ring buffer + global capture
 - `src/export/chart.ts` — styled PNG chart (§14 subset): pure margin/
 - `src/export/key-entries.ts` — assembles the chart/PDF thread key from stats + palette (+ symbol map since M9) — the real assembly the artefact suite drives (D153)
+- `src/export/pages.ts` — pure multi-page planner (M10): half-open tile bounds, leading-edge overlap, row-major order, sentence errors; plus the frame slice helper
 - `src/export/pdf.ts` — single-page PDF chart (§18 subset): pure
 - `src/export/png.ts` — clean PNG export (§13 subset): pure nearest-
 - `src/library/records.ts` — Pure library file formats: canonical inventory/palette JSON, validation, additive merge, id-collision rename
@@ -278,8 +282,10 @@
 - `tests/dither-model.test.ts` — dither-control state matrix: families, strength semantics, preset↔custom, per-method memory
 - `tests/dither-pruning.test.ts` — pruning exactness over 138,688 adversarial values × 5 palettes, dither byte-equality with and without a table, and the shared f32 work-buffer reuse guards (M5-PERF-22/25)
 - `tests/dither.test.ts` — dither golden + determinism/mean/serpentine invariants
+- `tests/estimates.test.ts` — hand-calculated sizes and lengths, skein boundaries, the colours-cannot-share-a-skein invariant, the disclosure sentence
 - `tests/export-artefacts.test.ts` — end-to-end export artefact suite over the real key assembly and PDF build, parsed back under Node (D153)
 - `tests/export-chart.test.ts` — chart layout: label margin + edge pad,
+- `tests/export-pages.test.ts` — planner invariants: exact-fit/overflow, overlap edges, fresh-span coverage with no gaps, slice sidecar alignment, error sentences
 - `tests/export-pdf.test.ts` — PDF layout (page sizes, aspect fit, key
 - `tests/export-png.test.ts` — export transforms: k×k block replication,
 - `tests/golden/dither-8x8.expected.json` — golden fixture: dither expected, TS-generated (protected)
@@ -295,6 +301,7 @@
 - `tests/golden/reduce-2x2.input.json` — golden fixture: reduce input, hand-derived (protected)
 - `tests/golden/resize-9x5-contain-4x4.expected.json` — golden fixture: resize expected, TS-generated (protected)
 - `tests/golden/resize-9x5-contain-4x4.input.json` — golden fixture: resize input (protected)
+- `tests/grid-presets.test.ts` — the presets' signing: unique ids, schema-bound values, the Every-10-equals-defaults migration identity, exact matching
 - `tests/grid.test.ts` — grid-line placement, tick numbering/thinning, auto-hide rule
 - `tests/helpers/golden.ts` — golden harness: fixture load + tolerance compare
 - `tests/helpers/lut-f32.ts` — f32 mirror of the WGSL LUT arithmetic (fround per op)

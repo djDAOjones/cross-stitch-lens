@@ -48,7 +48,12 @@ import {
 const ZOOM_STEP = 1.25;
 /** Arrow-key pan step in device px (Shift multiplies by 4). */
 const PAN_STEP = 40;
-/** CSS px reserved around a fitted design for the tick numbering. */
+/**
+ * Floor of the CSS px reserved around a fitted design. The real
+ * gutter comes from the `labelGutter` callback (M11 — sized from the
+ * numbering font and digit count, fixing the A17 clip of 3-digit row
+ * labels); this constant survives as the default and the floor.
+ */
 const FIT_MARGIN = 24;
 /** Smallest useful canvas height (CSS px) under the hug. */
 const HUG_MIN_CSS = 160;
@@ -63,6 +68,7 @@ export class PreviewController {
   private readonly host: HTMLElement;
   private readonly zoomLabel: HTMLElement;
   private readonly onChange: (scale: PreviewScale) => void;
+  private readonly labelGutter: (maxStitches: number) => number;
   private view: ViewState | null = null;
   private imgW = 0;
   private imgH = 0;
@@ -78,11 +84,13 @@ export class PreviewController {
     onChange: (scale: PreviewScale) => void = () => {
       /* no reporting by default */
     },
+    labelGutter: (maxStitches: number) => number = () => FIT_MARGIN,
   ) {
     this.client = client;
     this.host = host;
     this.zoomLabel = zoomLabel;
     this.onChange = onChange;
+    this.labelGutter = labelGutter;
     this.bindInput();
     // A responsive resize is not a user action: a fit mode refits, but
     // a manual scale is left exactly where the user put it.
@@ -174,7 +182,7 @@ export class PreviewController {
       this.imgW,
       this.imgH,
       this.host.clientWidth,
-      FIT_MARGIN,
+      this.labelGutter(Math.max(this.imgW, this.imgH)),
       HUG_MIN_CSS,
       Math.round(window.innerHeight * capShare),
     );
@@ -197,7 +205,14 @@ export class PreviewController {
     // file, and setScale coerces those to 'space' — but keep the axis
     // pass-through so a value that slips in still fits sanely.
     this.setView(
-      fitView(this.imgW, this.imgH, w, h, FIT_MARGIN * window.devicePixelRatio, this.mode),
+      fitView(
+        this.imgW,
+        this.imgH,
+        w,
+        h,
+        this.labelGutter(Math.max(this.imgW, this.imgH)) * window.devicePixelRatio,
+        this.mode,
+      ),
     );
   }
 

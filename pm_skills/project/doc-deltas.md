@@ -27,3 +27,6 @@
 - [ ] 2026-08-11 AGENTS.md § Persistence checklist / Core data model — no autosave or session restore exists; the checklist reads as though project state persists automatically. DUR-01 will change the answer, so sync after it ships, not before (source: D149/DUR-01)
 - [ ] 2026-08-12 AGENTS.md § Core data model — symbol assignment arrived as identity-keyed persisted state (schema v6 `symbols` block) and the glyph catalogue's canonical order is append-only once a batch signs (source: D165/M9)
 - [ ] 2026-08-12 DEV-INFRASTRUCTURE.md § Scripts / Quality gate — new `symbols:evidence` script writes the M9 print-evidence PDF to `bench-reports/`; `check:docs` now exempts `bench-reports/` citations (machine-local output, CI-parity) (source: D165/M9)
+- [ ] 2026-08-12 AGENTS.md § Core data model — ProjectFile's gridStyle is a screen/print pair with preset provenance since schema v7 (M11); the shape sketch still reads the flat block (source: D167/M11)
+- [ ] 2026-08-12 AGENTS.md § Core data model — ProjectFile's export.pdf gained pagination fields at schema v8 (M10); the shape sketch predates both v7 and v8 (source: D168/M10)
+- [ ] 2026-08-12 AGENTS.md § Core data model — ProjectFile gained a top-level estimates block at schema v9 (M12); the sketch now trails v7–v9 (one reconciliation covers all three) (source: D169/M12)

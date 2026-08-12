@@ -61,15 +61,9 @@ stitchable chart printed from a captured design — is still unmet.
 - [~] **M9 Symbols & B/W charting** [sign-off] [detail] (2026-07-22, scope signed 2026-08-11, build landed 2026-08-12)
   **Scope signed (D160); build landed whole (D165)**: 64 drafted glyphs in four batches, identity-keyed persisted assignment (schema v6), three chart modes, a symbol/name/count key, refusal past the set, and `npm run symbols:evidence`.
   Remaining: the **owner signs the glyph batches on printed evidence** (the [sign-off] that stays) — print `bench-reports/m9-symbol-evidence.pdf`. The override UI stays a v1-optional slice.
-- [ ] **M11 Grid, ruler & tick styling presets** [detail] (2026-07-22)
-  Minor/major grid styling, numbering/rulers, named presets incl. high-contrast, separate screen vs print settings. Absorbs the `FIT_MARGIN` tick-label clip waived at M14-VERIFY-01.
 - [ ] **M16 Print-sized export defaults** [sign-off] (2026-08-09)
   Intent: export defaults sized for print, not screen — enlarged PNG ~2k px on its longest side, grid and numbering on by default, across all four exporters (demoted at D149; waits on M9's symbol decision).
   Done when: the owner signs the defaults per exporter, what stays configurable, and how saved projects' export settings migrate.
-- [ ] **M10 Multi-page PDF chart export** [blocked: M9 for symbol charts] [detail] (2026-07-20)
-  A4/Letter pagination, overlap + registration marks, consistent coordinates + overview map, vector grid/symbols. Pure page planner first — bounded geometry, fully testable.
-- [ ] **M12 Fabric & thread estimates** [detail] (2026-07-22)
-  Fabric count → physical size, cut margins, centre point; qualified per-colour thread/skein estimates. Every result discloses its assumptions; an estimate is never presented as a guarantee.
 
 ### Track B Durability & identity
 

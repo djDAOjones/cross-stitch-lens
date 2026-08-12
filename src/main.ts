@@ -111,10 +111,13 @@ import {
 } from './export/chart.ts';
 import {
   buildChartPdf,
+  buildMultiPagePdf,
   pdfFilename,
+  type ChartPageTile,
   type KeyEntry,
   type PdfOptions,
 } from './export/pdf.ts';
+import { isPlanError, planPages, sliceBuffer } from './export/pages.ts';
 import { buildKeyEntries } from './export/key-entries.ts';
 import {
   downloadBlob,
@@ -153,7 +156,22 @@ import {
 } from './ui/scales.ts';
 import { defaultShellState, visibility, type ShellState } from './ui/shell.ts';
 import { PipelineClient } from './worker/client.ts';
-import { DEFAULT_GRID_STYLE, type GridStyle } from './worker/grid.ts';
+import {
+  centreStitch,
+  DEFAULT_ESTIMATES,
+  estimateAssumptions,
+  physicalSize,
+  totalEstimate,
+  type EstimateSettings,
+} from './core/estimates.ts';
+import { GRID_PRESETS, gridPresetById, matchGridPreset } from './core/grid-presets.ts';
+import {
+  DEFAULT_GRID_STYLE,
+  DEFAULT_GRID_VALUES,
+  labelGutterPx,
+  type GridStyle,
+  type GridStyleValues,
+} from './worker/grid.ts';
 
 installGlobalCapture(window);
 log.info('boot', `Pattern Mapper ${__APP_VERSION__} (${__BUILD_ID__})`);
@@ -341,6 +359,10 @@ function build(app: HTMLElement): void {
   let lastColorCount: number | null = null;
   /** Empty cells in the last frame, for the Stats total line. */
   let lastEmptyCount: number | null = null;
+  /** Per-colour stitch counts from the last frame (M12 estimates). */
+  let lastPerColor: number[] | null = null;
+  /** Fabric and thread-estimation settings (M12, schema v9). */
+  const estimateSettings: EstimateSettings = { ...DEFAULT_ESTIMATES };
 
   /** Error → message, for status text and log data. */
   function describeError(error: unknown): string {
@@ -905,10 +927,18 @@ function build(app: HTMLElement): void {
   const client = new PipelineClient();
   client.attachCanvas(canvas);
   // The controller reports its mode and CSS-px-per-stitch back into the
-  // scale model; nothing it reports can run the pipeline.
-  const preview = new PreviewController(client, host, zoomLabel, (previewScale) => {
-    scales = withPreview(scales, previewScale);
-  });
+  // scale model; nothing it reports can run the pipeline. The fit
+  // gutter is asked live from the grid style (M11) so 3-digit row
+  // labels get the room the fixed margin used to clip (A17).
+  const preview = new PreviewController(
+    client,
+    host,
+    zoomLabel,
+    (previewScale) => {
+      scales = withPreview(scales, previewScale);
+    },
+    (maxStitches) => labelGutterPx(maxStitches, gridStyle, 24),
+  );
 
   function reprocess(): void {
     const still = master();
@@ -998,14 +1028,20 @@ function build(app: HTMLElement): void {
   // the tick font are scaled to device px at send time so the worker
   // stays DPR-blind, matching the view-transform contract. The tick
   // numbering uses the page's computed text colour so it stays
-  // legible in both schemes (the worker is theme-blind).
+  // legible in both schemes (the worker is theme-blind). Since M11
+  // the on-screen style has a persisted **print** sibling driving the
+  // chart PNG and the PDF's embedded chart (raster px, never DPR
+  // scaled), plus preset provenance — null means Custom.
   const gridStyle: GridStyle = { ...DEFAULT_GRID_STYLE };
+  const gridPrint: GridStyleValues = { ...DEFAULT_GRID_VALUES };
+  let gridPreset: string | null = matchGridPreset(gridStyle, gridPrint);
   function sendGridStyle(): void {
     const dpr = window.devicePixelRatio;
     client.setGridStyle({
       ...gridStyle,
       minorThickness: gridStyle.minorThickness * dpr,
       majorThickness: gridStyle.majorThickness * dpr,
+      borderThickness: gridStyle.borderThickness * dpr,
       tickFontPx: Math.round(gridStyle.tickFontPx * dpr),
       tickColor: getComputedStyle(document.body).color,
     });
@@ -1126,79 +1162,197 @@ function build(app: HTMLElement): void {
 
   // Grid options live in a modal opened from the view strip
   // (M14-EXT-35, superseding EXT-30's under-strip reveal one look
-  // later): the full existing GridStyle surface — the Numbers toggle
-  // folds in from the strip, and the tick font size surfaces for the
-  // first time. Live-apply per §5.4 — the modal houses controls, it
-  // has no Apply, and Close is its only action. Bounded to what the
-  // worker and chart renderer already do (new rendering capability is
-  // M11's): identical settings produce identical chart bytes. The
-  // 'grid-details' disclosure preference retired with the reveal — a
-  // modal has no persisted open state; stale stored keys are ignored.
+  // later). Since M11 it is preset-led: a preset select feeds two
+  // fieldsets — the on-screen style and the persisted print style —
+  // and any edit below recomputes the provenance honestly ("Custom"
+  // is a state, not a choice, so its option stays disabled). Applying
+  // a preset rebuilds the fieldsets; the select itself keeps focus,
+  // so nothing is lost from under the keyboard. Live-apply per §5.4 —
+  // the modal houses controls, it has no Apply, and Close is its only
+  // action.
   function openGridOptions(): Promise<void> {
     return formModal(document, {
       title: 'Grid options',
       build: (body) => {
-        body.append(
-          numberField(
-            document,
-            'grid-minor',
-            'Minor interval',
-            { min: 1, max: 50, value: gridStyle.minorInterval },
-            (value) => {
-              gridStyle.minorInterval = value;
-              sendGridStyle();
-            },
-          ),
-          numberField(
-            document,
-            'grid-major',
-            'Major interval',
-            { min: 0, max: 100, value: gridStyle.majorInterval, helper: '0 hides major lines' },
-            (value) => {
-              gridStyle.majorInterval = value;
-              sendGridStyle();
-            },
-          ),
-          colorField(document, 'grid-color', 'Line colour', gridStyle.color, (value) => {
-            gridStyle.color = value;
+        const fields = document.createElement('div');
+        // One style-values fieldset; `values` is mutated in place so
+        // the screen half edits the live overlay object directly.
+        const half = (
+          idPrefix: string,
+          legend: string,
+          values: GridStyleValues,
+          screenHalf: boolean,
+        ): HTMLFieldSetElement => {
+          const fs = document.createElement('fieldset');
+          const leg = document.createElement('legend');
+          leg.textContent = legend;
+          const edited = (): void => {
+            syncPreset();
+            if (screenHalf) sendGridStyle();
+          };
+          fs.append(
+            leg,
+            numberField(
+              document,
+              `${idPrefix}-minor`,
+              'Minor interval',
+              { min: 1, max: 50, value: values.minorInterval },
+              (value) => {
+                values.minorInterval = value;
+                edited();
+              },
+            ),
+            numberField(
+              document,
+              `${idPrefix}-major`,
+              'Major interval',
+              { min: 0, max: 100, value: values.majorInterval, helper: '0 hides major lines' },
+              (value) => {
+                values.majorInterval = value;
+                edited();
+              },
+            ),
+            colorField(document, `${idPrefix}-color`, 'Minor colour', values.color, (value) => {
+              values.color = value;
+              edited();
+            }),
+            colorField(
+              document,
+              `${idPrefix}-major-color`,
+              'Major colour',
+              values.majorColor,
+              (value) => {
+                values.majorColor = value;
+                edited();
+              },
+            ),
+            numberField(
+              document,
+              `${idPrefix}-minor-thickness`,
+              'Minor thickness',
+              { min: 1, max: 4, value: values.minorThickness },
+              (value) => {
+                values.minorThickness = value;
+                edited();
+              },
+            ),
+            numberField(
+              document,
+              `${idPrefix}-major-thickness`,
+              'Major thickness',
+              { min: 1, max: 6, value: values.majorThickness },
+              (value) => {
+                values.majorThickness = value;
+                edited();
+              },
+            ),
+            numberField(
+              document,
+              `${idPrefix}-opacity`,
+              'Line opacity',
+              {
+                min: 0,
+                max: 100,
+                value: Math.round(values.opacity * 100),
+                helper: 'Percent — numbering stays solid',
+              },
+              (value) => {
+                values.opacity = value / 100;
+                edited();
+              },
+            ),
+            toggleField(
+              document,
+              `${idPrefix}-dash`,
+              'Dashed minor lines',
+              values.minorDash,
+              (on) => {
+                values.minorDash = on;
+                edited();
+              },
+            ).element,
+            numberField(
+              document,
+              `${idPrefix}-border`,
+              'Border thickness',
+              { min: 0, max: 6, value: values.borderThickness, helper: '0 for no border' },
+              (value) => {
+                values.borderThickness = value;
+                edited();
+              },
+            ),
+            colorField(
+              document,
+              `${idPrefix}-border-color`,
+              'Border colour',
+              values.borderColor,
+              (value) => {
+                values.borderColor = value;
+                edited();
+              },
+            ),
+            toggleField(document, `${idPrefix}-ticks`, 'Numbers', values.ticks, (on) => {
+              values.ticks = on;
+              edited();
+            }).element,
+            numberField(
+              document,
+              `${idPrefix}-tick-font`,
+              'Number size',
+              {
+                min: 6,
+                max: 32,
+                value: values.tickFontPx,
+                helper: screenHalf ? 'Pixels on screen' : 'Pixels in the exported chart',
+              },
+              (value) => {
+                values.tickFontPx = value;
+                edited();
+              },
+            ),
+          );
+          return fs;
+        };
+        const renderFields = (): void => {
+          fields.replaceChildren(
+            half('grid', 'Screen', gridStyle, true),
+            half('grid-print', 'Print', gridPrint, false),
+          );
+        };
+        const presetField = selectField(
+          document,
+          'grid-preset',
+          'Preset',
+          [
+            ...GRID_PRESETS.map((p) => [p.id, p.label] as const),
+            ['custom', 'Custom'] as const,
+          ],
+          gridPreset ?? 'custom',
+          (id) => {
+            const preset = gridPresetById(id);
+            if (preset === undefined) return;
+            Object.assign(gridStyle, preset.screen);
+            Object.assign(gridPrint, preset.print);
+            gridPreset = preset.id;
             sendGridStyle();
-          }),
-          numberField(
-            document,
-            'grid-minor-thickness',
-            'Minor thickness',
-            { min: 1, max: 4, value: gridStyle.minorThickness },
-            (value) => {
-              gridStyle.minorThickness = value;
-              sendGridStyle();
-            },
-          ),
-          numberField(
-            document,
-            'grid-major-thickness',
-            'Major thickness',
-            { min: 1, max: 6, value: gridStyle.majorThickness },
-            (value) => {
-              gridStyle.majorThickness = value;
-              sendGridStyle();
-            },
-          ),
-          toggleField(document, 'grid-ticks', 'Numbers', gridStyle.ticks, (on) => {
-            gridStyle.ticks = on;
-            sendGridStyle();
-          }).element,
-          numberField(
-            document,
-            'grid-tick-font',
-            'Number size',
-            { min: 6, max: 32, value: gridStyle.tickFontPx, helper: 'Pixels — the chart export uses it too' },
-            (value) => {
-              gridStyle.tickFontPx = value;
-              sendGridStyle();
-            },
-          ),
+            gridToggle.setAttribute('aria-pressed', String(gridStyle.show));
+            renderFields();
+            status.textContent = `Applied the ${preset.label} grid preset.`;
+          },
+          'Applying a preset sets every value below',
         );
-        return body.querySelector<HTMLElement>('input');
+        const presetSelect = presetField.querySelector('select');
+        const customOption = presetSelect?.querySelector<HTMLOptionElement>(
+          'option[value="custom"]',
+        );
+        if (customOption !== null && customOption !== undefined) customOption.disabled = true;
+        const syncPreset = (): void => {
+          gridPreset = matchGridPreset(gridStyle, gridPrint);
+          if (presetSelect !== null) presetSelect.value = gridPreset ?? 'custom';
+        };
+        renderFields();
+        body.append(presetField, fields);
+        return presetSelect;
       },
     });
   }
@@ -1703,6 +1857,19 @@ function build(app: HTMLElement): void {
     marginMm: 15,
     title: '',
   };
+  // PDF pagination (M10, schema v8): 'single' is the pre-M10 fitted
+  // page; 'grid' tiles at a fixed fresh-stitch count with leading
+  // overlap. The numbers persist even in single mode so a saved
+  // choice survives toggling.
+  const pdfPaging: { pages: 'single' | 'grid'; stitchesPerPage: number; overlapStitches: number } =
+    {
+      pages: 'single',
+      stitchesPerPage: 60,
+      overlapStitches: 2,
+    };
+  let syncPdfPaging: () => void = () => {
+    /* assigned when the PDF options build */
+  };
   const pdfButton = document.createElement('button');
   pdfButton.type = 'button';
   pdfButton.textContent = 'Export PDF';
@@ -1851,8 +2018,61 @@ function build(app: HTMLElement): void {
       textField(document, 'pdf-title', 'Design title', pdfOptions.title, (value) => {
         pdfOptions.title = value;
       }),
+      selectField(
+        document,
+        'pdf-pages',
+        'PDF pages',
+        [
+          ['single', 'One page'],
+          ['grid', 'Multiple pages'],
+        ],
+        pdfPaging.pages,
+        (value) => {
+          pdfPaging.pages = value === 'grid' ? 'grid' : 'single';
+          syncPdfPaging();
+        },
+        'Multiple pages tile the chart with a cover map and key',
+      ),
+      numberField(
+        document,
+        'pdf-stitches-per-page',
+        'Stitches per page',
+        {
+          min: 10,
+          max: 200,
+          value: pdfPaging.stitchesPerPage,
+          helper: 'Fresh stitches per page, each axis',
+        },
+        (value) => {
+          pdfPaging.stitchesPerPage = value;
+        },
+      ),
+      numberField(
+        document,
+        'pdf-overlap',
+        'Page overlap',
+        {
+          min: 0,
+          max: 10,
+          value: pdfPaging.overlapStitches,
+          helper: 'Stitches repeated at joins, marked for trimming',
+        },
+        (value) => {
+          pdfPaging.overlapStitches = value;
+        },
+      ),
     ),
   );
+  // Paging inputs disable while the export is one page (the A9
+  // disabled-with-reason pattern lives in the select's helper).
+  syncPdfPaging = () => {
+    const on = pdfPaging.pages === 'grid';
+    for (const id of ['pdf-stitches-per-page', 'pdf-overlap']) {
+      const input = document.getElementById(id);
+      if (input instanceof HTMLInputElement) input.disabled = !on;
+    }
+  };
+  syncPdfPaging();
 
   async function exportPng(): Promise<void> {
     const still = master();
@@ -1947,13 +2167,13 @@ function build(app: HTMLElement): void {
   async function exportChart(): Promise<void> {
     const still = master();
     if (still === null) return;
-    // Chart furniture follows the on-screen grid settings (CSS-px
-    // thicknesses — the chart's own unit; the DPR scaling is a
-    // preview concern). Paper/ink colours are fixed in chart.ts.
+    // Chart furniture follows the persisted print style (M11) —
+    // raster px, never the DPR-scaled screen values. Paper/ink
+    // colours are fixed in chart.ts.
     const wantedCell = scales.export.chartCellPx;
     const cell = Math.min(
       wantedCell,
-      maxCellPx(config.grid.width, config.grid.height, gridStyle),
+      maxCellPx(config.grid.width, config.grid.height, gridPrint),
     );
     status.textContent = 'Exporting…';
     chartButton.disabled = true;
@@ -1979,7 +2199,7 @@ function build(app: HTMLElement): void {
       const filename = chartFilename(frame.width, frame.height);
       downloadBlob(
         document,
-        await encodeChartPng(frame, gridStyle, cell, chartMode, symbols),
+        await encodeChartPng(frame, gridPrint, cell, chartMode, symbols),
         filename,
       );
       status.textContent =
@@ -2010,16 +2230,6 @@ function build(app: HTMLElement): void {
         },
         config,
       );
-      // Chart raster at print resolution: ~2400 px on the long side
-      // (≈300 dpi on an A4 content box), inside the canvas clamp.
-      const cell = Math.max(
-        4,
-        Math.min(
-          Math.ceil(2400 / Math.max(frame.width, frame.height)),
-          40,
-          maxCellPx(config.grid.width, config.grid.height, gridStyle),
-        ),
-      );
       let symbols: ChartSymbols = [];
       if (chartMode !== 'color') {
         const table = symbolTableFor(frame);
@@ -2030,9 +2240,6 @@ function build(app: HTMLElement): void {
         }
         symbols = table.symbols;
       }
-      const chartL = chartLayout(frame.width, frame.height, gridStyle, cell);
-      const chartBlob = await encodeChartPng(frame, gridStyle, cell, chartMode, symbols);
-      const chartPng = new Uint8Array(await chartBlob.arrayBuffer());
       // Thread key: used colours only; full-RGB mode has no key. The
       // assembly lives in export/key-entries.ts so the artefact suite
       // drives this exact code rather than a copy (EXPORT-01, D153).
@@ -2044,14 +2251,93 @@ function build(app: HTMLElement): void {
         BRAND_NAMES,
         chartMode === 'color' ? undefined : effectiveSymbols(symbolState),
       );
-      const bytes = await buildChartPdf(chartPng, chartL.width, chartL.height, entries, {
-        ...pdfOptions,
-      });
+      let bytes: Uint8Array;
+      let cell: number;
+      let pageNote = '';
+      if (pdfPaging.pages === 'grid') {
+        // Multi-page (M10): plan the tiling, render each page's slice
+        // at one shared cell size with global coordinates, and hand
+        // the tiles to the assembly with a colour overview map.
+        const plan = planPages(
+          config.grid.width,
+          config.grid.height,
+          pdfPaging.stitchesPerPage,
+          pdfPaging.overlapStitches,
+        );
+        if (isPlanError(plan)) {
+          status.textContent = plan.error;
+          return;
+        }
+        const span = Math.max(plan.maxSpanX, plan.maxSpanY);
+        cell = Math.max(
+          4,
+          Math.min(Math.ceil(2400 / span), 40, maxCellPx(plan.maxSpanX, plan.maxSpanY, gridPrint)),
+        );
+        const maxLabel = Math.max(frame.width, frame.height);
+        const tiles: ChartPageTile[] = [];
+        for (const slice of plan.pages) {
+          const tileFrame = sliceBuffer(frame, slice.x0, slice.x1, slice.y0, slice.y1);
+          const layout = chartLayout(tileFrame.width, tileFrame.height, gridPrint, cell, maxLabel);
+          const blob = await encodeChartPng(tileFrame, gridPrint, cell, chartMode, symbols, {
+            x: slice.x0,
+            y: slice.y0,
+          });
+          tiles.push({
+            png: new Uint8Array(await blob.arrayBuffer()),
+            pxW: layout.width,
+            pxH: layout.height,
+            cellPx: cell,
+            cellOriginX: layout.originX,
+            cellOriginY: layout.originY,
+            slice,
+          });
+        }
+        // Overview map: always colour cells — glyphs are illegible at
+        // map scale, and the map's job is placement, not stitching.
+        const ovCell = Math.max(1, Math.min(4, Math.floor(2000 / maxLabel)));
+        const ovLayout = chartLayout(frame.width, frame.height, gridPrint, ovCell);
+        const ovBlob = await encodeChartPng(frame, gridPrint, ovCell, 'color', []);
+        bytes = await buildMultiPagePdf(
+          tiles,
+          plan,
+          {
+            png: new Uint8Array(await ovBlob.arrayBuffer()),
+            pxW: ovLayout.width,
+            pxH: ovLayout.height,
+            cellPx: ovCell,
+            cellOriginX: ovLayout.originX,
+            cellOriginY: ovLayout.originY,
+            gridW: frame.width,
+            gridH: frame.height,
+          },
+          entries,
+          { ...pdfOptions },
+        );
+        pageNote = ` (${String(plan.pages.length + 1)} pages)`;
+      } else {
+        // Single page: chart raster at print resolution, ~2400 px on
+        // the long side (≈300 dpi on an A4 content box), inside the
+        // canvas clamp.
+        cell = Math.max(
+          4,
+          Math.min(
+            Math.ceil(2400 / Math.max(frame.width, frame.height)),
+            40,
+            maxCellPx(config.grid.width, config.grid.height, gridPrint),
+          ),
+        );
+        const chartL = chartLayout(frame.width, frame.height, gridPrint, cell);
+        const chartBlob = await encodeChartPng(frame, gridPrint, cell, chartMode, symbols);
+        const chartPng = new Uint8Array(await chartBlob.arrayBuffer());
+        bytes = await buildChartPdf(chartPng, chartL.width, chartL.height, entries, {
+          ...pdfOptions,
+        });
+      }
       const filename = pdfFilename(frame.width, frame.height);
       // pdf-lib returns a fresh non-shared buffer; cast for Blob's sake.
       const part = bytes as Uint8Array<ArrayBuffer>;
       downloadBlob(document, new Blob([part], { type: 'application/pdf' }), filename);
-      status.textContent = `Exported ${filename}.`;
+      status.textContent = `Exported ${filename}${pageNote}.`;
       log.info('export', 'pdf chart', {
         filename,
         cell,
@@ -2059,6 +2345,7 @@ function build(app: HTMLElement): void {
         orientation: pdfOptions.orientation,
         keyEntries: entries.length,
         mode: chartMode,
+        pages: pdfPaging.pages,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -2143,15 +2430,14 @@ function build(app: HTMLElement): void {
         queue: [...symbolState.queue],
         overrides: [...symbolState.overrides],
       },
+      // Screen + print halves with preset provenance (schema v7,
+      // M11). The runtime tickColor rides along on the screen object;
+      // serialisation reconstructs canonical fields, so it never
+      // reaches the file.
       gridStyle: {
-        show: gridStyle.show,
-        minorInterval: gridStyle.minorInterval,
-        majorInterval: gridStyle.majorInterval,
-        color: gridStyle.color,
-        minorThickness: gridStyle.minorThickness,
-        majorThickness: gridStyle.majorThickness,
-        ticks: gridStyle.ticks,
-        tickFontPx: gridStyle.tickFontPx,
+        screen: { ...gridStyle },
+        print: { ...gridPrint },
+        preset: gridPreset,
       },
       // Preview scale is project data from v2 (M6-VIEW-01): screen
       // size only, and asked of the controller so a live zoom is not
@@ -2168,8 +2454,14 @@ function build(app: HTMLElement): void {
           orientation: pdfOptions.orientation,
           marginMm: pdfOptions.marginMm,
           title: pdfOptions.title,
+          pages: pdfPaging.pages,
+          stitchesPerPage: pdfPaging.stitchesPerPage,
+          overlapStitches: pdfPaging.overlapStitches,
         },
       },
+      // Fabric and estimation settings persist whole (schema v9,
+      // M12) — including the model factors no control exposes yet.
+      estimates: { ...estimateSettings },
     };
   }
 
@@ -2212,6 +2504,14 @@ function build(app: HTMLElement): void {
     setFieldValue('pdf-orientation', pdfOptions.orientation);
     setFieldValue('pdf-margin', String(pdfOptions.marginMm));
     setFieldValue('pdf-title', pdfOptions.title);
+    setFieldValue('pdf-pages', pdfPaging.pages);
+    setFieldValue('pdf-stitches-per-page', String(pdfPaging.stitchesPerPage));
+    setFieldValue('pdf-overlap', String(pdfPaging.overlapStitches));
+    syncPdfPaging();
+    setFieldValue('fabric-count', String(estimateSettings.fabricCount));
+    setFieldValue('fabric-margin', String(estimateSettings.marginCm));
+    setFieldValue('fabric-strands', String(estimateSettings.strands));
+    refreshStats();
   }
 
   /**
@@ -2309,7 +2609,9 @@ function build(app: HTMLElement): void {
         (matchBuiltInDither(config.dither) === null
           ? null
           : { id: matchBuiltInDither(config.dither) ?? '', revision: 0 });
-      Object.assign(gridStyle, file.gridStyle);
+      Object.assign(gridStyle, file.gridStyle.screen);
+      Object.assign(gridPrint, file.gridStyle.print);
+      gridPreset = file.gridStyle.preset;
       scales = withPattern(scales, {
         widthStitches: file.pipeline.grid.width,
         heightStitches: file.pipeline.grid.height,
@@ -2326,6 +2628,10 @@ function build(app: HTMLElement): void {
       pdfOptions.orientation = file.export.pdf.orientation;
       pdfOptions.marginMm = file.export.pdf.marginMm;
       pdfOptions.title = file.export.pdf.title;
+      pdfPaging.pages = file.export.pdf.pages;
+      pdfPaging.stitchesPerPage = file.export.pdf.stitchesPerPage;
+      pdfPaging.overlapStitches = file.export.pdf.overlapStitches;
+      Object.assign(estimateSettings, file.estimates);
       syncControls();
       sendGridStyle();
       dimensionsLabel.textContent = patternSummary(scales.pattern);
@@ -2443,6 +2749,12 @@ function build(app: HTMLElement): void {
   const statsStitch = statsRow('Stitch size');
   const statsTotal = statsRow('Total stitches');
   const statsColours = statsRow('Colours in use');
+  // Fabric and thread rows (M12): physical readouts from the pure
+  // estimator, every one qualified by the assumptions line below.
+  const statsFabric = statsRow('Fabric size');
+  const statsCut = statsRow('Cut size');
+  const statsCentre = statsRow('Centre');
+  const statsThread = statsRow('Thread estimate');
 
   /** Colours-in-use value, carrying D98's never-silent limit duty. */
   function colourInUseLine(): string {
@@ -2451,6 +2763,11 @@ function build(app: HTMLElement): void {
     if (!paletteMode) return `${used} · unlimited`;
     if (designRules.count.mode !== 'all') return `${used} · limit ${String(designRules.count.n)}`;
     return used;
+  }
+
+  /** One decimal for physical readouts — fabric is cut, not machined. */
+  function cm1(value: number): string {
+    return value.toFixed(1);
   }
 
   /** Refresh the Stats values from owned state — never recomputed
@@ -2474,9 +2791,88 @@ function build(app: HTMLElement): void {
         ? `${total.toLocaleString('en-GB')} (${lastEmptyCount.toLocaleString('en-GB')} empty)`
         : total.toLocaleString('en-GB');
     statsColours.textContent = colourInUseLine();
+    // Fabric and thread (M12): pure-estimator readouts, qualified by
+    // the assumptions line the fieldset carries.
+    const w = scales.pattern.widthStitches;
+    const h = scales.pattern.heightStitches;
+    const size = physicalSize(w, h, estimateSettings);
+    statsFabric.textContent =
+      `${cm1(size.widthCm)} × ${cm1(size.heightCm)} cm ` +
+      `(${cm1(size.widthIn)} × ${cm1(size.heightIn)} in) at ` +
+      `${String(estimateSettings.fabricCount)}-count`;
+    statsCut.textContent = `${cm1(size.cutWidthCm)} × ${cm1(size.cutHeightCm)} cm`;
+    const centre = centreStitch(w, h);
+    statsCentre.textContent = `stitch ${String(centre.x)}, ${String(centre.y)}`;
+    if (lastPerColor === null) {
+      statsThread.textContent = 'none yet';
+    } else if (!paletteMode) {
+      // Full-RGB output has no thread identities: a per-colour skein
+      // list over arbitrary RGB would be shopping fiction (M12).
+      statsThread.textContent = 'needs the palette applied';
+    } else {
+      const totals = totalEstimate(lastPerColor, estimateSettings);
+      statsThread.textContent =
+        `≈ ${totals.metres.toFixed(1)} m · ${String(totals.skeins)} ` +
+        `skein${totals.skeins === 1 ? '' : 's'}`;
+    }
+    assumptionsNote.textContent = estimateAssumptions(estimateSettings);
   }
 
-  section('section-stats', 'Stats', true, statsList);
+  // Fabric settings (M12): the three choices a maker actually varies;
+  // routing, waste, and skein length persist with documented defaults
+  // and stay hand-editable in the project file until a sitting asks
+  // for controls.
+  const fabricGroup = document.createElement('fieldset');
+  const fabricLegend = document.createElement('legend');
+  fabricLegend.textContent = 'Fabric';
+  const assumptionsNote = document.createElement('p');
+  assumptionsNote.className = 'meta';
+  fabricGroup.append(
+    fabricLegend,
+    numberField(
+      document,
+      'fabric-count',
+      'Fabric count',
+      {
+        min: 4,
+        max: 36,
+        value: estimateSettings.fabricCount,
+        helper: 'Stitches per inch (Aida)',
+      },
+      (value) => {
+        estimateSettings.fabricCount = value;
+        refreshStats();
+      },
+    ),
+    numberField(
+      document,
+      'fabric-margin',
+      'Cut margin',
+      {
+        min: 0,
+        max: 30,
+        value: estimateSettings.marginCm,
+        helper: 'Centimetres added on every side',
+      },
+      (value) => {
+        estimateSettings.marginCm = value;
+        refreshStats();
+      },
+    ),
+    numberField(
+      document,
+      'fabric-strands',
+      'Working strands',
+      { min: 1, max: 6, value: estimateSettings.strands, helper: 'Of the six in a skein' },
+      (value) => {
+        estimateSettings.strands = value;
+        refreshStats();
+      },
+    ),
+    assumptionsNote,
+  );
+
+  section('section-stats', 'Stats', true, statsList, fabricGroup);
 
   // No Design section (M14-EXT-40, the owner's sixth look): size and
   // zoom live in the Capture section, whose element is inserted into
@@ -2945,6 +3341,7 @@ function build(app: HTMLElement): void {
     for (const timing of frame.timings) activeBackends[timing.stage] = timing.backend;
     lastColorCount = stats.colorCount;
     lastEmptyCount = stats.emptyCount;
+    lastPerColor = stats.perColor.map((c) => c.count);
     colourSection.update(sectionState());
     refreshStats();
     status.textContent = 'Preview updated.';

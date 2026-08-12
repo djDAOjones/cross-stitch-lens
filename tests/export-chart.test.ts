@@ -20,7 +20,7 @@ import {
 } from '../src/export/chart.ts';
 import { MAX_OUTPUT_SIDE } from '../src/export/png.ts';
 import { glyphById } from '../src/core/symbols/glyphs.ts';
-import { DEFAULT_GRID_STYLE, type GridStyle } from '../src/worker/grid.ts';
+import { DEFAULT_GRID_STYLE, labelGutterPx, type GridStyle } from '../src/worker/grid.ts';
 import { EMPTY_INDEX, type PixelBuffer } from '../src/core/types.ts';
 
 const STYLE: GridStyle = { ...DEFAULT_GRID_STYLE }; // majors every 10, ticks on
@@ -29,11 +29,19 @@ describe('chartLayout', () => {
   it('reserves a label margin plus edge padding around the cells', () => {
     const layout = chartLayout(200, 150, STYLE, 10);
     const pad = Math.ceil(STYLE.majorThickness / 2);
-    const margin = Math.round(STYLE.tickFontPx * 2.5);
+    // Since M11 the margin is the shared label gutter — sized from
+    // the font and the widest label, no longer a flat 2.5 em.
+    const margin = labelGutterPx(200, STYLE, 0);
     expect(layout.originX).toBe(pad + margin);
     expect(layout.originY).toBe(pad + margin);
     expect(layout.width).toBe(layout.originX + 200 * 10 + pad);
     expect(layout.height).toBe(layout.originY + 150 * 10 + pad);
+  });
+
+  it('gives a 4-digit grid more label room than a 2-digit one (A17 class)', () => {
+    const small = chartLayout(99, 99, STYLE, 10);
+    const large = chartLayout(1024, 1024, STYLE, 10);
+    expect(large.originX).toBeGreaterThan(small.originX);
   });
 
   it('drops the label margin when numbering is off or majors are hidden', () => {
@@ -42,6 +50,14 @@ describe('chartLayout', () => {
     const pad = Math.ceil(STYLE.majorThickness / 2);
     expect(noTicks.originX).toBe(pad);
     expect(noMajors.originX).toBe(pad);
+  });
+
+  it('pads for a border thicker than either line class', () => {
+    const bordered = chartLayout(100, 100, { ...STYLE, borderThickness: 8 }, 10);
+    const plain = chartLayout(100, 100, STYLE, 10);
+    expect(bordered.originX - plain.originX).toBe(
+      Math.ceil(8 / 2) - Math.ceil(STYLE.majorThickness / 2),
+    );
   });
 });
 

@@ -21,7 +21,15 @@ import type { ChartMode } from '../core/project.ts';
 import { STITCH_ALPHA } from '../core/stats.ts';
 import type { SymbolGlyph } from '../core/symbols/glyphs.ts';
 import { EMPTY_INDEX, type PixelBuffer } from '../core/types.ts';
-import { gridLines, snapSpan, tickLabels, type GridStyle } from '../worker/grid.ts';
+import {
+  gridLines,
+  labelGutterPx,
+  minorDashPattern,
+  snapSpan,
+  tickLabels,
+  type GridLine,
+  type GridStyleValues,
+} from '../worker/grid.ts';
 import { flattenBackground, MAX_OUTPUT_SIDE, oversizeMessage, scaleNearest } from './png.ts';
 
 /** Chart paper colour (print target — never themed). */
@@ -41,28 +49,38 @@ export interface ChartLayout {
 
 /**
  * Margin reserved for numbering along the top and left edges. Sized
- * from the label font so bigger text gets more room; zero when
+ * from the label font *and* the widest label the grid can produce
+ * (M11 — the fixed 2.5 em margin clipped 4-digit labels); zero when
  * numbering is off (no majors → grid.ts emits no labels).
  */
-function labelMargin(style: GridStyle): number {
-  return style.ticks && style.majorInterval > 0 ? Math.round(style.tickFontPx * 2.5) : 0;
+function labelMargin(style: GridStyleValues, maxStitches: number): number {
+  return labelGutterPx(maxStitches, style, 0);
 }
 
 /** Padding so boundary lines (centred on the edge) are not clipped. */
-function edgePad(style: GridStyle): number {
-  return Math.ceil(Math.max(style.minorThickness, style.majorThickness) / 2);
+function edgePad(style: GridStyleValues): number {
+  return Math.ceil(
+    Math.max(style.minorThickness, style.majorThickness, style.borderThickness) / 2,
+  );
 }
 
-/** Lay out a chart of `gridW`×`gridH` stitches at `cellPx` px/stitch. */
+/**
+ * Lay out a chart of `gridW`×`gridH` stitches at `cellPx` px/stitch.
+ * `maxLabelStitch` (M10) is the largest global stitch number the
+ * margins must hold — a page tile 55 cells wide can still be
+ * numbered into the thousands.
+ */
 export function chartLayout(
   gridW: number,
   gridH: number,
-  style: GridStyle,
+  style: GridStyleValues,
   cellPx: number,
+  maxLabelStitch: number = Math.max(gridW, gridH),
 ): ChartLayout {
   const pad = edgePad(style);
-  const originX = pad + labelMargin(style);
-  const originY = pad + labelMargin(style);
+  const margin = labelMargin(style, maxLabelStitch);
+  const originX = pad + margin;
+  const originY = pad + margin;
   return {
     width: originX + gridW * cellPx + pad,
     height: originY + gridH * cellPx + pad,
@@ -75,8 +93,8 @@ export function chartLayout(
  * Largest cell size whose chart still fits the canvas side limit
  * (≥ 1) — margins included, so the clamp never lies at the boundary.
  */
-export function maxCellPx(gridW: number, gridH: number, style: GridStyle): number {
-  const fixed = edgePad(style) * 2 + labelMargin(style);
+export function maxCellPx(gridW: number, gridH: number, style: GridStyleValues): number {
+  const fixed = edgePad(style) * 2 + labelMargin(style, Math.max(gridW, gridH));
   return Math.max(1, Math.floor((MAX_OUTPUT_SIDE - fixed) / Math.max(gridW, gridH, 1)));
 }
 
@@ -198,12 +216,24 @@ function drawSymbols(
  */
 export async function encodeChartPng(
   frame: PixelBuffer,
-  style: GridStyle,
+  style: GridStyleValues,
   cellPx: number,
   mode: ChartMode = 'color',
   symbols: ChartSymbols = [],
+  /**
+   * Global stitch origin when `frame` is a page tile (M10): grid
+   * classification and numbering use global coordinates so tiles
+   * agree at their joins. `{0,0}` — the default — is a whole chart.
+   */
+  origin: { x: number; y: number } = { x: 0, y: 0 },
 ): Promise<Blob> {
-  const layout = chartLayout(frame.width, frame.height, style, cellPx);
+  const layout = chartLayout(
+    frame.width,
+    frame.height,
+    style,
+    cellPx,
+    Math.max(origin.x + frame.width, origin.y + frame.height),
+  );
   // Module-boundary guard (M13-DEF-02): the UI clamps via maxCellPx,
   // but a direct caller past the limit would otherwise get a silently
   // zeroed canvas and an unactionable browser error.
@@ -241,37 +271,86 @@ export async function encodeChartPng(
   }
 
   // Grid lines, reusing the preview's geometry at scale = cellPx.
-  // Style thicknesses are CSS px, which is exactly the chart's unit.
+  // Style thicknesses are raster px — since M11 the chart receives
+  // the persisted *print* style, no longer the on-screen one. The
+  // passes mirror preview-surface.ts: dashed-or-solid minors, then
+  // majors, then the border owning the boundary; line paint honours
+  // the style opacity while numbering and symbols stay opaque.
   const cellsW = frame.width * cellPx;
   const cellsH = frame.height * cellPx;
-  ctx.fillStyle = style.color;
-  for (const line of gridLines(frame.width, style, cellPx)) {
-    const span = snapSpan(
-      layout.originX + line.offset,
-      line.major ? style.majorThickness : style.minorThickness,
-    );
+  const xs = gridLines(frame.width, style, cellPx, origin.x);
+  const ys = gridLines(frame.height, style, cellPx, origin.y);
+  const borderOn = style.show && style.borderThickness > 0;
+  const classOf = (lines: GridLine[], major: boolean) =>
+    lines.filter((l) => l.major === major && !(borderOn && l.edge));
+  ctx.globalAlpha = Math.min(1, Math.max(0, style.opacity));
+  if (style.minorDash) {
+    const path = new Path2D();
+    for (const line of classOf(xs, false)) {
+      const span = snapSpan(layout.originX + line.offset, style.minorThickness);
+      const x = span.start + span.size / 2;
+      path.moveTo(x, layout.originY);
+      path.lineTo(x, layout.originY + cellsH);
+    }
+    for (const line of classOf(ys, false)) {
+      const span = snapSpan(layout.originY + line.offset, style.minorThickness);
+      const y = span.start + span.size / 2;
+      path.moveTo(layout.originX, y);
+      path.lineTo(layout.originX + cellsW, y);
+    }
+    ctx.strokeStyle = style.color;
+    ctx.lineWidth = Math.max(1, Math.round(style.minorThickness));
+    ctx.setLineDash(minorDashPattern(style.minorThickness));
+    ctx.stroke(path);
+    ctx.setLineDash([]);
+  } else {
+    ctx.fillStyle = style.color;
+    for (const line of classOf(xs, false)) {
+      const span = snapSpan(layout.originX + line.offset, style.minorThickness);
+      ctx.fillRect(span.start, layout.originY, span.size, cellsH);
+    }
+    for (const line of classOf(ys, false)) {
+      const span = snapSpan(layout.originY + line.offset, style.minorThickness);
+      ctx.fillRect(layout.originX, span.start, cellsW, span.size);
+    }
+  }
+  ctx.fillStyle = style.majorColor;
+  for (const line of classOf(xs, true)) {
+    const span = snapSpan(layout.originX + line.offset, style.majorThickness);
     ctx.fillRect(span.start, layout.originY, span.size, cellsH);
   }
-  for (const line of gridLines(frame.height, style, cellPx)) {
-    const span = snapSpan(
-      layout.originY + line.offset,
-      line.major ? style.majorThickness : style.minorThickness,
-    );
+  for (const line of classOf(ys, true)) {
+    const span = snapSpan(layout.originY + line.offset, style.majorThickness);
     ctx.fillRect(layout.originX, span.start, cellsW, span.size);
   }
+  if (borderOn) {
+    ctx.fillStyle = style.borderColor;
+    const x0 = snapSpan(layout.originX, style.borderThickness);
+    const x1 = snapSpan(layout.originX + cellsW, style.borderThickness);
+    const y0 = snapSpan(layout.originY, style.borderThickness);
+    const y1 = snapSpan(layout.originY + cellsH, style.borderThickness);
+    const frameH = y1.start + y1.size - y0.start;
+    const frameW = x1.start + x1.size - x0.start;
+    ctx.fillRect(x0.start, y0.start, x0.size, frameH);
+    ctx.fillRect(x1.start, y0.start, x1.size, frameH);
+    ctx.fillRect(x0.start, y0.start, frameW, y0.size);
+    ctx.fillRect(x0.start, y1.start, frameW, y1.size);
+  }
+  ctx.globalAlpha = 1;
 
-  // Row/column numbering in the margins (origin 1, §16).
+  // Row/column numbering in the margins (origin 1, §16; global on
+  // tiles, M10).
   if (style.ticks) {
     ctx.fillStyle = CHART_TEXT;
     ctx.font = `${style.tickFontPx}px ui-sans-serif, system-ui, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'bottom';
-    for (const tick of tickLabels(frame.width, style.majorInterval, cellPx)) {
+    for (const tick of tickLabels(frame.width, style.majorInterval, cellPx, undefined, origin.x)) {
       ctx.fillText(tick.label, layout.originX + tick.offset, layout.originY - 4);
     }
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
-    for (const tick of tickLabels(frame.height, style.majorInterval, cellPx)) {
+    for (const tick of tickLabels(frame.height, style.majorInterval, cellPx, undefined, origin.y)) {
       ctx.fillText(tick.label, layout.originX - 4, layout.originY + tick.offset);
     }
   }

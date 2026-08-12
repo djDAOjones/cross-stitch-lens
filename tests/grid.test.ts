@@ -9,8 +9,10 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_GRID_STYLE,
   gridLines,
+  labelGutterPx,
   labelInterval,
   lineClassVisible,
+  minorDashPattern,
   snapSpan,
   tickLabels,
   type GridStyle,
@@ -66,6 +68,43 @@ describe('gridLines', () => {
     expect(gridLines(10, style({ show: false }), 10)).toEqual([]);
     expect(gridLines(0, style(), 10)).toEqual([]);
   });
+
+  it('tags exactly the two boundary lines as edges', () => {
+    const lines = gridLines(10, style({ majorInterval: 5 }), 10);
+    expect(lines.filter((l) => l.edge).map((l) => l.offset)).toEqual([0, 100]);
+    expect(lines.filter((l) => !l.edge)).toHaveLength(lines.length - 2);
+  });
+});
+
+describe('minorDashPattern', () => {
+  it('uses three thicknesses of dash and gap', () => {
+    expect(minorDashPattern(2)).toEqual([6, 6]);
+  });
+
+  it('floors at 2 px so a hairline still reads as dashed', () => {
+    expect(minorDashPattern(0.5)).toEqual([2, 2]);
+  });
+});
+
+describe('labelGutterPx', () => {
+  const numbered = { ticks: true, majorInterval: 10, tickFontPx: 11 };
+
+  it('returns the floor when numbering is off or has no interval', () => {
+    expect(labelGutterPx(200, { ...numbered, ticks: false }, 24)).toBe(24);
+    expect(labelGutterPx(200, { ...numbered, majorInterval: 0 }, 24)).toBe(24);
+  });
+
+  it('holds a 3-digit label where the fixed 24 px gutter clipped (A17)', () => {
+    // tick 5.5 + gap 3.67 + 3 × 0.65 × 11 + 4 ≈ 34.6 → 35
+    expect(labelGutterPx(200, numbered, 24)).toBe(35);
+  });
+
+  it('grows with the digit count, never below the floor', () => {
+    const three = labelGutterPx(999, numbered, 0);
+    const four = labelGutterPx(1024, numbered, 0);
+    expect(four).toBeGreaterThan(three);
+    expect(labelGutterPx(5, { ...numbered, tickFontPx: 4 }, 24)).toBe(24);
+  });
 });
 
 describe('lineClassVisible', () => {
@@ -119,6 +158,32 @@ describe('tickLabels', () => {
 
   it('is empty for a design smaller than the first label', () => {
     expect(tickLabels(5, 10, 10)).toEqual([]);
+  });
+});
+
+describe('page-tile offsets (M10)', () => {
+  it('classifies tile lines by global index, edges always bounding', () => {
+    // Tile covering global 45–100 (55 cells): majors land on global
+    // multiples of 10 — locals 5, 15, …, 55 — plus the leading edge.
+    const lines = gridLines(55, style({ majorInterval: 10 }), 10, 45);
+    const majors = lines.filter((l) => l.major).map((l) => l.offset);
+    expect(majors).toEqual([0, 50, 150, 250, 350, 450, 550]);
+  });
+
+  it('numbers tiles globally, never restarting at 10', () => {
+    const labels = tickLabels(50, 10, 10, undefined, 50);
+    expect(labels).toEqual([
+      { offset: 100, label: '60' },
+      { offset: 200, label: '70' },
+      { offset: 300, label: '80' },
+      { offset: 400, label: '90' },
+      { offset: 500, label: '100' },
+    ]);
+  });
+
+  it('keeps whole-chart behaviour identical at offset zero', () => {
+    expect(tickLabels(30, 10, 10, undefined, 0)).toEqual(tickLabels(30, 10, 10));
+    expect(gridLines(10, style(), 10, 0)).toEqual(gridLines(10, style(), 10));
   });
 });
 

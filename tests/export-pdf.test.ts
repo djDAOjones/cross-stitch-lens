@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildChartPdf,
+  buildMultiPagePdf,
   fitText,
   keyColumnWidth,
   keyLabel,
@@ -16,10 +17,14 @@ import {
   MM_TO_PT,
   pdfFilename,
   pdfLayout,
+  tileScale,
   toWinAnsi,
+  type ChartPageTile,
   type KeyEntry,
+  type OverviewArt,
   type PdfOptions,
 } from '../src/export/pdf.ts';
+import { isPlanError, planPages } from '../src/export/pages.ts';
 import { glyphById } from '../src/core/symbols/glyphs.ts';
 
 const OPTIONS: PdfOptions = {
@@ -118,6 +123,72 @@ describe('buildChartPdf', () => {
   it('degrades a non-Latin title instead of failing', async () => {
     const bytes = await buildChartPdf(PNG_1PX, 100, 100, [], { ...OPTIONS, title: 'Fox 🦊' });
     expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
+  });
+});
+
+describe('buildMultiPagePdf (M10)', () => {
+  /** Tiles for a 100×100 grid at 50/page with 3 overlap, fake rasters. */
+  function fixtures(): { tiles: ChartPageTile[]; overview: OverviewArt } {
+    const plan = planPages(100, 100, 50, 3);
+    if (isPlanError(plan)) throw new Error(plan.error);
+    const cellPx = 10;
+    const originPx = 30;
+    const tiles = plan.pages.map((slice) => ({
+      png: PNG_1PX,
+      pxW: originPx + (slice.x1 - slice.x0) * cellPx + 2,
+      pxH: originPx + (slice.y1 - slice.y0) * cellPx + 2,
+      cellPx,
+      cellOriginX: originPx,
+      cellOriginY: originPx,
+      slice,
+    }));
+    return {
+      tiles,
+      overview: {
+        png: PNG_1PX,
+        pxW: 460,
+        pxH: 460,
+        cellPx: 4,
+        cellOriginX: 30,
+        cellOriginY: 30,
+        gridW: 100,
+        gridH: 100,
+      },
+    };
+  }
+
+  it('produces the cover plus one page per tile, all at the page size', async () => {
+    const { tiles, overview } = fixtures();
+    const plan = planPages(100, 100, 50, 3);
+    if (isPlanError(plan)) throw new Error(plan.error);
+    const bytes = await buildMultiPagePdf(tiles, plan, overview, ENTRIES, OPTIONS);
+    const doc = await PDFDocument.load(bytes);
+    expect(doc.getPageCount()).toBe(5);
+    for (const page of doc.getPages()) {
+      expect(page.getWidth()).toBeCloseTo(595.28, 1);
+      expect(page.getHeight()).toBeCloseTo(841.89, 1);
+    }
+  });
+
+  it('uses one shared scale that fits the largest tile above the footer', () => {
+    const { tiles } = fixtures();
+    const scale = tileScale(tiles, OPTIONS);
+    const margin = 15 * MM_TO_PT;
+    const contentW = 595.28 - 2 * margin;
+    const maxW = Math.max(...tiles.map((t) => t.pxW));
+    const maxH = Math.max(...tiles.map((t) => t.pxH));
+    expect(maxW * scale).toBeLessThanOrEqual(contentW + 1e-6);
+    expect(maxH * scale).toBeLessThanOrEqual(841.89 - 2 * margin - 14 + 1e-6);
+    // Uniform: the same number scales every page — asserted by type
+    // (one value), checked here against the driving constraint.
+    expect(scale).toBeGreaterThan(0);
+  });
+
+  it('refuses margins that leave no room', () => {
+    const { tiles } = fixtures();
+    expect(() => tileScale(tiles, { ...OPTIONS, marginMm: 300 })).toThrow(
+      /margins leave no room/,
+    );
   });
 });
 

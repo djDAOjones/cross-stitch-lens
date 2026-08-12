@@ -7,6 +7,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_GRID_VALUES } from '../src/core/grid-style.ts';
 import {
   DEFAULT_PREVIEW,
   MAX_GRID_SIDE,
@@ -58,14 +59,37 @@ function sampleProject(): ProjectFile {
       overrides: [{ threadId: 'dmc:817', symbolId: 'circle' }],
     },
     gridStyle: {
-      show: true,
-      minorInterval: 1,
-      majorInterval: 10,
-      color: '#666666',
-      minorThickness: 1,
-      majorThickness: 2,
-      ticks: true,
-      tickFontPx: 11,
+      screen: {
+        show: true,
+        minorInterval: 1,
+        majorInterval: 10,
+        color: '#666666',
+        majorColor: '#333333',
+        minorThickness: 1,
+        majorThickness: 2,
+        opacity: 0.8,
+        minorDash: true,
+        borderThickness: 3,
+        borderColor: '#000000',
+        ticks: true,
+        tickFontPx: 11,
+      },
+      print: {
+        show: true,
+        minorInterval: 1,
+        majorInterval: 10,
+        color: '#000000',
+        majorColor: '#000000',
+        minorThickness: 1,
+        majorThickness: 3,
+        opacity: 1,
+        minorDash: false,
+        borderThickness: 4,
+        borderColor: '#000000',
+        ticks: true,
+        tickFontPx: 14,
+      },
+      preset: null,
     },
     preview: { mode: 'manual', cssPxPerStitch: 2.5 },
     export: {
@@ -74,9 +98,67 @@ function sampleProject(): ProjectFile {
       color: '#ffffff',
       chartCell: 10,
       chartMode: 'symbols',
-      pdf: { pageSize: 'a4', orientation: 'portrait', marginMm: 15, title: 'Test design' },
+      pdf: {
+        pageSize: 'a4',
+        orientation: 'portrait',
+        marginMm: 15,
+        title: 'Test design',
+        pages: 'grid',
+        stitchesPerPage: 60,
+        overlapStitches: 2,
+      },
+    },
+    estimates: {
+      fabricCount: 16,
+      marginCm: 6,
+      strands: 3,
+      routingFactor: 1.3,
+      wasteShare: 0.15,
+      skeinMetres: 8,
     },
   };
+}
+
+/**
+ * The flat pre-v7 gridStyle block exactly as v1–v6 files carried it.
+ * Non-default values on purpose, so the migrated result can only be
+ * labelled Custom (preset null), never accidentally a built-in.
+ */
+function legacyGridStyle(): Record<string, unknown> {
+  return {
+    show: true,
+    minorInterval: 1,
+    majorInterval: 10,
+    color: '#444444',
+    minorThickness: 1,
+    majorThickness: 2,
+    ticks: true,
+    tickFontPx: 12,
+  };
+}
+
+/**
+ * What `legacyGridStyle` must migrate to: both halves seeded from the
+ * one flat block (major and border inherit the line colour; opacity,
+ * dash, and border take their appearance-preserving identities).
+ */
+function migratedLegacyGrid(): ProjectFile['gridStyle'] {
+  const half = {
+    show: true,
+    minorInterval: 1,
+    majorInterval: 10,
+    color: '#444444',
+    majorColor: '#444444',
+    minorThickness: 1,
+    majorThickness: 2,
+    opacity: 1,
+    minorDash: false,
+    borderThickness: 0,
+    borderColor: '#444444',
+    ticks: true,
+    tickFontPx: 12,
+  };
+  return { screen: { ...half }, print: { ...half }, preset: null };
 }
 
 describe('serializeProject / parseProject round trip', () => {
@@ -92,6 +174,7 @@ describe('serializeProject / parseProject round trip', () => {
   it('canonicalises caller key order, so shuffled input still round-trips', () => {
     const file = sampleProject();
     const shuffled = JSON.stringify({
+      estimates: file.estimates,
       export: file.export,
       preview: file.preview,
       gridStyle: file.gridStyle,
@@ -219,12 +302,49 @@ describe('parseProject validation', () => {
     ).toThrow('pipeline.dither.serpentine');
   });
 
-  it('rejects a malformed grid-line colour', () => {
+  it('rejects a malformed grid-line colour, naming the half', () => {
     expect(() =>
       parseProject(
-        mutated((doc) => ((doc['gridStyle'] as Record<string, unknown>)['color'] = 'red')),
+        mutated((doc) => {
+          const block = doc['gridStyle'] as { screen: Record<string, unknown> };
+          block.screen['color'] = 'red';
+        }),
       ),
-    ).toThrow('gridStyle.color');
+    ).toThrow('gridStyle.screen.color');
+  });
+
+  it('rejects an out-of-range line opacity, naming the half', () => {
+    expect(() =>
+      parseProject(
+        mutated((doc) => {
+          const block = doc['gridStyle'] as { print: Record<string, unknown> };
+          block.print['opacity'] = 1.5;
+        }),
+      ),
+    ).toThrow('gridStyle.print.opacity');
+  });
+
+  it('rejects a missing print half, naming the path', () => {
+    expect(() =>
+      parseProject(
+        mutated((doc) => delete (doc['gridStyle'] as Record<string, unknown>)['print']),
+      ),
+    ).toThrow('gridStyle.print');
+  });
+
+  it('rejects preset-id shape abuse but keeps unknown ids', () => {
+    expect(() =>
+      parseProject(
+        mutated(
+          (doc) => ((doc['gridStyle'] as Record<string, unknown>)['preset'] = 'x'.repeat(65)),
+        ),
+      ),
+    ).toThrow('gridStyle.preset');
+    // Forward-friendly: a future build's preset id loads as-is.
+    const future = parseProject(
+      mutated((doc) => ((doc['gridStyle'] as Record<string, unknown>)['preset'] = 'squares')),
+    );
+    expect(future.gridStyle.preset).toBe('squares');
   });
 
   it('rejects an unknown PDF page size', () => {
@@ -282,6 +402,7 @@ describe('migration from schema v1', () => {
     const pipeline = doc['pipeline'] as Record<string, unknown>;
     pipeline['dither'] = true;
     pipeline['serpentine'] = true;
+    doc['gridStyle'] = legacyGridStyle();
     doc['schemaVersion'] = 1;
     return JSON.stringify(doc);
   }
@@ -300,7 +421,8 @@ describe('migration from schema v1', () => {
     const loaded = parseProject(v1Document());
     const original = sampleProject();
     expect(loaded.pipeline).toEqual(original.pipeline);
-    expect(loaded.gridStyle).toEqual(original.gridStyle);
+    // The flat v1 grid style arrives split into the v7 halves.
+    expect(loaded.gridStyle).toEqual(migratedLegacyGrid());
     expect(loaded.export).toEqual(original.export);
   });
 
@@ -319,6 +441,7 @@ describe('migration from schema v1', () => {
 describe('migration from schema v3 dither', () => {
   function v3Document(dither: boolean, serpentine: boolean): string {
     const doc = JSON.parse(serializeProject(sampleProject())) as Record<string, unknown>;
+    doc['gridStyle'] = legacyGridStyle();
     const pipeline = doc['pipeline'] as Record<string, unknown>;
     pipeline['dither'] = dither;
     pipeline['serpentine'] = serpentine;
@@ -564,6 +687,7 @@ describe('migration from schema v4 palette (M15-PERSIST-01, D114 waiver)', () =>
   function v4Document(policy: Record<string, unknown>, snapshot: unknown[]): string {
     const doc = JSON.parse(serializeProject(sampleProject())) as Record<string, unknown>;
     doc['palette'] = { policy, snapshot };
+    doc['gridStyle'] = legacyGridStyle();
     doc['schemaVersion'] = 4;
     return JSON.stringify(doc);
   }
@@ -634,6 +758,7 @@ describe('migration from schema v5 symbols', () => {
     const doc = JSON.parse(serializeProject(sampleProject())) as Record<string, unknown>;
     delete doc['symbols'];
     delete (doc['export'] as Record<string, unknown>)['chartMode'];
+    doc['gridStyle'] = legacyGridStyle();
     doc['schemaVersion'] = 5;
     return JSON.stringify(doc);
   }
@@ -648,6 +773,125 @@ describe('migration from schema v5 symbols', () => {
   it('re-saves the migrated file byte-stable at the current schema', () => {
     const migrated = serializeProject(parseProject(v5Document()));
     expect(serializeProject(parseProject(migrated))).toBe(migrated);
+  });
+});
+
+/**
+ * v6 → v7 (M11): the single grid style splits into screen + print
+ * halves with preset provenance. Migration must preserve appearance
+ * exactly (both halves seed from the one block that drove both
+ * surfaces) and label the values honestly.
+ */
+describe('migration from schema v6 grid style', () => {
+  function v6Document(grid: Record<string, unknown>): string {
+    const doc = JSON.parse(serializeProject(sampleProject())) as Record<string, unknown>;
+    doc['gridStyle'] = grid;
+    doc['schemaVersion'] = 6;
+    return JSON.stringify(doc);
+  }
+
+  it('splits the flat style into identical screen and print halves', () => {
+    const loaded = parseProject(v6Document(legacyGridStyle()));
+    expect(loaded.migratedFrom).toBe(6);
+    expect(loaded.gridStyle).toEqual(migratedLegacyGrid());
+  });
+
+  it('labels untouched default styling as the Every 10 preset', () => {
+    const flatDefaults = {
+      show: true,
+      minorInterval: 1,
+      majorInterval: 10,
+      color: '#666666',
+      minorThickness: 1,
+      majorThickness: 2,
+      ticks: true,
+      tickFontPx: 11,
+    };
+    const loaded = parseProject(v6Document(flatDefaults));
+    expect(loaded.gridStyle.preset).toBe('every-10');
+    expect(loaded.gridStyle.screen).toEqual(DEFAULT_GRID_VALUES);
+    expect(loaded.gridStyle.print).toEqual(DEFAULT_GRID_VALUES);
+  });
+
+  it('re-saves the migrated file byte-stable at the current schema', () => {
+    const migrated = serializeProject(parseProject(v6Document(legacyGridStyle())));
+    expect(serializeProject(parseProject(migrated))).toBe(migrated);
+    expect(migrated).not.toContain('migratedFrom');
+  });
+});
+
+/**
+ * v7 → v8 (M10): PDF pagination arrives. Older files exported one
+ * fitted page, which the migrated 'single' states exactly; the
+ * grid-mode numbers arrive at the UI defaults, inert until chosen.
+ */
+describe('migration from schema v7 pdf pages', () => {
+  function v7Document(): string {
+    const doc = JSON.parse(serializeProject(sampleProject())) as Record<string, unknown>;
+    const exportPrefs = doc['export'] as Record<string, unknown>;
+    const pdf = exportPrefs['pdf'] as Record<string, unknown>;
+    delete pdf['pages'];
+    delete pdf['stitchesPerPage'];
+    delete pdf['overlapStitches'];
+    doc['schemaVersion'] = 7;
+    return JSON.stringify(doc);
+  }
+
+  it('adds single-page mode with the default paging numbers', () => {
+    const loaded = parseProject(v7Document());
+    expect(loaded.migratedFrom).toBe(7);
+    expect(loaded.export.pdf.pages).toBe('single');
+    expect(loaded.export.pdf.stitchesPerPage).toBe(60);
+    expect(loaded.export.pdf.overlapStitches).toBe(2);
+  });
+
+  it('re-saves the migrated file byte-stable at the current schema', () => {
+    const migrated = serializeProject(parseProject(v7Document()));
+    expect(serializeProject(parseProject(migrated))).toBe(migrated);
+  });
+
+  it('rejects an unknown pages mode, naming the path', () => {
+    const doc = JSON.parse(serializeProject(sampleProject())) as Record<string, unknown>;
+    ((doc['export'] as Record<string, unknown>)['pdf'] as Record<string, unknown>)['pages'] =
+      'booklet';
+    expect(() => parseProject(JSON.stringify(doc))).toThrow('export.pdf.pages');
+  });
+});
+
+/**
+ * v8 → v9 (M12): fabric and estimation settings arrive. Older files
+ * never chose a fabric; the documented defaults are the model.
+ */
+describe('migration from schema v8 estimates', () => {
+  function v8Document(): string {
+    const doc = JSON.parse(serializeProject(sampleProject())) as Record<string, unknown>;
+    delete doc['estimates'];
+    doc['schemaVersion'] = 8;
+    return JSON.stringify(doc);
+  }
+
+  it('seeds the documented default estimation model', () => {
+    const loaded = parseProject(v8Document());
+    expect(loaded.migratedFrom).toBe(8);
+    expect(loaded.estimates).toEqual({
+      fabricCount: 14,
+      marginCm: 5,
+      strands: 2,
+      routingFactor: 1.2,
+      wasteShare: 0.1,
+      skeinMetres: 8,
+    });
+  });
+
+  it('re-saves the migrated file byte-stable at the current schema', () => {
+    const migrated = serializeProject(parseProject(v8Document()));
+    expect(serializeProject(parseProject(migrated))).toBe(migrated);
+  });
+
+  it('rejects an out-of-range waste share, naming the path', () => {
+    const doc = JSON.parse(serializeProject(sampleProject())) as Record<string, unknown>;
+    (doc['estimates'] as Record<string, unknown>)['wasteShare'] = 2;
+    expect(() => parseProject(JSON.stringify(doc))).toThrow('estimates.wasteShare');
   });
 });
 

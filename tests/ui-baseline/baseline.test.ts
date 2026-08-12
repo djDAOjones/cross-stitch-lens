@@ -29,6 +29,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
+import { DEFAULT_GRID_VALUES } from '../../src/core/grid-style.ts';
 import { DEFAULT_DITHER, type PipelineConfig } from '../../src/core/pipeline/config.ts';
 import { type PalettePolicy } from '../../src/core/palette-policy.ts';
 import { resolveProjectPalette } from '../../src/core/palette-resolve.ts';
@@ -112,15 +113,14 @@ function defaultProject(config: PipelineConfig): ProjectFile {
       design: { count: { mode: 'max', n: 8 }, minDistance: 0, mustUse: [] },
       snapshot: config.palette?.entries ?? [],
     },
+    // Schema v7 (M11): screen + print halves, both at the defaults a
+    // fresh session holds — which byte-match the Every 10 preset, so
+    // that is the honest provenance (the projectJson pin moved for
+    // the bump; the engine hashes never move).
     gridStyle: {
-      show: true,
-      minorInterval: 1,
-      majorInterval: 10,
-      color: '#666666',
-      minorThickness: 1,
-      majorThickness: 2,
-      ticks: true,
-      tickFontPx: 11,
+      screen: { ...DEFAULT_GRID_VALUES },
+      print: { ...DEFAULT_GRID_VALUES },
+      preset: 'every-10',
     },
     // A fresh session has granted nothing: the full catalogue queued in
     // canonical order, exactly as `initialSymbolState` builds it
@@ -134,7 +134,25 @@ function defaultProject(config: PipelineConfig): ProjectFile {
       color: '#ffffff',
       chartCell: 10,
       chartMode: 'color',
-      pdf: { pageSize: 'a4', orientation: 'portrait', marginMm: 15, title: '' },
+      pdf: {
+        pageSize: 'a4',
+        orientation: 'portrait',
+        marginMm: 15,
+        title: '',
+        // Schema v8 (M10): one fitted page stays the default.
+        pages: 'single',
+        stitchesPerPage: 60,
+        overlapStitches: 2,
+      },
+    },
+    // Schema v9 (M12): the documented default estimation model.
+    estimates: {
+      fabricCount: 14,
+      marginCm: 5,
+      strands: 2,
+      routingFactor: 1.2,
+      wasteShare: 0.1,
+      skeinMetres: 8,
     },
   };
 }

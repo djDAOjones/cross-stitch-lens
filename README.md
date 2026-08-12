@@ -19,13 +19,15 @@ WebGPU as profiled drop-in backends.
 
 Pre-MVP. Work is organised into milestones in
 [`pm_skills/project/backlog.md`](pm_skills/project/backlog.md).
-**M0–M8, M13, M14 and M15 have all shipped** (v0.5.0). Ship order is
-no longer milestone-number order — next is **Batch C0** (a mechanical
-tooling and defect batch), then **Track A, the printable pattern**:
-M9 symbols and B/W charting → M11 grid and tick styling → M16
-print-sized export defaults → M10 multi-page PDF → M12 fabric and
-thread estimates. That arc is the app's unfinished half: today's chart
-PDF is one page, colour cells only, and sized for the screen.
+**M0–M8, M13, M14, M15 and Batch C0 have all shipped** (v0.5.0), and
+**Track A — the printable pattern — is build-complete**: M9 symbols
+and B/W charting (build landed; owner signatures on printed evidence
+outstanding), M11 grid and tick styling presets (schema v7's
+screen/print styling split), M10 multi-page PDF export (schema v8 — a
+page planner, cover map, and ruler-true tiled pages), and M12 fabric
+and thread estimates (schema v9, every result disclosing its
+assumptions). What remains in the arc is human: the M9 signatures and
+M16's print-sized export defaults sitting.
 
 **M15 (colour & dithering profiles)** closed on both acceptance gates
 (D148): colour profiles as composition recipes with a kind-agnostic

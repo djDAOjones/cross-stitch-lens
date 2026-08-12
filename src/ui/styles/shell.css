@@ -444,6 +444,11 @@ main {
   border: 1px solid var(--csl-border-strong);
   padding: var(--csl-spacing-05);
   width: min(24rem, 100%);
+  /* A tall form (Grid options carries screen + print fieldsets, M11)
+    scrolls inside the dialog — the page behind never scrolls, and
+    the focus ring stays inside the visible layer. */
+  max-height: 100%;
+  overflow-y: auto;
 }
 
 .modal-title {

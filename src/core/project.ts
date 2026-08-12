@@ -18,6 +18,9 @@
 
 import type { ColorMetric } from './color/metrics.ts';
 import type { ColorProfileRecipe, HsbRangeRule } from './color-profile.ts';
+import { DEFAULT_ESTIMATES, type EstimateSettings } from './estimates.ts';
+import { matchGridPreset } from './grid-presets.ts';
+import type { GridStyleValues } from './grid-style.ts';
 import type { CountMode } from './palette-policy.ts';
 import type { DitherConfig, OrderPreset } from './pipeline/config.ts';
 import type { ResizeMode } from './pipeline/resize.ts';
@@ -25,7 +28,7 @@ import type { SymbolPair } from './symbols/assignment.ts';
 import type { Provenance, Thread, ThreadStatus } from './types.ts';
 
 /** Current project-file schema version. Bump with a forward migration. */
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 9;
 
 /**
  * Hard ceiling on a persisted palette snapshot.
@@ -124,22 +127,27 @@ export interface ProjectSymbols {
 export type ChartMode = 'color' | 'symbols' | 'color-symbols';
 
 /**
- * Grid/chart styling as stored (§15–§16 subset), in CSS px. The
- * theme-derived tick text colour is intentionally not persisted —
- * it is recomputed from the page colour scheme at render time.
+ * One grid-styling half as stored — exactly the core style-values
+ * shape (§15–§16 subset). The theme-derived tick text colour is
+ * intentionally not persisted — it is recomputed from the page
+ * colour scheme at render time.
  */
-export interface ProjectGridStyle {
-  show: boolean;
-  /** Stitches between minor lines (≥ 1). */
-  minorInterval: number;
-  /** Stitches between major lines; 0 disables major lines. */
-  majorInterval: number;
-  /** `#rrggbb` line colour shared by minor and major lines. */
-  color: string;
-  minorThickness: number;
-  majorThickness: number;
-  ticks: boolean;
-  tickFontPx: number;
+export type ProjectGridStyle = GridStyleValues;
+
+/**
+ * Grid/chart styling as stored (schema v7, M11): a **screen** half in
+ * CSS px driving the preview overlay and a **print** half in raster
+ * px driving the chart PNG and the PDF's embedded chart — the two
+ * surfaces stopped sharing one block because print wants different
+ * ink than a live preview. `preset` is provenance only (the built-in
+ * both halves last came from; null = custom): the canonical values
+ * above always win, so a preset changing in a later release can never
+ * restyle a saved design.
+ */
+export interface ProjectGridBlock {
+  screen: ProjectGridStyle;
+  print: ProjectGridStyle;
+  preset: string | null;
 }
 
 /**
@@ -180,10 +188,19 @@ export interface ProjectExport {
     orientation: 'portrait' | 'landscape';
     marginMm: number;
     title: string;
+    /**
+     * PDF pagination (schema v8, M10): 'single' fits the whole chart
+     * on one page (the pre-M10 behaviour); 'grid' tiles it at
+     * `stitchesPerPage` fresh stitches per axis with
+     * `overlapStitches` repeated at leading joins.
+     */
+    pages: 'single' | 'grid';
+    stitchesPerPage: number;
+    overlapStitches: number;
   };
 }
 
-/** The full project file. This shape is schema v5, verbatim. */
+/** The full project file. This shape is schema v7, verbatim. */
 export interface ProjectFile {
   schemaVersion: typeof SCHEMA_VERSION;
   /**
@@ -197,9 +214,12 @@ export interface ProjectFile {
   palette: ProjectPalette | null;
   /** Symbol grants, queue, and overrides (schema v6, M9). */
   symbols: ProjectSymbols;
-  gridStyle: ProjectGridStyle;
+  /** Screen + print styling and preset provenance (schema v7, M11). */
+  gridStyle: ProjectGridBlock;
   preview: ProjectPreview;
   export: ProjectExport;
+  /** Fabric and thread-estimation settings (schema v9, M12). */
+  estimates: EstimateSettings;
 }
 
 /** The v2 preview block a migrated v1 file gets: fit to the space. */
@@ -280,6 +300,25 @@ function canonicalSymbols(symbols: ProjectSymbols): ProjectSymbols {
   };
 }
 
+/** Canonical field order for one grid style-values half (schema v7). */
+function canonicalGridValues(values: ProjectGridStyle): ProjectGridStyle {
+  return {
+    show: values.show,
+    minorInterval: values.minorInterval,
+    majorInterval: values.majorInterval,
+    color: values.color,
+    majorColor: values.majorColor,
+    minorThickness: values.minorThickness,
+    majorThickness: values.majorThickness,
+    opacity: values.opacity,
+    minorDash: values.minorDash,
+    borderThickness: values.borderThickness,
+    borderColor: values.borderColor,
+    ticks: values.ticks,
+    tickFontPx: values.tickFontPx,
+  };
+}
+
 /** Canonical field order for the dither union, per algorithm family. */
 function canonicalDither(dither: DitherConfig): DitherConfig {
   if (dither.algorithm === 'none') return { algorithm: 'none' };
@@ -313,14 +352,9 @@ export function serializeProject(file: ProjectFile): string {
     palette: file.palette === null ? null : canonicalPalette(file.palette),
     symbols: canonicalSymbols(file.symbols),
     gridStyle: {
-      show: file.gridStyle.show,
-      minorInterval: file.gridStyle.minorInterval,
-      majorInterval: file.gridStyle.majorInterval,
-      color: file.gridStyle.color,
-      minorThickness: file.gridStyle.minorThickness,
-      majorThickness: file.gridStyle.majorThickness,
-      ticks: file.gridStyle.ticks,
-      tickFontPx: file.gridStyle.tickFontPx,
+      screen: canonicalGridValues(file.gridStyle.screen),
+      print: canonicalGridValues(file.gridStyle.print),
+      preset: file.gridStyle.preset,
     },
     preview: {
       mode: file.preview.mode,
@@ -337,7 +371,18 @@ export function serializeProject(file: ProjectFile): string {
         orientation: file.export.pdf.orientation,
         marginMm: file.export.pdf.marginMm,
         title: file.export.pdf.title,
+        pages: file.export.pdf.pages,
+        stitchesPerPage: file.export.pdf.stitchesPerPage,
+        overlapStitches: file.export.pdf.overlapStitches,
       },
+    },
+    estimates: {
+      fabricCount: file.estimates.fabricCount,
+      marginCm: file.estimates.marginCm,
+      strands: file.estimates.strands,
+      routingFactor: file.estimates.routingFactor,
+      wasteShare: file.estimates.wasteShare,
+      skeinMetres: file.estimates.skeinMetres,
     },
   };
   return `${JSON.stringify(canonical, null, 2)}\n`;
@@ -553,6 +598,50 @@ function asSymbolPairs(value: unknown, path: string): SymbolPair[] {
   });
 }
 
+/** Validate one v7 grid style-values half. */
+function parseGridValues(value: unknown, path: string): ProjectGridStyle {
+  const raw = asRecord(value, path);
+  return {
+    show: asBool(raw['show'], `${path}.show`),
+    minorInterval: asInt(raw['minorInterval'], `${path}.minorInterval`, 1, 1000),
+    majorInterval: asInt(raw['majorInterval'], `${path}.majorInterval`, 0, 1000),
+    color: asHexColor(raw['color'], `${path}.color`),
+    majorColor: asHexColor(raw['majorColor'], `${path}.majorColor`),
+    minorThickness: asInt(raw['minorThickness'], `${path}.minorThickness`, 1, 16),
+    majorThickness: asInt(raw['majorThickness'], `${path}.majorThickness`, 1, 16),
+    opacity: asNumber(raw['opacity'], `${path}.opacity`, 0, 1),
+    minorDash: asBool(raw['minorDash'], `${path}.minorDash`),
+    borderThickness: asInt(raw['borderThickness'], `${path}.borderThickness`, 0, 16),
+    borderColor: asHexColor(raw['borderColor'], `${path}.borderColor`),
+    ticks: asBool(raw['ticks'], `${path}.ticks`),
+    tickFontPx: asInt(raw['tickFontPx'], `${path}.tickFontPx`, 4, 96),
+  };
+}
+
+/**
+ * Validate the v7 grid block. The preset id is forward-friendly: any
+ * sane string is kept (a file from a newer release may name a preset
+ * this build lacks — the UI shows it as Custom), only shape abuse is
+ * refused.
+ */
+function parseGridBlock(value: unknown): ProjectGridBlock {
+  const raw = asRecord(value, 'gridStyle');
+  const presetRaw = raw['preset'];
+  let preset: string | null = null;
+  if (presetRaw !== null && presetRaw !== undefined) {
+    const id = asString(presetRaw, 'gridStyle.preset');
+    if (id.length === 0 || id.length > 64) {
+      fail('gridStyle.preset', 'a preset id of 1–64 characters or null');
+    }
+    preset = id;
+  }
+  return {
+    screen: parseGridValues(raw['screen'], 'gridStyle.screen'),
+    print: parseGridValues(raw['print'], 'gridStyle.print'),
+    preset,
+  };
+}
+
 /** Validate the v6 symbols block. */
 function parseSymbols(value: unknown): ProjectSymbols {
   const raw = asRecord(value, 'symbols');
@@ -649,9 +738,72 @@ function migrateProject(raw: Record<string, unknown>, version: number): Record<s
     // exactly — the app's reconcile fills the queue from its own
     // catalogue. Charts painted colour cells, so that is the mode.
     if (at === 6) doc = migrateV5Symbols(doc);
+    // v6 → v7: the single grid style splits into screen + print
+    // halves with preset provenance (M11).
+    if (at === 7) doc = migrateV6GridStyle(doc);
+    // v7 → v8: PDF pagination arrives (M10). Older files exported one
+    // fitted page, which 'single' states exactly; the grid-mode
+    // numbers are the UI defaults, inert until the mode is chosen.
+    if (at === 8) doc = migrateV7PdfPages(doc);
+    // v8 → v9: fabric and thread-estimation settings arrive (M12).
+    // Older files never chose a fabric; the documented defaults are
+    // exactly the model the readouts would have shown.
+    if (at === 9 && doc['estimates'] === undefined) {
+      doc = { ...doc, estimates: { ...DEFAULT_ESTIMATES } };
+    }
     doc = { ...doc, schemaVersion: at };
   }
   return doc;
+}
+
+/** Add the v8 PDF pagination fields, filling only what is absent. */
+function migrateV7PdfPages(doc: Record<string, unknown>): Record<string, unknown> {
+  const exportPrefs = asRecord(doc['export'], 'export');
+  const pdf = {
+    pages: 'single',
+    stitchesPerPage: 60,
+    overlapStitches: 2,
+    ...asRecord(exportPrefs['pdf'], 'export.pdf'),
+  };
+  return { ...doc, export: { ...exportPrefs, pdf } };
+}
+
+/**
+ * Split the v6 flat grid style into the v7 screen/print pair (M11).
+ * Both halves seed from the one block that previously drove both
+ * surfaces, and the new fields take their appearance-preserving
+ * identities (full opacity, solid, no border, major sharing the line
+ * colour) — a migrated file renders exactly as it did. The preset
+ * label attaches only when the seeded values byte-match a built-in
+ * (an untouched v6 file is exactly "Every 10"); anything else is
+ * honestly Custom. Field values pass through raw — the validator
+ * after migration is the judge, and a mismatch simply never matches
+ * a preset.
+ */
+function migrateV6GridStyle(doc: Record<string, unknown>): Record<string, unknown> {
+  const old = asRecord(doc['gridStyle'], 'gridStyle');
+  const half = (): Record<string, unknown> => ({
+    show: old['show'],
+    minorInterval: old['minorInterval'],
+    majorInterval: old['majorInterval'],
+    color: old['color'],
+    majorColor: old['color'],
+    minorThickness: old['minorThickness'],
+    majorThickness: old['majorThickness'],
+    opacity: 1,
+    minorDash: false,
+    borderThickness: 0,
+    borderColor: old['color'],
+    ticks: old['ticks'],
+    tickFontPx: old['tickFontPx'],
+  });
+  const screen = half();
+  const print = half();
+  const preset = matchGridPreset(
+    screen as unknown as GridStyleValues,
+    print as unknown as GridStyleValues,
+  );
+  return { ...doc, gridStyle: { screen, print, preset } };
 }
 
 /** Lift the v4 policy palette block into the v5 recipe shape. */
@@ -768,10 +920,10 @@ export function parseProject(json: string): ProjectFile {
 
   const pipeline = asRecord(doc['pipeline'], 'pipeline');
   const grid = asRecord(pipeline['grid'], 'pipeline.grid');
-  const gridStyle = asRecord(doc['gridStyle'], 'gridStyle');
   const preview = asRecord(doc['preview'], 'preview');
   const exportPrefs = asRecord(doc['export'], 'export');
   const pdf = asRecord(exportPrefs['pdf'], 'export.pdf');
+  const estimates = asRecord(doc['estimates'], 'estimates');
 
   return {
     schemaVersion: SCHEMA_VERSION,
@@ -794,16 +946,7 @@ export function parseProject(json: string): ProjectFile {
     },
     palette: parsePalette(doc['palette']),
     symbols: parseSymbols(doc['symbols']),
-    gridStyle: {
-      show: asBool(gridStyle['show'], 'gridStyle.show'),
-      minorInterval: asInt(gridStyle['minorInterval'], 'gridStyle.minorInterval', 1, 1000),
-      majorInterval: asInt(gridStyle['majorInterval'], 'gridStyle.majorInterval', 0, 1000),
-      color: asHexColor(gridStyle['color'], 'gridStyle.color'),
-      minorThickness: asInt(gridStyle['minorThickness'], 'gridStyle.minorThickness', 1, 16),
-      majorThickness: asInt(gridStyle['majorThickness'], 'gridStyle.majorThickness', 1, 16),
-      ticks: asBool(gridStyle['ticks'], 'gridStyle.ticks'),
-      tickFontPx: asInt(gridStyle['tickFontPx'], 'gridStyle.tickFontPx', 4, 96),
-    },
+    gridStyle: parseGridBlock(doc['gridStyle']),
     preview: {
       mode: asOneOf(preview['mode'], 'preview.mode', ['space', 'width', 'height', 'manual']),
       cssPxPerStitch: asNumber(
@@ -834,7 +977,18 @@ export function parseProject(json: string): ProjectFile {
         ]),
         marginMm: asInt(pdf['marginMm'], 'export.pdf.marginMm', 0, 100),
         title: asString(pdf['title'], 'export.pdf.title'),
+        pages: asOneOf(pdf['pages'], 'export.pdf.pages', ['single', 'grid']),
+        stitchesPerPage: asInt(pdf['stitchesPerPage'], 'export.pdf.stitchesPerPage', 1, 1024),
+        overlapStitches: asInt(pdf['overlapStitches'], 'export.pdf.overlapStitches', 0, 50),
       },
+    },
+    estimates: {
+      fabricCount: asNumber(estimates['fabricCount'], 'estimates.fabricCount', 1, 60),
+      marginCm: asNumber(estimates['marginCm'], 'estimates.marginCm', 0, 50),
+      strands: asInt(estimates['strands'], 'estimates.strands', 1, 6),
+      routingFactor: asNumber(estimates['routingFactor'], 'estimates.routingFactor', 1, 5),
+      wasteShare: asNumber(estimates['wasteShare'], 'estimates.wasteShare', 0, 1),
+      skeinMetres: asNumber(estimates['skeinMetres'], 'estimates.skeinMetres', 1, 100),
     },
   };
 }

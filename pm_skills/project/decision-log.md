@@ -1434,3 +1434,50 @@ already reserves it).
 
 **Link:** SAVE-01 ships with it (a design's title names its file).
 Build starts at the option gate — the file-format pick.
+
+## D172 — PUB-04: GitHub Pages serves the built bundle, not the raw branch (2026-08-22)
+
+**The owner switched GitHub Pages on** to share the app (2026-08-22,
+"Deploy from a branch": `main`, `/(root)`) and the live URL served
+an empty shell. The raw repository is not the app: `index.html` asks
+the browser for `/src/main.ts` — TypeScript, resolved against the
+domain root — so nothing loads. The branch deploy also published the
+whole tree (docs, project memory, tests, the demo photos) at a public
+URL.
+
+**Decision.** Publish the production bundle from CI instead. On a push
+to the default branch, a green `npm run check` is followed by a second
+`vite build --base /<repo>/` — a project site lives under
+`/pattern-mapper/`, and the gate's own build at base `/` stays a build
+proof, not the shipped artefact — then `dist` is uploaded as the Pages
+artifact and a `deploy` job publishes it. The bundle carries the Rust
+engine because `check:wasm` has already built the pkg in the same job.
+One runtime string had the domain root baked in — the profile-demo
+slot loader — and now reads `import.meta.env.BASE_URL`, pinned by a
+regression test under a non-root base. `npm run build` and `vite
+preview` keep base `/`, so `bench:auto` and local preview are
+untouched. The Pages source must be **GitHub Actions**: a branch
+source keeps its own build running and races the workflow on every
+push.
+
+**Alternatives.** A committed `gh-pages` branch (build output in git —
+the history the D150 posture avoids); a separate deploy workflow
+chained by `workflow_run` (a second toolchain install, and a run the
+owner correlates by hand); Vite `base: './'` (fragile for the worker
+and wasm asset URLs).
+
+**Gates recorded, not waived.** PUB-02 gates public deploy and is
+still open — `graphic.jpg` was already live under the branch deploy,
+so this change narrows the public surface to `dist` rather than
+widening it; the owner's replacement is now the pressing Track C act.
+PUB-01's "reachable from the app" clause has a real deploy to ship
+with. The bench harness (`bench.html`) rides along in the bundle;
+whether it should is parked.
+
+**Scope.** `.github/workflows/lint.yml`, `src/ui/profile-editor-preview.ts`,
+`tests/profile-editor.test.ts`, `.claude/launch.json` (a base-path
+preview config), `README.md` (live URL), memory files.
+
+**Link:** `DEV-INFRASTRUCTURE.md` § Deployment still reads "post-MVP,
+published by the host" — captured in `doc-deltas.md` for the next
+doc-sync.

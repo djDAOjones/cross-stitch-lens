@@ -6,6 +6,12 @@ name: CI
 # docs-lint baseline, and the report-only secret scan — on every push
 # to the default branch and every pull request.
 # CI parity rule (DEV-INFRASTRUCTURE.md): local green = CI green.
+#
+# On a push to the default branch a green gate is followed by the
+# GitHub Pages publish (D172): the bundle is rebuilt with the
+# project-site base path (`/<repo>/`) and `dist` is deployed. The
+# repository's Pages source must be "GitHub Actions" — a branch
+# source keeps its own build running and races this one.
 
 on:
   push:
@@ -63,3 +69,39 @@ jobs:
         run: npm run check
         env:
           CI: 'true'
+
+      # A project site is served under /<repo>/, so the shipped bundle
+      # is a second build with that base. The gate's own `vite build`
+      # (base `/`) stays a build proof; this one is the artefact. The
+      # wasm pkg check:wasm built above is still on disk, so the bundle
+      # carries the Rust engine. Default-branch pushes only.
+      - name: Build the Pages bundle
+        if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
+        run: npx vite build --base "$BASE_PATH"
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/
+
+      - name: Upload the Pages artifact
+        if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: dist
+
+  deploy:
+    name: Publish to GitHub Pages
+    # `needs` makes a red gate a non-deploy, not a broken site.
+    needs: check
+    if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v5

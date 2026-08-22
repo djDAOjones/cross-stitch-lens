@@ -48,7 +48,7 @@
 
 ## .claude
 
-- `.claude/launch.json` — dev-server launch config for agent browser preview
+- `.claude/launch.json` — dev-server and preview launch configs for agent browser preview, incl. the Pages base-path preview (serves a `dist` built with the same `--base`)
 - `.claude/settings.json` — project agent settings: the SessionStart hook that provisions cloud sessions
 
 ## .githooks
@@ -57,7 +57,7 @@
 
 ## .github
 
-- `.github/workflows/lint.yml` — CI: `npm run check` on Node 22 per push/PR
+- `.github/workflows/lint.yml` — CI: `npm run check` on Node 22 per push/PR; a green default-branch push then rebuilds with the Pages base and publishes `dist` to GitHub Pages (D172)
 
 ## .windsurf
 

@@ -72,3 +72,5 @@ refer to `docs/requirements.md`.
 - Grid style DPR staleness: sendGridStyle premultiplies devicePixelRatio but only re-sends on colour-scheme change — moving the window to a different-DPR display keeps stale thickness/font until the next style edit (from: 2026-08-12 M11)
 - M10 fidelity residue: vector tile furniture (grid/numbering as PDF vectors instead of raster), per-page key policy, A3/custom page sizes — raster tiles at recorded effective DPI stand until print tests demand more (from: 2026-08-12 M10, D168)
 - M12 estimate residue: per-colour skein column in the PDF key and Colours-used rows, an inches/cm display-unit preference, controls for routing/waste/skein-length, and a stitcher's review of defaults and wording (from: 2026-08-12 M12, D169)
+- The bench harness (`bench.html`, `bench-source.html`) ships inside the Pages bundle and its popup path is root-relative — decide whether the public bundle should carry the measurement harness at all (from: 2026-08-22 PUB-04)
+- Post-deploy verification as one command: fetch the live index, compare its `buildId` with the commit just pushed — today a manual step (from: 2026-08-22 PUB-04)

@@ -82,12 +82,16 @@ cannot tell two designs apart.
 Opened 2026-08-11 (D160); audit clean, `LICENSE` landed (D161).
 **Publication proceeds in this repository** (D164): continuity over a
 clean cut; protections rest on the stated posture and the items below.
+**Live since 2026-08-22** at <https://djdaojones.github.io/pattern-mapper/>:
+a green `check` on `main` publishes the built bundle (PUB-04, D172).
+The owner's own branch deploy that day overtook the PUB-02 gate; the
+item stays open and is now the pressing one.
 
 - [ ] **PUB-01 Licences and notices for public distribution** (2026-08-11, decided 2026-08-11)
   **Decision (a) executed (D161)**: proprietary — `LICENSE` (all rights reserved, source-visible) and `THIRD-PARTY-NOTICES.md` committed; both manifests declare `UNLICENSED`.
-  Remaining: the notices become **reachable from the app** (placement is a taste call), shipping with the deploy when deploying becomes real.
+  Remaining: the notices become **reachable from the app** (placement is a taste call), shipping with the next push now that deploying is real (PUB-04, D172).
 - [ ] **PUB-02 Replace `graphic.jpg` and confirm the photo provenance** [maintainer] (2026-08-11)
-  Intent: the flat-graphic demo slot is third-party fan art with a two-layer rights problem (the artist's copyright, and the underlying mark). The owner replaces it; the `PHOTO_SLOTS` contract keeps the name `graphic.jpg`, zero code changes. The item **gates public deploy** (D150: fix HEAD, keep history).
+  Intent: the flat-graphic demo slot is third-party fan art with a two-layer rights problem (the artist's copyright, and the underlying mark). The owner replaces it; the `PHOTO_SLOTS` contract keeps the name `graphic.jpg`, zero code changes. The item **gates public deploy** (D150: fix HEAD, keep history). The 2026-08-22 branch deploy already published HEAD's copy; PUB-04 narrowed the public surface to `dist`, which still carries the slot.
   Done when: `graphic.jpg` at HEAD is rights-clean, and the five photographs are confirmed as the owner's own (`landscape-1.jpg` is load-bearing twice: it seeded the M8 golden crop).
   Owner's replacement plan (2026-08-12): render it — a cube in Blender lit by three RGB lights aimed at the visible corners, giving both a colour spread and a luminance ramp across flat faces, which is exactly what the slot tests. Wholly self-produced from primitives, so the two-layer rights problem dissolves rather than being swapped for another.
 

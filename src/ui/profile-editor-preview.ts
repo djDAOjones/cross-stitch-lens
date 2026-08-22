@@ -77,7 +77,10 @@ export async function fetchSlot(
   decode: (blob: Blob) => Promise<PixelBuffer>,
 ): Promise<PixelBuffer | null> {
   try {
-    const response = await fetch(`/profile-demo/${file}`);
+    // A project site on GitHub Pages lives under /<repo>/ (D172), so
+    // the public folder is reached through Vite's base — never the
+    // domain root. BASE_URL always carries its trailing slash.
+    const response = await fetch(`${import.meta.env.BASE_URL}profile-demo/${file}`);
     if (!response.ok) return null;
     const blob = await response.blob();
     // Vite's dev server answers missing files with index.html; a

@@ -91,6 +91,12 @@ npm run check      # quality gate: typecheck + lint + test + wasm + build
 `localhost` is a secure context, so screen capture and WebGPU work in
 dev without HTTPS. The app is fully offline at runtime.
 
+**Live copy:** every green push to `main` publishes the production
+bundle to GitHub Pages at <https://djdaojones.github.io/pattern-mapper/>
+(the `deploy` job in `.github/workflows/lint.yml`, D172). To preview
+that bundle locally under the same base path:
+`npx vite build --base /pattern-mapper/ && npx vite preview --base /pattern-mapper/`.
+
 ## Key modules and entry points
 
 - `index.html` → `src/main.ts` — app entry.

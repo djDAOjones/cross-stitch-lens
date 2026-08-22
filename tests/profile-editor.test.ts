@@ -6,7 +6,7 @@
  * running app per the house convention.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { userColor } from '../src/core/color-sources.ts';
 import { loadCatalogue } from '../src/core/thread-catalogue.ts';
@@ -146,6 +146,27 @@ describe('preview rig geometry and slots', () => {
       expect(await fetchSlot('portrait.png', () => Promise.reject(new Error('no')))).toBeNull();
     } finally {
       globalThis.fetch = originalFetch;
+    }
+  });
+
+  it('fetches the slot under the deploy base path, not the domain root', async () => {
+    // GitHub Pages serves a project site under /<repo>/ (D172). A
+    // root-absolute URL leaves the site and 404s, which the loader
+    // would report as an honest-looking "Image offline" — so the
+    // base is pinned here under a non-root value.
+    vi.stubEnv('BASE_URL', '/pattern-mapper/');
+    const originalFetch = globalThis.fetch;
+    const requested: string[] = [];
+    globalThis.fetch = ((input: string) => {
+      requested.push(input);
+      return Promise.reject(new Error('offline'));
+    }) as unknown as typeof fetch;
+    try {
+      await fetchSlot('landscape-1.jpg', () => Promise.reject(new Error('no')));
+      expect(requested).toEqual(['/pattern-mapper/profile-demo/landscape-1.jpg']);
+    } finally {
+      globalThis.fetch = originalFetch;
+      vi.unstubAllEnvs();
     }
   });
 });

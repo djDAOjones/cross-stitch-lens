@@ -30,3 +30,4 @@
 - [ ] 2026-08-12 AGENTS.md § Core data model — ProjectFile's gridStyle is a screen/print pair with preset provenance since schema v7 (M11); the shape sketch still reads the flat block (source: D167/M11)
 - [ ] 2026-08-12 AGENTS.md § Core data model — ProjectFile's export.pdf gained pagination fields at schema v8 (M10); the shape sketch predates both v7 and v8 (source: D168/M10)
 - [ ] 2026-08-12 AGENTS.md § Core data model — ProjectFile gained a top-level estimates block at schema v9 (M12); the sketch now trails v7–v9 (one reconciliation covers all three) (source: D169/M12)
+- [ ] 2026-08-22 DEV-INFRASTRUCTURE.md § Deployment / § Dev server — deployment is real: CI publishes `dist` to GitHub Pages on a green default-branch push via `vite build --base /<repo>/`; "post-MVP, published by the host" no longer describes it, and `--base` joins `PORT` as a sanctioned override (source: D172/PUB-04)

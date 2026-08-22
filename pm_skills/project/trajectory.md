@@ -17,6 +17,18 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
+## Track C — Publication (IN PROGRESS, owner-paced)
+
+**Outcome:** the app has a public URL. Licences and notices landed
+(D161), publication proceeds in this repository (D164), and the deploy
+pipeline ships the built bundle from a green gate.
+
+- PUB-04 (2026-08-22) — GitHub Pages serves the built app, not the
+  raw branch: a green `check` on `main` rebuilds with
+  `--base /pattern-mapper/`, uploads `dist` and deploys it, Rust engine
+  included; the one root-baked runtime path (the profile-demo loader)
+  now follows the base, pinned by a regression test. See D172.
+
 ## Track A — The printable pattern (IN PROGRESS)
 
 **Outcome:** the chart became a printable pattern. Four milestones

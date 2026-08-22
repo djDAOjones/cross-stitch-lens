@@ -22,6 +22,20 @@
       ],
       "port": 4173,
       "autoPort": true
+    },
+    {
+      "name": "pattern-mapper-pages-preview",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "vite",
+        "preview",
+        "--base",
+        "/pattern-mapper/",
+        "--port",
+        "4173"
+      ],
+      "port": 4173,
+      "autoPort": true
     }
   ]
 }

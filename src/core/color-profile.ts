@@ -211,6 +211,22 @@ export function resolveProfileMembership(
       }
     }
   }
+  // "My threads" is the inventory of the browser this runs in — not
+  // in the project file — so a shared design meets an empty inventory
+  // first. Name it (COUNT-01): the generic empty-profile sentence sent
+  // the owner's reporter after a library, a pin, or an exclusion, none
+  // of which was the remedy.
+  const mineEmpty =
+    recipe.libraries.includes('mine') && (inputs.owned === undefined || inputs.owned.size === 0);
+  if (mineEmpty && union.length > 0) {
+    conflicts.push({
+      kind: 'owned-none',
+      severity: 'warning',
+      ids: [],
+      message:
+        'My threads is enabled, but your inventory has no threads in this browser, so it contributes nothing to this profile.',
+    });
+  }
   if (recipe.libraries.length === 0 && recipe.include.length === 0) {
     conflicts.push({
       kind: 'no-libraries-enabled',
@@ -292,7 +308,15 @@ export function resolveProfileMembership(
 
   if (entries.length === 0) {
     // Name the proximate emptiness, not a generic failure.
-    if (recipe.ownedOnly && union.length > 0 && narrowed.length === 0) {
+    if (mineEmpty && union.length === 0) {
+      conflicts.push({
+        kind: 'owned-none',
+        severity: 'error',
+        ids: [],
+        message:
+          'This profile draws on My threads, but your inventory has no threads in this browser. Mark threads as owned under "My threads (inventory)", or choose another profile.',
+      });
+    } else if (recipe.ownedOnly && union.length > 0 && narrowed.length === 0) {
       conflicts.push({
         kind: 'owned-none',
         severity: 'error',

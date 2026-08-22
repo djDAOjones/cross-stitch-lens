@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 282 file(s) across 12 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 283 file(s) across 12 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 13 file(s)
 - `.claude` — 2 file(s)
 - `.githooks` — 1 file(s)
@@ -27,7 +27,7 @@
 - `public` — 7 file(s)
 - `scripts` — 20 file(s)
 - `src` — 101 file(s)
-- `tests` — 115 file(s)
+- `tests` — 116 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -315,6 +315,7 @@
 - `tests/modal.test.ts` — pure halves: focus-trap decisions + aria-describedby list arithmetic
 - `tests/palette-policy.test.ts` — Policy resolution: brands/source/inventory/exclusions and every explained conflict
 - `tests/palette-presets.test.ts` — Preset semantics: real references, enabled-brand only, visible degradation, stated rules
+- `tests/palette-resolve.test.ts` — The profile-world resolver’s own pins (COUNT-01 / MUST-01): a seat outside membership stays a Note, the count sentence is grammatical, an empty My-threads inventory resolves empty and not ok
 - `tests/palette-selection.test.ts` — Count limits and auto-fill, incl. the canonical "lock 5, request 15 → 10 filled"
 - `tests/palette.test.ts` — DMC load invariants (533, unique, hex↔rgb)
 - `tests/pipeline-config.test.ts` — preset order, full-RGB, dither-replaces-reduce

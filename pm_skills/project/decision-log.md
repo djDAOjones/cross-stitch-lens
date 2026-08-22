@@ -1481,3 +1481,157 @@ preview config), `README.md` (live URL), memory files.
 **Link:** `DEV-INFRASTRUCTURE.md` § Deployment still reads "post-MVP,
 published by the host" — captured in `doc-deltas.md` for the next
 doc-sync.
+
+## D173 — ICE-RECOLOUR-01 opens, and the first live-app reports are diagnosed (2026-08-22)
+
+**Context.** The first user feedback since the site went live (D172)
+arrived through the owner: "the number of colours limitation is not
+honoured" and "must have colours not working". The same message asked
+for a review of creative colouring — a pixel editor, a colour swap,
+"something that gives users the creative potential to move beyond
+realism" — and, later in the session, a target % distribution of
+palette colours, strongest at 1-bit.
+
+**Diagnosis, confirmed in the running app before anything was
+proposed** (the D157 rule). The count limit was *honoured* on every
+path reachable in-session: constraint off → 252 of 489 colours used,
+8 → 8, 3 → 3, 12 → 12, a switch to Pastels → 8 of 965; the live pump,
+grab, sample, pattern-change and project-load paths read correct. The
+report is therefore not reproduced (COUNT-01, blocked on the
+reporter's steps or a diagnostics bundle); the named candidates are the
+editor's design preview, which renders the whole profile by design
+(D116), Must-use seats exceeding the limit, and the one-frame two-step.
+
+Must-use, by contrast, has a mechanism: the search-to-add offers the
+entire build, so a thread outside the profile's membership can be
+chosen, after which the resolver keeps the seat and emits a Note rather
+than filling it — Anchor 403 on the DMC profile, and both seats after a
+switch to Pastels, reproduced exactly. That is a contradiction
+validated after the fact, the shape UI-STANDARDS says to make
+unrepresentable. A second, semantic half: a seat guarantees a palette
+entry, never stitches (DMC 666 took 701 stitches with dithering and
+157 without; on a picture with nothing near it, none). Both halves are
+MUST-01.
+
+**Decision.** Open ICE-RECOLOUR-01 as a `[sign-off]` review item with
+the exploration in its ticket: a thread-for-thread **swap layer** (a
+pure stage over the index sidecar — presence, which Must-use cannot
+promise), a **pixel editor** of cell overrides (after DUR-01: hand
+edits must survive the tab), and quantiser controls — tone-only
+matching so curated ladders work as two-tone maps, and the owner's
+distribution target, exact at two states (a quantile threshold) and
+iterative above. Recommended order: swap → tone-only → editor; the
+distribution control stays deep-thought. No code changed.
+
+**Alternatives.** Fixing Must-use by scoping its search to the profile
+(smaller, but a user who wants a colour the profile lacks is left with
+nothing) versus auto-pinning every Must-use into the design's recipe
+copy (the D114 (edited)-copy pattern; recommended). Building the pixel
+editor first (the largest surface, and premature while the app still
+loses work on tab close).
+
+**Scope.** `backlog.md` (MUST-01, COUNT-01, ICE-RECOLOUR-01), three
+ticket files, `wish-list.md` (three findings from the trace), this
+entry. No product code.
+
+**Link:** ICE-RECOLOUR-01's swap is the presence half of MUST-01;
+MUST-01's own fix is the seat half.
+
+## D174 — The owner's project file names the mechanism; DIAG-02 opens (2026-08-23)
+
+**Context.** The owner could reproduce both live-app reports and sent
+the saved project (`project-120x60.json`). Its palette block was the
+diagnosis: profile `builtin:my-threads`, six Anchor/Ariadna Must-use
+seats, `count.n = 8`, and `snapshot: []` — the snapshot is
+`config.palette?.entries` at save time, so the palette was null with
+Threadify on.
+
+**Mechanism, confirmed by loading the file into the dev build.** My
+threads resolves over the inventory of the browser it runs in — not in
+the file, and empty here. An empty membership fails resolution,
+`resolvePalette` maps failure to `config.palette = null`, and the
+pipeline runs full-RGB: the picture not reduced, no seats. The readouts
+then mislead by omission: "Colours in use: 3305 · limit 8" (the suffix
+keys on `paletteMode`, not the palette), "≈ 12.2 m · 3305 skeins" (the
+M12 guard keys on the mode too), six live chips, and one "Problem:"
+line carrying the generic profile-empty sentence rather than "your
+inventory is empty in this browser". Owning one seat's thread gave
+"1 · limit 8" — and exposed a grammar slip in the profile-world count
+sentence. The two complaints are one state. COUNT-01 is therefore
+reproduced and re-titled; MUST-01 keeps the seat semantics, with the
+My-threads variant added. Yesterday's "not reproduced" verdict stood
+on the DMC path, where nothing is wrong — the file supplied the path.
+
+**Decision.** DIAG-02 opens, on the owner's instruction: the Debug menu
+behind a `?diag=1` opt-in on the live build (the `DIAG=1` flag the
+diagnostics contract reserves, after its redaction review), palette
+resolutions logged, and a one-click report bundling the project JSON
+with the redacted log — the saved file proved to be the evidence, and a
+tester would not know to send it. No code changed; the fixes wait on
+the owner's pick (state the failure where the picture is, or refuse to
+render — the ticket recommends the former).
+
+**Scope.** `backlog.md` (COUNT-01 rewritten and unblocked, DIAG-02
+new), `tickets/COUNT-01.md` (rewritten), `tickets/MUST-01.md` (update),
+`tickets/DIAG-02.md` (new), `wish-list.md` (one line: My-threads
+designs are not portable), this entry.
+
+**Link:** COUNT-01's fix is the presentation of a failed resolution;
+MUST-01's is the seat; DIAG-02 is how the next report arrives whole.
+
+## D175 — COUNT-01 ships: a failed resolution stops looking like a render; DIAG-02's opt-in and palette log ship with it (2026-08-23)
+
+**Decision.** The owner asked for "all the quick fixes" from D174, and
+they landed as one batch, each a minimal upstream change:
+
+- A profile that resolves to nothing still renders full-RGB — the
+  fallback stays, the owner's pick being the recommended "state it
+  where the picture is" over refusing to render — but it can no longer
+  pass as a palette render: the Stats line reads "3305 · no palette
+  applied" instead of "· limit 8" (`colourInUseLine` now tests the
+  palette, not the mode), the thread estimate says "needs the palette
+  applied" rather than pricing 3,305 skeins (the same correction to
+  the M12 guard), and the Colour section's summary states the
+  consequence — the picture is shown without threads, and the limit
+  and Must-use do not apply — beside the Problem line that states the
+  cause.
+- The cause is now the right one: `resolveProfileMembership` names an
+  empty inventory under My threads ("your inventory has no threads in
+  this browser…") — an error when that is the whole profile, a warning
+  when other libraries carry it — instead of the generic profile-empty
+  sentence whose three remedies were all wrong.
+- The profile-world count sentence is grammatical ("resolves 1 colour,
+  so it is being used").
+- MUST-01's honesty half: the status line after a pick outside
+  membership says so, and the Must-use group explains seat versus
+  presence. The seat semantics stay the owner's — the item is now
+  `[sign-off]`, because auto-pinning reverses M15-CORE-03's "kept and
+  explained" rule.
+- DIAG-02 shapes 1 and 2: the Debug menu mounts in a production bundle
+  behind `?diag=1` — a per-visit URL parameter, not a build flag,
+  because the live site is one bundle for everyone — after the
+  redaction review the contract reserved (every logger call read:
+  sizes, timings, backend names, export options, user-chosen
+  filenames, the capture's display label, crop coordinates, browser
+  error messages; nothing from storage, no credentials); and
+  `resolvePalette` logs every resolution, so the next bundle carries
+  the profile, rule, seats, membership, selection and conflicts.
+
+**Verification.** `check` green at 1,262 tests (+6: the inventory
+sentences, the opt-in rule, and a first direct suite for the
+profile-world resolver, which had none). The owner's
+`project-120x60.json` re-run live before and after; a `vite preview`
+of the production build shows the Debug menu with `?diag=1` and not
+without.
+
+**Alternatives.** Refusing to render on a failed resolution (honest,
+but hides the picture the user just loaded); a `DIAG=1` build flag
+(would expose the menu to every visitor of the one public bundle).
+
+**Scope.** `src/main.ts`, `src/core/color-profile.ts`,
+`src/core/palette-resolve.ts`, `src/ui/colour-section.ts`,
+`src/ui/diagnostics-button.ts`, three test files (one new), memory
+files, one doc-delta (the diagnostics contract).
+
+**Link:** DIAG-02's remaining shape is the one-click report, on the
+`DEV_EMAIL` decision; MUST-01 waits on the seat sign-off.

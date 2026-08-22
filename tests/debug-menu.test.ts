@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEV_EMAIL,
   devEmailUrl,
+  diagnosticsRequested,
   diagnosticsStatusMessage,
   downloadStatusMessage,
   emailStatusMessage,
@@ -74,5 +75,16 @@ describe('announced outcomes', () => {
     expect(downloadStatusMessage(2, 'log.txt')).toContain('log.txt');
     expect(emailStatusMessage('log.txt')).toContain('log.txt');
     expect(emailStatusMessage('log.txt')).toContain('attach');
+  });
+});
+
+describe('diagnosticsRequested (the production opt-in, DIAG-02)', () => {
+  it('is true only for the literal ?diag=1', () => {
+    expect(diagnosticsRequested('?diag=1')).toBe(true);
+    expect(diagnosticsRequested('?foo=bar&diag=1')).toBe(true);
+    expect(diagnosticsRequested('')).toBe(false);
+    expect(diagnosticsRequested('?diag=true')).toBe(false);
+    expect(diagnosticsRequested('?diag=0')).toBe(false);
+    expect(diagnosticsRequested('?diagnostics=1')).toBe(false);
   });
 });

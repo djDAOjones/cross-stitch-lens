@@ -242,7 +242,11 @@ export function resolveProfilePalette(request: ProfilePaletteRequest): ResolvedP
     });
   }
   if (target > eligibleCount) {
-    const threads = eligibleCount === 1 ? 'colour is' : 'colours are';
+    // "resolves 1 colour, so it is being used" / "resolves 6 colours,
+    // so all 6 are being used". The fragment was copied from the
+    // policy-world sentence with its verb attached, which read
+    // "resolves 1 colour is, so it is being used" until COUNT-01.
+    const threads = eligibleCount === 1 ? 'colour' : 'colours';
     const all = eligibleCount === 1 ? 'it is' : `all ${String(eligibleCount)} are`;
     conflicts.push({
       kind: 'count-exceeds-eligible',

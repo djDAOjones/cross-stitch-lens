@@ -226,6 +226,14 @@ export function createColourSection(
   const mustUseLabel = doc.createElement('p');
   mustUseLabel.className = 'group-label';
   mustUseLabel.textContent = 'Must-use colours';
+  // Seat, not presence (MUST-01): the promise is a place in the
+  // palette, and the stitches still go to their nearest colour — the
+  // half of "must use" the live-app reporter read the other way.
+  const mustUseHelper = doc.createElement('p');
+  mustUseHelper.className = 'helper';
+  mustUseHelper.id = 'must-use-helper';
+  mustUseHelper.textContent =
+    'Guaranteed a place in the palette; stitches still go to their nearest colour, so a seat can go unused.';
   const chipList = doc.createElement('div');
   chipList.className = 'pin-chips';
   chipList.setAttribute('role', 'list');
@@ -263,6 +271,7 @@ export function createColourSection(
     countCluster,
     distanceField,
     mustUseLabel,
+    mustUseHelper,
     chipList,
     addDetails,
     summary,
@@ -309,6 +318,7 @@ export function createColourSection(
       countCluster,
       distanceField,
       mustUseLabel,
+      mustUseHelper,
       chipList,
       addDetails,
       summary,
@@ -399,7 +409,14 @@ export function createColourSection(
       chipList.hidden = next.mustUse.length === 0;
     }
 
-    summary.textContent = `${String(next.eligibleCount)} colour${next.eligibleCount === 1 ? '' : 's'} available.`;
+    // The consequence beside the cause (COUNT-01): with no palette the
+    // preview shows the picture as it is, and the count and Must-use
+    // controls above this line are not in force — the "Problem:" line
+    // below says why, this says what that means.
+    summary.textContent =
+      next.eligibleCount === 0
+        ? '0 colours available — the picture is shown without threads, and the colour limit and Must-use colours do not apply until this profile resolves.'
+        : `${String(next.eligibleCount)} colour${next.eligibleCount === 1 ? '' : 's'} available.`;
 
     const conflictsFp = JSON.stringify(next.conflicts.map((c) => [c.severity, c.message]));
     if (conflictsFp !== lastConflictsFp) {

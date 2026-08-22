@@ -17,6 +17,23 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
+## Live-app feedback (IN PROGRESS, from 2026-08-22)
+
+**Outcome:** the first reports from the public URL are becoming fixes
+with the mechanism confirmed in the running app before anything is
+proposed — and the owner's saved project file is the evidence that
+names it.
+
+- COUNT-01 (2026-08-23) — a profile that resolves to nothing no longer
+  masquerades as a render: the Stats line says "no palette applied"
+  instead of "· limit N", the estimate refuses to price RGB, the Colour
+  section states the consequence beside the cause, an empty inventory
+  under My threads is named as such, and the profile-world count
+  sentence is grammatical. Reproduced from the owner's project before
+  and after. DIAG-02's `?diag=1` opt-in and palette logging shipped
+  alongside; MUST-01's wording half too. See D174 (mechanism) and D175
+  (fix).
+
 ## Track C — Publication (IN PROGRESS, owner-paced)
 
 **Outcome:** the app has a public URL. Licences and notices landed

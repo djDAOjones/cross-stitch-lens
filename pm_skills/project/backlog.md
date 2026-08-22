@@ -64,6 +64,20 @@ owner-gated item remains.
   Done when: the owner signs the defaults per exporter, what stays configurable, and how saved projects' export settings migrate.
   Absorbs, on one sitting (D170): M9's remaining print inspection (every chart mode at minimum and typical cell sizes, grayscale/low-ink, key↔chart agreement) and M12's estimate defaults-and-wording review.
 
+### Reported from the live app (2026-08-22)
+
+The first user feedback since the deploy (D172), relayed by the owner
+without steps or a bundle. Diagnosed in the running app before anything
+was proposed (D173); sequencing is the owner's call — placed here so
+the next pick sees them.
+
+- [ ] **MUST-01 A Must-use colour can be chosen that the design cannot honour** [sign-off] [detail] (2026-08-22, wording half shipped 2026-08-23)
+  Intent: the Must-use search offers every colour in the build, but a seat outside the profile's membership is kept as a Note and never filled — and a filled seat guarantees a palette entry, not stitches. The honesty half shipped (D175): the status line and a helper now say so. Open: the seat semantics — auto-pin the colour into the design's recipe copy (recommended) or scope the search — a reversal of M15-CORE-03's "kept and explained" rule, so it is the owner's.
+  Done when: a Must-use picked from any brand reaches the palette and the key, Revert drops an auto-pin, and the profile-world resolver's tests cover it. Presence itself is ICE-RECOLOUR-01's swap.
+- [ ] **DIAG-02 Diagnostics for testers on the live build** [detail] (2026-08-23, opt-in and palette logging shipped 2026-08-23)
+  Shipped (D175): the Debug menu mounts on the live build behind `?diag=1`, and every palette resolution is logged (profile, rule, seats, membership, selected, conflicts, source). Remaining: a one-click "Report a problem" that saves the project JSON and the redacted log together and opens the email route — waits on the `DEV_EMAIL` placeholder, which ships in a public bundle.
+  Done when: a tester on the live URL can produce, in one click, a bundle and a project file naming the build, profile, count rule, seats, resolved palette and every conflict.
+
 ### Track B Durability & identity
 
 Opened 2026-08-11 (D149). One subject: the app loses your work and
@@ -133,6 +147,10 @@ upstream editor at all.
 - [ ] **A11Y-VO-01 The human remainder of the screen-reader pass** [maintainer] (2026-08-09)
   Intent: A11Y-01 took the "has a name" half; this is whether the announcements are any *good*, plus the no-meaning-by-colour check.
   Done when: a VoiceOver pass over the main control surface is recorded pass/fail per control, and the colour-only check is answered.
+
+- [ ] **ICE-RECOLOUR-01 Creative recolouring: colour swap, pixel editor, and controls beyond nearest colour** [sign-off] [detail] (2026-08-22)
+  Intent: creative control past realism in the colour mapping — a thread-for-thread swap layer (presence, where Must-use is only a seat), a cell-level pixel editor, and quantiser controls such as tone-only matching and the owner's target % distribution of palette colours (strongest at 1-bit / 2-state; deep thought, not solving). Pure stages after the colour stage or reduce-stage params — never preview-only.
+  Done when: the owner signs which layers ship, in what order (the ticket recommends swap → tone-only matching → pixel editor after DUR-01), and where they live in the UI.
 
 **Blocked on data or research.**
 

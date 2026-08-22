@@ -223,3 +223,15 @@ export function createDiagnosticsControl(
   wrapper.append(menu, status);
   return { element: wrapper, run };
 }
+
+/**
+ * The production opt-in (DIAG-02): a production bundle mounts the
+ * Debug menu only when the URL carries `?diag=1`. A URL parameter
+ * rather than a build flag because the live site is one bundle for
+ * everyone — the opt-in has to be per visit, so a tester can simply be
+ * sent a link. Anything but the literal `1` is "no". Dev builds mount
+ * the menu regardless.
+ */
+export function diagnosticsRequested(search: string): boolean {
+  return new URLSearchParams(search).get('diag') === '1';
+}

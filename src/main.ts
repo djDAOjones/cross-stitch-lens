@@ -128,7 +128,7 @@ import {
   scaleNearest,
 } from './export/png.ts';
 import { createDebugPanel } from './ui/debug-panel.ts';
-import { createDiagnosticsControl } from './ui/diagnostics-button.ts';
+import { createDiagnosticsControl, diagnosticsRequested } from './ui/diagnostics-button.ts';
 import {
   DITHER_PRESETS,
   matchBuiltInDither,
@@ -413,6 +413,7 @@ function build(app: HTMLElement): void {
       config.palette = null;
       paletteConflicts = [];
       eligibleCount = 0;
+      log.info('palette', 'threadify off — full-RGB');
     } else {
       const resolved = resolveProfilePalette({
         recipe: designRecipe,
@@ -424,6 +425,22 @@ function build(app: HTMLElement): void {
       config.palette = resolved.ok ? resolved.palette : null;
       paletteConflicts = resolved.conflicts;
       eligibleCount = resolved.eligibleCount;
+      // The facts a palette report needs, in the bundle (DIAG-02):
+      // COUNT-01 arrived as two sentences because none of this was
+      // logged. Once per resolution, never per frame — the pump holds
+      // its palette, so the ring buffer is not flooded.
+      log.info('palette', resolved.ok ? 'resolved' : 'resolved to nothing', {
+        profile: profileRef?.id ?? null,
+        edited: designEdited,
+        count: designRules.count,
+        minDistance: designRules.minDistance,
+        mustUse: [...designRules.mustUse],
+        membership: resolved.eligibleCount,
+        selected: resolved.selectedCount,
+        locked: resolved.lockedCount,
+        conflicts: resolved.conflicts.map((c) => c.kind),
+        source: selectionSource !== null,
+      });
     }
     // A thread highlight is keyed by palette index (M14-EXT-17); when
     // the entry list changes the indices remap, and a held selection
@@ -872,11 +889,16 @@ function build(app: HTMLElement): void {
   const activeBackends: Record<string, string> = {};
 
   // Copy-diagnostics affordance (AGENTS.md → "Self-explaining
-  // runtime"). Dev-only: a production bundle needs the explicit opt-in
-  // and redaction review in DEV-INFRASTRUCTURE.md → "Maintainer
-  // diagnostics", which has not been done.
-  const diagnostics = import.meta.env.DEV
-    ? createDiagnosticsControl(document, {
+  // runtime"). Every dev build; a production bundle only behind the
+  // explicit `?diag=1` opt-in (DIAG-02, D175). The redaction review
+  // DEV-INFRASTRUCTURE.md → "Maintainer diagnostics" asks for was done
+  // there: the log carries sizes, timings, backend names, export
+  // options, filenames the user chose, the capture's display label,
+  // crop coordinates and browser error messages — nothing from
+  // storage, no credentials. The profiling panel stays dev-only.
+  const diagnostics =
+    import.meta.env.DEV || diagnosticsRequested(window.location.search)
+      ? createDiagnosticsControl(document, {
         collect: () => {
           const logs = recentLogs();
           const bundle = buildDiagnosticsBundle(
@@ -897,7 +919,7 @@ function build(app: HTMLElement): void {
                 displayMedia: typeof navigator.mediaDevices?.getDisplayMedia === 'function',
               },
               activeBackends,
-              dev: true,
+              dev: import.meta.env.DEV,
             },
             logs,
           );
@@ -1646,8 +1668,16 @@ function build(app: HTMLElement): void {
     },
     addMustUse: (id) => {
       if (!designRules.mustUse.includes(id)) designRules.mustUse.push(id);
-      status.textContent = `${labelForId(id)} will always be in the palette.`;
       applyColour();
+      // The promise holds only inside the profile's membership
+      // (MUST-01): outside it the seat is kept and explained, and the
+      // status line must not say the opposite a line above the Note.
+      const unseated = paletteConflicts.some(
+        (c) => c.kind === 'locked-not-permitted' && c.ids.includes(id),
+      );
+      status.textContent = unseated
+        ? `${labelForId(id)} is set to Must use but is not in this profile's colours — see the note in the Colour section.`
+        : `${labelForId(id)} will always be in the palette.`;
     },
     removeMustUse: (id) => {
       designRules.mustUse = designRules.mustUse.filter((m) => m !== id);
@@ -2761,6 +2791,10 @@ function build(app: HTMLElement): void {
     if (lastColorCount === null) return 'none yet';
     const used = String(lastColorCount);
     if (!paletteMode) return `${used} · unlimited`;
+    // A profile that resolved to nothing renders the picture as it is
+    // (COUNT-01): no limit is in force, so none is printed — the
+    // owner's report was "3305 · limit 8", and it was true.
+    if (config.palette === null) return `${used} · no palette applied`;
     if (designRules.count.mode !== 'all') return `${used} · limit ${String(designRules.count.n)}`;
     return used;
   }
@@ -2805,9 +2839,12 @@ function build(app: HTMLElement): void {
     statsCentre.textContent = `stitch ${String(centre.x)}, ${String(centre.y)}`;
     if (lastPerColor === null) {
       statsThread.textContent = 'none yet';
-    } else if (!paletteMode) {
+    } else if (!paletteMode || config.palette === null) {
       // Full-RGB output has no thread identities: a per-colour skein
-      // list over arbitrary RGB would be shopping fiction (M12).
+      // list over arbitrary RGB would be shopping fiction (M12). The
+      // palette is tested, not the mode: a profile that resolved to
+      // nothing renders full-RGB under Threadify too, and priced 3,305
+      // "skeins" before COUNT-01.
       statsThread.textContent = 'needs the palette applied';
     } else {
       const totals = totalEstimate(lastPerColor, estimateSettings);

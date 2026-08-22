@@ -58,6 +58,30 @@ describe('library union (step 1)', () => {
     expect(mine.entries.map((e) => e.id)).toEqual(['dmc:310', 'dmc:321']);
   });
 
+  it('names the empty inventory when My threads is the whole profile (COUNT-01)', () => {
+    // The owner's reporter hit this with a saved My-threads design on
+    // a browser that had never marked a thread as owned; the generic
+    // sentence sent them after a library, a pin, or an exclusion.
+    const result = resolveProfileMembership(
+      recipe({ libraries: ['mine'] }),
+      inputs({ owned: new Set() }),
+    );
+    expect(result.ok).toBe(false);
+    const conflict = result.conflicts.find((c) => c.kind === 'owned-none');
+    expect(conflict?.severity).toBe('error');
+    expect(conflict?.message).toContain('inventory has no threads in this browser');
+    expect(result.conflicts.some((c) => c.kind === 'profile-empty')).toBe(false);
+  });
+
+  it('warns that an empty inventory contributes nothing when other libraries carry the profile', () => {
+    const result = resolveProfileMembership(recipe({ libraries: ['mine', 'map:bw'] }), inputs());
+    expect(result.ok).toBe(true);
+    expect(result.entries).toHaveLength(2);
+    const conflict = result.conflicts.find((c) => c.kind === 'owned-none');
+    expect(conflict?.severity).toBe('warning');
+    expect(conflict?.message).toContain('contributes nothing');
+  });
+
   it('explains an unknown library and carries on', () => {
     const result = resolveProfileMembership(
       recipe({ libraries: ['nope', 'map:bw'] }),

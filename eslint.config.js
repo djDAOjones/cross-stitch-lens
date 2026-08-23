@@ -24,6 +24,9 @@ export default tseslint.config(
       '_user-guff/**',
       'pm_skills/**',
       '.githooks/**',
+      // Gitignored measurement output; a probe script dropped there must
+      // not turn the gate red (INFRA-02).
+      'bench-reports/**',
     ],
   },
   js.configs.recommended,

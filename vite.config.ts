@@ -50,8 +50,8 @@ const WASM_STUB = fileURLToPath(
  *
  * The public Pages bundle does not (PUB-06): `PM_PUBLIC_BUNDLE=1`, set
  * by the CI Pages-build step, builds `main` alone, so a maintainer
- * instrument with a root-relative popup (`/bench-source.html` — a 404
- * under `/<repo>/`) and a ~2 GiB `?auto=mem` probe is not a public URL.
+ * instrument with a ~2 GiB `?auto=mem` probe is not a public URL (its
+ * popup followed the base from INFRA-02; the exclusion stands).
  * Keyed on an explicit env rather than `--mode` because
  * `import.meta.env.MODE` / `DEV` are recorded in bench reports and gate
  * the debug panel; the env changes nothing but this list.

@@ -75,11 +75,19 @@ const SAFE_PATH_RE = /^[\w./-]+$/;
  * was the author's laptop and broke the CI-parity rule. Generated output
  * the gate itself produces earlier in the run (`dist/`, from `check:build`)
  * stays checked: it is present by the time this step runs.
+ *
+ * `crates/stitch-engine/pkg/` is gitignored generated output too, but
+ * unlike `dist/` it is not always present by this step: `check:wasm`
+ * builds it only where the Rust toolchain is installed (it skips
+ * elsewhere by design), and `check:docs` is also run on its own, where
+ * nothing has built it at all. Citing the folder is a statement about
+ * the build, not a reference that can rot (INFRA-02).
  */
 const IGNORE = [
   /(^|\/)archive(\/|$)/,
   /(^|\/)tickets(\/|$)/,
   /^bench-reports(\/|$)/,
+  /^crates\/stitch-engine\/pkg(\/|$)/,
 ];
 
 /**

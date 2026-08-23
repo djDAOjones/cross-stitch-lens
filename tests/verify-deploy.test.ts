@@ -129,6 +129,7 @@ describe('parseArgs', () => {
       url: DEFAULT_URL,
       wait: 0,
       target: DEFAULT_TARGET,
+      fetch: false,
       help: false,
     });
     expect(DEFAULT_URL.endsWith('/')).toBe(true);
@@ -140,6 +141,7 @@ describe('parseArgs', () => {
       parseArgs(['--url=http://localhost:4173/pattern-mapper', '--wait=30', 'HEAD']),
     ).toMatchObject({ url: 'http://localhost:4173/pattern-mapper/', wait: 30, target: 'HEAD' });
     expect(parseArgs(['-h']).help).toBe(true);
+    expect(parseArgs(['--fetch'])).toMatchObject({ fetch: true, target: DEFAULT_TARGET });
   });
 
   it('rejects an unknown option, a missing value, a non-numeric wait and a second target (error)', () => {
@@ -148,5 +150,6 @@ describe('parseArgs', () => {
     expect(() => parseArgs(['--wait', 'soon'])).toThrow(/number of seconds/);
     expect(() => parseArgs(['--wait', '-5'])).toThrow(/number of seconds/);
     expect(() => parseArgs(['abc1234', 'def5678'])).toThrow(/only one target/);
+    expect(() => parseArgs(['--fetch=yes'])).toThrow(/--fetch takes no value/);
   });
 });

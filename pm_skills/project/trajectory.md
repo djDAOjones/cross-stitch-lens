@@ -17,6 +17,17 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
+## Track D — Creative control of the image (IN PROGRESS)
+
+**Outcome:** opened 2026-08-23 (D188/D189); the gate was made safe for
+the worktree round its scoping tickets open before any of them ran.
+
+- INFRA-02 (2026-08-23) — four gate riders: the bench harness popup
+  follows `BASE_URL`, `check:docs` passes on its own in a fresh tree
+  (the wasm pkg is generated output), `eslint` ignores
+  `bench-reports/`, and `verify:deploy --fetch` refreshes `origin`
+  first; the full gate proved green in a fresh worktree. See D198.
+
 ## Small UI batch (SHIPPED 2026-08-23)
 
 **Outcome:** the five Icebox promotions of D188 plus three UI defects

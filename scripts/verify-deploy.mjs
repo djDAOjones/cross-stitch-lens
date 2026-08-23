@@ -9,6 +9,7 @@
  *   npm run verify:deploy -- --wait 600      # poll until it matches (≤ 10 min)
  *   npm run verify:deploy -- 72d9db7         # vs a SHA you name
  *   npm run verify:deploy -- --url http://localhost:4173/pattern-mapper/ HEAD
+ *   npm run verify:deploy -- --fetch            # refresh origin/main first
  *
  * Answers "does the live site serve the commit I just pushed?" with one
  * line on stdout and an exit code: 0 PASS, 1 FAIL (a different build is
@@ -20,6 +21,11 @@
  * and the id is read from that asset. The asset's name is content-
  * hashed, so it can never be a stale copy. SHAs compare by prefix
  * because `git rev-parse --short` auto-abbreviates and can grow.
+ *
+ * `origin/main` is resolved locally: after a push from this machine it
+ * is already current, but in a worktree or on another machine it names
+ * whatever was last fetched, so `--fetch` runs `git fetch origin` first
+ * (INFRA-02) — the alternative being a manual fetch or an explicit SHA.
  *
  * Zero dependencies (Node ≥ 22: global fetch). The pure helpers are
  * exported and unit-tested with the network off
@@ -38,7 +44,8 @@ export const DEFAULT_URL = 'https://djdaojones.github.io/pattern-mapper/';
 /**
  * What "the commit just pushed" means by default. Resolved locally
  * without a fetch: after `git push` from this machine the ref is
- * already current; from elsewhere pass the SHA, or fetch first.
+ * already current; from elsewhere pass the SHA, fetch first, or pass
+ * `--fetch`.
  */
 export const DEFAULT_TARGET = 'origin/main';
 
@@ -166,15 +173,15 @@ export function verdictLine(outcome) {
 }
 
 /**
- * `[--url <site>] [--wait <seconds>] [<sha>|<git-ref>]`, with
+ * `[--url <site>] [--wait <seconds>] [--fetch] [<sha>|<git-ref>]`, with
  * `--option=value` accepted too. A mistake throws (a usage error, exit
  * 2) rather than falling back to a default that would verify the
  * wrong thing.
  * @param {readonly string[]} argv arguments after the script name
- * @returns {{ url: string, wait: number, target: string, help: boolean }}
+ * @returns {{ url: string, wait: number, target: string, fetch: boolean, help: boolean }}
  */
 export function parseArgs(argv) {
-  const opts = { url: DEFAULT_URL, wait: 0, target: DEFAULT_TARGET, help: false };
+  const opts = { url: DEFAULT_URL, wait: 0, target: DEFAULT_TARGET, fetch: false, help: false };
   const rest = [...argv];
   let targetSeen = false;
   while (rest.length > 0) {
@@ -194,6 +201,9 @@ export function parseArgs(argv) {
         throw new Error('--wait needs a number of seconds');
       }
       opts.wait = seconds;
+    } else if (name === '--fetch') {
+      if (eq !== -1) throw new Error('--fetch takes no value');
+      opts.fetch = true;
     } else if (name === '--help' || name === '-h') {
       opts.help = true;
     } else if (name.startsWith('-')) {
@@ -249,6 +259,20 @@ async function readLiveBuildId(siteUrl) {
 }
 
 /**
+ * `git fetch origin`, so a remote-tracking target names what the remote
+ * holds now rather than what this checkout last saw. Output is quiet:
+ * the verdict line stays the only stdout line.
+ */
+function fetchOrigin() {
+  try {
+    execFileSync('git', ['fetch', '--quiet', 'origin'], { stdio: ['ignore', 'ignore', 'pipe'] });
+  } catch (error) {
+    const stderr = error instanceof Error && 'stderr' in error ? String(error.stderr).trim() : '';
+    throw new Error(`git fetch origin failed${stderr ? ` — ${stderr}` : ''}`, { cause: error });
+  }
+}
+
+/**
  * The expected commit: a raw SHA is taken as given; anything else is a
  * git ref resolved in the current repository.
  * @param {string} target
@@ -284,8 +308,9 @@ async function attempt(siteUrl, expected) {
 }
 
 const USAGE =
-  'usage: node scripts/verify-deploy.mjs [--url <site>] [--wait <seconds>] [<sha>|<git-ref>]\n' +
-  `  site defaults to ${DEFAULT_URL}, target to ${DEFAULT_TARGET}; exit 0 PASS, 1 FAIL, 2 ERROR`;
+  'usage: node scripts/verify-deploy.mjs [--url <site>] [--wait <seconds>] [--fetch] [<sha>|<git-ref>]\n' +
+  `  site defaults to ${DEFAULT_URL}, target to ${DEFAULT_TARGET}; --fetch runs git fetch origin first;\n` +
+  '  exit 0 PASS, 1 FAIL, 2 ERROR';
 
 /**
  * Verdict on stdout (exactly one line), progress under `--wait` on
@@ -310,6 +335,7 @@ async function main(argv) {
   /** @type {{ sha: string, label: string }} */
   let expected;
   try {
+    if (opts.fetch) fetchOrigin();
     expected = resolveTarget(opts.target);
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);

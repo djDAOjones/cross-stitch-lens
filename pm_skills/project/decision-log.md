@@ -1111,3 +1111,45 @@ from the Icebox-triage chat at its close: the generated
 `docs/catalogue-sweep.md` still named DATA-02 as a parked class — its
 writer (`tests/audits/catalogue.audit.test.ts`) now says "closed as
 cosmetic (D188)" and the sweep was re-run; the data half is unchanged.
+
+## D198 — INFRA-02 ships: four gate riders fixed and proved green in a fresh worktree (2026-08-23)
+
+**Context.** D197 queued four one-liners ahead of Track D because
+each bites the worktree round its scoping tickets open: the bench
+harness popup was root-relative, `check:docs` on its own failed in a
+fresh tree, `eslint .` linted gitignored `bench-reports/`, and
+`verify:deploy` resolved `origin/main` from whatever the checkout last
+saw. Run gateless (auto-jazz) as the item's line allows.
+
+**Decision.** (1) `src/bench-browser.ts` opens
+`${import.meta.env.BASE_URL}bench-source.html` (the `SOURCE_PAGE`
+constant, also named in the popup-blocked messages) — identical at
+base `/`, where `bench:auto` serves, and `/pattern-mapper/bench-source.html`
+in a `--base` harness build. (2) `scripts/check-docs.mjs` adds
+`crates/stitch-engine/pkg` to its generated-output ignore class beside
+`bench-reports/`: the folder is gitignored and `check:wasm` builds it
+only where a Rust toolchain exists, so citing it is a statement about
+the build, not a reference that can rot; the alternative — rewording
+`docs/acceptance-matrix.md` — was rejected because `matrix:write`
+generates that file. (3) `eslint.config.js` ignores `bench-reports/**`
+(the `m16-sitting/geometry.mjs` probe was in the lint set; 226 → 225
+files). (4) `verify:deploy --fetch` runs `git fetch --quiet origin`
+before resolving the target, an ERROR with git's stderr when the fetch
+fails; `--fetch=value` is a usage error. Assumption stated at the
+skipped gate: the remote is always `origin` — a non-origin target
+(`upstream/main`) would still resolve locally; derive the remote from
+the ref if that day comes.
+
+**Verification.** Stock HEAD in a fresh worktree reproduced rider 2
+(`docs/acceptance-matrix.md:46 missing path`); with the patch applied
+the full `check` ran green there — `cargo test` + `wasm-pack`, 1,378
+tests, build, docs — and a `--base /pattern-mapper/` build carries the
+base-prefixed popup path with no root-relative leftover. Live:
+`verify:deploy --fetch` → PASS against `92405d8`. Worktree and branch
+removed afterwards.
+
+**Scope.** `src/bench-browser.ts`, `scripts/check-docs.mjs`,
+`eslint.config.js`, `scripts/verify-deploy.mjs` + `.d.mts`,
+`tests/verify-deploy.test.ts`, one stale phrase in `vite.config.ts`'s
+bundle-inputs comment. `DEV-INFRASTRUCTURE.md`'s `verify:deploy` rows
+do not yet name `--fetch` — a doc-deltas line.

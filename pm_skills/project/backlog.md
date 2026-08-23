@@ -59,8 +59,6 @@ they no longer imply sequence.
 
 ### Current — Track D Creative control of the image
 
-- [ ] **INFRA-02 Gate riders before the next worktree round** (2026-08-23, D197) — four one-liners: the harness popup path `/bench-source.html` is root-relative (`src/bench-browser.ts` → `import.meta.env.BASE_URL`); `check:docs` alone fails in a fresh worktree (`docs/acceptance-matrix.md` names `crates/stitch-engine/pkg`, built only by `check:wasm`); `eslint .` lints untracked `bench-reports/` (one `ignores` line); `verify:deploy --fetch`. Done when each is fixed and the gate is green in a fresh worktree; gateless.
-
 Opened 2026-08-23 at the icebox triage (D188). One subject: the user
 controls the final picture *inside* the app, beyond nearest-colour
 realism (D149; the first live-app ask, D173). The swap is build-ready;

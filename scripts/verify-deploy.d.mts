@@ -17,6 +17,7 @@ export interface VerifyOptions {
   url: string;
   wait: number;
   target: string;
+  fetch: boolean;
   help: boolean;
 }
 

@@ -828,19 +828,28 @@ async function runLiveWindow(
 let sourceWindow: Window | null = null;
 const sourceChannel = new BroadcastChannel('csl-bench-source');
 
+/**
+ * The source page's URL under whatever base this harness build was
+ * served from. `bench:auto` serves at `/`, where this is the bare
+ * `/bench-source.html`; a harness build previewed under a sub-path
+ * (`--base /<repo>/`) would 404 on a root-relative path (INFRA-02).
+ * BASE_URL always carries its trailing slash.
+ */
+const SOURCE_PAGE = `${import.meta.env.BASE_URL}bench-source.html`;
+
 async function openSource(): Promise<void> {
   // Positioned beside the harness window rather than cascaded over it:
   // a popup that fully occludes the harness can flip this page to
   // `hidden`, and a hidden page's samples are throttled garbage. Both
   // windows staying at least partially visible is a run precondition.
   sourceWindow = window.open(
-    '/bench-source.html',
+    SOURCE_PAGE,
     'csl-bench-source',
     'left=780,top=40,width=720,height=560',
   );
   if (sourceWindow === null) {
-    findings.push('popup blocked — open /bench-source.html manually in a second window');
-    say('Popup blocked. Open /bench-source.html manually, then share that window.');
+    findings.push(`popup blocked — open ${SOURCE_PAGE} manually in a second window`);
+    say(`Popup blocked. Open ${SOURCE_PAGE} manually, then share that window.`);
     return;
   }
   say('Source window open. Start capture and choose that window in the picker.');

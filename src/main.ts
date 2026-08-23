@@ -73,13 +73,35 @@ import {
   MAX_PREVIEW_CSS_PX,
   MAX_SOURCE_NAME,
   MIN_PREVIEW_CSS_PX,
+  parseProject,
   projectFilename,
   projectStamp,
   SCHEMA_VERSION,
+  serializeProject,
   type ChartMode,
   type ProjectFile,
 } from './core/project.ts';
 import { readProjectBytes, sourceEntryName, writeProjectBytes } from './core/project-package.ts';
+import {
+  ageLabel,
+  effectiveBudget,
+  HISTORY_BUDGETS,
+  HISTORY_TICK_MS,
+  historyLine,
+  historyUsage,
+  MemorySnapshotStore,
+  nearQuota,
+  newDesignId,
+  nextToEvict,
+  openSnapshots,
+  planWrite,
+  sizeLabel,
+  snapshotBytes,
+  type DesignSnapshot,
+  type HistoryBudget,
+  type SnapshotMeta,
+  type SnapshotStore,
+} from './library/snapshots.ts';
 import {
   effectiveSymbols,
   grantNeeded,
@@ -302,13 +324,34 @@ function build(app: HTMLElement): void {
   let sourceOrigin: SourceOrigin | null = null;
 
   /**
+   * Design identity for the history (DUR-01): a new picture, a loaded
+   * file or a capture session starts a new design; settings edits
+   * update the same one. The source generation counts picture changes
+   * the history must notice — the settings document cannot carry that
+   * signal, since a capture's frames change under an unchanged document.
+   */
+  let designId = newDesignId();
+  let designCreatedAt = Date.now();
+  let sourceGeneration = 0;
+
+  /** Begin a new design: fresh id, fresh clock, the picture changed. */
+  function startNewDesign(): void {
+    designId = newDesignId();
+    designCreatedAt = Date.now();
+    sourceGeneration += 1;
+    onDesignStarted();
+  }
+
+  /**
    * Point the master image at a still buffer that is never transferred,
-   * remembering the bytes it was decoded from when there are any.
+   * remembering the bytes it was decoded from when there are any. A
+   * still arriving is a new design.
    */
   function setStillMaster(buffer: PixelBuffer, origin: SourceOrigin | null = null): void {
     masterImage = buffer;
     masterRefill = null;
     sourceOrigin = origin;
+    startNewDesign();
   }
 
   /**
@@ -2496,16 +2539,355 @@ function build(app: HTMLElement): void {
     projectInput.value = '';
     if (file !== undefined) void loadProject(file);
   });
-  // Unsaved-work honesty (D78/D75): the app has no autosave, and the
-  // one place that says so is here, with the save action. Final
-  // wording lands in the M14-IMPL-05 sweep.
-  const keepNote = document.createElement('p');
-  keepNote.className = 'meta';
-  keepNote.textContent = 'Nothing is kept unless you save your project.';
+  // The design history (DUR-01, D171): the design in progress is kept
+  // in this browser as the user works — restored silently on the next
+  // visit — plus the few designs before it. Explicit save stays the act
+  // that means something: a file survives a storage clear-out and opens
+  // anywhere, and the standing line below steers to it. The store, the
+  // budgets, eviction and the copy live in `library/snapshots.ts`; this
+  // block is the wiring. The pre-DUR-01 sentence ("Nothing is kept
+  // unless you save your project.") survives inside `historyLine` for
+  // the one state where it is still true: storage refused.
+  let snapshots: SnapshotStore = new MemorySnapshotStore();
+  let historyRows: SnapshotMeta[] = [];
+  let historyBudget: HistoryBudget = HISTORY_BUDGETS.basic;
+  let persistGranted = false;
+  /** True once there is a design worth keeping: a picture, or a loaded file. */
+  let designHasContent = false;
+  let designStanding: 'none' | 'kept' | 'restored' | 'saved' = 'none';
+  let designSavedAt: number | null = null;
+  let savedName: string | null = null;
+  /** The document as last saved to a file, for "changes since". */
+  let savedJson: string | null = null;
+  /** A restored design's last file save, as an age label, or null if never. */
+  let restoredLastSaved: string | null = null;
+  let lastWrittenJson = '';
+  let lastWrittenGeneration = -1;
+  let lastFailedJson: string | null = null;
+  let historyWriteInFlight = false;
+  let historyWritePending = false;
+
+  const historyNote = document.createElement('p');
+  historyNote.className = 'meta';
+  historyNote.id = 'history-line';
+  historyNote.textContent = historyLine({
+    available: true,
+    usage: { designs: 0, bytes: 0 },
+    budget: historyBudget,
+    current: 'none',
+    savedName: null,
+    changedSinceSave: false,
+    lastSaved: null,
+    nextToDrop: null,
+  });
+  // "Recent designs…" makes the history recoverable, not write-only
+  // (D171 decision 2): a choices modal, the Source chooser's shape.
+  const recentButton = document.createElement('button');
+  recentButton.type = 'button';
+  recentButton.textContent = 'Recent designs…';
+  recentButton.addEventListener('click', () => {
+    void openRecentDesigns();
+  });
+  // The persist opt-in (D171 decision 6): offered near the quota, never
+  // on arrival — a permission prompt on first use is the pattern this
+  // project rejects. Granted, the browser promises not to evict the
+  // origin's storage, and the history moves to the larger tier.
+  const keepMoreButton = document.createElement('button');
+  keepMoreButton.type = 'button';
+  keepMoreButton.textContent = 'Keep more designs';
+  keepMoreButton.hidden = true;
+  keepMoreButton.addEventListener('click', () => {
+    void requestPersistence();
+  });
   // Build identity moves off the primary surface to the Project foot
   // (audit A13): still user-reachable, no longer the page's second
   // line. `version` is created with the header block above.
-  projectGroup.append(keepNote, saveButton, loadButton, projectInput);
+  projectGroup.append(
+    historyNote,
+    saveButton,
+    loadButton,
+    recentButton,
+    keepMoreButton,
+    projectInput,
+  );
+
+  /** A new design began (picture, file, capture): its standing resets. */
+  function onDesignStarted(): void {
+    designHasContent = true;
+    designStanding = 'none';
+    designSavedAt = null;
+    savedName = null;
+    savedJson = null;
+    restoredLastSaved = null;
+    lastWrittenJson = '';
+    lastFailedJson = null;
+    refreshHistoryLine();
+  }
+
+  /** What the picker and the history call this design. */
+  function designTitle(): string {
+    const title = pdfOptions.title.trim();
+    if (title !== '') return title;
+    return sourceName ?? 'Untitled design';
+  }
+
+  /** `navigator.storage.persist` exists — not every browser has it. */
+  function canPersist(): boolean {
+    return typeof navigator.storage?.persist === 'function';
+  }
+
+  /** The Project section's standing line and the opt-in's visibility. */
+  function refreshHistoryLine(): void {
+    const changedSinceSave =
+      designStanding === 'saved' &&
+      savedJson !== null &&
+      serializeProject(currentProject()) !== savedJson;
+    historyNote.textContent = historyLine({
+      available: snapshots.persistent,
+      usage: historyUsage(historyRows),
+      budget: historyBudget,
+      current: designHasContent ? designStanding : 'none',
+      savedName,
+      changedSinceSave,
+      lastSaved: restoredLastSaved,
+      nextToDrop: nextToEvict(historyRows, historyBudget),
+    });
+    keepMoreButton.hidden =
+      persistGranted || !canPersist() || !nearQuota(historyRows, historyBudget);
+  }
+
+  /** The design as the history keeps it: document, picture, title. */
+  async function currentSnapshot(json: string): Promise<DesignSnapshot> {
+    const descriptor = sourceDescriptor();
+    const source =
+      sourceOrigin === null || descriptor === null
+        ? null
+        : {
+            bytes: await sourceOrigin.blob.arrayBuffer(),
+            type: descriptor.type,
+            name: descriptor.name,
+            entry: descriptor.entry,
+          };
+    return {
+      id: designId,
+      title: designTitle(),
+      createdAt: designCreatedAt,
+      updatedAt: Date.now(),
+      savedAt: designSavedAt,
+      projectJson: json,
+      source,
+    };
+  }
+
+  /**
+   * Write the current design into the history, evicting oldest-first
+   * within the budget. One write at a time; a change landing while one
+   * is in flight queues exactly one more. An eviction is named in the
+   * status region, never silent (D171 decision 6); a failed write says
+   * so once and keeps the design on screen — saving a file is always
+   * the way out.
+   */
+  async function writeHistory(reason: string): Promise<void> {
+    if (!designHasContent) return;
+    if (historyWriteInFlight) {
+      historyWritePending = true;
+      return;
+    }
+    historyWriteInFlight = true;
+    const json = serializeProject(currentProject());
+    try {
+      const snapshot = await currentSnapshot(json);
+      const bytes = snapshotBytes(snapshot);
+      const plan = planWrite(historyRows, { id: designId, bytes }, historyBudget);
+      for (const victim of plan.evict) await snapshots.delete(victim.id);
+      await snapshots.put(snapshot);
+      historyRows = await snapshots.list();
+      lastWrittenJson = json;
+      lastWrittenGeneration = sourceGeneration;
+      lastFailedJson = null;
+      if (designStanding === 'none') designStanding = 'kept';
+      if (plan.evict.length > 0) {
+        const unsaved = plan.evict.filter((victim) => victim.savedAt === null);
+        const first = unsaved[0];
+        if (first !== undefined) {
+          status.textContent = `Dropped “${first.title}” from this browser's history to make room — it was never saved as a file.`;
+        }
+        log.info('history', 'evicted', {
+          count: plan.evict.length,
+          bytes: plan.evict.reduce((sum, victim) => sum + victim.bytes, 0),
+          neverSaved: unsaved.length,
+        });
+      }
+      log.debug('history', 'written', {
+        reason,
+        bytes,
+        designs: historyRows.length,
+        picture: snapshot.source !== null,
+        overBudget: plan.overBudget,
+      });
+    } catch (error) {
+      const message = describeError(error);
+      if (lastFailedJson === null) {
+        status.textContent = `History could not be written (${message}). Your design is still here — save a file to keep it.`;
+      }
+      lastFailedJson = json;
+      log.error('history', 'write failed', { reason, message });
+    } finally {
+      historyWriteInFlight = false;
+      refreshHistoryLine();
+      if (historyWritePending) {
+        historyWritePending = false;
+        void writeHistory('queued');
+      }
+    }
+  }
+
+  /**
+   * The change-detection tick: write when the document or the picture
+   * changed since the last write. Observing the state, rather than
+   * hooking every control, means no path can be missed; a serialisation
+   * costs under a millisecond. A failed write is retried only once the
+   * design changes again.
+   */
+  function historyTick(): void {
+    if (!sectionsReady || !designHasContent || historyWriteInFlight) return;
+    const json = serializeProject(currentProject());
+    const pictureChanged = sourceGeneration !== lastWrittenGeneration;
+    if (json === lastWrittenJson && !pictureChanged) return;
+    if (json === lastFailedJson && !pictureChanged) return;
+    void writeHistory(pictureChanged ? 'picture' : 'edit');
+  }
+
+  /** Has the browser already granted persistent storage? */
+  async function storagePersisted(): Promise<boolean> {
+    try {
+      return typeof navigator.storage?.persisted === 'function'
+        ? await navigator.storage.persisted()
+        : false;
+    } catch {
+      return false;
+    }
+  }
+
+  /** The browser's storage estimate, or null where it has none to give. */
+  async function storageEstimate(): Promise<{ quota?: number; usage?: number } | null> {
+    try {
+      return typeof navigator.storage?.estimate === 'function'
+        ? await navigator.storage.estimate()
+        : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** The tier for the persist state, bounded by the browser's estimate. */
+  async function currentBudget(): Promise<HistoryBudget> {
+    const tier = persistGranted ? HISTORY_BUDGETS.persisted : HISTORY_BUDGETS.basic;
+    return effectiveBudget(tier, await storageEstimate(), historyUsage(historyRows).bytes);
+  }
+
+  /** The opt-in: ask the browser to keep this origin's storage. */
+  async function requestPersistence(): Promise<void> {
+    keepMoreButton.disabled = true;
+    try {
+      const granted = await navigator.storage.persist();
+      persistGranted = granted;
+      historyBudget = await currentBudget();
+      status.textContent = granted
+        ? `The browser will keep this site's storage — the history can now hold up to ${String(historyBudget.maxDesigns)} designs.`
+        : "The browser declined to keep this site's storage — the history stays at its basic limit. Save files to be safe.";
+      log.info('history', 'persist', { granted, maxDesigns: historyBudget.maxDesigns });
+    } catch (error) {
+      const message = describeError(error);
+      status.textContent = `Could not ask the browser to keep storage (${message}).`;
+      log.warn('history', 'persist failed', { message });
+    } finally {
+      keepMoreButton.disabled = false;
+      refreshHistoryLine();
+    }
+  }
+
+  /**
+   * Bring a kept design back: settings through the same apply path as a
+   * file, the picture from the stored bytes. Silent on boot (D171
+   * decision 1) — no dialog, the status and the standing line name it.
+   */
+  async function restoreDesign(id: string, how: 'boot' | 'picker'): Promise<boolean> {
+    const record = await snapshots.get(id);
+    if (record === null) {
+      status.textContent = "That design is no longer in this browser's history.";
+      return false;
+    }
+    let file: ProjectFile;
+    try {
+      file = parseProject(record.projectJson);
+    } catch (error) {
+      const message = describeError(error);
+      status.textContent = `“${record.title}” could not be restored (${message}).`;
+      log.error('history', 'record unreadable', { message });
+      return false;
+    }
+    let pictureLoaded = false;
+    if (record.source !== null) {
+      const blob = new Blob([record.source.bytes], { type: record.source.type });
+      try {
+        const buffer = await decodeImageBlob(blob);
+        setStillMaster(buffer, { blob, name: record.source.name });
+        sourceName = record.source.name;
+        invalidateSelectionSource();
+        pictureLoaded = true;
+      } catch (error) {
+        log.warn('history', 'picture undecodable', { message: describeError(error) });
+      }
+    }
+    applyProject(file);
+    if (pictureLoaded) {
+      ensureSelectionSource();
+      updateSourceEntry();
+    }
+    // Adopt the record's identity: this is that design, continued, and
+    // the next tick writes it back to the top of the history.
+    designId = record.id;
+    designCreatedAt = record.createdAt;
+    designSavedAt = record.savedAt;
+    designHasContent = true;
+    designStanding = 'restored';
+    savedName = null;
+    savedJson = null;
+    restoredLastSaved = record.savedAt === null ? null : ageLabel(Date.now(), record.savedAt);
+    lastWrittenJson = record.projectJson;
+    lastWrittenGeneration = sourceGeneration;
+    status.textContent =
+      how === 'boot'
+        ? `Restored “${record.title}” from this browser's history — not saved as a file.`
+        : `Opened “${record.title}” from this browser's history.`;
+    log.info('history', 'restored', { how, title: record.title, picture: pictureLoaded });
+    refreshHistoryLine();
+    return true;
+  }
+
+  /** The Recent designs picker: newest first, the current one marked. */
+  async function openRecentDesigns(): Promise<void> {
+    historyRows = await snapshots.list();
+    if (historyRows.length === 0) {
+      status.textContent = "No designs in this browser's history yet.";
+      return;
+    }
+    const now = Date.now();
+    const choice = await choicesModal(document, {
+      title: 'Recent designs',
+      note: `Kept in this browser (${String(historyRows.length)} of ${String(historyBudget.maxDesigns)}). Opening one replaces the design on screen; that design stays in the history.`,
+      choices: historyRows.map((row) => ({
+        id: row.id,
+        label: row.id === designId ? `${row.title} (current)` : row.title,
+        helper: `${ageLabel(now, row.updatedAt)} · ${sizeLabel(row.bytes)}${row.hasPicture ? '' : ' · settings only'}${row.savedAt === null ? ' · never saved as a file' : ' · saved as a file'}`,
+      })),
+    });
+    if (choice === null || choice === designId) return;
+    // The design on screen goes into the history as it stands first.
+    await writeHistory('switch');
+    await restoreDesign(choice, 'picker');
+  }
 
   /**
    * The picture's entry in a saved package (schema v10): named from the
@@ -2634,6 +3016,16 @@ function build(app: HTMLElement): void {
         bytes: bytes.byteLength,
         picture: source !== null,
       });
+      // The history learns the design is safe on disk: its record stops
+      // counting as never-saved, and the standing line says so.
+      designHasContent = true;
+      designStanding = 'saved';
+      designSavedAt = Date.now();
+      savedName = filename;
+      savedJson = serializeProject(file);
+      await snapshots.markSaved(designId, designSavedAt);
+      historyRows = await snapshots.list();
+      refreshHistoryLine();
     } catch (error) {
       const message = describeError(error);
       status.textContent = `Could not save the project (${message}).`;
@@ -2721,6 +3113,13 @@ function build(app: HTMLElement): void {
       config.palette = snapshotPalette;
       eligibleCount = loaded.snapshot.length;
       paletteConflicts = driftConflicts(loaded.snapshot);
+      // Portability (the 2026-08-23 wish-list line, decision C): a
+      // design that draws on My inventory carries its membership in
+      // the browser it was made in, not in the file. It still renders
+      // — the snapshot is authoritative — but say what a refresh here
+      // would do. A warning: the banner quotes errors only.
+      const inventoryNote = inventoryDriftConflict(loaded);
+      if (inventoryNote !== null) paletteConflicts.push(inventoryNote);
       // The display name resolves properly once the profiles cache
       // lands; refresh it only if nothing has replaced the loaded
       // palette meanwhile (review of D124, punch item 3).
@@ -2738,6 +3137,25 @@ function build(app: HTMLElement): void {
     // The snapshot branch sets the palette without resolving, so the
     // banner is synced here for both branches (MYTHREADS-01).
     syncPaletteBanner();
+  }
+
+  /** A loaded design's My-inventory threads that this browser does not own. */
+  function inventoryDriftConflict(
+    loaded: NonNullable<ProjectFile['palette']>,
+  ): PaletteConflict | null {
+    const drawsOnInventory =
+      loaded.profileRef?.id === 'builtin:my-threads' ||
+      loaded.recipe.libraries.includes('mine') ||
+      loaded.recipe.ownedOnly;
+    if (!drawsOnInventory || loaded.snapshot.length === 0) return null;
+    const missing = loaded.snapshot.filter((t) => !owned.has(t.id));
+    if (missing.length === 0) return null;
+    return {
+      kind: 'unresolved-entries',
+      severity: 'warning',
+      ids: missing.map((t) => t.id),
+      message: `This design draws on My inventory, and ${String(missing.length)} of its ${String(loaded.snapshot.length)} threads are not in this browser's inventory. It renders from its saved colours; a refresh here would resolve from this inventory.`,
+    };
   }
 
   /**
@@ -2866,6 +3284,10 @@ function build(app: HTMLElement): void {
         // palette rules, and the shell learns a source exists.
         ensureSelectionSource();
         updateSourceEntry();
+      } else {
+        // A loaded file is a new design even without a picture — the
+        // one on screen stays recoverable in the history.
+        startNewDesign();
       }
       // The retired order is named at the moment it starts rendering
       // (M14-EXT-44) — the standing line in Processing carries it
@@ -3173,6 +3595,25 @@ function build(app: HTMLElement): void {
       profiles: colourProfiles.length,
     });
     applyColour();
+    // The design history (DUR-01): opened after the library so a
+    // restored palette sees the inventory, then the latest design comes
+    // back — silently, and only if nothing arrived meanwhile.
+    snapshots = await openSnapshots(typeof indexedDB === 'undefined' ? undefined : indexedDB);
+    historyRows = await snapshots.list();
+    persistGranted = await storagePersisted();
+    historyBudget = await currentBudget();
+    log.info('history', 'opened', {
+      persistent: snapshots.persistent,
+      designs: historyRows.length,
+      bytes: historyUsage(historyRows).bytes,
+      persisted: persistGranted,
+      maxDesigns: historyBudget.maxDesigns,
+    });
+    const latest = historyRows[0];
+    if (latest !== undefined && !sourceExists && !designHasContent) {
+      await restoreDesign(latest.id, 'boot');
+    }
+    refreshHistoryLine();
   })().catch((error: unknown) => {
     log.error('library', 'could not be opened', { message: describeError(error) });
   });
@@ -3944,8 +4385,10 @@ function build(app: HTMLElement): void {
       const session = await startCapture();
       capture = session;
       // A capture has no bytes of its own (DUR-01): the previous still's
-      // must not ride into a save of the live frame.
+      // must not ride into a save of the live frame. A session is a new
+      // design; its frames count as picture changes for the history.
       sourceOrigin = null;
+      startNewDesign();
       lockButton.hidden = false;
       // Each session starts unlocked — the M14-EXT-20 default,
       // superseding D101's follow-by-default; session-only, never
@@ -4033,6 +4476,8 @@ function build(app: HTMLElement): void {
   function stopSession(): void {
     capture?.stop();
     endCaptureUi('Screen capture stopped.');
+    // The last frame is now the still this design keeps (DUR-01).
+    sourceGeneration += 1;
     log.info('capture', 'session stopped');
   }
 
@@ -4047,6 +4492,8 @@ function build(app: HTMLElement): void {
       stopPumpNow();
       draftGovernor.reset();
       setDraftMode(false);
+      // The held frame is the picture the history keeps (DUR-01).
+      sourceGeneration += 1;
       status.textContent = 'Frozen — the preview holds the last frame; capture is still running.';
       log.info('capture', 'frozen');
     } else {
@@ -4330,6 +4777,16 @@ function build(app: HTMLElement): void {
     const file = imageFiles(event.clipboardData?.files ?? []).at(0);
     if (file) void importBlob(file, 'paste', file.name);
   });
+
+  // The design history's heartbeat (DUR-01): observe the state on a
+  // timer rather than hook every control — no path can be missed, and
+  // no other region of this file is touched. Hiding or leaving the page
+  // flushes at once, so a normal close loses nothing.
+  window.setInterval(historyTick, HISTORY_TICK_MS);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) historyTick();
+  });
+  window.addEventListener('pagehide', historyTick);
 }
 
 const app = document.getElementById('app');

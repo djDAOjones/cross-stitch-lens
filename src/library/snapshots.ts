@@ -437,6 +437,32 @@ export function nearQuota(existing: readonly SnapshotMeta[], budget: HistoryBudg
 }
 
 /**
+ * How often the app looks for a change worth keeping (ms). Two seconds
+ * bounds the loss window on a crash; a normal close flushes at once.
+ */
+export const HISTORY_TICK_MS = 2000;
+
+/** "just now", "4 min ago", "3 h ago", "yesterday", "5 days ago", "12 Aug 2026". */
+export function ageLabel(now: number, then: number, locale?: string): string {
+  const seconds = Math.max(0, Math.round((now - then) / 1000));
+  if (seconds < 45) return 'just now';
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${String(minutes)} min ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${String(hours)} h ago`;
+  const days = Math.round(hours / 24);
+  if (days === 1) return 'yesterday';
+  if (days < 7) return `${String(days)} days ago`;
+  return new Date(then).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+/** "820 KB", "1.2 MB", "38 MB". */
+export function sizeLabel(bytes: number): string {
+  if (bytes < MB) return `${String(Math.max(1, Math.round(bytes / 1024)))} KB`;
+  return `${(bytes / MB).toFixed(bytes < 10 * MB ? 1 : 0)} MB`;
+}
+
+/**
  * The design the next arrival would drop, when the history is full:
  * the oldest. Null while there is room. Which one it is matters to
  * the warning — a never-saved design is named before it goes.
@@ -463,6 +489,8 @@ export interface HistoryLineState {
   savedName: string | null;
   /** Edits since that save, when `current` is 'saved'. */
   changedSinceSave: boolean;
+  /** A restored design's last file save as an age label, or null if never saved. */
+  lastSaved: string | null;
   /** The design the next arrival would drop, when the history is full. */
   nextToDrop: SnapshotMeta | null;
 }
@@ -491,7 +519,10 @@ export function historyLine(state: HistoryLineState): string {
       line = `Kept in this browser's history (${slots}) — not saved as a file.`;
       break;
     case 'restored':
-      line = `Restored from this browser's history (${slots}) — not saved as a file.`;
+      line =
+        state.lastSaved === null
+          ? `Restored from this browser's history (${slots}) — not saved as a file.`
+          : `Restored from this browser's history (${slots}) — last saved as a file ${state.lastSaved}.`;
       break;
     case 'saved':
       line = state.changedSinceSave

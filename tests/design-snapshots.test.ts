@@ -12,6 +12,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  ageLabel,
   effectiveBudget,
   HISTORY_BUDGETS,
   historyLine,
@@ -22,6 +23,7 @@ import {
   newDesignId,
   nextToEvict,
   planWrite,
+  sizeLabel,
   snapshotBytes,
   type DesignSnapshot,
   type HistoryLineState,
@@ -214,6 +216,25 @@ describe('usage, nearQuota, nextToEvict, effectiveBudget', () => {
   });
 });
 
+describe('ageLabel / sizeLabel (the picker’s helper copy)', () => {
+  it('reads as a person would say it', () => {
+    const now = Date.UTC(2026, 7, 23, 12, 0, 0);
+    expect(ageLabel(now, now - 10_000)).toBe('just now');
+    expect(ageLabel(now, now - 4 * 60_000)).toBe('4 min ago');
+    expect(ageLabel(now, now - 3 * 3_600_000)).toBe('3 h ago');
+    expect(ageLabel(now, now - 26 * 3_600_000)).toBe('yesterday');
+    expect(ageLabel(now, now - 5 * 86_400_000)).toBe('5 days ago');
+    expect(ageLabel(now, Date.UTC(2026, 7, 1, 12), 'en-GB')).toBe('1 Aug 2026');
+  });
+
+  it('sizes in KB under a megabyte, one decimal under ten', () => {
+    expect(sizeLabel(500)).toBe('1 KB');
+    expect(sizeLabel(820 * 1024)).toBe('820 KB');
+    expect(sizeLabel(1.25 * MB)).toBe('1.3 MB');
+    expect(sizeLabel(38.4 * MB)).toBe('38 MB');
+  });
+});
+
 describe('historyLine (the Project section copy)', () => {
   const base: HistoryLineState = {
     available: true,
@@ -222,6 +243,7 @@ describe('historyLine (the Project section copy)', () => {
     current: 'kept',
     savedName: null,
     changedSinceSave: false,
+    lastSaved: null,
     nextToDrop: null,
   };
 
@@ -238,6 +260,9 @@ describe('historyLine (the Project section copy)', () => {
     expect(historyLine(base)).toBe("Kept in this browser's history (3 of 10) — not saved as a file.");
     expect(historyLine({ ...base, current: 'restored' })).toBe(
       "Restored from this browser's history (3 of 10) — not saved as a file.",
+    );
+    expect(historyLine({ ...base, current: 'restored', lastSaved: 'yesterday' })).toBe(
+      "Restored from this browser's history (3 of 10) — last saved as a file yesterday.",
     );
     expect(historyLine({ ...base, current: 'saved', savedName: 'Fox-200x200.pmproj' })).toBe(
       'Saved as Fox-200x200.pmproj. History: 3 of 10.',

@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CREATIVE-01 contact-sheet prototype</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        font: 14px/1.45 system-ui, sans-serif;
+        background: #161616;
+        color: #f4f4f4;
+        margin: 1.5rem;
+      }
+      h1 {
+        font-size: 1.15rem;
+        font-weight: 500;
+      }
+      p.note {
+        color: #b5b5b5;
+        max-width: 70ch;
+      }
+      #app {
+        max-width: 1100px;
+      }
+      #app.frame-400 {
+        max-width: 400px;
+        outline: 1px dashed #666;
+        outline-offset: 8px;
+      }
+      fieldset {
+        border: 1px solid #444;
+        border-radius: 6px;
+        margin: 0 0 1rem;
+        padding: 0.6rem 0.9rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.7rem 1.3rem;
+        align-items: center;
+      }
+      legend {
+        color: #b5b5b5;
+        padding: 0 0.3rem;
+      }
+      label {
+        display: inline-flex;
+        gap: 0.4rem;
+        align-items: center;
+        white-space: nowrap;
+      }
+      select,
+      button {
+        background: #262626;
+        color: #f4f4f4;
+        border: 1px solid #555;
+        border-radius: 4px;
+        padding: 0.25rem 0.5rem;
+        font: inherit;
+      }
+      button:hover {
+        background: #333;
+      }
+      .canvases {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      .canvases figure {
+        margin: 0;
+        flex: 1 1 180px;
+        min-width: 150px;
+        max-width: 380px;
+      }
+      .canvases canvas {
+        image-rendering: pixelated;
+        width: 100%;
+        background: #333;
+        border: 1px solid #444;
+        display: block;
+      }
+      figcaption {
+        text-align: center;
+        color: #b5b5b5;
+        padding-top: 4px;
+        font-size: 12px;
+      }
+      #status {
+        color: #d6d6d6;
+        min-height: 1.2em;
+        margin: 0.4rem 0;
+      }
+      dialog {
+        background: #1d1d1d;
+        color: #f4f4f4;
+        border: 1px solid #555;
+        border-radius: 8px;
+        padding: 1rem;
+        max-width: min(92vw, 1000px);
+      }
+      dialog::backdrop {
+        background: rgba(0, 0, 0, 0.6);
+      }
+      .sheet-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 1rem;
+        margin-bottom: 0.6rem;
+      }
+      .sheet-grid {
+        display: grid;
+        gap: 10px;
+      }
+      .sheet-cell {
+        background: #262626;
+        border: 1px solid #555;
+        border-radius: 6px;
+        padding: 6px;
+        cursor: pointer;
+        text-align: center;
+        font: inherit;
+        color: inherit;
+      }
+      .sheet-cell:hover,
+      .sheet-cell:focus-visible {
+        border-color: #7cb2ff;
+      }
+      .sheet-cell canvas {
+        image-rendering: pixelated;
+        width: 100%;
+        background: #333;
+        display: block;
+      }
+      .sheet-cell .cell-label {
+        font-size: 12px;
+        padding-top: 4px;
+      }
+      .sheet-cell .cell-ms {
+        font-size: 11px;
+        color: #9a9a9a;
+      }
+      #panel-host:empty {
+        display: none;
+      }
+      #panel-host {
+        border: 1px solid #555;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+        background: #1d1d1d;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>CREATIVE-01 — contact-sheet prototype (dither axis)</h1>
+    <p class="note">
+      Branch-only prototype (never production source). The mechanism under
+      trial: a still frozen at open → N labelled variants rendered off the
+      live path → a pick adopts. Axis 1 is the seven shipped dither presets
+      (owner-signed labels, D159), rendered through the real pipeline. The
+      open questions this page trials: modal vs panel, the render budget,
+      and cell size inside a 400 px shell.
+    </p>
+
+    <div id="app">
+      <fieldset>
+        <legend>Source & palette</legend>
+        <label>Source <select id="source"></select></label>
+        <label>Palette <select id="palette">
+          <option value="8" selected>DMC, limit 8 (default policy)</option>
+          <option value="16">DMC, limit 16</option>
+        </select></label>
+        <label>Grid <select id="grid">
+          <option value="150">150</option>
+          <option value="300" selected>300</option>
+        </select></label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Contact sheet</legend>
+        <button id="open-sheet" type="button">Freeze still &amp; open the sheet</button>
+        <label>Presentation <select id="present">
+          <option value="modal" selected>modal (dialog)</option>
+          <option value="panel">inline panel</option>
+        </select></label>
+        <label>Cells per row <select id="perrow">
+          <option value="1">1</option>
+          <option value="2" selected>2</option>
+          <option value="3">3</option>
+        </select></label>
+        <label><input id="frame400" type="checkbox" /> 400 px shell frame</label>
+      </fieldset>
+
+      <div id="status" role="status">Ready.</div>
+
+      <div class="canvases">
+        <figure><canvas id="before"></canvas><figcaption>source (grid)</figcaption></figure>
+        <figure><canvas id="current"></canvas><figcaption id="current-caption">current render</figcaption></figure>
+      </div>
+
+      <div id="panel-host"></div>
+    </div>
+
+    <dialog id="sheet-dialog"></dialog>
+
+    <script type="module" src="/src/contact-proto.ts"></script>
+  </body>
+</html>

@@ -45,9 +45,10 @@ line passes and `check` is green. Requirements references are to
 
 **Ship order is no longer milestone-number order** (D149). Shipped:
 M0–M8, M13, M14, M15, **Batch C0** (D149–D159, 2026-08-11) and
-**Track B** (DUR-01 + SAVE-01, D179, 2026-08-23); **Track A** is
+**Track B** (DUR-01 + SAVE-01, D179, 2026-08-23) and the **small UI
+batch** (eight items, D191–D196, 2026-08-23); **Track A** is
 build-complete (D165–D170), its close parked with the print programme.
-The order set on 2026-08-23 (D189): the **small UI batch** first, then
+The order set on 2026-08-23 (D189): the small UI batch first, then
 **Track D — Creative control**, then **Track C — Publication**; the
 **Print** programme (M16's sitting, PRINT-01 → PRINT-02, PRINT-TEST-01)
 waits in the Icebox until the owner schedules it. The numbers stay
@@ -56,13 +57,7 @@ they no longer imply sequence.
 
 ## Active
 
-### Current — Small UI batch (SHIPPED 2026-08-23)
-
-Promoted from the Icebox at the 2026-08-23 triage (D188) and run
-gateless in one sitting with the UI defects the wish-list triage
-surfaced: eight items, D191–D196. The slot is empty; Next is Track D.
-
-### Next — Track D Creative control of the image
+### Current — Track D Creative control of the image
 
 Opened 2026-08-23 at the icebox triage (D188). One subject: the user
 controls the final picture *inside* the app, beyond nearest-colour
@@ -83,7 +78,7 @@ prototypes and sign-off sittings of their own.
   Intent: pick from the source picture or the rendered design — and, where the browser has the EyeDropper API, from anything on screen — and resolve it to the nearest threads with their distance, feeding Must-use (pins, D178), swap targets (D182) and the inventory. The editor's pick-up tool is PAINT-01's.
   Done when: scoped in CREATIVE-01 and PAINT-01, then built as a Track D item.
 
-### Then — Track C Publication
+### Next — Track C Publication
 
 Live since 2026-08-22 at <https://djdaojones.github.io/pattern-mapper/>:
 a green `check` on `main` publishes the built bundle and then verifies

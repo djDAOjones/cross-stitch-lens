@@ -65,6 +65,15 @@ main {
   margin-left: auto;
 }
 
+/* Ghost button (PUB-01): the Licences control shares the shell bar
+  with Source but is a legal link, not a product action — borderless
+  so the hierarchy reads; the 44 px target, hover fill and focus ring
+  are the base button's. Scoped to the header until a second ghost
+  earns a base.css variant. */
+.app-header .button-ghost {
+  border-color: transparent;
+}
+
 /* Dev-only diagnostics cluster: its own bar group, wrapping as a
   unit; the announced status takes a full-width line so a copy or
   download result never squeezes the product controls. */
@@ -489,6 +498,44 @@ main {
 
 .modal-danger {
   border: 2px solid var(--csl-support-error);
+}
+
+/* Licences and notices dialog (PUB-01): the two documents as sections
+  under the dialog title — an h3 per document, the notices file's own
+  headings as h4 — reflowed into body-01 paragraphs so the hard-wrapped
+  MIT texts never scroll sideways at companion widths. Hierarchy is
+  size and weight, never colour. The first h3 takes the dialog's
+  initial (programmatic) focus, so the ring shows there on open. */
+.notices h3 {
+  font-size: var(--csl-heading-01-size);
+  line-height: var(--csl-heading-01-line);
+  font-weight: var(--csl-heading-01-weight);
+  margin: var(--csl-spacing-06) 0 var(--csl-spacing-03);
+}
+
+.notices section:first-child h3 {
+  margin-top: 0;
+}
+
+.notices h4,
+.notices h5,
+.notices h6 {
+  font-size: var(--csl-label-01-size);
+  line-height: var(--csl-label-01-line);
+  font-weight: var(--csl-heading-01-weight);
+  margin: var(--csl-spacing-05) 0 var(--csl-spacing-02);
+}
+
+.notices p {
+  font-size: var(--csl-body-01-size);
+  line-height: var(--csl-body-01-line);
+  margin: 0 0 var(--csl-spacing-04);
+}
+
+.notices code {
+  font-size: var(--csl-code-01-size);
+  line-height: var(--csl-code-01-line);
+  font-weight: var(--csl-code-01-weight);
 }
 
 /* Carbon accordion (M14-IMPL-03): section headers are real h2s

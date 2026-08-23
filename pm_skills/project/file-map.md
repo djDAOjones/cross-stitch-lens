@@ -151,7 +151,7 @@
 - `src/capture/pump.ts` — frame pump: rVFC subscription + pure latest-wins grab gate
 - `src/capture/session.ts` — getDisplayMedia session: start/grab/snapshot/stop + pure error/label helpers
 - `src/capture/surface.ts` — one reusable grab canvas: resize in place, never reallocate per frame (pure, injected factory)
-- `src/core/color-profile.ts` — colour-profile recipe + resolver to the effective ordered table, every narrowing explained; built-ins; policy→recipe bridge (M15)
+- `src/core/color-profile.ts` — colour-profile recipe + resolver to the effective ordered table, every narrowing explained; built-ins; policy→recipe bridge (M15); pin/unpin recipe helpers (MUST-01)
 - `src/core/color-sources.ts` — generated colour maps, map:/user: identity namespaces, CSS name table, provenance-honest labels (M15)
 - `src/core/color/candidates.ts` — per-bin candidate pruning for exact Lab matching: conservative Lab bounding box per 15-bit bin, witness-radius exclusion. An exclusion proof, not an approximation — returns the identical index to a full scan
 - `src/core/color/convert.ts` — sRGB↔linear↔Lab conversions (D65, CIE 1976)
@@ -272,7 +272,7 @@
 - `tests/capture-session.test.ts` — capture pure half: error messages, surface labels
 - `tests/capture-surface.test.ts` — grab-surface reuse: one canvas across N grabs, in-place resize, context failure
 - `tests/color-convert.test.ts` — golden: Lab reference values + round-trips
-- `tests/color-profile.test.ts` — profile resolver: every narrowing step + sentence, ordering contract, built-ins non-empty, policy→recipe bridge
+- `tests/color-profile.test.ts` — profile resolver: every narrowing step + sentence, ordering contract, built-ins non-empty, policy→recipe bridge; recipe pin helpers + pins-only inventory warning (MUST-01)
 - `tests/color-sources.test.ts` — map identity/count/ordering pins, exact-match naming incl. lime/green, namespace collision guard
 - `tests/controls.test.ts` — number-input clamping (pure half of controls)
 - `tests/debug-menu.test.ts` — Debug-menu pure halves: mailto redaction boundary, announced outcomes (M14-EXT-26)
@@ -317,7 +317,7 @@
 - `tests/notices.test.ts` — parser invariants, byte-for-byte pin of the shipped texts to the repo files, no-fetch / no-root-URL guard (D172)
 - `tests/palette-policy.test.ts` — Policy resolution: brands/source/inventory/exclusions and every explained conflict
 - `tests/palette-presets.test.ts` — Preset semantics: real references, enabled-brand only, visible degradation, stated rules
-- `tests/palette-resolve.test.ts` — The profile-world resolver’s own pins (COUNT-01 / MUST-01): a seat outside membership stays a Note, the count sentence is grammatical, an empty My-threads inventory resolves empty and not ok
+- `tests/palette-resolve.test.ts` — the profile-world resolver's pins: COUNT-01 sentences, MUST-01 seat rule (pin fills, Revert shape, My-inventory pins, ownedOnly), empty-inventory case
 - `tests/palette-selection.test.ts` — Count limits and auto-fill, incl. the canonical "lock 5, request 15 → 10 filled"
 - `tests/palette.test.ts` — DMC load invariants (533, unique, hex↔rgb)
 - `tests/pipeline-config.test.ts` — preset order, full-RGB, dither-replaces-reduce

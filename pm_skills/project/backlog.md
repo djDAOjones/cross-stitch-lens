@@ -71,9 +71,6 @@ without steps or a bundle. Diagnosed in the running app before anything
 was proposed (D173); sequencing is the owner's call — placed here so
 the next pick sees them.
 
-- [ ] **MUST-01 A Must-use colour can be chosen that the design cannot honour** [sign-off] [detail] (2026-08-22, wording half shipped 2026-08-23)
-  Intent: the Must-use search offers every colour in the build, but a seat outside the profile's membership is kept as a Note and never filled — and a filled seat guarantees a palette entry, not stitches. The honesty half shipped (D175): the status line and a helper now say so. Open: the seat semantics — auto-pin the colour into the design's recipe copy (recommended) or scope the search — a reversal of M15-CORE-03's "kept and explained" rule, so it is the owner's.
-  Done when: a Must-use picked from any brand reaches the palette and the key, Revert drops an auto-pin, and the profile-world resolver's tests cover it. Presence itself is ICE-RECOLOUR-01's swap.
 - [ ] **DIAG-02 Diagnostics for testers on the live build** [detail] (2026-08-23, opt-in and palette logging shipped 2026-08-23)
   Shipped (D175): the Debug menu mounts on the live build behind `?diag=1`, and every palette resolution is logged (profile, rule, seats, membership, selected, conflicts, source). Remaining: a one-click "Report a problem" that saves the project JSON and the redacted log together and opens the email route — waits on the `DEV_EMAIL` placeholder, which ships in a public bundle.
   Done when: a tester on the live URL can produce, in one click, a bundle and a project file naming the build, profile, count rule, seats, resolved palette and every conflict.

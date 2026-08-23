@@ -24,6 +24,11 @@ with the mechanism confirmed in the running app before anything is
 proposed — and the owner's saved project file is the evidence that
 names it.
 
+- MUST-01 (2026-08-23) — a Must-use picked outside the profile pins
+  into the design's recipe copy: the seat is honoured, "(edited)" tells
+  the truth, removing the chip undoes the pin, Revert drops it; drifted
+  seats stay kept and explained; My-inventory designs render from their
+  pins with the inventory warning. See D178.
 - MYTHREADS-01 (2026-08-23) — the empty-inventory dead end gets an
   exit: "My inventory" (renamed from "My threads", id unchanged) is a
   disabled option with its reason while the inventory is empty, and a

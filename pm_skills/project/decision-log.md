@@ -1727,3 +1727,51 @@ memory; deltas ledgered for `UI-STANDARDS.md`, `docs/ui-spec.md` and
 
 **Link:** merged as `6b3d839`; Track C's open items are PUB-02 (the
 rights gate) and the promoted PUB-05/PUB-06.
+
+## D178 — MUST-01 ships: a Must-use outside the profile pins into the design's colours (2026-08-23)
+
+**Context.** D175 made the seat honest — a Must-use outside the
+profile's membership stayed a kept-and-explained Note — and left the
+seat semantics to the owner. Picked on the `must-01` branch of the
+2026-08-23 parallel run; both decisions relayed through the coordinator.
+
+**Decision.** (b) auto-pin: a Must-use chosen outside membership is
+written into the design's recipe copy as an include pin — D114's
+"(edited)" copy pattern, "kill that green" mirrored by "I need this
+red" — so the resolver's M15-CORE-03 rule changes nowhere. The reversal
+is confined to the pick: a *chosen* seat no longer stays outside, while
+a seat that *drifts* out (a profile edit, a moved profile on load,
+adopting another profile, Revert) is still kept and explained. Built as
+pure recipe helpers with thin wiring: `pinIntoRecipe` (include once,
+exclusion lifted) and `unpinFromRecipe` measured against the linked
+profile's base (drop the include unless the base has it, restore a base
+exclusion, never add a base include the copy lacks; no base →
+unchanged), so the pick and its undo are one gesture and "(edited)"
+stays honest after a remove. Folded, all the owner's: adopting a
+profile does not re-pin; Revert stays recipe-only; the empty-inventory
+warning is judged once the table is known, so a My-inventory design
+resolving through its pins alone still says so (auto-pin would
+otherwise hide D176's banner); membership is asked of the resolver
+before resolving, never read back from `paletteConflicts` (stale under
+FLICKER-01's gate); D175's "unseated" status branch goes as superseded.
+
+**Alternatives.** (a) a membership-scoped search with a "Search all
+colours" reveal — a strict superset in code, wish-listed; wiring-only
+(a removed seat's pin stayed as residue); a resolver-derived implicit
+pin (reverses CORE-03 everywhere, silently widening loaded files);
+load-time pinning of legacy seats (indistinguishable from drift).
+
+**Verification.** Resolver and helper tests (DMC and Pastels pins, the
+Revert shape, My-inventory + pins with the warning, an unowned pin under
+`ownedOnly`), a byte-identical round trip, and the ticket's table live
+before and after (Anchor 403 on DMC: 490 colours, no Note, "(edited)",
+4,339 stitches reaching Colours used and the key). Gate green on the
+merged tree: 1,285 tests.
+
+**Scope.** `src/core/color-profile.ts`, `src/main.ts`,
+`src/ui/colour-section.ts`, `tests/color-profile.test.ts`,
+`tests/palette-resolve.test.ts`; the MUST-01 ticket deleted; memory. No
+doc-delta; the save format is unchanged.
+
+**Link:** merged as `1a2dc42`; presence itself stays ICE-RECOLOUR-01's
+swap; DIAG-02 is unaffected.

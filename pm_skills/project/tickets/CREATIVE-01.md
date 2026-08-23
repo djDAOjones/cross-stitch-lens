@@ -153,3 +153,109 @@ swap-target verb; the contact sheet's swatches). Shares the eyedropper
 and the render palette with PAINT-01. ICE-PROFILES-02 waits on C1.
 Requirements §5.1, §6, §9, §10; decisions D46, D48, D92, D114/D116,
 D135, D147, D149, D173, D178, D182, D188.
+
+## Scoping state after discussion rounds 1–5 (2026-08-23)
+
+Owner-agreed working state from five discussion rounds; the sitting
+signs. Where this contradicts a candidate bullet above, this wins.
+
+### The programme
+
+1. **Slice 1 — tone mode** (schema v12). The colour ↔ tone weighted
+   metric as a slider, ladder mode at its end-stop; tone bands with
+   cut handles on a lightness ramp — the ramp strip is control and
+   provenance readout in one (the owner's reference: the DaVinci
+   Resolve qualifier idiom); target shares = cuts at source-lightness
+   quantiles (exact at any N undithered, near with); cuts start
+   natural with one Equalise button; re-pick from the current frame;
+   the colour-use floor. Folds candidates 1, 3, 5, 9 and the new 12.
+2. **Slices 2a/2b — adjustments** as the third profile kind (v13).
+   2a: black point, white point, tone curve, global saturation.
+   2b: the six-band H/S/L colour mixer and the saturation range
+   slider, both collapsed by default.
+3. **Slice 3 — eyedropper** (PICK-01's in-app half): the preview
+   tool-mode pilot PAINT-01 inherits; nearest threads with ΔE feeding
+   Must-use, swap targets and the inventory. No bump.
+4. **Slice 4 — contact sheet**: a modal over the held still via the
+   export route; axis 1 dither methods, later adjustment presets and
+   colour profiles; a pick adopts. No bump.
+5. **Slice 5 — match-error compare**: the ΔE heat map as a compare
+   mode. No bump.
+
+Parked, with triggers: mid-slider shares (the iterative bias; wakes
+when the slider proves itself), the L/C/H weight split (advanced
+reveal, on ask), posterise (the contact sheet shows the per-hue-
+banding gap), recipe-level swaps (a user wants one swap across
+designs), finished-stitch preview (the print programme's home), the
+N-D distribution case. PROFILES-02 wakes when slice 1 ships. Cut:
+brightness, contrast, gamma, threshold, global hue shift — the curve,
+the mixer and tone mode cover all five.
+
+### Slice-1 decisions of record
+
+- **Weighted from the start** (the parked weights "need to come
+  soon"): the metric carries the weight; the count-limit selection
+  uses the same weight as cell matching; the LUT key includes it.
+  Dither must diffuse error in the weighted space or hue error leaks
+  into lightness — the prototype's central measurement.
+- **Tone curve**: exactly three points — top, mid, bottom — each
+  adjustable on both axes, so an inverted mapping is legal by
+  construction; no free-point spline. Keyboard: Tab through the
+  points, arrows nudge.
+- **Softness** on a band boundary ships in slice 1 only if it falls
+  naturally out of the dither maths (softness = dither confined to
+  the falloff zone around a cut); else hard cuts first.
+- **Colour-use floor**: after the count — "count up to N, then drop
+  the under-earners"; ending below N is accepted. Off by default,
+  toggleable. Owner label direction "Minimum colour count threshold"
+  or similar; working label "Minimum stitches per colour"; unit lean
+  absolute stitches (to confirm). Must-use seats exempt; the drop
+  cascade converges — the palette only shrinks.
+- **Tone hint and confetti caution**: one suitability heuristic
+  (entry count, hue spread, lightness spread), two messages — a
+  ladder near the tone end offers a one-click "use tone matching"
+  button; a broad multi-hue palette near the tone end shows a subtle
+  inline caution (owner's sketch: "may be entering confetti zone").
+  Never a silent change, never a block. Full tone + full palette
+  stays allowed, unguarded — the ramp readout explains the result.
+- **Naming**: "ladder" is project coinage (nodding to the art-class
+  value ladder). Established neighbours: gradient map (Photoshop),
+  duotone/tritone (print), colour ramp (pixel art), gradient/ombré
+  set (yarn). The survey weighs these; the ramp control and a "ramp"
+  profile shape must not collide.
+
+### Slice-2 decisions of record
+
+- The curve replaces gamma AND contrast; the black/white point
+  sliders bind to the curve's endpoints.
+- Saturation range slider: two handles rescaling the picture's
+  saturation into a chosen band — levels for the S channel; lives in
+  the adjust stage (already first in the chain, the owner's "close
+  to the raw image"). Design-options fork: nominal remap with a
+  low-S roll-off (lean — raising the floor must not tint near-greys
+  whose hue is noise) vs observed-range remap (image-adaptive; needs
+  the held source under live capture or it flickers).
+- The mixer: six colour bands (owner-confirmed) × H/S/L; the classic
+  six R/Y/G/C/B/M as working centres the prototype may tune.
+- Engine note: `fullRgbVariant` must keep the adjust params so the
+  selection source is the adjusted picture.
+- Built-in adjustment presets: the sitting signs the starter set; ~8
+  candidates with before/afters from the rig come as evidence.
+
+### Open for the sitting (none block the prototype)
+
+The floor's unit and final label; the user-facing names for tone mode
+and ladder-shaped profiles; the confetti-note wording; the
+saturation-range remap flavour.
+
+### Prototype plan (agreed)
+
+Two prototypes on a branch, never production source: (1) **tone
+mode** — the weighted metric, the ramp with cut handles and the
+three-point curve (two or three control shapes trialled), natural
+cuts + Equalise, quantile shares; the weighted-dither error question
+measured on the bench fixtures; before/afters over the six-photograph
+rig and `npm run audit` with two to four ladder profiles. (2) the
+**contact-sheet modal** (dither axis). Evidence to `bench-reports/`
+or here; then the sign-off sitting signs the programme and the
+slices become Track D items.

@@ -137,6 +137,7 @@ triage, D197).
 - [ ] **DUR-03 Design-history follow-ups** — remove one design, clear the history, "Keep more designs" outside the near-quota window; a "capture the same window again" offer when a restored capture returns as a still. Wakes on a user ask.
 - [ ] **DIAG-04 One-file report** — `project.json` plus the log inside a store-only `.pmproj` the app loads directly: one download, no multiple-downloads prompt (D187 chose two files). Wakes on tester friction.
 - [ ] **SYMBOL-SWAP-01 Explicit symbol swap** — take another thread's glyph and hand it yours in one act; a model verb beside `setOverride`, the picker lists the unused pool only (D191). Wakes on a user ask.
+- [ ] **STATUS-01 Keep a status sentence across one reprocess** — a sentence set beside a reprocess ("X is stitched as Y.", the Must-use sentences) shows only until the frame's "Preview updated." replaces it a second later; the status line needs a way to hold a user-facing sentence through one frame (from ICE-RECOLOUR-01). Wakes on a user missing an explanation.
 
 **Parked — each wakes on a named trigger** (D188).
 

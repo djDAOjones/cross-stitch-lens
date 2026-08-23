@@ -957,3 +957,34 @@ new ticket.
 `src/main.ts`. No tests: CSS containment is browser-verified; the
 a11y and contrast gates are unchanged. `docs/ui-evidence.md` FIX-04 /
 EXT-39 rows predate the gate — a doc-deltas line.
+
+## D194 — DATA-05 ships as three strings: the mapped-colour tooltip stops implying a measured catalogue; the Design title says it names the file; the chart readout counts the gutter (2026-08-23)
+
+**Context.** DATA-05 was one tooltip — "colour mapped, not measured"
+on generated colours, which implied the catalogue rows *were* measured
+(they are compiled and uncalibrated, D161; DATA-03 relabels the
+provenance vocabulary later). The wish-list triage surfaced two more
+strings of the same size and the owner's gateless batch took them
+together.
+
+**Decision.** The tooltip now says where a mapped colour came from —
+"colour mapped from its DMC equivalent" — and nothing about
+measurement; the `Provenance` type's `'measured'` label is DATA-03's
+to rename and is untouched here. The Design title field gains the
+helper "Printed on the PDF; also names the saved project file." — its
+second job (SAVE-01, D179) was invisible from the field. The
+export-size readout's chart figure is now the file's real canvas:
+`chartLayout` with the cell clamped as the export clamps it, so label
+gutter and edge padding are counted — the M16 pack read "chart
+2000 × 2000 px" beside a 2037 px file. Because the print half of the
+grid style sizes that gutter, print-half edits and grid presets now
+refresh the section readouts.
+
+**Verification.** `info-panel.test.ts` asserts the new wording and
+the absence of "measured"; in the app the readout said 2037 × 2037
+and the exported PNG decoded at 2037 × 2037; the helper is wired by
+`aria-describedby`.
+
+**Scope.** `src/ui/info-panel.ts`, `src/main.ts`,
+`tests/info-panel.test.ts`. `docs/ui-spec.md` § 280 still quotes the
+old mapped-colour helper — a doc-deltas line.

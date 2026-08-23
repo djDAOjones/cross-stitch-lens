@@ -81,10 +81,12 @@ export function buildRows(perColor: ColorUsage[], options: RowOptions = {}): Row
       };
     }
     const brand = options.brandNames?.get(thread.brandId) ?? thread.brandId;
-    // A mapped colour is flagged in the tooltip rather than left to
-    // look like a manufacturer measurement (M7-BRAND-01).
+    // A mapped colour is flagged in the tooltip (M7-BRAND-01) by
+    // saying where it came from — never "not measured", which implied
+    // the catalogue rows were (they are compiled, uncalibrated — D161;
+    // DATA-05 ahead of DATA-03's relabel).
     const provenance =
-      thread.provenance === 'mapped' ? ' · colour mapped, not measured' : '';
+      thread.provenance === 'mapped' ? ' · colour mapped from its DMC equivalent' : '';
     return {
       hex: usage.hex,
       // Hex rides in the visible label (audit A14): a title tooltip is

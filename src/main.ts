@@ -1453,6 +1453,9 @@ function build(app: HTMLElement): void {
           const edited = (): void => {
             syncPreset();
             if (screenHalf) sendGridStyle();
+            // The print half sizes the chart's gutter, which the
+            // export-size readout now counts (DATA-05).
+            else refreshSections();
           };
           fs.append(
             leg,
@@ -1599,6 +1602,7 @@ function build(app: HTMLElement): void {
             Object.assign(gridPrint, preset.print);
             gridPreset = preset.id;
             sendGridStyle();
+            refreshSections();
             gridToggle.setAttribute('aria-pressed', String(gridStyle.show));
             renderFields();
             status.textContent = `Applied the ${preset.label} grid preset.`;
@@ -2337,9 +2341,17 @@ function build(app: HTMLElement): void {
           pdfOptions.marginMm = value;
         },
       ),
-      textField(document, 'pdf-title', 'Design title', pdfOptions.title, (value) => {
-        pdfOptions.title = value;
-      }),
+      textField(
+        document,
+        'pdf-title',
+        'Design title',
+        pdfOptions.title,
+        (value) => {
+          pdfOptions.title = value;
+        },
+        // The title's second job (SAVE-01) was invisible from the field.
+        'Printed on the PDF; also names the saved project file.',
+      ),
       selectField(
         document,
         'pdf-pages',
@@ -3549,15 +3561,18 @@ function build(app: HTMLElement): void {
     orderNote.hidden = config.preset !== 'reduce-first';
   }
 
-  /** "PNG 800 × 800 px · chart 2,000 px wide" — the derived output
+  /** "PNG 800 × 800 px · chart 2,037 × 2,037 px" — the derived output
    *  size, from the four-resolutions model (a readout, never a fifth
-   *  control). */
+   *  control). The chart figure is the file's real canvas — label
+   *  gutter and edge padding included, the cell clamped as the export
+   *  clamps it — so the readout says what the export writes. */
   function exportSizeLine(): string {
     const w = config.grid.width;
     const h = config.grid.height;
     const s = scales.export.cleanPxPerStitch;
-    const cell = scales.export.chartCellPx;
-    return `PNG ${String(w * s)} × ${String(h * s)} px · chart ${String(w * cell)} × ${String(h * cell)} px`;
+    const cell = Math.min(scales.export.chartCellPx, maxCellPx(w, h, gridPrint));
+    const chart = chartLayout(w, h, gridPrint, cell);
+    return `PNG ${String(w * s)} × ${String(h * s)} px · chart ${String(chart.width)} × ${String(chart.height)} px`;
   }
 
   // Stats (M14-EXT-21): the design's headline numbers, first in the

@@ -66,7 +66,8 @@ describe('buildRows', () => {
       ],
       { brandNames: new Map([['anchor', 'Anchor']]) },
     );
-    expect(rows[0]?.title).toContain('colour mapped, not measured');
+    expect(rows[0]?.title).toContain('colour mapped from its DMC equivalent');
+    expect(rows[0]?.title).not.toContain('measured');
   });
 
   it('always carries the hex in the tooltip', () => {

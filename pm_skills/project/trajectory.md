@@ -38,6 +38,10 @@ wish-list triage surfaced, run gateless in the owner's order (D189).
 - ICE-WIDTH-02 (2026-08-23) — the width guide announces only under
   the diagnostics rule (dev builds, `?diag=1` in production); the
   public header is two lines shorter. See D193.
+- DATA-05 (2026-08-23) — three strings: the mapped-colour tooltip
+  names its source instead of "not measured", the Design title's
+  helper says it names the saved file, and the chart-size readout
+  counts the label gutter (2037, not 2000). See D194.
 
 ## Track B — Durability & identity (SHIPPED 2026-08-23)
 

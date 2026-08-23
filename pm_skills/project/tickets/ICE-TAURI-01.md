@@ -39,7 +39,7 @@ maintenance, not a configuration toggle.
 ### Window/workspace value
 
 Prototype Tauri's logical position/size, monitor enumeration, always-on-top if
-desired, and window-state restoration. Then test the real ICE-WORKSPACE-01 need:
+desired, and window-state restoration. Then test the window-automation need ICE-WORKSPACE-01 described (cut at the 2026-08-23 triage, D188; its ticket is in git history):
 arranging Lens is straightforward; moving Photoshop requires a separate,
 tightly-scoped macOS Accessibility/automation mechanism and permission. Tauri
 does not itself grant control over another application's windows.
@@ -88,7 +88,7 @@ or creates disproportionate release support.
 ## Dependencies
 
 - M6-WIN-01 supplies the tested browser ceiling.
-- ICE-WORKSPACE-01 supplies the window-automation use case.
+- The window-automation use case came from ICE-WORKSPACE-01 (cut 2026-08-23, D188: D149 retired the Photoshop-beside-the-app assumption).
 - This is an icebox spike; it does not block browser milestones M6–M12.
 
 ## References

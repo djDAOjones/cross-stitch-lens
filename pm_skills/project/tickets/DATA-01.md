@@ -11,7 +11,7 @@ two classes became their own backlog items, because the original item
 could not close without a large slice of the owner's time spent on the
 class that matters least:
 
-- **DATA-02** — name-versus-colour disagreement. A thread's *name* is
+- **DATA-02** — name-versus-colour disagreement (closed as cosmetic at the 2026-08-23 triage, D188). A thread's *name* is
   decoration: identity is `brandId:reference` and RGB is display-only
   (D55/D56), so a wrong name is ugly in the key and nothing more.
 - **DATA-03** — published brand values. This is the class that actually
@@ -92,7 +92,7 @@ Verifying the measured hexes against each brand's **published** colour
 values. Every one of the 3,338 rows carries provenance `measured` and
 no published source sits in the repo, so that is a separate piece of
 work with its own data problem — and it is the one that would need
-ICE-XREF-01's kind of owner-supplied source data.
+the kind of owner-supplied source data the curated cross-reference note in ICE-EXPLORER-01's ticket describes.
 
 ## Done when
 
@@ -102,4 +102,4 @@ ICE-XREF-01's kind of owner-supplied source data.
   same-brand hex pair since only they can say whether it is a slip.
 - Accepted corrections are in `thread-list.csv` by the owner's hand,
   `catalogue.json` regenerated, and `check` green.
-- The name-versus-colour probe is **out of scope here** — DATA-02.
+- The name-versus-colour probe is **out of scope here** — DATA-02, closed as cosmetic at the 2026-08-23 triage (D188).

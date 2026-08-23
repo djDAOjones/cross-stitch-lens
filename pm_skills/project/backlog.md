@@ -41,13 +41,18 @@
 
 Milestones ship in order. A milestone is done when its acceptance
 line passes and `check` is green. Requirements references are to
+Milestones ship in order. A milestone is done when its acceptance
+line passes and `check` is green. Requirements references are to
 `docs/requirements.md`.
 
 **Ship order is no longer milestone-number order** (D149). Shipped:
 M0–M8, M13, M14, M15, **Batch C0** (D149–D159, 2026-08-11) and
-**Track B** (DUR-01 + SAVE-01, D179, 2026-08-23). Remaining: **Track A**'s
-M16 only, with **Track C — Publication** owner-paced alongside; the
-numbers stay
+**Track B** (DUR-01 + SAVE-01, D179, 2026-08-23). Remaining, in the
+order set on 2026-08-23 (the print scoping and the icebox triage,
+D188): M16's sitting signs the print standard first; then the **small
+UI batch** and **Track D — Creative control**; the **Print** programme
+(PRINT-01 → PRINT-02, PRINT-TEST-01) builds at the end of the cycle;
+**Track C — Publication** owner-paced alongside. The numbers stay
 because they are greppable across the tickets and the decision log;
 they no longer imply sequence.
 
@@ -79,6 +84,38 @@ M16's sitting signs the standard first. Scope in PRINT-01's ticket.
   Intent: `npm run print:proof` renders every chart style × preset × paper × mode with a proof strip on each sheet (id, settings, expected mm per stitch, build id, a 50 mm scale bar) and writes the matching tick-box checklist, so a print change is verified at the printer in one sitting.
   Done when: the set renders from one command, every sheet identifies itself, the checklist covers the accessibility floors, and a ruler on the scale bar proves 100 %.
 
+### Next — Small UI batch
+
+Promoted from the Icebox at the 2026-08-23 triage (D188): small,
+mechanism known, gateless-able; one run, in this order.
+
+- [ ] **ICE-SYMBOL-UI-01 Manual symbol override picker** — M9's v1-optional slice (D170): reassign a thread's glyph from the *unused* pool only; taking another's is an explicit swap, never a conflict (D160-3). Model and persistence exist (`src/core/symbols/assignment.ts`) — UI alone. Done when the override survives save/load. Before M16's sitting.
+- [ ] **ICE-LIMIT-01 Rescale the colour-limit slider** — signed (D188): floor 2, ceiling 512, a log scale with the midpoint near 16; the number input already reaches 512. The stored value is `n`, so old projects load unchanged. Done when the slider follows the scale and a test pins the mapping.
+- [ ] **ICE-WIDTH-01 Judge the shell at its designed-for width** — decided (D188): the floor stays 320 px; the app is *designed for* 400 px (a phone in portrait, a strip beside an editor); phones are still-image users — mobile browsers have no `getDisplayMedia`. Done when the shell is read at 400 and 320 px in the running app and what fails is fixed or ticketed.
+- [ ] **ICE-WIDTH-02 The width readout goes behind `?diag=1`** — the header's two-line "works down to 320 px" sentence (`src/main.ts`) was a maintainer aid: the public header drops it; the readout renders only under the `diagnosticsRequested` rule (D175). Done when the public header is two lines shorter and `?diag=1` still shows it.
+- [ ] **DATA-05 Stop implying the catalogue is measured** — the Colours-used tooltip says "colour mapped, not measured" for generated colours (`src/ui/info-panel.ts`), implying the catalogue rows are (D161: compiled, uncalibrated). Reword ahead of DATA-03's relabel.
+
+### Track D — Creative control of the image
+
+Opened 2026-08-23 at the icebox triage (D188). One subject: the user
+controls the final picture *inside* the app, beyond nearest-colour
+realism (D149; the first live-app ask, D173). The swap is build-ready;
+everything else runs through two scoping tickets with sessions,
+prototypes and sign-off sittings of their own.
+
+- [ ] **ICE-RECOLOUR-01 Colour swap (layer A)** [detail] (2026-08-22, signed 2026-08-23)
+  Signed and optioned (D182): a design rule in `palette.design.swaps`, a pure stage over the sidecar with a render palette, targets from the whole universe, Swap… on the Colours-used row plus a Swaps chip list; builds as schema v11 in full mode from the plan gate. Closes MUST-01's presence half; layers B and C moved to PAINT-01 and CREATIVE-01 (D188).
+  Done when: layer A ships with the round trip intact and a swap target reaching Colours used, the key and the estimates.
+- [ ] **CREATIVE-01 Scope the creative and diagnostic image features** [sign-off] [detail] (2026-08-23)
+  Intent: one signed programme — what ships, in what order, where each lives (stage, stage parameter, profile kind or view), the first slice — for the candidates the triage kept: tone-only matching (RECOLOUR C1), adjustments as a third profile kind (ICE-ADJUST-01), the contact sheet as a mechanism (ICE-VARIANTS-01), the tonal provenance view (ICE-PROVENANCE-01, the diagnostic half), PICK-01's in-app half, the target % distribution (RECOLOUR C2) and the ICE-PROFILES-02 hook. The IDs stay greppable here; the intent lives in the ticket.
+  Done when: the owner signs the list, order, placements, persistence and UI homes; each signed feature becomes its own Track D item.
+- [ ] **PAINT-01 Scope the pixel editor** [sign-off] [detail] (2026-08-23)
+  Intent: an editor a stitcher can work in, not a demo brush — tools, the interaction model by pointer, keyboard and touch, persistence and clearing, undo, its composition with the swap's render palette, and the v1 slice. Stills only in v1, after layer A (D182-3/4).
+  Done when: the owner signs the v1 tool set, interaction model, persistence and build slices; each slice becomes its own Track D item.
+- [ ] **PICK-01 Eyedropper: grab a colour from the picture, the design or the screen** (2026-08-23)
+  Intent: pick from the source picture or the rendered design — and, where the browser has the EyeDropper API, from anything on screen — and resolve it to the nearest threads with their distance, feeding Must-use (pins, D178), swap targets (D182) and the inventory. The editor's pick-up tool is PAINT-01's.
+  Done when: scoped in CREATIVE-01 and PAINT-01, then built as a Track D item.
+
 ### Track C — Publication
 
 Live since 2026-08-22 at <https://djdaojones.github.io/pattern-mapper/>:
@@ -100,68 +137,29 @@ item is the pressing one.
 <!-- Deferred but worth keeping (post-triage). Needs a decision to
      reactivate. Promote into a milestone when committed. -->
 
-- [ ] **ICE-SYMBOL-UI-01 Manual symbol override picker** (2026-08-12)
-  Intent: M9's v1-optional slice, deferred whole at its close (D170). Pick from *unused* glyphs only; taking another thread's symbol is an explicit swap, never a conflict state (D160-3).
-  Done when: a thread's symbol can be reassigned from the unused pool and the override survives save/load. Model and persistence exist — this is the UI alone.
+**Owner-paced — yes at the 2026-08-23 triage (D188)**, scheduled by the
+owner; the catalogue is one cascade (DATA-01 → DATA-04 → DATA-03, D164).
 
-**Presumptive milestone after Track A** (D149): controlling the final
-image is the point of the app; a broader audience may have no upstream
-editor.
-
-- [ ] **ICE-ADJUST-01 Image adjustments as a third profile kind** (2026-08-04, rescoped 2026-08-11)
-  Intent: tonal sliders plus **colour thresholds as presets** — the first slice of §9, making the `adjust` stage real (D48). Build as a third kind on M15's profile editor, not loose sliders.
-  Done when: adjustments remap the source ahead of reduction with live preview, ship as read-only built-ins plus editable copies, and survive save/load.
-- [ ] **ICE-PROVENANCE-01 Tonal provenance view** (2026-08-04)
-  Intent: D92's remaining tonal half — where each chosen thread sits in the source's light↔dark range. Needs new selection-stage introspection; an upstream editor cannot tell you this.
-  Done when: the palette's tonal coverage is visible against the source's range, labelled as provenance.
-
-**Owner judgement required** — none can run gatelessly.
-
-- [ ] **ICE-VARIANTS-01 A contact sheet: one axis first** (2026-08-09, narrowed 2026-08-11)
-  Intent: show a spread side by side and pick by eye — one bounded axis, the five dither methods from a frozen still (D149).
-  Done when: a five-cell dither sweep renders from a frozen still, labelled, and picking a cell adopts that method. Never live capture: one pipeline per frame stands.
-- [ ] **ICE-LIMIT-01 Rescale the colour-limit slider** (2026-08-09)
-  Intent: ceiling to 512, a perceptual scale with the midpoint near 16, and drop 1 as selectable (D149; supersedes part of D98's range).
-  Done when: the owner signs the scale and floor, and projects saved under the old range still load.
-- [ ] **ICE-WIDTH-01 Decide what the app's width is designed for** (2026-08-09)
-  Intent: the shell says "works down to 320 px" but nobody decided what width it is *for*; the owner wants as narrow as possible while fully functional.
-  Done when: a stated width target and rationale are recorded, and narrow-width behaviour is judged against it.
-- [ ] **ICE-WIDTH-02 A low-height readout for judging window width** [blocked: ICE-WIDTH-01] (2026-08-09)
-  Intent: the header's width line costs two lines of height where space is scarcest. Blocked: a readout cannot place you until there is a target.
-- [ ] **ICE-PROFILES-02 More built-in colour profiles: the unbuilt candidates** [detail] (2026-08-09)
-  Forty unsigned candidate names kept when M15-GALLERY-01 closed at sixteen. Done when run through the signed-batch process, or cut.
 - [ ] **A11Y-VO-01 The human remainder of the screen-reader pass** [maintainer] (2026-08-09)
-  Intent: A11Y-01 took the "has a name" half; this is whether the announcements are any *good*, plus the no-meaning-by-colour check. PUB-01's Licences control and DUR-01's three new controls have joined the list (D177, D179).
+  Intent: A11Y-01 took the "has a name" half; this is whether the announcements are any *good*, plus the no-meaning-by-colour check. PUB-01's Licences control and DUR-01's three new controls have joined the list (D177, D179). Pairs with M16's sitting.
   Done when: a VoiceOver pass over the main control surface is recorded pass/fail per control, and the colour-only check is answered.
-- [ ] **ICE-RECOLOUR-01 Creative recolouring: colour swap, pixel editor, and controls beyond nearest colour** [detail] (2026-08-22, signed 2026-08-23)
-  Signed (D182): swap → tone-only matching → pixel editor; the swap is a design rule and a pure stage over the sidecar, targets from the whole universe, Swap… on the Colours-used row plus a Swaps chip list; layer A builds as schema v11 when scheduled.
-  Done when: layer A ships with the round trip intact and a swap target reaching Colours used, the key and the estimates.
-
-**Blocked on data or research.** Unblock order: DATA-04 and DATA-01
-feed DATA-03; ICE-EXPLORER-01 is the consumer ICE-XREF-01 waits for.
-
 - [ ] **DATA-01 Correct the swept catalogue rows** [maintainer] [detail] (2026-08-11)
   The detection half shipped (D155): the sweep runs inside `npm run audit`, worklist in `docs/catalogue-sweep.md` — 21 unnamed rows (all Finca) and 11 same-brand hex pairs. Corrections are the owner's, in `thread-list.csv`; regenerate and re-run the sweep for the delta.
-- [ ] **DATA-02 Name-versus-colour disagreement in the catalogue** (2026-08-11)
-  Intent: the class DATA-01 parks. A crude probe returns 402 hits dominated by legitimate compound names; real cases look different (`ariadna:1650` is a cyan-white named "heather very light").
-  Done when: a probe with a defensible false-positive rate ships, or the class closes as cosmetic (identity is `brandId:reference`; RGB is display-only, D55/D56).
 - [ ] **DATA-04 Catalogue data-structure review before finalisation** [sign-off] (2026-08-12)
-  Intent: settle the catalogue's shape once, ahead of DATA-03, so finalisation triggers the regeneration cascade a single time — provenance vocabulary (D161), empty-name legality, shared-hex semantics, per-brand metadata, `mappedFrom` vs ICE-XREF-01, a data version, and where the owner CSV lives (D163).
+  Intent: settle the catalogue's shape once, ahead of DATA-03, so finalisation triggers the regeneration cascade a single time — provenance vocabulary (D161), empty-name legality, shared-hex semantics, per-brand metadata, `mappedFrom` vs the curated cross-reference note in ICE-EXPLORER-01's ticket, a data version, and where the owner CSV lives (D163).
   Done when: the owner signs the target schema with migration notes and the ripple list — `build-palette.mjs`, the core `Thread` type, every consumer, and the snapshots inside saved project files (the round trip must hold).
 - [ ] **DATA-03 Finalise the catalogue values before publication** [maintainer] (2026-08-11, reshaped 2026-08-11)
   Intent: the values are compiled from public reference material, uncalibrated — the `provenance: "measured"` label is inaccurate (D161) and gets honest here. Lands as one catalogue rebuild with DATA-04's schema outcome and DATA-01's corrections (D164); manufacturer-published lists stay out of the repo.
   Done when: the owner finalises the values, the provenance label tells the truth, and the regeneration cascade runs with approvals.
-- [ ] **ICE-XREF-01 Curated cross-reference ingestion** [blocked: owner data + no consumer] [detail] (2026-07-21)
-  Owner-reviewed equivalences so "nearest equivalent" answers from published conversions, not colour distance. The real block is the missing consumer — do not start before ICE-EXPLORER-01.
+
+**Parked — each wakes on a named trigger** (D188).
+
+- [ ] **ICE-PROFILES-02 More built-in colour profiles: the unbuilt candidates** [detail] (2026-08-09)
+  Forty unsigned candidate names kept when M15-GALLERY-01 closed at sixteen. Wakes when CREATIVE-01's tone-only matching ships or a user asks; done when run through the signed-batch process, or cut.
 - [ ] **ICE-EXPLORER-01 Colour explorer** [detail] (2026-07-21)
-  A browse view over the 3,338-thread catalogue with cross-brand equivalents and their provenance. The engine half exists; this is the view.
-
-**Platform and packaging.** ICE-TAURI-01 unblocks ICE-WORKSPACE-01.
-
+  A browse view over the 3,338-thread catalogue with cross-brand equivalents and their provenance; the engine half exists. Wakes on a user ask. Its ticket carries the curated cross-reference note absorbed from ICE-XREF-01 (cut 2026-08-23).
+- [ ] **ICE-TAURI-01 Tauri desktop packaging feasibility** [spike] [detail] [blocked: a named trigger] (2026-07-20)
+  Raised by D149: publication targets any platform, so this spike is the packaging input. Wakes on users asking for an installable app, or browser capture proving insufficient on a platform the audience uses; its Photoshop-workspace case went with ICE-WORKSPACE-01 (cut, D188).
 - [ ] **PUB-03 Clean-cut republication — dormant contingency** [blocked: a named trigger] (2026-08-12, demoted 2026-08-12)
-  Intent: the D163 plan (publish from a fresh initial commit; this repository goes private as the archive). Wakes on a rights complaint touching this history, or the app turning commercial (which also retires the compiled catalogue values — DATA-03).
+  Intent: the D163 plan (publish from a fresh initial commit; this repository goes private as the archive), kept as an option. Wakes on a rights complaint touching this history, or the app turning commercial (which also retires the compiled catalogue values — DATA-03).
   Done when: triggered and executed per D163, or cut once publication is behind us.
-- [ ] **ICE-TAURI-01 Tauri desktop packaging feasibility** [spike] [detail] (2026-07-20)
-  Raised by D149: publication targets any platform, so this spike is the packaging input.
-- [ ] **ICE-WORKSPACE-01 Automated Photoshop companion workspace** [blocked: ICE-TAURI-01] [detail] (2026-07-20)
-  Depends entirely on packaging (D53). D149 weakens the case — a broader audience may not run Photoshop.

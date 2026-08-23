@@ -1,4 +1,4 @@
-# ICE-RECOLOUR-01 — Creative recolouring: beyond realism in the colour mapping
+# ICE-RECOLOUR-01 — Colour swap (layer A)
 
 ## The ask (owner, 2026-08-22)
 
@@ -18,37 +18,27 @@ Must-use seat is a palette place, never stitches — D178 closed the
 seat half and handed presence here. Nothing lets a user say "*this*
 thread, *here*".
 
-## Three layers
+## The layers, and where they live now
 
-**A. Colour swap (thread → thread remap).** A pure stage after the
-colour stage that rewrites the palette-index sidecar: "everywhere the
-mapper chose X, stitch Y". Stitches, counts, estimates, the key and
-symbols follow the sidecar. Reduce keeps matching against the
-*selected* colours — a swap changes what a chosen entry renders as,
-not what the mapper matches to — so the LUT fingerprint (D46) is
-untouched. Cost O(cells). Signed, scoped and optioned below.
+This item opened with three layers (D173). At the 2026-08-23 icebox
+triage (D188) it **narrowed to layer A**, the build-ready swap; the
+others moved to scoping tickets of their own:
 
-**B. Pixel editor (cell overrides).** A sparse cell → thread map as the
-*last* stage (cell-addressed, so after resize under either preset).
-Paint a thread, fill a contiguous same-index region, erase to fabric,
-undo; exports carry it because they re-run the pipeline. Persisted
-sparse (dense worst case 2 MB at 1024²), cleared on any grid change,
-held across frames. The cost is the surface: hit-testing through the
-preview's view transform (`src/ui/viewport.ts`), a tool mode, keyboard
-painting for AAA operability, the engaged-preview contract (EXT-27).
-Needs A's render palette: a painted thread may be outside the palette.
-
-**C. Controls inside the quantiser** — stage params, cheaper than
-either layer. *C1 tone-only (or weighted) matching*: Lab channel
-weights in the metric (§6); at L-only a curated ladder such as Delft
-blue or Ukiyo-e becomes a two- or three-tone map with the hue supplied
-by the profile, whose order already carries the gradient (D46) — one
-metric variant, one LUT key; the WebGPU LUT routes to TS until it
-learns the weights. *C2 target % distribution* (the owner's idea):
-exact at two states (the source's lightness quantile at the requested
-share), iterative above (a per-entry bias on the distance until the
-histogram lands) — parked inside this item as deep thought.
-*Threshold levels* are ICE-ADJUST-01's slice and pair with both.
+- **A. Colour swap (thread → thread remap)** — this ticket. A pure
+  stage after the colour stage that rewrites the palette-index
+  sidecar: "everywhere the mapper chose X, stitch Y". Stitches,
+  counts, estimates, the key and symbols follow the sidecar. Reduce
+  keeps matching against the *selected* colours — a swap changes what
+  a chosen entry renders as, not what the mapper matches to — so the
+  LUT fingerprint (D46) is untouched. Cost O(cells). Signed, scoped
+  and optioned below.
+- **B. Pixel editor (cell overrides)** → `PAINT-01`. The seed
+  paragraph and the signed constraints (stills only in v1; after A)
+  moved with it.
+- **C. Controls inside the quantiser** — C1 tone-only matching and C2
+  the target % distribution → `CREATIVE-01`, as candidates beside the
+  adjustments, the contact sheet, the provenance view and the
+  eyedropper. Threshold levels are ICE-ADJUST-01's slice there.
 
 ## Signed 2026-08-23
 
@@ -149,5 +139,5 @@ bump in its round. Full mode from the plan gate — stages 3–4 not run.
 - Requirements: §5.1, §6, §9, §20.
 - Decisions: D46, D114/D116, D135, D149, D160/D165, D171/D179
   (DUR-01), D173 (this item opens), D178 (MUST-01's seat half;
-  presence is here).
-- Related items: ICE-ADJUST-01, ICE-SYMBOL-UI-01.
+  presence is here), D182 (the signature), D188 (narrowed to layer A).
+- Related items: CREATIVE-01, PAINT-01, PICK-01, ICE-SYMBOL-UI-01.

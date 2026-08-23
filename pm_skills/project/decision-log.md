@@ -698,3 +698,82 @@ remainder: the mail client opening with the prefilled body, Chrome's
 prompt, the route on the live URL.
 
 **Link:** D183 (the reconstruction) stands; DIAG-03 is the alias.
+
+## D188 — Icebox triage: the creative programme gets scoping of its own, a small UI batch promotes, three items go (2026-08-23)
+
+**Context.** The owner asked for a whole-icebox triage — every item
+judged worth doing or not, chunked, the yes/no and the order theirs.
+It landed after the 2026-08-23 parallel run merged (D176–D183) and the
+prune, refactor and doc-sync that followed (D184–D187), so it judged
+the queue as it now stands: MUST-01, DUR-01 and SAVE-01 shipped,
+ICE-RECOLOUR-01 signed with layer A build-ready. Nineteen items in six
+chunks; the owner agreed the calls with three amendments. The print
+scoping (PRINT-01, PRINT-02, PRINT-TEST-01; M16 re-aimed — `838f3e7`)
+landed beside it from the Integrator chat and is not re-judged here.
+
+**Decision.**
+
+- **Track D — Creative control of the image opens**, the owner's major
+  ask: tickets that give *space and resources* to scoping two
+  programmes rather than deciding each candidate at a pick.
+  CREATIVE-01 scopes the creative and diagnostic image features —
+  tone-only matching, adjustments as a third profile kind, the contact
+  sheet as a mechanism, the tonal provenance view, the eyedropper's
+  in-app half, the distribution control, the PROFILES-02 hook — and
+  PAINT-01 scopes the pixel editor as an editor a stitcher can work
+  in. Each is `[sign-off]` with a ticket naming its candidates, the
+  questions, the method (two or three sessions, throwaway prototypes,
+  evidence on real pictures, a survey of the idiom users bring) and
+  what a signature delivers; signed features become Track D items.
+  ICE-RECOLOUR-01 narrows to layer A, the build-ready swap; its B and
+  C layers moved into the two tickets. ICE-ADJUST-01, ICE-VARIANTS-01
+  and ICE-PROVENANCE-01 leave the Icebox as CREATIVE-01's candidates —
+  their IDs stay on its line, their intent in its ticket.
+- **PICK-01, the eyedropper**, on the owner's ask: pick from the
+  picture, the design or (the EyeDropper API, where present) the
+  screen; resolve to the nearest threads; feed Must-use, swap targets
+  and the inventory. Scoped in CREATIVE-01; its pick-up half in
+  PAINT-01.
+- **A small UI batch promotes to Next**, gateless-able:
+  ICE-SYMBOL-UI-01 (UI only — model and persistence verified),
+  ICE-LIMIT-01 with its scale signed (floor 2, ceiling 512, log,
+  midpoint ≈ 16 — D149's own words), ICE-WIDTH-01 decided — the floor
+  stays 320 px, the app is **designed for 400 px**, and phones are
+  still-image users because mobile browsers lack `getDisplayMedia` —
+  with the judging left as the item, ICE-WIDTH-02 reshaped (the public
+  header drops the width sentence; the readout moves behind `?diag=1`)
+  and DATA-05, one tooltip string that implies the catalogue is
+  measured (D161).
+- **Owner-paced, yes:** A11Y-VO-01 (pairs with M16's sitting) and the
+  DATA-01 → DATA-04 → DATA-03 cascade, unchanged.
+- **Parked with a named trigger:** ICE-PROFILES-02 (tone-only matching
+  ships, or a user asks), ICE-EXPLORER-01 (a user asks), ICE-TAURI-01
+  (users want an installable app, or browser capture proves
+  insufficient), PUB-03 (as before).
+- **Cut:** DATA-02 — closed as cosmetic (a name is decoration, D55/D56;
+  real cases surface in DATA-03); ICE-XREF-01 — blocked twice with zero
+  data rows, its long/tidy-form design note absorbed into
+  ICE-EXPLORER-01's ticket; ICE-WORKSPACE-01 — built for the
+  Photoshop-beside-the-app workflow D149 retired, and D53 already
+  delivered the real goal.
+
+**Order.** M16's sitting signs the print standard · the small UI batch
+· ICE-RECOLOUR-01 layer A · CREATIVE-01 and PAINT-01 scoping (beside the
+swap in a parallel worktree) · their signed slices · the Print
+programme builds at the end of the cycle, as its scoping says; Track C
+and the owner sittings alongside. Nothing waits on DUR-01 any more.
+
+**Alternatives.** Cutting ICE-PROVENANCE-01 (recommended; the owner
+kept it). One scoping ticket for everything (the editor would crowd
+the features out). Folding the scoping into ICE-RECOLOUR-01 (layer A
+must not wait on a programme). Keeping the absorbed items as Icebox
+lines (one home, and the word budget).
+
+**Scope.** `backlog.md`; tickets CREATIVE-01 and PAINT-01 new,
+ICE-RECOLOUR-01 narrowed, ICE-EXPLORER-01 absorbing XREF, DATA-01 and
+ICE-TAURI-01 re-pointed, ICE-XREF-01 and ICE-WORKSPACE-01 deleted;
+`doc-deltas.md` (the width posture). No product code; the wish-list
+untouched at 52 lines, over its cap — the owner's Start B.
+
+**Link:** Track D's first build is ICE-RECOLOUR-01 layer A; CREATIVE-01
+and PAINT-01 close on signatures, not ships.

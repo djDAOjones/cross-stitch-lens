@@ -4956,18 +4956,23 @@ function build(app: HTMLElement): void {
   // Window-width guide (M14-FIX-04): while the window is being
   // narrowed toward the companion posture, one debounced line in the
   // existing status region names the floor — zero standing chrome,
-  // one announcement per resize burst, silent at roomy widths.
-  let widthGuideTimer = 0;
-  window.addEventListener('resize', () => {
-    window.clearTimeout(widthGuideTimer);
-    widthGuideTimer = window.setTimeout(() => {
-      if (window.innerWidth >= 960) return;
-      status.textContent =
-        window.innerWidth < 320
-          ? `Window ${String(window.innerWidth)} px — narrower than the supported 320 px floor.`
-          : `Window ${String(window.innerWidth)} px wide — works down to 320 px.`;
-    }, 350);
-  });
+  // one announcement per resize burst, silent at roomy widths. A
+  // maintainer's aid, not a user's (ICE-WIDTH-02): it renders under
+  // the diagnostics rule (D175 — every dev build, production only
+  // behind `?diag=1`), so the public header stays two lines shorter.
+  if (diagnostics !== null) {
+    let widthGuideTimer = 0;
+    window.addEventListener('resize', () => {
+      window.clearTimeout(widthGuideTimer);
+      widthGuideTimer = window.setTimeout(() => {
+        if (window.innerWidth >= 960) return;
+        status.textContent =
+          window.innerWidth < 320
+            ? `Window ${String(window.innerWidth)} px — narrower than the supported 320 px floor.`
+            : `Window ${String(window.innerWidth)} px wide — works down to 320 px.`;
+      }, 350);
+    });
+  }
 
   window.addEventListener('dragover', (event) => {
     event.preventDefault();

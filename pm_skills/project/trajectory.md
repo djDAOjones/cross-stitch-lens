@@ -30,6 +30,14 @@ wish-list triage surfaced, run gateless in the owner's order (D189).
   from 2 to 512 with 16 at its midpoint (two log halves, 300
   positions, `aria-valuetext` in colours); the number input stays the
   exact handle. See D192.
+- ICE-WIDTH-01 (2026-08-23) — the shell judged at 400 and 320 px:
+  three page-overflow causes fixed (content-box inputs, the table's
+  visually-hidden text escaping its scroll box, the fieldset
+  min-content default) and the browse-row buttons kept on one line.
+  See D193.
+- ICE-WIDTH-02 (2026-08-23) — the width guide announces only under
+  the diagnostics rule (dev builds, `?diag=1` in production); the
+  public header is two lines shorter. See D193.
 
 ## Track B — Durability & identity (SHIPPED 2026-08-23)
 

@@ -61,8 +61,6 @@ they no longer imply sequence.
 Promoted from the Icebox at the 2026-08-23 triage (D188): small,
 mechanism known, gateless-able; one run, in this order.
 
-- [ ] **ICE-WIDTH-01 Judge the shell at its designed-for width** — decided (D188): the floor stays 320 px; the app is *designed for* 400 px (a phone in portrait, a strip beside an editor); phones are still-image users — mobile browsers have no `getDisplayMedia`. Done when the shell is read at 400 and 320 px in the running app and what fails is fixed or ticketed.
-- [ ] **ICE-WIDTH-02 The width readout goes behind `?diag=1`** — the header's two-line "works down to 320 px" sentence (`src/main.ts`) was a maintainer aid: the public header drops it; the readout renders only under the `diagnosticsRequested` rule (D175). Done when the public header is two lines shorter and `?diag=1` still shows it.
 - [ ] **DATA-05 Stop implying the catalogue is measured** — the Colours-used tooltip says "colour mapped, not measured" for generated colours (`src/ui/info-panel.ts`), implying the catalogue rows are (D161: compiled, uncalibrated). Reword ahead of DATA-03's relabel.
 
 ### Next — Track D Creative control of the image

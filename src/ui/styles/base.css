@@ -51,6 +51,11 @@ fieldset {
   border: 0;
   padding: 0;
   margin: 0 0 var(--csl-spacing-06);
+  /* Browsers give fieldsets `min-inline-size: min-content`, which lets
+    one long nowrap thread name in a browse row widen the whole Colour
+    fieldset past a 400 px window — the rows' min-width: 0 + ellipsis
+    never got the chance to apply (ICE-WIDTH-01). */
+  min-inline-size: 0;
 }
 
 fieldset:last-child {
@@ -96,6 +101,10 @@ input[type='text'],
 input[type='search'],
 select {
   width: 100%;
+  /* The border counts inside the 100 % (ICE-WIDTH-01): content-box
+    fields ran 2 px past every panel and gave the page a horizontal
+    scroll at 400 px. */
+  box-sizing: border-box;
   /* AAA pointer target; `search` is included so no input type slips
     under the floor again (audit finding A3a). */
   min-height: var(--csl-target-min);

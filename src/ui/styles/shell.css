@@ -435,6 +435,10 @@ main {
 .debug-panel {
   max-width: 100%;
   overflow-x: auto;
+  /* The containing block for the table's visually-hidden header text
+    (ICE-WIDTH-01): absolutely positioned, it otherwise escapes the
+    scroll container and stretches the page to the table's width. */
+  position: relative;
 }
 
 /* Compressed info block (M14-FIX-05): the stats line and colours
@@ -804,6 +808,13 @@ main {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The row's action keeps its one-line width; the squeeze goes to the
+  name's ellipsis, not to a "Must / use" wrap at 320 px (ICE-WIDTH-01). */
+.browse-row button {
+  flex: none;
   white-space: nowrap;
 }
 

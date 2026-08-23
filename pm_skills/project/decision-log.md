@@ -915,3 +915,45 @@ midpoint produced 16, a typed 157 moved the handle to 249.
 **Scope.** `src/ui/colour-section.ts`; `tests/count-scale.test.ts`.
 `docs/ui-spec.md` and `docs/ui-evidence.md` still say 1–64 — a
 doc-deltas line.
+
+## D193 — ICE-WIDTH-01 and ICE-WIDTH-02 ship: the shell judged at 400 and 320 px, three overflow causes fixed; the width guide goes behind the diagnostics rule (2026-08-23)
+
+**Context.** D188 decided the posture — the floor stays 320 px, the
+app is *designed for* 400 px, phones are still-image users — and left
+the judging as the item; ICE-WIDTH-02 reshaped the header's width
+sentence as a maintainer aid. Gateless run, judged in the automated
+browser on the sample picture with every section and reveal opened.
+
+**What failed, and the fixes.** At 400 px the page scrolled
+horizontally for three independent reasons, none of them layout
+design: (1) `width: 100%` text, number and search inputs were
+`content-box`, so their 1 px borders ran 2 px past every panel —
+`box-sizing: border-box` on that rule; (2) the Colours-used table's
+visually-hidden header text (absolutely positioned) escaped the
+scrolling `.info-panel` and stretched the document to the table's
+619 px — the panel is now `position: relative`, the containing block
+the scroll box was assumed to be; (3) the browser default
+`fieldset { min-inline-size: min-content }` let one long nowrap thread
+name in a browse row widen the whole Colour fieldset to 430 px, so the
+rows' `min-width: 0` + ellipsis never applied — reset to 0. At 320 px,
+with those in, nothing overflowed and every pointer target held 44 px;
+the one visible fault was the browse rows' "Must use" buttons wrapping
+to two uneven lines — `flex: none; white-space: nowrap` on the row's
+buttons sends the squeeze to the name's ellipsis instead. The preview
+keeps 298 of 320 px.
+
+**The width guide** (M14-FIX-04, a status-line announcement on a
+resize burst below 960 px) now registers only when the diagnostics
+control does — D175's rule: every dev build, production only behind
+`?diag=1` — so the public header is the two lines shorter. Verified on
+the built bundle: silent at `/`, "Window 400 px wide — works down to
+320 px." at `/?diag=1`.
+
+**Left as is.** The Colours-used table scrolls inside its panel at
+every width by design (UI-STANDARDS → companion-window baseline); no
+new ticket.
+
+**Scope.** `src/ui/styles/base.css`, `src/ui/styles/shell.css`,
+`src/main.ts`. No tests: CSS containment is browser-verified; the
+a11y and contrast gates are unchanged. `docs/ui-evidence.md` FIX-04 /
+EXT-39 rows predate the gate — a doc-deltas line.

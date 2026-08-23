@@ -442,6 +442,14 @@ export function nearQuota(existing: readonly SnapshotMeta[], budget: HistoryBudg
  */
 export const HISTORY_TICK_MS = 2000;
 
+/**
+ * How often a live capture's frame is compared for the history (ms):
+ * the document does not change while the picture does, so the frame
+ * is hashed on this cadence and written only when it moved. Thirty
+ * seconds bounds how stale a restored capture can be.
+ */
+export const HISTORY_LIVE_HEARTBEAT_MS = 30_000;
+
 /** "just now", "4 min ago", "3 h ago", "yesterday", "5 days ago", "12 Aug 2026". */
 export function ageLabel(now: number, then: number, locale?: string): string {
   const seconds = Math.max(0, Math.round((now - then) / 1000));

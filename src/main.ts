@@ -86,6 +86,7 @@ import {
   ageLabel,
   effectiveBudget,
   HISTORY_BUDGETS,
+  HISTORY_LIVE_HEARTBEAT_MS,
   HISTORY_TICK_MS,
   historyLine,
   historyUsage,
@@ -352,6 +353,37 @@ function build(app: HTMLElement): void {
     masterRefill = null;
     sourceOrigin = origin;
     startNewDesign();
+  }
+
+  /**
+   * The picture as bytes, for a save or the history (D171 decision 5).
+   * A still that arrived as a file already has them. A still without
+   * bytes of its own — the generated sample, or the frame a capture
+   * left behind when it ended — is encoded to PNG **once** and the
+   * result kept as its origin, so every later save embeds the same
+   * bytes. A live capture is encoded afresh each time: its frame is
+   * whatever is on screen now, and that frame is what freezes into the
+   * file — "a capture has no file to reference, so the frame becomes
+   * one". Null when there is no picture, or it cannot be encoded.
+   */
+  async function stillSourceBytes(): Promise<SourceOrigin | null> {
+    if (sourceOrigin !== null) return sourceOrigin;
+    const still = master();
+    if (still === null) return null;
+    try {
+      const blob = await encodePngBlob({
+        width: still.width,
+        height: still.height,
+        data: new Uint8ClampedArray(still.data),
+      });
+      const origin: SourceOrigin = { blob, name: sourceName ?? 'Still' };
+      // Only a still is kept: the next live frame would differ.
+      if (masterRefill === null) sourceOrigin = origin;
+      return origin;
+    } catch (error) {
+      log.warn('project', 'picture could not be encoded', { message: describeError(error) });
+      return null;
+    }
   }
 
   /**
@@ -2564,6 +2596,8 @@ function build(app: HTMLElement): void {
   let lastWrittenJson = '';
   let lastWrittenGeneration = -1;
   let lastFailedJson: string | null = null;
+  let liveCheckedAt = 0;
+  let liveFrameHash = 0;
   let historyWriteInFlight = false;
   let historyWritePending = false;
 
@@ -2658,12 +2692,13 @@ function build(app: HTMLElement): void {
 
   /** The design as the history keeps it: document, picture, title. */
   async function currentSnapshot(json: string): Promise<DesignSnapshot> {
-    const descriptor = sourceDescriptor();
+    const origin = await stillSourceBytes();
+    const descriptor = sourceDescriptorFor(origin);
     const source =
-      sourceOrigin === null || descriptor === null
+      origin === null || descriptor === null
         ? null
         : {
-            bytes: await sourceOrigin.blob.arrayBuffer(),
+            bytes: await origin.blob.arrayBuffer(),
             type: descriptor.type,
             name: descriptor.name,
             entry: descriptor.entry,
@@ -2751,6 +2786,23 @@ function build(app: HTMLElement): void {
    */
   function historyTick(): void {
     if (!sectionsReady || !designHasContent || historyWriteInFlight) return;
+    // A live capture's frames change under an unchanged document: on
+    // the heartbeat, a frame whose pixels moved counts as a picture
+    // change. A hash here, not an encode — the write encodes, and only
+    // when something moved.
+    if (
+      capture !== null &&
+      !captureFrozen &&
+      Date.now() - liveCheckedAt >= HISTORY_LIVE_HEARTBEAT_MS
+    ) {
+      liveCheckedAt = Date.now();
+      const frame = master();
+      const hash = frame === null ? 0 : hashPixels(frame.data);
+      if (hash !== liveFrameHash) {
+        liveFrameHash = hash;
+        sourceGeneration += 1;
+      }
+    }
     const json = serializeProject(currentProject());
     const pictureChanged = sourceGeneration !== lastWrittenGeneration;
     if (json === lastWrittenJson && !pictureChanged) return;
@@ -2895,13 +2947,13 @@ function build(app: HTMLElement): void {
    * bytes are, with a neutral type when the browser reported none (the
    * decoder sniffs content either way).
    */
-  function sourceDescriptor(): ProjectFile['source'] {
-    if (sourceOrigin === null) return null;
-    const type = sourceOrigin.blob.type === '' ? 'application/octet-stream' : sourceOrigin.blob.type;
+  function sourceDescriptorFor(origin: SourceOrigin | null): ProjectFile['source'] {
+    if (origin === null) return null;
+    const type = origin.blob.type === '' ? 'application/octet-stream' : origin.blob.type;
     return {
       entry: sourceEntryName(type),
       type,
-      name: sourceOrigin.name.slice(0, MAX_SOURCE_NAME),
+      name: origin.name.slice(0, MAX_SOURCE_NAME),
     };
   }
 
@@ -2914,11 +2966,15 @@ function build(app: HTMLElement): void {
     return { mode: live.mode, cssPxPerStitch: bounded };
   }
 
-  /** Snapshot the live UI state as a current-schema project file. */
+  /**
+   * Snapshot the live UI state as a current-schema project file. The
+   * source block names the bytes the design already has; a live
+   * capture has none until a save freezes its frame (see saveProject).
+   */
   function currentProject(): ProjectFile {
     return {
       schemaVersion: SCHEMA_VERSION,
-      source: sourceDescriptor(),
+      source: sourceDescriptorFor(sourceOrigin),
       pipeline: {
         preset: config.preset,
         grid: { width: config.grid.width, height: config.grid.height },
@@ -2996,9 +3052,12 @@ function build(app: HTMLElement): void {
     saveButton.disabled = true;
     status.textContent = 'Saving…';
     try {
-      const file = currentProject();
-      const source =
-        sourceOrigin === null ? null : new Uint8Array(await sourceOrigin.blob.arrayBuffer());
+      // A live capture freezes to a still here (D171 decision 5): the
+      // frame on screen becomes the file's picture. Stills keep their
+      // own bytes, verbatim.
+      const origin = await stillSourceBytes();
+      const file: ProjectFile = { ...currentProject(), source: sourceDescriptorFor(origin) };
+      const source = origin === null ? null : new Uint8Array(await origin.blob.arrayBuffer());
       const bytes = writeProjectBytes(file, source);
       // The Design title names the file (SAVE-01); the picture's name,
       // then a timestamp, stand in when it is empty.
@@ -3010,7 +3069,10 @@ function build(app: HTMLElement): void {
         stamp: projectStamp(new Date()),
       });
       downloadBlob(document, new Blob([bytes], { type: 'application/zip' }), filename);
-      status.textContent = `Saved ${filename}.`;
+      status.textContent =
+        origin === null && masterImage !== null
+          ? `Saved ${filename} — without its picture, which could not be encoded.`
+          : `Saved ${filename}.`;
       log.info('project', 'saved', {
         filename,
         bytes: bytes.byteLength,

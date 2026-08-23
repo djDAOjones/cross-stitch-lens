@@ -134,6 +134,16 @@ fixtures.
 **Build note**: ready to build; next free schema is **v11**; the only
 bump in its round. Full mode from the plan gate — stages 3–4 not run.
 
+**From the wish-list triage (D197).** Must-fix in the build: the
+**stats race** — `setOnResult` computes stats against the *current*
+`config.palette`, not the palette the frame rendered with (one frame
+after any palette change under-reports; COUNT-01 saw `colours: 2`
+against a 489-entry render); with a render palette in play the
+mismatch stops being harmless. Plan-gate question: **embed the
+inventory in the project file** (DUR-01 chose warn-on-load, D179) — the
+other half of the portability question could ride the same v11 bump,
+or wait for its own.
+
 ## References
 
 - Requirements: §5.1, §6, §9, §20.

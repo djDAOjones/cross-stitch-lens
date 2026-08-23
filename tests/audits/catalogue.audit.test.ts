@@ -15,11 +15,12 @@
  * **This sweep reports only the two machine-CERTAIN classes** (D151's
  * split): rows with no name, and same-brand duplicate hexes. The
  * judgement classes are their own backlog items —
- * - **DATA-02** name-versus-colour disagreement. A crude probe returns
- *   402 hits dominated by compound names ("Blue Green", "Antique
- *   Violet") legitimately sitting between their two words. A wrong
- *   *name* is cosmetic anyway: identity is `brandId:reference` and RGB
- *   is display-only (D55/D56).
+ * - name-versus-colour disagreement (the former DATA-02, closed as
+ *   cosmetic at D188). A crude probe returns 402 hits dominated by
+ *   compound names ("Blue Green", "Antique Violet") legitimately
+ *   sitting between their two words. A wrong *name* is cosmetic
+ *   anyway: identity is `brandId:reference` and RGB is display-only
+ *   (D55/D56); real cases surface in DATA-03.
  * - **DATA-03** verification against each brand's *published* values —
  *   the class that actually affects output, blocked on owner data,
  *   since all 3,338 rows carry provenance `measured`.
@@ -200,9 +201,9 @@ describe.skipIf(!AUDIT)('DATA-01 thread catalogue sweep (AUDIT=1)', () => {
 
   it('publishes the sweep', () => {
     findings.push(
-      'Out of scope here, by D151: name-versus-colour disagreement (DATA-02) and verification ' +
-        'against published brand values (DATA-03). Re-run this sweep after each round of owner ' +
-        'corrections and read the delta.',
+      'Out of scope here, by D151: name-versus-colour disagreement (closed as cosmetic, D188) ' +
+        'and verification against published brand values (DATA-03). Re-run this sweep after each ' +
+        'round of owner corrections and read the delta.',
     );
     publishAudit({
       ticket: 'DATA-01',
@@ -254,8 +255,9 @@ describe.skipIf(!AUDIT)('DATA-01 thread catalogue sweep (AUDIT=1)', () => {
       '',
       '## Not covered here',
       '',
-      '- **DATA-02** — name-versus-colour disagreement. Cosmetic: a wrong',
-      '  name is ugly in the key, but identity is not the name.',
+      '- **Name-versus-colour disagreement** — closed as cosmetic (D188): a',
+      '  wrong name is ugly in the key, but identity is not the name; real',
+      '  cases surface in DATA-03.',
       '- **DATA-03** — verification against each brand’s *published*',
       '  values. The class that affects output, blocked on owner data.',
     ];

@@ -1059,3 +1059,55 @@ control — is a human check.
 `src/ui/styles/shell.css`, `src/ui/styles/tokens.css` (one `@pair`).
 `docs/ui-spec.md` / `ui-evidence.md` describe the status line alone —
 a doc-deltas line.
+
+## D197 — Wish-list triage: 48 lines promoted or cut, the inbox empty; the gate riders queue ahead of the next worktree round (2026-08-23)
+
+**Context.** The wish-list stood at 52 against its cap of 25 through
+two prunes (D188, D190) that deferred the triage to the owner's Start
+B. This session's Start B presented every line in seven chunks with a
+call each; the owner ran the UI work first and then asked for
+everything tied up for a fresh chat, which takes the calls as
+presented — each below is reversible by re-adding a line.
+
+**Cut (25).** The twelve **spec §25 / "later" lines** — order editor,
+CIEDE2000 and weighting, preview modes, camera input, fabric
+simulation, ScreenCaptureKit, SVG/CSV/ZIP, embroidery formats,
+Photoshop revisited, cloud, export presets, optimisation modes — were
+a copy of `docs/requirements.md` §25, which remains their home; two
+ideas in them were worth carrying (below). Gate and bench lines with
+no trigger: clippy/rustfmt in the gate, the browser-mode runner, the
+manual `?backend=` override, bv2 per-row taint, the occlusion flag,
+the harness master-image gap, the synced-tree cache relocation.
+Retired premises or accepted behaviour: the companion-window
+rehearsal (D149), semi-transparent dither participation, the
+document-size modal, Must-use membership marking and
+remove-after-exclusion (D178), the `resolvePalette` log widening, the
+retired policy-world resolver (D124 keeps the record), and the M10
+residue (A3, true-size page, per-page key are PRINT-01/02's).
+
+**Promoted.** To **Current**, ahead of Track D: **INFRA-02**, four
+gate one-liners (`bench-source.html` base path, `check:docs` standing
+alone, `eslint` over `bench-reports/`, `verify:deploy --fetch`) — each
+bites the worktree round Track D's scoping opens. To the **Icebox**, a
+parked-follow-ups group with a trigger each: INFRA-03 (audit flake,
+stale wasm pkg), CAPTURE-OMT-01 (off-main-thread capture, D135),
+COUNT-02 (re-select against the held source), DUR-02 (deflate
+`.pmproj`), DUR-03 (history management, re-capture on restore),
+DIAG-04 (one-file report), SYMBOL-SWAP-01 (D191's swap verb). Into
+**tickets**: CREATIVE-01 gains re-pick-from-frame, recipe-level
+"render X as Y" and the finished-stitch view as candidates 9–11;
+PRINT-01 absorbs the M12 key residue, print-from-phone, the
+accessibility face, SVG/CSV/ZIP and vector furniture;
+ICE-RECOLOUR-01 takes the stats race as a build-time must-fix and the
+inventory-in-file as a plan-gate question. Swap-to-fabric was already
+PAINT-01's Q10. Seven lines shipped in the batch (D191–D196).
+
+**Cost.** Backlog Active rises to ~1,900 words / 26 items against
+1,500 — the parked group is terse by design and the Refactor D190
+proposed stands; the wish-list is at 0 against 25.
+
+**Scope.** `wish-list.md`, `backlog.md`, three tickets. One handoff
+from the Icebox-triage chat at its close: the generated
+`docs/catalogue-sweep.md` still named DATA-02 as a parked class — its
+writer (`tests/audits/catalogue.audit.test.ts`) now says "closed as
+cosmetic (D188)" and the sweep was re-run; the data half is unchanged.

@@ -59,6 +59,8 @@ they no longer imply sequence.
 
 ### Current — Track D Creative control of the image
 
+- [ ] **INFRA-02 Gate riders before the next worktree round** (2026-08-23, D197) — four one-liners: the harness popup path `/bench-source.html` is root-relative (`src/bench-browser.ts` → `import.meta.env.BASE_URL`); `check:docs` alone fails in a fresh worktree (`docs/acceptance-matrix.md` names `crates/stitch-engine/pkg`, built only by `check:wasm`); `eslint .` lints untracked `bench-reports/` (one `ignores` line); `verify:deploy --fetch`. Done when each is fixed and the gate is green in a fresh worktree; gateless.
+
 Opened 2026-08-23 at the icebox triage (D188). One subject: the user
 controls the final picture *inside* the app, beyond nearest-colour
 realism (D149; the first live-app ask, D173). The swap is build-ready;
@@ -129,6 +131,17 @@ owner; the catalogue is one cascade (DATA-01 → DATA-04 → DATA-03, D164).
 - [ ] **DATA-03 Finalise the catalogue values before publication** [maintainer] (2026-08-11, reshaped 2026-08-11)
   Intent: the values are compiled from public reference material, uncalibrated — the `provenance: "measured"` label is inaccurate (D161) and gets honest here. Lands as one catalogue rebuild with DATA-04's schema outcome and DATA-01's corrections (D164); manufacturer-published lists stay out of the repo.
   Done when: the owner finalises the values, the provenance label tells the truth, and the regeneration cascade runs with approvals.
+
+**Parked follow-ups — each wakes on a named trigger** (wish-list
+triage, D197).
+
+- [ ] **INFRA-03 Gate reliability on the synced tree** — `npm run audit` intermittently reports 2 failures right after a full `check` (twice, 2026-08-11; grab `/tmp/audit.log` while red), and `crates/stitch-engine/pkg` goes stale silently without a local Rust toolchain. Wakes on the next red.
+- [ ] **CAPTURE-OMT-01 Off-main-thread capture** — move the surface-sized grab readback and dirty sample off the main thread (`MediaStreamTrackProcessor`-class); an architecture change with its own scope (D135). Wakes on felt stutter, or a captured surface materially over 6.5 MP.
+- [ ] **COUNT-02 Re-select against the held source** — every distinct count step pays a full-RGB refetch plus the FLICKER-01 hold although the distribution does not depend on the count. Wakes on a slider-feel report.
+- [ ] **DUR-02 Accept a deflate-compressed `.pmproj`** — a package re-zipped by Finder or Explorer is refused; `DecompressionStream('deflate-raw')` in an adapter outside core would accept it. Wakes when a user hits it.
+- [ ] **DUR-03 Design-history follow-ups** — remove one design, clear the history, "Keep more designs" outside the near-quota window; a "capture the same window again" offer when a restored capture returns as a still. Wakes on a user ask.
+- [ ] **DIAG-04 One-file report** — `project.json` plus the log inside a store-only `.pmproj` the app loads directly: one download, no multiple-downloads prompt (D187 chose two files). Wakes on tester friction.
+- [ ] **SYMBOL-SWAP-01 Explicit symbol swap** — take another thread's glyph and hand it yours in one act; a model verb beside `setOverride`, the picker lists the unused pool only (D191). Wakes on a user ask.
 
 **Parked — each wakes on a named trigger** (D188).
 

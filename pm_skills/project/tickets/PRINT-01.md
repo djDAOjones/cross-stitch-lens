@@ -102,6 +102,24 @@ ICE-RECOLOUR-01's layer A holds v11, so share it or take v12. Migration
 resets and labels; `gridStyle.print`'s meaning changes from raster px
 to ratios (doc delta for M11).
 
+## Absorbed at the wish-list triage (2026-08-23, D197)
+
+- **M12 key residue:** a per-colour skein column in the PDF key and
+  the Colours-used rows; a cm/inches display preference; controls for
+  routing, waste and skein length. The stitcher's review of the
+  defaults is M16's sitting (D170).
+- **Print from a phone, or share the PDF to one** — D188 reads phones
+  as still-image users; revisit once the plan exists.
+- **An embedded accessibility face for the key** (Atkinson’s face
+  or IBM Plex Sans, both open-licensed) if PRINT-TEST-01's proof set
+  shows 1/l/I or 6/9 confusion — needs `@pdf-lib/fontkit`, a runtime
+  dependency decision.
+- **SVG chart, CSV stitch data, a print-ready ZIP** (§19) — outputs the
+  plan's model makes cheap; judged here, not as a milestone.
+- **Vector furniture** (grid, numbers, symbols as PDF vectors) is the
+  hybrid in "The other design decision"; the M10 residue's A3, true-size
+  page and per-page key are already this ticket's and PRINT-02's.
+
 ## Risks
 
 Page explosion at large grids; Helvetica is Latin-1 (`?` for non-Latin

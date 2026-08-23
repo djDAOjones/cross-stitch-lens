@@ -64,7 +64,8 @@ references — the shape a copied-down spreadsheet cell makes.
 
 ## Not covered here
 
-- **DATA-02** — name-versus-colour disagreement. Cosmetic: a wrong
-  name is ugly in the key, but identity is not the name.
+- **Name-versus-colour disagreement** — closed as cosmetic (D188): a
+  wrong name is ugly in the key, but identity is not the name; real
+  cases surface in DATA-03.
 - **DATA-03** — verification against each brand’s *published*
   values. The class that affects output, blocked on owner data.

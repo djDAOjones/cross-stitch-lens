@@ -76,6 +76,16 @@ Each carries what is already decided; the scoping judges the rest.
    heat map over the design showing where the palette serves the
    picture worst, which is where a Must-use, a swap or a painted cell
    earns its place. Diagnostic; a Compare-class decoration (D92).
+9. *From the wish-list triage (D197), unjudged:* **re-pick colours from
+   the current frame** — a live capture seeds the selection source from
+   its first frame (or an earlier still) and holds it until the
+   geometry or a colour rule changes, so the palette can be chosen
+   against a picture that is no longer the source (COUNT-01).
+10. *Likewise:* **recipe-level "render X as Y"** — a profile carrying
+    swaps; additive once C1 exists (ICE-RECOLOUR-01 Q5).
+11. *Likewise, a view not a control:* **finished-stitch / fabric
+    preview** — simulated thread crosses and fabric (§10; §25's fabric
+    simulation), the creative sibling of the provenance view.
 
 ## Questions the scoping must answer
 

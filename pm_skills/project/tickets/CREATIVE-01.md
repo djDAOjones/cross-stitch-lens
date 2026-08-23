@@ -8,6 +8,17 @@
 > "Scoping state after discussion rounds 1–5" section, that section
 > wins; the naming and flavour items D200 lists stay open, each owned
 > by its building slice.
+>
+> **TONE-01 build landed 2026-08-24 (D201, schema v12).** The tone
+> module is `src/core/color/tone.ts`; the UI group
+> `src/ui/tone-controls.ts` in the Colour section; evidence regenerates
+> via `npm run audit` (`audit-tone-01-*.json`, `tone-01-gallery-*.html`).
+> Open on the item: the four naming items and a human keyboard pass.
+> For the later slices: the selection source now fetches when a floor
+> or tone needs it, not only under a count limit; `PipelineConfig.tone`
+> rides the config like `swaps`; the wasm clamp and GPU-LUT skip gate
+> on `toneEngaged`. ADJUST-01's curve is a *different* curve (source
+> remap in the adjust stage); do not fold them.
 
 ## Outcome
 

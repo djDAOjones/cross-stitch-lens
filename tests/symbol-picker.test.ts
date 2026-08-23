@@ -7,6 +7,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { defaultTone } from '../src/core/color/tone.ts';
 
 import {
   effectiveSymbols,
@@ -117,6 +118,7 @@ function projectWith(symbols: SymbolAssignmentState): ProjectFile {
       metric: 'lab',
       dither: { algorithm: 'none' },
       ditherProfileRef: null,
+      tone: defaultTone(),
     },
     palette: null,
     symbols: {

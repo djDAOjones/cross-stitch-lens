@@ -10,6 +10,7 @@
 
 import type { CandidateTable } from '../color/candidates.ts';
 import type { ColorMetric } from '../color/metrics.ts';
+import { toneEngaged, type ToneConfig } from '../color/tone.ts';
 import { adjustIsIdentity, adjustStage, type AdjustParams } from './adjust.ts';
 import {
   ditherStage,
@@ -65,6 +66,15 @@ export interface PipelineConfig {
    * means none. Meaningless without a palette.
    */
   swaps?: ThreadSwap[];
+  /**
+   * Tone mode (TONE-01, schema v12): the colour ↔ tone weight, the
+   * three-point lightness curve, and ladder-mode cuts. Optional so
+   * every pre-TONE-01 config stays valid; absent — or disengaged
+   * (weight 0, identity curve) — leaves matching, selection and
+   * dithering byte-identical to their pre-TONE-01 selves. Engages
+   * only under the 'lab' metric (§6). Meaningless without a palette.
+   */
+  tone?: ToneConfig;
 }
 
 /**
@@ -78,8 +88,17 @@ export function fullRgbVariant(config: PipelineConfig): PipelineConfig {
   return { ...config, palette: null, dither: { algorithm: 'none' }, swaps: [] };
 }
 
-/** Optional LUT supplier so a host (the worker) can inject its cache. */
-export type LutProvider = (palette: Palette, metric: ColorMetric) => Uint16Array;
+/**
+ * Optional LUT supplier so a host (the worker) can inject its cache.
+ * The tone config is part of the LUT's identity (the key carries the
+ * weight, curve and cuts — D46), so the provider receives it whenever
+ * it is engaged.
+ */
+export type LutProvider = (
+  palette: Palette,
+  metric: ColorMetric,
+  tone?: ToneConfig,
+) => Uint16Array;
 
 /**
  * Optional candidate-table supplier, same idea as {@link LutProvider}:
@@ -125,12 +144,20 @@ export function buildStages(
 
   const colour: StageInstance[] = [];
   if (config.palette !== null) {
+    // Tone rides into the colour stages only when it actually changes
+    // matching — the engagement gate is what keeps a weight-0 config
+    // on the untouched pre-TONE-01 code paths, byte for byte.
+    const tone = toneEngaged(config.metric, config.tone) ? config.tone : undefined;
     if (config.dither.algorithm !== 'none') {
       // Pruning is Lab-only; under 'rgb' the stage keeps the full scan.
       // It is valid for both families: diffusion and threshold match
-      // through the same exact path.
+      // through the same exact path. The table is a plain-Lab
+      // structure, so an engaged tone skips it (the tone scan is over
+      // the selected palette, not the catalogue — small by design).
       const candidates =
-        config.metric === 'lab' ? providers.candidates?.(config.palette) : undefined;
+        config.metric === 'lab' && tone === undefined
+          ? providers.candidates?.(config.palette)
+          : undefined;
       colour.push(
         stageInstance(ditherStage, {
           palette: config.palette,
@@ -140,16 +167,18 @@ export function buildStages(
           // Threshold methods have no scan direction; false is inert.
           serpentine: 'serpentine' in config.dither ? config.dither.serpentine : false,
           ...(candidates === undefined ? {} : { candidates }),
+          ...(tone === undefined ? {} : { tone }),
         }),
       );
     } else {
-      const lut = providers.lut?.(config.palette, config.metric);
+      const lut = providers.lut?.(config.palette, config.metric, tone);
       colour.push(
         stageInstance(reduceStage, {
           palette: config.palette,
           metric: config.metric,
           path: 'lut',
           ...(lut === undefined ? {} : { lut }),
+          ...(tone === undefined ? {} : { tone }),
         }),
       );
     }

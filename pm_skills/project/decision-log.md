@@ -1281,3 +1281,66 @@ COMPARE-ERR-01 join Track D in slice order; PICK-01's line becomes
 slice 3. The ticket file stays as the five items' shared spec (the
 D149 shared-file exception) and is deleted with the last slice.
 PAINT-01 still scopes separately.
+
+## D201 — TONE-01 builds: tone mode is one weighted metric through matching, selection and dither, at schema v12 (2026-08-24)
+
+**Context.** Slice 1 of the signed creative programme (D200); the
+scope and design were signed in CREATIVE-01, so the checkpoint gates
+were pre-satisfied by the ticket and the build ran gateless against
+its decisions of record. The prototype's central call — dither must
+diffuse error in the weighted space — is now production behaviour.
+The item stays open ([~]) on its owner half: mode name, floor
+label/unit, confetti wording and ramp shape are working labels until
+the sitting settles them.
+
+**Built.** One weighted metric, engaged only under 'lab' and only
+when the weight or curve departs from default — disengaged tone runs
+none of the tone code, which is what keeps t = 0 byte-identical
+(engine baseline hashes unmoved; only the projectJson pin moved, the
+v10/v11 precedent). `src/core/color/tone.ts` owns the space: w = 1−t
+scales a/b, the three-point curve remaps picture lightness only,
+ladder order is L*-ascending with natural cuts at rung midpoints,
+custom cuts bind at the end-stop alone and degrade to natural on a
+palette-size mismatch. Matching, LUT build (key carries the tone
+fingerprint — D46 made literal), count-limit selection and both
+dither families all work in that one space; the candidates table is
+skipped under tone (plain-Lab proof), the GPU LUT routes to TS, and
+wasm dither is routed *and* clamped away. Threshold dither perturbs
+curved L at 100/255 of the sRGB amplitude — a stated working
+assumption, published in the audit, not asserted. Selection curves
+the distribution's lightness too (the prototype did not — the
+decision of record's "same objective as the render" argument wins);
+the minimum-distance rule deliberately stays in plain Lab: it
+promises perceptual spacing of bought threads, and the scaled space
+would call two same-lightness hues distance zero. The colour-use
+floor drops the worst under-earner one at a time over the selection
+distribution (locks exempt, never below one colour, works with and
+without a count limit) and its sentence names the count dropped and
+both ways out. Schema v12: `pipeline.tone` {weight, curve, cuts} and
+`palette.design.floor`, v11 files seeded disengaged/off.
+
+**UI.** The tone group mounts in the Colour section after Minimum
+distance (the inventory's host-owns-plumbing pattern): the colour↔tone
+slider; the ramp strip — histogram over band colours on canvas, cut
+handles as 44 px sliders live at the end-stop, the band list as the
+DOM mirror with *achieved* shares from the rendered frame (never
+targets; a merge-swapped rung honestly reads "swapped"); Equalise and
+Reset cuts; the three-point curve behind a reveal (pointer + arrows +
+native number inputs); re-pick from current frame (disabled with its
+reason outside live capture); the floor toggle + stitches input; one
+suitability heuristic driving the ladder offer and the confetti
+caution, never a block. The selection source is now fetched whenever
+the count limit, the floor or tone needs it, and re-pick is
+invalidate + refetch of the same buffer.
+
+**Verification.** `check` green (1,450 tests; 62 new). The production
+audit reproduces the prototype's numbers on the shipped paths
+bit-for-bit — hue-sweep FS spread 2.28 L*, σ 0.32, bias −0.01 (the
+sRGB error space measured ~6.9); Equalise 2.3 % drift undithered,
+29.2 % under FS; catalogue selection at t = 1 spans L* 8–92 —
+artefacts `bench-reports/audit-tone-01-<sha>.json` +
+`tone-01-gallery-<sha>.html`. Live in the app: end-stop re-selection
+to a ladder, Equalise, the floor drop with its sentence, curve
+inversion, and a `.pmproj` round trip restoring weight, curve, cuts
+and floor. Human checks left: keyboard activation of handles/points
+and the four naming items.

@@ -116,7 +116,9 @@ export type ConflictKind =
   | 'range-empty'
   | 'profile-empty'
   // M15 selection (M15-CORE-03):
-  | 'distance-limits-count';
+  | 'distance-limits-count'
+  // TONE-01 selection (the colour-use floor):
+  | 'floor-dropped';
 
 /**
  * One explained problem. `severity: 'error'` means no valid palette

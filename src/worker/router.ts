@@ -49,7 +49,7 @@ export interface RouterDeps {
  */
 export async function ensureLutFor(config: PipelineConfig): Promise<void> {
   if (config.palette === null || config.dither.algorithm !== 'none') return;
-  await ensureLut(config.palette, config.metric);
+  await ensureLut(config.palette, config.metric, config.tone);
 }
 
 /** Production wiring: real cache, executor, and bitmap encoder. */

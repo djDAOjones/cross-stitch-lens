@@ -5,6 +5,7 @@
  * testable without a Worker.
  */
 
+import { toneEngaged } from '../core/color/tone.ts';
 import { buildStages, type PipelineConfig } from '../core/pipeline/config.ts';
 import type { Backend, PixelBuffer } from '../core/types.ts';
 import { routeDither, selectedBackend, wasmDitherImplements } from './backend-select.ts';
@@ -40,6 +41,7 @@ function routeFor(stageName: string, config: PipelineConfig): Backend | undefine
     metric: config.metric,
     algorithm: config.dither.algorithm,
     strength: config.dither.strength,
+    toneEngaged: toneEngaged(config.metric, config.tone),
   });
 }
 
@@ -81,15 +83,18 @@ export function executeRequest(
       // a dither the crate does not implement would execute the
       // adapter's internal TS delegation while the timing row said
       // 'wasm'. Clamping here keeps the label truthful — it can only
-      // name code that ran.
+      // name code that ran. An engaged tone clamps too (TONE-01): the
+      // crate diffuses sRGB error, and a backend may never substitute
+      // a different method — weighted-space diffusion is one.
       const requested: Backend =
         chosen === 'wasm' &&
         instance.stage.name === 'dither' &&
         request.config.dither.algorithm !== 'none' &&
-        !wasmDitherImplements(
-          request.config.dither.algorithm,
-          request.config.dither.strength,
-        )
+        (toneEngaged(request.config.metric, request.config.tone) ||
+          !wasmDitherImplements(
+            request.config.dither.algorithm,
+            request.config.dither.strength,
+          ))
           ? 'ts'
           : chosen;
       const fn = instance.stage.backends[requested] ?? instance.stage.backends.ts;

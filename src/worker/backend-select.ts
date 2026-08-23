@@ -33,6 +33,15 @@ export interface DitherWorkload {
   algorithm: DitherAlgorithm;
   /** Error/amplitude scale; the crate implements only the exact 1. */
   strength: number;
+  /**
+   * Tone mode engaged (TONE-01): the error diffuses in the tone
+   * space, which the crate does not implement — a weighted frame
+   * routes 'ts' unconditionally. Defensive here: tone engages only
+   * under 'lab', which already routes 'ts', but the rule must not
+   * depend on that coincidence. Optional; absent means disengaged
+   * (the pre-TONE-01 workloads).
+   */
+  toneEngaged?: boolean;
 }
 
 /**
@@ -69,6 +78,7 @@ export interface DitherWorkload {
  * enforces the same guard defensively for manual overrides.
  */
 export function routeDither(workload: DitherWorkload): Backend {
+  if (workload.toneEngaged === true) return 'ts';
   if (!wasmDitherImplements(workload.algorithm, workload.strength)) return 'ts';
   return workload.metric === 'rgb' ? 'wasm' : 'ts';
 }

@@ -13,6 +13,12 @@
 
 import { buildLut, lutKey, nearestIndex } from '../color/lut.ts';
 import type { ColorMetric } from '../color/metrics.ts';
+import {
+  createToneMatcher,
+  toneEngaged,
+  toneNearest,
+  type ToneConfig,
+} from '../color/tone.ts';
 import { paletteLab, paletteRgb } from '../palette.ts';
 import type { Palette, PixelBuffer, Stage } from '../types.ts';
 
@@ -28,6 +34,14 @@ export interface ReduceParams {
    */
   path: 'lut' | 'exact';
   lut?: Uint16Array;
+  /**
+   * Tone mode (TONE-01): when engaged, matching runs in the tone
+   * space (curved L, w·a, w·b). A caller-supplied `lut` must have
+   * been built for the same tone config — the worker's cache keys on
+   * `toneFingerprint` (D46) to guarantee it. Absent or disengaged,
+   * this stage is byte-identical to its pre-TONE-01 self.
+   */
+  tone?: ToneConfig;
 }
 
 /**
@@ -47,10 +61,33 @@ function reduceTs(input: PixelBuffer, params: ReduceParams): PixelBuffer {
   const palRgb = paletteRgb(params.palette);
   const usesLab = params.metric === 'lab';
 
+  const tone = toneEngaged(params.metric, params.tone) ? params.tone : undefined;
+
   if (params.path === 'lut') {
-    const lut = params.lut ?? buildLut(params.palette, params.metric);
+    const lut = params.lut ?? buildLut(params.palette, params.metric, tone);
     for (let i = 0, cell = 0; i < src.length; i += 4, cell++) {
       const entry = lut[lutKey(src[i] ?? 0, src[i + 1] ?? 0, src[i + 2] ?? 0)] ?? 0;
+      indices[cell] = entry;
+      const idx = entry * 3;
+      out[i] = palRgb[idx] ?? 0;
+      out[i + 1] = palRgb[idx + 1] ?? 0;
+      out[i + 2] = palRgb[idx + 2] ?? 0;
+      out[i + 3] = src[i + 3] ?? 255;
+    }
+  } else if (tone !== undefined) {
+    // Tone-space exact matching: the full scan over the scaled
+    // palette (or the ladder's band lookup). The pruning table is a
+    // plain-Lab structure, so it does not apply here.
+    const matcher = createToneMatcher(params.palette, tone);
+    const labScratch = new Float32Array(3);
+    for (let i = 0, cell = 0; i < src.length; i += 4, cell++) {
+      const entry = toneNearest(
+        matcher,
+        src[i] ?? 0,
+        src[i + 1] ?? 0,
+        src[i + 2] ?? 0,
+        labScratch,
+      );
       indices[cell] = entry;
       const idx = entry * 3;
       out[i] = palRgb[idx] ?? 0;

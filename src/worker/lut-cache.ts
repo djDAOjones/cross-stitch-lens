@@ -22,6 +22,7 @@ import { buildLutGpu } from '../backends/webgpu/reduce.ts';
 import { buildCandidateTable, type CandidateTable } from '../core/color/candidates.ts';
 import { buildLut, LUT_SIZE } from '../core/color/lut.ts';
 import type { ColorMetric } from '../core/color/metrics.ts';
+import { toneEngaged, toneFingerprint, type ToneConfig } from '../core/color/tone.ts';
 import { paletteFingerprint } from '../core/palette.ts';
 import type { Palette } from '../core/types.ts';
 import { log } from '../diagnostics/log.ts';
@@ -71,9 +72,16 @@ export function resetLutCacheStats(): void {
   candidateStats.evictions = 0;
 }
 
-/** Cache key for a palette+metric pair: content, not name. */
-function keyFor(palette: Palette, metric: ColorMetric): string {
-  return `v${String(LUT_SCHEMA_VERSION)}:${paletteFingerprint(palette)}:${metric}`;
+/**
+ * Cache key for a palette+metric+tone triple: content, not name. The
+ * tone segment is what "the LUT key carries the weight" (D46, TONE-01)
+ * means in practice — the weight, curve and cuts are baked into the
+ * LUT's entries, so two configs differing in any of them must never
+ * share one. Disengaged tone keys as the constant 'off'.
+ */
+function keyFor(palette: Palette, metric: ColorMetric, tone?: ToneConfig): string {
+  const toneKey = toneEngaged(metric, tone) ? toneFingerprint(tone) : 'off';
+  return `v${String(LUT_SCHEMA_VERSION)}:${paletteFingerprint(palette)}:${metric}:${toneKey}`;
 }
 
 /** Store a LUT, evicting the least recently used entry past the cap. */
@@ -122,35 +130,47 @@ function isPlausibleLut(lut: Uint16Array, paletteSize: number): boolean {
 }
 
 /**
- * Ensure the LUT for a palette+metric is cached, building on the GPU
- * where available (32,768 bins × palette size — the expensive part of
- * a palette/metric change) and falling back to the sync TS build.
+ * Ensure the LUT for a palette+metric+tone is cached, building on the
+ * GPU where available (32,768 bins × palette size — the expensive part
+ * of a palette/metric change) and falling back to the sync TS build.
+ *
+ * An engaged tone skips the GPU outright: the WGSL kernel bakes the
+ * plain metric and has not learned the weights, and TS is ground
+ * truth — "the WebGPU LUT routes to TS until it learns the weights"
+ * (CREATIVE-01, D200).
  */
 export async function ensureLut(
   palette: Palette,
   metric: ColorMetric,
+  tone?: ToneConfig,
 ): Promise<Uint16Array> {
-  const key = keyFor(palette, metric);
+  const key = keyFor(palette, metric, tone);
   const hit = touch(key);
   if (hit) return hit;
-  const gpuLut = await buildLutGpu(palette, metric);
-  if (gpuLut !== null) {
-    if (isPlausibleLut(gpuLut, palette.entries.length)) {
-      log.info('webgpu', 'LUT built on gpu', { key });
-      store(key, gpuLut);
-      return gpuLut;
+  if (!toneEngaged(metric, tone)) {
+    const gpuLut = await buildLutGpu(palette, metric);
+    if (gpuLut !== null) {
+      if (isPlausibleLut(gpuLut, palette.entries.length)) {
+        log.info('webgpu', 'LUT built on gpu', { key });
+        store(key, gpuLut);
+        return gpuLut;
+      }
+      log.error('webgpu', 'gpu LUT failed the sanity check — falling back to ts', { key });
     }
-    log.error('webgpu', 'gpu LUT failed the sanity check — falling back to ts', { key });
   }
-  return getLut(palette, metric);
+  return getLut(palette, metric, tone);
 }
 
-/** Get (building on miss) the LUT for a palette+metric. */
-export function getLut(palette: Palette, metric: ColorMetric): Uint16Array {
-  const key = keyFor(palette, metric);
+/** Get (building on miss) the LUT for a palette+metric+tone. */
+export function getLut(
+  palette: Palette,
+  metric: ColorMetric,
+  tone?: ToneConfig,
+): Uint16Array {
+  const key = keyFor(palette, metric, tone);
   const hit = touch(key);
   if (hit) return hit;
-  const lut = buildLut(palette, metric);
+  const lut = buildLut(palette, metric, tone);
   store(key, lut);
   return lut;
 }

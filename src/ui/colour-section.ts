@@ -84,6 +84,13 @@ export interface ColourSectionActions {
    * here — the host owns the plumbing, this section owns the slot.
    */
   mountInventory(container: HTMLElement): void;
+  /**
+   * Fill the tone-matching slot (TONE-01) — the same host-owns-the-
+   * plumbing pattern as the inventory: the section owns where the
+   * group sits (after the selection rules, before Must-use) and its
+   * visibility with the mode; the tone controls own everything inside.
+   */
+  mountTone(container: HTMLElement): void;
 }
 
 export interface ColourSection {
@@ -296,6 +303,11 @@ export function createColourSection(
   distanceRow.append(distanceRange, distanceValue);
   distanceField.append(distanceLabel, distanceRow, distanceHelper);
 
+  // --- tone matching slot (TONE-01) ---------------------------------
+  const toneSlot = doc.createElement('div');
+  toneSlot.className = 'tone-slot';
+  actions.mountTone(toneSlot);
+
   // --- Must-use chips + search-to-add ------------------------------
   const mustUseLabel = doc.createElement('p');
   mustUseLabel.className = 'group-label';
@@ -363,6 +375,7 @@ export function createColourSection(
     limitToggle.element,
     countCluster,
     distanceField,
+    toneSlot,
     mustUseLabel,
     mustUseHelper,
     chipList,
@@ -414,6 +427,7 @@ export function createColourSection(
       limitToggle.element,
       countCluster,
       distanceField,
+      toneSlot,
       mustUseLabel,
       mustUseHelper,
       chipList,

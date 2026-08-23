@@ -20,11 +20,13 @@
  */
 
 import type { ColorMetric } from './color/metrics.ts';
+import { defaultTone, type CurvePoint, type ToneConfig } from './color/tone.ts';
 import type { ColorProfileRecipe, HsbRangeRule } from './color-profile.ts';
 import { DEFAULT_ESTIMATES, type EstimateSettings } from './estimates.ts';
 import { matchGridPreset } from './grid-presets.ts';
 import type { GridStyleValues } from './grid-style.ts';
 import type { CountMode } from './palette-policy.ts';
+import type { FloorRule } from './palette-selection.ts';
 import type { DitherConfig, OrderPreset } from './pipeline/config.ts';
 import type { ResizeMode } from './pipeline/resize.ts';
 import type { ThreadSwap } from './pipeline/swap.ts';
@@ -32,7 +34,14 @@ import type { SymbolPair } from './symbols/assignment.ts';
 import type { Provenance, Thread, ThreadStatus } from './types.ts';
 
 /** Current project-file schema version. Bump with a forward migration. */
-export const SCHEMA_VERSION = 11;
+export const SCHEMA_VERSION = 12;
+
+/**
+ * The colour-use floor a migrated (or fresh) design starts with: off,
+ * with a visible starting value for when it is switched on (TONE-01;
+ * the unit and final label are owner items — D200).
+ */
+export const DEFAULT_FLOOR: FloorRule = { on: false, minStitches: 10 };
 
 /**
  * Extension of a saved project (DUR-01): a store-only zip package —
@@ -89,6 +98,14 @@ export interface ProjectPipeline {
    * the config structurally matches one, and otherwise stay null.
    */
   ditherProfileRef: { id: string; revision: number } | null;
+  /**
+   * Tone mode (TONE-01, schema v12): the colour ↔ tone weight, the
+   * three-point lightness curve, and ladder-mode cuts (null =
+   * natural). Matching configuration, beside `metric` and `dither`;
+   * older files never engaged it, which the disengaged default states
+   * exactly.
+   */
+  tone: ToneConfig;
 }
 
 /**
@@ -116,6 +133,12 @@ export interface ProjectPalette {
     minDistance: number;
     mustUse: string[];
     swaps: ThreadSwap[];
+    /**
+     * The colour-use floor (TONE-01, v12): count up to N, then drop
+     * the colours earning fewer than `minStitches` stitches. Off by
+     * default; Must-use seats exempt.
+     */
+    floor: FloorRule;
   };
   /** Ordered threads exactly as rendered. Empty means "not yet run". */
   snapshot: Thread[];
@@ -371,8 +394,19 @@ function canonicalPalette(palette: ProjectPalette): ProjectPalette {
         from: swap.from,
         to: canonicalThread(swap.to),
       })),
+      floor: { on: palette.design.floor.on, minStitches: palette.design.floor.minStitches },
     },
     snapshot: palette.snapshot.map(canonicalThread),
+  };
+}
+
+/** Canonical field order for the tone block (schema v12). */
+function canonicalTone(tone: ToneConfig): ToneConfig {
+  const points = tone.curve.map((p): CurvePoint => ({ in: p.in, out: p.out }));
+  return {
+    weight: tone.weight,
+    curve: [points[0] ?? { in: 0, out: 0 }, points[1] ?? { in: 50, out: 50 }, points[2] ?? { in: 100, out: 100 }],
+    cuts: tone.cuts === null ? null : [...tone.cuts],
   };
 }
 
@@ -442,6 +476,7 @@ export function serializeProject(file: ProjectFile): string {
               id: file.pipeline.ditherProfileRef.id,
               revision: file.pipeline.ditherProfileRef.revision,
             },
+      tone: canonicalTone(file.pipeline.tone),
     },
     palette: file.palette === null ? null : canonicalPalette(file.palette),
     symbols: canonicalSymbols(file.symbols),
@@ -695,9 +730,71 @@ function parsePalette(value: unknown): ProjectPalette | null {
       minDistance: asNumber(designRaw['minDistance'], 'palette.design.minDistance', 0, 200),
       mustUse: asIdList(designRaw['mustUse'], 'palette.design.mustUse'),
       swaps: asSwaps(designRaw['swaps'], 'palette.design.swaps'),
+      floor: asFloor(designRaw['floor'], 'palette.design.floor'),
     },
     snapshot: snapshotRaw.map((entry, i) => asThread(entry, `palette.snapshot[${String(i)}]`)),
   };
+}
+
+/** Validate the v12 colour-use floor. */
+function asFloor(value: unknown, path: string): FloorRule {
+  const raw = asRecord(value, path);
+  return {
+    on: asBool(raw['on'], `${path}.on`),
+    // The ceiling is the largest design (1024²); a floor above the
+    // stitch count simply drops everything droppable, which the
+    // resolver explains.
+    minStitches: asInt(raw['minStitches'], `${path}.minStitches`, 1, MAX_GRID_SIDE * MAX_GRID_SIDE),
+  };
+}
+
+/**
+ * Validate the v12 tone block. The curve is exactly three points with
+ * non-decreasing inputs (the UI enforces it; a hand-edited file that
+ * breaks it is refused rather than silently reinterpreted); cuts are
+ * ascending curved-L* positions or null for natural bands. A cuts
+ * list whose length no longer matches the palette is legal here —
+ * the runtime treats it as natural — because the palette a selection
+ * produces is not knowable at parse time.
+ */
+function parseTone(value: unknown): ToneConfig {
+  const raw = asRecord(value, 'pipeline.tone');
+  const weight = asNumber(raw['weight'], 'pipeline.tone.weight', 0, 1);
+  const curveRaw = raw['curve'];
+  if (!Array.isArray(curveRaw) || curveRaw.length !== 3) {
+    fail('pipeline.tone.curve', 'exactly three curve points');
+  }
+  const points = curveRaw.map((entry, i) => {
+    const point = asRecord(entry, `pipeline.tone.curve[${String(i)}]`);
+    return {
+      in: asNumber(point['in'], `pipeline.tone.curve[${String(i)}].in`, 0, 100),
+      out: asNumber(point['out'], `pipeline.tone.curve[${String(i)}].out`, 0, 100),
+    };
+  });
+  const [lo, mid, hi] = points;
+  if (lo === undefined || mid === undefined || hi === undefined) {
+    fail('pipeline.tone.curve', 'exactly three curve points');
+  }
+  if (lo.in > mid.in || mid.in > hi.in) {
+    fail('pipeline.tone.curve', 'points with non-decreasing input positions');
+  }
+  const cutsRaw = raw['cuts'];
+  let cuts: number[] | null = null;
+  if (cutsRaw !== null && cutsRaw !== undefined) {
+    if (!Array.isArray(cutsRaw)) fail('pipeline.tone.cuts', 'an array of cuts or null');
+    if (cutsRaw.length > MAX_PALETTE_ENTRIES - 1) {
+      fail('pipeline.tone.cuts', `at most ${String(MAX_PALETTE_ENTRIES - 1)} cuts`);
+    }
+    cuts = cutsRaw.map((entry, i) =>
+      asNumber(entry, `pipeline.tone.cuts[${String(i)}]`, 0, 100),
+    );
+    for (let i = 1; i < cuts.length; i++) {
+      if ((cuts[i] ?? 0) < (cuts[i - 1] ?? 0)) {
+        fail('pipeline.tone.cuts', 'ascending cut positions');
+      }
+    }
+  }
+  return { weight, curve: [lo, mid, hi], cuts };
 }
 
 /** Validate one thread → symbol pair list (grants or overrides). */
@@ -908,9 +1005,37 @@ function migrateProject(raw: Record<string, unknown>, version: number): Record<s
     // Older files never swapped a thread, which the empty list states
     // exactly; a full-RGB file (`palette: null`) has no rules to seed.
     if (at === 11) doc = migrateV10Swaps(doc);
+    // v11 → v12: tone mode and the colour-use floor arrive (TONE-01).
+    // Older files never engaged either, which the disengaged defaults
+    // state exactly — weight 0 with the identity curve is matching as
+    // it always was, and the floor is off.
+    if (at === 12) doc = migrateV11Tone(doc);
     doc = { ...doc, schemaVersion: at };
   }
   return doc;
+}
+
+/** Seed `pipeline.tone` and `palette.design.floor` where absent. */
+function migrateV11Tone(doc: Record<string, unknown>): Record<string, unknown> {
+  let out = doc;
+  const pipeline = out['pipeline'];
+  if (pipeline !== null && typeof pipeline === 'object') {
+    const pipelineRaw = pipeline as Record<string, unknown>;
+    if (pipelineRaw['tone'] === undefined) {
+      out = { ...out, pipeline: { ...pipelineRaw, tone: defaultTone() } };
+    }
+  }
+  const palette = out['palette'];
+  if (palette === null || typeof palette !== 'object') return out;
+  const paletteRaw = palette as Record<string, unknown>;
+  const design = paletteRaw['design'];
+  if (design === null || typeof design !== 'object') return out;
+  const designRaw = design as Record<string, unknown>;
+  if (designRaw['floor'] !== undefined) return out;
+  return {
+    ...out,
+    palette: { ...paletteRaw, design: { ...designRaw, floor: { ...DEFAULT_FLOOR } } },
+  };
 }
 
 /** Seed `palette.design.swaps` as empty where a palette block exists. */
@@ -1113,6 +1238,7 @@ export function parseProject(json: string): ProjectFile {
       metric: asOneOf(pipeline['metric'], 'pipeline.metric', ['rgb', 'lab']),
       dither: parseDither(pipeline['dither']),
       ditherProfileRef: parseDitherRef(pipeline['ditherProfileRef']),
+      tone: parseTone(pipeline['tone']),
     },
     palette: parsePalette(doc['palette']),
     symbols: parseSymbols(doc['symbols']),

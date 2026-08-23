@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 299 file(s) across 12 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 304 file(s) across 12 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 13 file(s)
 - `.claude` — 2 file(s)
 - `.githooks` — 1 file(s)
@@ -26,8 +26,8 @@
 - `docs` — 16 file(s)
 - `public` — 7 file(s)
 - `scripts` — 22 file(s)
-- `src` — 107 file(s)
-- `tests` — 124 file(s)
+- `src` — 109 file(s)
+- `tests` — 127 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -159,13 +159,14 @@
 - `src/core/color/convert.ts` — sRGB↔linear↔Lab conversions (D65, CIE 1976)
 - `src/core/color/lut.ts` — 15-bit RGB→palette-index LUT builder + exact nearest
 - `src/core/color/metrics.ts` — squared colour distances: Euclidean RGB, ΔE76
+- `src/core/color/tone.ts` — tone mode (TONE-01): weighted metric, three-point curve, ladder cuts/quantiles, histogram, suitability hints
 - `src/core/estimates.ts` — pure fabric sizing + thread/skein estimator (M12): named factors only, per-colour skein round-up, and the disclosure sentence
 - `src/core/grid-presets.ts` — six built-in grid styling presets (paired screen/print halves) + exact-match provenance detector; in core so the v6→v7 migration can label files
 - `src/core/grid-style.ts` — the persisted grid style-values shape + appearance-preserving defaults; single source for the worker style, both project-file halves, and the presets
 - `src/core/palette-policy.ts` — brands/source/inventory/locks → permitted set + explained conflicts
 - `src/core/palette-presets.ts` — built-in algorithmic colour-scheme presets (LCh rules)
 - `src/core/palette-resolve.ts` — the one policy → ordered palette entry point
-- `src/core/palette-selection.ts` — colour-count selection and lock/prefer auto-fill
+- `src/core/palette-selection.ts` — colour-count selection and auto-fill, in the tone space when engaged, plus the colour-use floor cascade (TONE-01)
 - `src/core/palette.ts` — Palette model, DMC preset load, rgb/Lab flattening, colour + identity fingerprints
 - `src/core/palettes/catalogue.json` — generated catalogue, 3,338 threads across 8 brands (protected)
 - `src/core/palettes/dmc-anchor-map.csv` — superseded DMC/Anchor map, kept as owner data (protected)
@@ -174,7 +175,7 @@
 - `src/core/pipeline/adjust.ts` — adjust hook stage: identity until §9 ops land
 - `src/core/pipeline/config.ts` — PipelineConfig → stage list; §7 presets; full-RGB twin; the swap stage joins the colour group when active (`swaps?`)
 - `src/core/pipeline/dither-presets.ts` — canonical dither presets + structural equality + built-in matching (M15-DITH-01; moved from ui)
-- `src/core/pipeline/dither.ts` — Floyd–Steinberg dither: exact errors, serpentine
+- `src/core/pipeline/dither.ts` — the five dither methods: exact errors, serpentine; tone-space diffusion/threshold when tone engages (TONE-01)
 - `src/core/pipeline/identity.ts` — identity stage: hello-world purity demo
 - `src/core/pipeline/index.ts` — pipeline executor: backend pick + ts fallback
 - `src/core/pipeline/reduce.ts` — reduce stage: LUT + exact paths, alpha passthrough
@@ -182,7 +183,7 @@
 - `src/core/pipeline/swap.ts` — swap stage (ICE-RECOLOUR-01): `renderPalette()` (selected entries + render-only targets, index map, no-chain) and the pure sidecar remap + repaint
 - `src/core/pipeline/threshold-tiles.ts` — Bayer + void-and-cluster blue-noise threshold tiles: fixed data, documented provenance, memoised
 - `src/core/project-package.ts` — store-only zip project package (`.pmproj`): deterministic writer (fixed 1980 stamps), bounded reader with named refusals, format detection, readProjectBytes/writeProjectBytes (DUR-01)
-- `src/core/project.ts` — project file (§20): schema v11 with the `source` block and `design.swaps`, v1→v11 migrations, canonical (de)serialisation, title-driven `projectFilename` + stamp fallback, `PROJECT_EXTENSION` (DUR-01/SAVE-01)
+- `src/core/project.ts` — project file (§20): schema v12 with `pipeline.tone` + `design.floor` (TONE-01) over v11's `source`/`design.swaps`, v1→v12 migrations, canonical (de)serialisation, title-driven `projectFilename` + stamp fallback, `PROJECT_EXTENSION` (DUR-01/SAVE-01)
 - `src/core/stats.ts` — design stats §11 subset: counts, %, thread refs
 - `src/core/symbols/assignment.ts` — symbol assignment as persisted state (D160-4): need-based grants, release-to-back queue, survivor-free reset, overrides, load reconcile
 - `src/core/symbols/glyphs.ts` — the app-owned 64-glyph catalogue in canonical append-only order; fill-only M/L/C/Z paths rendered identically by Path2D and drawSvgPath (D165)
@@ -202,7 +203,7 @@
 - `src/main.ts` — app entry: M2 shell — import, control panel, preview, info panel
 - `src/ui/accordion.ts` — Carbon accordion section: h2-wrapped toggle, hidden panel, derived closed-state summary
 - `src/ui/browse-table.ts` — shared capped search table (the 60-row pattern extracted; D117 seam 3)
-- `src/ui/colour-section.ts` — recut Colour section: profile select + (edited) verbs, count (log-scale slider, ICE-LIMIT-01) + minimum distance, Must-use chips, Swaps chips (ICE-RECOLOUR-01), inventory reveal (M15-UI-01)
+- `src/ui/colour-section.ts` — recut Colour section: profile select + (edited) verbs, count (log-scale slider, ICE-LIMIT-01) + minimum distance, tone-matching slot (TONE-01), Must-use chips, Swaps chips (ICE-RECOLOUR-01), inventory reveal (M15-UI-01)
 - `src/ui/controls.ts` — Carbon-style field builders: toggle/number/colour/select + clampInt
 - `src/ui/debug-panel.ts` — dev-only profiling panel: rolling timing window (pure) + disclosure DOM
 - `src/ui/diagnostics-button.ts` — the Debug menu: Report a problem (project document + redacted log + mailto, DIAG-02), Copy diagnostics, Download log; announced status line; `DEV_EMAIL`
@@ -225,6 +226,7 @@
 - `src/ui/styles/shell.css` — shell chrome: header, columns, preview host, focus-mode chain, capture surfaces, panel containers
 - `src/ui/styles/tokens.css` — design tokens: project + Carbon-convention systems, both schemes, @pair contrast contract (D80)
 - `src/ui/symbol-picker.ts` — symbol override picker (ICE-SYMBOL-UI-01): pure model (unused pool in catalogue order, the row's glyph), inline-SVG glyph element, the Carbon picker dialog over `runModal`
+- `src/ui/tone-controls.ts` — tone-matching group: slider, ramp strip (canvas + 44px cut handles + DOM band mirror), curve reveal, floor, re-pick; pure halves exported
 - `src/ui/viewport.ts` — pure viewport maths: fit, anchored zoom, pan clamp
 - `src/vite-env.d.ts` — ambient types for injected version/build globals
 - `src/worker/backend-select.ts` — per-workload dither routing (metric-categorical, M5-PERF-27) + recorded per-stage override map
@@ -232,7 +234,7 @@
 - `src/worker/coalesce.ts` — latest-wins scheduler (no queue), drop counter
 - `src/worker/execute.ts` — timed frame execution; errors become responses
 - `src/worker/grid.ts` — pure grid/tick geometry: line placement, auto-hide, label thinning
-- `src/worker/lut-cache.ts` — one LUT per palette content+metric; LRU-bounded; rejects implausible GPU LUTs; hit/miss/eviction counters
+- `src/worker/lut-cache.ts` — one LUT per palette content+metric+tone (TONE-01; engaged tone skips the GPU); LRU-bounded; rejects implausible GPU LUTs; hit/miss/eviction counters
 - `src/worker/pipeline-worker.ts` — worker entry shell: owns worker scope, wires router
 - `src/worker/preview-surface.ts` — worker: OffscreenCanvas; view/grid/tick/compare redraw (no clip)
 - `src/worker/protocol.ts` — main↔worker message types, transferred buffers, absolute-clock frame marks, harness-only backend force
@@ -257,6 +259,7 @@
 - `tests/audits/resize.audit.test.ts` — M5-PERF-11: candidate timings + byte-equality across the mode matrix
 - `tests/audits/routing.audit.test.ts` — sweeps grid × palette × metric on both dither backends and asserts `routeDither` agrees with the measured winner on every row (M5-PERF-27 evidence)
 - `tests/audits/runtime.audit.test.ts` — M5-PERF-16/17/19: compare cost, gate stalls, dirty sensitivity, export isolation
+- `tests/audits/tone-mode.audit.test.ts` — TONE-01 evidence behind AUDIT=1: hue-sweep error-space table, Equalise drift, curve inversion, ladder selection, floor; writes the gallery HTML
 - `tests/audits/wasm-boundary.audit.test.ts` — M5-PERF-15: boundary vs Rust split, calibration representativeness
 - `tests/backend-select.test.ts` — selection policy/calibration + ts fallback with both backends disabled
 - `tests/bench-auto-lib.test.ts` — quiet-run logic: idle parsing, valid-only canonical naming, never-retry-structural gate
@@ -347,6 +350,8 @@
 - `tests/symbols-assignment.test.ts` — assignment-model semantics: grants, release-to-back, disjoint reset, overrides, exhaustion, reconcile (D165)
 - `tests/symbols-glyphs.test.ts` — glyph catalogue invariants: pinned canonical order (append-only tripwire), path grammar, bounds (D165)
 - `tests/thread-equivalents.test.ts` — Nearest cross-brand equivalent: ordering, labelling, curated over computed
+- `tests/tone-controls.test.ts` — tone-controls pure halves: swap-aware share attribution, cut clamping, curve nudging, share label
+- `tests/tone.test.ts` — tone-mode invariants: engagement gate + tie-break parity with production, end-stop/cut semantics, quantiles, tone reduce/dither determinism and lightness hold
 - `tests/ui-baseline/baseline.test.ts` — M14 byte-identity tripwire: pins fixture/pipeline/project hashes inside check
 - `tests/ui-baseline/exports/chart-200x200.pdf` — M14 baseline capture: chart PDF (compare date-normalised, D74)
 - `tests/ui-baseline/exports/chart-200x200.png` — M14 baseline capture: chart PNG at cell 10

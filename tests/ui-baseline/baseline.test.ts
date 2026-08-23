@@ -29,12 +29,14 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
+import { defaultTone } from '../../src/core/color/tone.ts';
 import { DEFAULT_GRID_VALUES } from '../../src/core/grid-style.ts';
 import { DEFAULT_DITHER, type PipelineConfig } from '../../src/core/pipeline/config.ts';
 import { type PalettePolicy } from '../../src/core/palette-policy.ts';
 import { resolveProjectPalette } from '../../src/core/palette-resolve.ts';
 import { loadCatalogue } from '../../src/core/thread-catalogue.ts';
 import {
+  DEFAULT_FLOOR,
   SCHEMA_VERSION,
   serializeProject,
   type ProjectFile,
@@ -109,14 +111,25 @@ function defaultProject(config: PipelineConfig): ProjectFile {
       // built-in (D117's dissolved legacy state), so the stated
       // default carries its reference.
       ditherProfileRef: { id: 'builtin:none', revision: 0 },
+      // Schema v12 (TONE-01): tone disengaged in the stated default —
+      // the projectJson pin moved for the bump; the engine hashes never
+      // move.
+      tone: defaultTone(),
     },
     palette: {
       profileRef: { id: 'builtin:dmc', revision: 0 },
       recipe: { libraries: ['dmc'], ownedOnly: false, include: [], exclude: [], ranges: [] },
-      // Schema v11 (ICE-RECOLOUR-01): no swaps in the stated default —
-      // the projectJson pin moved for the bump; the engine hashes never
+      // Schema v11 (ICE-RECOLOUR-01): no swaps in the stated default;
+      // schema v12 (TONE-01): the colour-use floor off — the
+      // projectJson pin moved for each bump; the engine hashes never
       // move.
-      design: { count: { mode: 'max', n: 8 }, minDistance: 0, mustUse: [], swaps: [] },
+      design: {
+        count: { mode: 'max', n: 8 },
+        minDistance: 0,
+        mustUse: [],
+        swaps: [],
+        floor: { ...DEFAULT_FLOOR },
+      },
       snapshot: config.palette?.entries ?? [],
     },
     // Schema v7 (M11): screen + print halves, both at the defaults a

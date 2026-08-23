@@ -6,12 +6,13 @@
  * is the schema's suite and pins every field deliberately.
  */
 
+import { defaultTone } from '../../src/core/color/tone.ts';
 import { DEFAULT_ESTIMATES } from '../../src/core/estimates.ts';
 import { DEFAULT_GRID_VALUES } from '../../src/core/grid-style.ts';
 import { loadDmcPalette } from '../../src/core/palette.ts';
-import { SCHEMA_VERSION, type ProjectFile } from '../../src/core/project.ts';
+import { DEFAULT_FLOOR, SCHEMA_VERSION, type ProjectFile } from '../../src/core/project.ts';
 
-/** A valid v10 project with a picture entry and a two-thread snapshot. */
+/** A valid current-schema project with a picture entry and a two-thread snapshot. */
 export function sampleProject(): ProjectFile {
   return {
     schemaVersion: SCHEMA_VERSION,
@@ -23,11 +24,18 @@ export function sampleProject(): ProjectFile {
       metric: 'lab',
       dither: { algorithm: 'floyd-steinberg', serpentine: true, strength: 1 },
       ditherProfileRef: null,
+      tone: defaultTone(),
     },
     palette: {
       profileRef: { id: 'builtin:dmc', revision: 0 },
       recipe: { libraries: ['dmc'], ownedOnly: false, include: [], exclude: [], ranges: [] },
-      design: { count: { mode: 'max', n: 8 }, minDistance: 0, mustUse: [], swaps: [] },
+      design: {
+        count: { mode: 'max', n: 8 },
+        minDistance: 0,
+        mustUse: [],
+        swaps: [],
+        floor: { ...DEFAULT_FLOOR },
+      },
       snapshot: loadDmcPalette().entries.slice(0, 2),
     },
     symbols: { assigned: [], queue: [], overrides: [] },

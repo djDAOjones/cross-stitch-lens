@@ -15,7 +15,7 @@
 | Native acceleration | Rust → WASM (`wasm-pack`, SIMD) for error diffusion; WebGPU compute (WGSL) for parallel stages |
 | Capture | `getDisplayMedia` + user-drawn crop rect; frames via `ImageCapture`/`requestVideoFrameCallback` |
 | PDF export | pdf-lib |
-| Persistence | `.pmproj` project packages — a store-only zip holding canonical `project.json` beside the picture verbatim (schema v10; explicit save; legacy `.json` v1–v9 still loads); IndexedDB for **library** data — thread inventory, saved palettes, profiles, user colours — and, in its own database `pattern-mapper-designs`, the **design history** that restores the latest design on reopen and steers to explicit save (DUR-01, D179) |
+| Persistence | `.pmproj` project packages — a store-only zip holding canonical `project.json` beside the picture verbatim (schema v12; explicit save; legacy `.json` v1–v9 still loads); IndexedDB for **library** data — thread inventory, saved palettes, profiles, user colours — and, in its own database `pattern-mapper-designs`, the **design history** that restores the latest design on reopen and steers to explicit save (DUR-01, D179) |
 | Tests | Vitest + golden-output fixtures |
 | Future packaging | Tauri v2 (macOS ScreenCaptureKit plugin for arbitrary-region capture) — no code paths assume it |
 
@@ -173,11 +173,16 @@ announced through `LibraryStore.persistent`, never silent.
 
 ### Colour reduction strategy
 
-1. On palette or metric change, build a LUT: 15-bit quantised RGB
-   (32,768 entries) → nearest palette index, computed once in the
+1. On palette, metric or tone change, build a LUT: 15-bit quantised
+   RGB (32,768 entries) → nearest palette index, computed once in the
    worker (CIELAB distance by default; metric pluggable). The LUT
    stores palette *indices*, so its cache key is a content fingerprint
-   of the entries **in order** — never the palette name (D46).
+   of the entries **in order** — never the palette name (D46) — plus,
+   since TONE-01, the tone fingerprint (weight, curve, cuts), because
+   an engaged tone is baked into the entries. An engaged tone builds
+   on the TS path only (the WGSL kernel has not learned the weights)
+   and matches in the tone space (curved L, w·a, w·b — `tone.ts`);
+   dither then diffuses its error in that same space (D200/D201).
 2. Per-pixel mapping is then an array lookup — this is why the TS
    path is already fast; WASM/WebGPU accelerate LUT *construction*
    and non-LUT paths (dither error terms use exact arithmetic).
@@ -239,14 +244,17 @@ measured reality at M5C/M5D (D47/D48).
 `{ schemaVersion, source, pipeline, palette, symbols, gridStyle,
 preview, export, estimates }` — see requirements §20 for the full field
 inventory. Loading an older `schemaVersion` must migrate, never fail
-(currently **v10** — `SCHEMA_VERSION` in `src/core/project.ts` — with
-forward steps from v1–v9; v5 added the colour and dither profile refs
+(currently **v12** — `SCHEMA_VERSION` in `src/core/project.ts` — with
+forward steps from v1–v11; v5 added the colour and dither profile refs
 at M15 under the D114 compatibility waiver, v6 the symbol-assignment
 block and chart mode at M9, v7 the grid-styling split at M11, v8 the
 PDF pagination fields at M10, v9 the fabric/estimation settings at
 M12, v10 the `source` block `{ entry, type, name }` naming the embedded
-picture at DUR-01). A file saved by a *newer* version is refused with a
-message naming both versions, never silently misread.
+picture at DUR-01, v11 the colour swaps in `palette.design`
+(ICE-RECOLOUR-01), v12 the tone block `pipeline.tone` and the
+colour-use floor `palette.design.floor` (TONE-01)). A file saved by a
+*newer* version is refused with a message naming both versions, never
+silently misread.
 
 Since DUR-01 (D179) the file on disk is a `.pmproj` **package**
 (`src/core/project-package.ts`): a store-only zip holding `project.json`

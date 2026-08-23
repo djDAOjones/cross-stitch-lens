@@ -372,7 +372,7 @@ The canonical entities (full definitions in `architecture.md`):
 - **`Pipeline`** — an ordered list of stage instances + params. Order is
   **data, not code**: stored in the project file, reorderable in the UI.
 - **`ProjectFile`** — the versioned document (`project.json`, schema
-  v10) inside a `.pmproj` package that also carries the picture
+  v12) inside a `.pmproj` package that also carries the picture
   verbatim (DUR-01): `{ schemaVersion, source, pipeline, palette,
   symbols, gridStyle, preview, export, estimates }`. `source` names
   the embedded picture or is `null` (v10); `symbols` is identity-keyed
@@ -380,8 +380,10 @@ The canonical entities (full definitions in `architecture.md`):
   is append-only once a batch signs (v6, M9); `gridStyle` is a
   screen/print pair with preset provenance (v7, M11); `export.pdf`
   carries the pagination fields (v8, M10); `estimates` the fabric and
-  thread-estimation settings (v9, M12). Legacy `.json` files load by
-  content detection and migrate forward.
+  thread-estimation settings (v9, M12); `palette.design` carries the
+  colour swaps (v11, ICE-RECOLOUR-01) and the colour-use floor, and
+  `pipeline.tone` the tone block (v12, TONE-01). Legacy `.json` files
+  load by content detection and migrate forward.
 
 Do **not** represent pixel data as arrays of objects, mutate a stage's
 input buffer, or encode pipeline order as hard-coded call sequences.

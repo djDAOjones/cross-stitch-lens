@@ -936,3 +936,189 @@ main {
   margin: 0;
   color: var(--csl-text-primary);
 }
+
+/* Tone matching (TONE-01): the ramp strip is control and provenance
+  in one — histogram over band colours on a canvas, cut handles as
+  44px sliders above it, and the band list as the DOM mirror of what
+  the canvas paints. The curve plot is the same shape in miniature.
+  Band/thread colours are content, never routed through UI tokens. */
+.tone-controls {
+  display: grid;
+  gap: var(--csl-spacing-03);
+}
+
+.tone-slider-ends {
+  display: flex;
+  justify-content: space-between;
+  color: var(--csl-text-secondary);
+  font-size: 0.75rem;
+}
+
+.tone-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--csl-spacing-03);
+}
+
+.tone-ramp-track {
+  position: relative;
+  /* Room for the canvas plus the handle row's 44px targets. */
+  padding-bottom: var(--csl-spacing-03);
+}
+
+.tone-ramp-canvas {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--csl-border-subtle);
+  background: var(--csl-layer-01);
+}
+
+.tone-ramp-handles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.tone-cut-handle {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  width: var(--csl-target-min);
+  min-width: var(--csl-target-min);
+  transform: translateX(-50%);
+  pointer-events: auto;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: ew-resize;
+}
+
+/* The visible grip: a dot on the cut line the canvas draws. */
+.tone-cut-handle::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  width: 0.75rem;
+  height: 0.75rem;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: var(--csl-layer-01);
+  border: 2px solid var(--csl-text-primary);
+}
+
+.tone-cut-handle:disabled {
+  cursor: default;
+  opacity: 1; /* readout state, not a dimmed control */
+}
+
+.tone-cut-handle:disabled::after {
+  border-color: var(--csl-border-strong);
+}
+
+.tone-bands {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+  font-size: 0.8125rem;
+}
+
+.tone-band {
+  display: flex;
+  align-items: center;
+  gap: var(--csl-spacing-03);
+}
+
+.tone-band-swatch {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  border: 1px solid var(--csl-border-subtle);
+}
+
+.tone-curve-plot {
+  position: relative;
+  width: min(16rem, 100%);
+  aspect-ratio: 1;
+  border: 1px solid var(--csl-border-subtle);
+  background: var(--csl-layer-01);
+}
+
+.tone-curve {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.tone-curve-grid {
+  fill: none;
+  stroke: var(--csl-border-subtle);
+  stroke-width: 0.5;
+}
+
+.tone-curve-path {
+  fill: none;
+  stroke: var(--csl-text-primary);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.tone-curve-points {
+  position: absolute;
+  inset: 0;
+}
+
+.tone-curve-point {
+  position: absolute;
+  width: var(--csl-target-min);
+  height: var(--csl-target-min);
+  min-width: var(--csl-target-min);
+  min-height: var(--csl-target-min);
+  transform: translate(-50%, -50%);
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: grab;
+}
+
+.tone-curve-point::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.75rem;
+  height: 0.75rem;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: var(--csl-layer-01);
+  border: 2px solid var(--csl-text-primary);
+}
+
+.tone-curve-numbers {
+  display: grid;
+  gap: var(--csl-spacing-02);
+}
+
+.tone-curve-number-row {
+  display: flex;
+  align-items: center;
+  gap: var(--csl-spacing-03);
+}
+
+.tone-curve-number-row > .meta {
+  flex: 1 1 6rem;
+}
+
+.tone-curve-number {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--csl-spacing-02);
+  font-size: 0.8125rem;
+}
+
+.tone-curve-number input {
+  width: 4.5rem;
+}

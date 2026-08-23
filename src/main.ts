@@ -59,7 +59,7 @@ import {
 } from './core/color-profile.ts';
 import { generateColorMap, userColor } from './core/color-sources.ts';
 import type { CountMode, PaletteConflict } from './core/palette-policy.ts';
-import { paletteOf } from './core/palette.ts';
+import { paletteLab, paletteOf } from './core/palette.ts';
 import { resolveProfilePalette } from './core/palette-resolve.ts';
 import type { ProfileInputs } from './core/color-profile.ts';
 import { loadCatalogue } from './core/thread-catalogue.ts';
@@ -78,6 +78,7 @@ import {
 } from './ui/profile-editor-colour.ts';
 import { createEditorPreview, fetchSlot } from './ui/profile-editor-preview.ts';
 import {
+  DEFAULT_FLOOR,
   MAX_PREVIEW_CSS_PX,
   MAX_SOURCE_NAME,
   MIN_PREVIEW_CSS_PX,
@@ -89,6 +90,26 @@ import {
   type ChartMode,
   type ProjectFile,
 } from './core/project.ts';
+import {
+  defaultTone,
+  equalShares,
+  ladderOrder,
+  lightnessHistogram,
+  naturalCuts,
+  quantileCuts,
+  toneEngaged,
+  toneHint,
+  toneSuitability,
+  type LightnessHistogram,
+  type ToneConfig,
+} from './core/color/tone.ts';
+import type { FloorRule } from './core/palette-selection.ts';
+import {
+  createToneControls,
+  rungShares,
+  type ToneControlsState,
+  type ToneRung,
+} from './ui/tone-controls.ts';
 import { readProjectBytes, sourceEntryName, writeProjectBytes } from './core/project-package.ts';
 import {
   ageLabel,
@@ -290,6 +311,9 @@ function build(app: HTMLElement): void {
     palette: null,
     metric: 'lab',
     dither: { ...DEFAULT_DITHER },
+    // Tone mode (TONE-01): disengaged by default — matching exactly as
+    // it always was until the slider or the curve moves.
+    tone: defaultTone(),
   };
   let masterImage: PixelBuffer | null = null;
   /**
@@ -433,11 +457,13 @@ function build(app: HTMLElement): void {
     minDistance: number;
     mustUse: string[];
     swaps: ThreadSwap[];
+    floor: FloorRule;
   } = {
     count: { mode: 'max', n: 8 },
     minDistance: 0,
     mustUse: [],
     swaps: [],
+    floor: { ...DEFAULT_FLOOR },
   };
 
   /**
@@ -596,6 +622,9 @@ function build(app: HTMLElement): void {
         design: designRules,
         inputs: profileInputs(),
         source: selectionSource ?? undefined,
+        // Selection in the same space as cell matching (TONE-01, the
+        // D200 decision of record); tone is a Lab concept (§6).
+        tone: config.metric === 'lab' ? config.tone : undefined,
         name: paletteName(),
       });
       config.palette = resolved.ok ? resolved.palette : null;
@@ -662,7 +691,15 @@ function build(app: HTMLElement): void {
    * the policy changes.
    */
   function ensureSelectionSource(): void {
-    if (masterImage === null || !paletteMode || designRules.count.mode === 'all') return;
+    if (masterImage === null || !paletteMode) return;
+    // Fetched when anything actually reads it: the colour count, the
+    // colour-use floor, or tone mode's histogram (the ramp strip and
+    // Equalise) — TONE-01 widened this from the count alone.
+    const wantsSource =
+      designRules.count.mode !== 'all' ||
+      designRules.floor.on ||
+      toneEngaged(config.metric, config.tone);
+    if (!wantsSource) return;
     const wanted = selectionGeometryKey();
     if (selectionPending || (selectionSource !== null && selectionGeometry === wanted)) return;
     const still = master();
@@ -680,6 +717,8 @@ function build(app: HTMLElement): void {
         selectionGeometry = wanted;
         resolvePalette();
         colourSection.update(sectionState());
+        // The ramp's histogram reads this buffer (TONE-01).
+        updateToneControls();
         reprocess();
       },
       (error: unknown) => {
@@ -1979,6 +2018,7 @@ function build(app: HTMLElement): void {
     // palette beats holding a stale picture.
     if (selectionPending) {
       colourSection.update(sectionState());
+      updateToneControls();
       refreshSections();
       return;
     }
@@ -1986,6 +2026,7 @@ function build(app: HTMLElement): void {
     // Dithering only applies when reducing to a palette.
     ditherControls.update();
     colourSection.update(sectionState());
+    updateToneControls();
     refreshSections();
     reprocess();
   }
@@ -2057,6 +2098,133 @@ function build(app: HTMLElement): void {
     const base = profileRecipes.get(profileRef.id);
     designEdited = base === undefined || JSON.stringify(base) !== JSON.stringify(designRecipe);
   }
+
+  // --- Tone matching (TONE-01) ---------------------------------------
+  // The tone group lives in the Colour section's slot; the state below
+  // is what the ramp reads that the section state does not carry.
+
+  /** The config's tone, never undefined on the app's own config. */
+  function currentTone(): ToneConfig {
+    return config.tone ?? defaultTone();
+  }
+
+  /** Per-thread stitch counts from the last frame (id → count). */
+  let lastPerThreadCounts: Map<string, number> | null = null;
+  /** Whether the last frame dithered (the ramp's wording). */
+  let lastFrameDitherOn = false;
+
+  /** Histogram cache: keyed on the source buffer + the curve. */
+  let toneHistFor: PixelBuffer | null = null;
+  let toneHistCurve = '';
+  let toneHistCache: LightnessHistogram | null = null;
+
+  function toneHistogramCached(): LightnessHistogram | null {
+    if (selectionSource === null) return null;
+    const curveKey = JSON.stringify(currentTone().curve);
+    if (toneHistFor !== selectionSource || toneHistCurve !== curveKey) {
+      toneHistCache = lightnessHistogram(selectionSource, currentTone().curve);
+      toneHistFor = selectionSource;
+      toneHistCurve = curveKey;
+    }
+    return toneHistCache;
+  }
+
+  /** The selected palette in ladder order, labelled for the ramp. */
+  function toneRungs(): ToneRung[] {
+    const pal = config.palette;
+    if (pal === null || pal.entries.length === 0) return [];
+    const lab = paletteLab(pal);
+    return Array.from(ladderOrder(pal)).map((i) => {
+      const entry = pal.entries[i];
+      return {
+        id: entry?.id ?? '',
+        hex: entry?.hex ?? '#000000',
+        l: lab[i * 3] ?? 0,
+        label: entry === undefined ? '' : entryLabel(entry, CATALOGUE),
+      };
+    });
+  }
+
+  function toneState(): ToneControlsState {
+    const pal = config.palette;
+    const rungs = toneRungs();
+    const rungIds = rungs.map((r) => r.id);
+    const achieved =
+      lastPerThreadCounts === null || rungs.length === 0
+        ? null
+        : rungShares(rungIds, designRules.swaps, lastPerThreadCounts);
+    return {
+      visible: paletteMode,
+      tone: currentTone(),
+      rungs,
+      naturalCuts: pal === null ? [] : naturalCuts(pal, ladderOrder(pal)),
+      histogram: toneHistogramCached(),
+      achieved,
+      ditherOn: lastFrameDitherOn,
+      hint: pal === null ? null : toneHint(toneSuitability(pal), currentTone().weight),
+      canRePick: capture !== null,
+      floor: designRules.floor,
+    };
+  }
+
+  function updateToneControls(): void {
+    toneControls.update(toneState());
+  }
+
+  const toneControls = createToneControls(document, {
+    visible: paletteMode,
+    tone: currentTone(),
+    rungs: [],
+    naturalCuts: [],
+    histogram: null,
+    achieved: null,
+    ditherOn: false,
+    hint: null,
+    canRePick: false,
+    floor: designRules.floor,
+  }, {
+    setWeight: (weight) => {
+      config.tone = { ...currentTone(), weight };
+      // Weight moves the selection objective too, so the full colour
+      // path re-runs; the FLICKER-01 hold applies while a fresh
+      // selection source is in flight.
+      applyColour();
+    },
+    setCurve: (curve) => {
+      config.tone = { ...currentTone(), curve };
+      applyColour();
+    },
+    setCuts: (cuts) => {
+      config.tone = { ...currentTone(), cuts };
+      // Cuts change cell mapping only — the selection does not read
+      // them — so this skips the re-selection and just re-renders.
+      updateToneControls();
+      reprocess();
+    },
+    equalise: () => {
+      const hist = toneHistogramCached();
+      const n = config.palette?.entries.length ?? 0;
+      if (hist === null || n < 2) return;
+      config.tone = { ...currentTone(), cuts: quantileCuts(hist, equalShares(n)) };
+      updateToneControls();
+      reprocess();
+      status.textContent = `Bands equalised across ${String(n)} colours.`;
+    },
+    rePick: () => {
+      invalidateSelectionSource();
+      ensureSelectionSource();
+      status.textContent = 'Re-picking colours from the current frame…';
+    },
+    setFloor: (floor) => {
+      designRules.floor = floor;
+      applyColour();
+    },
+    useToneMatching: () => {
+      config.tone = { ...currentTone(), weight: 1 };
+      applyColour();
+      status.textContent = 'Tone matching on — the palette works as a ladder.';
+    },
+  });
 
   const colourSection = createColourSection(document, {
     paletteMode,
@@ -2199,6 +2367,9 @@ function build(app: HTMLElement): void {
     labelFor: labelForId,
     mountInventory: (container) => {
       mountInventoryUi(container);
+    },
+    mountTone: (container) => {
+      container.append(toneControls.element);
     },
   });
   const colourGroup = colourSection.element;
@@ -3343,6 +3514,7 @@ function build(app: HTMLElement): void {
         metric: config.metric,
         dither: config.dither,
         ditherProfileRef: ditherRef,
+        tone: config.tone ?? defaultTone(),
       },
       // The design's recipe copy *and* the exact threads that
       // rendered it (schema v5, M15-PERSIST-01): reopening must
@@ -3526,6 +3698,7 @@ function build(app: HTMLElement): void {
       minDistance: loaded.design.minDistance,
       mustUse: [...loaded.design.mustUse],
       swaps: loaded.design.swaps.map((swap) => ({ from: swap.from, to: swap.to })),
+      floor: { ...loaded.design.floor },
     };
     config.swaps = designRules.swaps;
     // The edited flag re-derives against the live library; drift is
@@ -3619,6 +3792,18 @@ function build(app: HTMLElement): void {
       applyLoadedPalette(file.palette);
       config.metric = file.pipeline.metric;
       config.dither = file.pipeline.dither;
+      // A fresh copy, never the parsed object: the tone controls
+      // mutate through replacement, and the file object must stay
+      // exactly what was loaded.
+      config.tone = {
+        weight: file.pipeline.tone.weight,
+        curve: file.pipeline.tone.curve.map((p) => ({ in: p.in, out: p.out })) as [
+          { in: number; out: number },
+          { in: number; out: number },
+          { in: number; out: number },
+        ],
+        cuts: file.pipeline.tone.cuts === null ? null : [...file.pipeline.tone.cuts],
+      };
       // Adopt the saved reference, or match a built-in structurally
       // (M15-DITH-01): an old file whose config equals a preset
       // attaches that profile; anything else stays honestly
@@ -3652,6 +3837,7 @@ function build(app: HTMLElement): void {
       pdfPaging.overlapStitches = file.export.pdf.overlapStitches;
       Object.assign(estimateSettings, file.estimates);
       syncControls();
+      updateToneControls();
       sendGridStyle();
       dimensionsLabel.textContent = patternSummary(scales.pattern);
       // A loaded pattern re-aspects the live capture frame the same way
@@ -4445,7 +4631,16 @@ function build(app: HTMLElement): void {
     lastColorCount = stats.colorCount;
     lastEmptyCount = stats.emptyCount;
     lastPerColor = stats.perColor.map((c) => c.count);
+    // The ramp readout's numbers: achieved per-thread counts from the
+    // frame that actually rendered (TONE-01) — identified rows only.
+    const perThread = new Map<string, number>();
+    for (const usage of stats.perColor) {
+      if (usage.thread !== undefined) perThread.set(usage.thread.id, usage.count);
+    }
+    lastPerThreadCounts = stats.identified ? perThread : null;
+    lastFrameDitherOn = frame.config.dither.algorithm !== 'none';
     colourSection.update(sectionState());
+    updateToneControls();
     refreshStats();
     status.textContent = 'Preview updated.';
     log.info('pipeline', 'frame processed', {
@@ -4722,6 +4917,8 @@ function build(app: HTMLElement): void {
     thumbWrap.hidden = true;
     hideCaptureSection();
     updateSourceEntry();
+    // Re-pick loses its live frame with the session (TONE-01).
+    updateToneControls();
     status.textContent = message;
     // Hand focus to whichever chooser now exists — the bar's Source
     // button, or the entry's first action when the session was the
@@ -4856,6 +5053,8 @@ function build(app: HTMLElement): void {
       setDisclosure('preview-section', true);
       syncPreviewSticky();
       updateSourceEntry();
+      // Re-pick gains its live frame with the session (TONE-01).
+      updateToneControls();
       // Source replacement → auto-fit (M14-EXT-08).
       preview.resetView();
       // The capture surface mounts above the preview (M14-FIX-01);

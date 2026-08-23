@@ -13,6 +13,7 @@ import {
   type ColorProfileRecipe,
   type ProfileInputs,
 } from './color-profile.ts';
+import type { ToneConfig } from './color/tone.ts';
 import {
   duplicateDisplayColours,
   resolvePermitted,
@@ -22,7 +23,12 @@ import {
   type PolicyInputs,
   type ResolvedPalette,
 } from './palette-policy.ts';
-import { buildDistribution, selectThreads } from './palette-selection.ts';
+import {
+  applyColourFloor,
+  buildDistribution,
+  selectThreads,
+  type FloorRule,
+} from './palette-selection.ts';
 import { paletteOf } from './palette.ts';
 import type { PixelBuffer } from './types.ts';
 
@@ -163,10 +169,19 @@ export interface ProfilePaletteRequest {
     count: { mode: 'all' | 'max' | 'exact'; n: number };
     minDistance: number;
     mustUse: readonly string[];
+    /** The colour-use floor (TONE-01, schema v12); absent = off. */
+    floor?: FloorRule | undefined;
   };
   inputs: ProfileInputs;
   /** Grid-sized source for count selection; omit before the first frame. */
   source?: PixelBuffer | undefined;
+  /**
+   * Tone mode (TONE-01): selection then runs in the same tone space
+   * cell matching uses — the D200 decision of record. Pass it only
+   * under the 'lab' metric; absent = plain Lab, the pre-TONE-01
+   * behaviour exactly.
+   */
+  tone?: ToneConfig | undefined;
   name: string;
 }
 
@@ -209,7 +224,15 @@ export function resolveProfilePalette(request: ProfilePaletteRequest): ResolvedP
   }
 
   const eligibleCount = eligible.length;
-  const source = design.count.mode === 'all' ? undefined : request.source;
+  const floor =
+    design.floor !== undefined && design.floor.on && design.floor.minStitches > 0
+      ? design.floor
+      : undefined;
+  // The floor needs the distribution even without a count limit —
+  // "use everything that earns its stitches" is a legal rule — so
+  // 'all' mode keeps the source when a floor is on.
+  const source =
+    design.count.mode === 'all' && floor === undefined ? undefined : request.source;
   const permitted: PermittedSet = {
     eligible,
     locks,
@@ -227,6 +250,45 @@ export function resolveProfilePalette(request: ProfilePaletteRequest): ResolvedP
       conflicts,
       eligibleCount,
       selectedCount: eligibleCount,
+      lockedCount: locks.length,
+      ok: true,
+    };
+  }
+
+  /** The floor's explanation, shared by both paths below. */
+  const floorSentence = (dropped: number, kept: number): PaletteConflict => {
+    const colours = dropped === 1 ? 'colour' : 'colours';
+    const minimum = String(floor?.minStitches ?? 0);
+    return {
+      kind: 'floor-dropped',
+      severity: 'warning',
+      ids: [],
+      message: `${String(dropped)} ${colours} earned fewer than ${minimum} stitches and ${dropped === 1 ? 'was' : 'were'} dropped, leaving ${String(kept)}. Lower the minimum stitches per colour, or turn it off, to keep more.`,
+    };
+  };
+
+  // 'all' mode with a floor: no count selection — the whole membership
+  // stands, then the under-earners drop. The minimum-distance rule
+  // stays not-applied here, exactly as 'all' mode has always worked.
+  if (design.count.mode === 'all') {
+    const distribution = buildDistribution(source);
+    const floored = applyColourFloor(
+      eligible,
+      locks,
+      distribution,
+      floor?.minStitches ?? 0,
+      request.tone,
+    );
+    if (floored.dropped > 0) {
+      conflicts.push(floorSentence(floored.dropped, floored.threads.length));
+    }
+    conflicts.push(...duplicateDisplayColours(floored.threads));
+    return {
+      palette: paletteOf(name, floored.threads),
+      unresolved: [],
+      conflicts,
+      eligibleCount,
+      selectedCount: floored.threads.length,
       lockedCount: locks.length,
       ok: true,
     };
@@ -257,8 +319,14 @@ export function resolveProfilePalette(request: ProfilePaletteRequest): ResolvedP
   }
 
   const distribution = buildDistribution(source);
-  const selection = selectThreads(permitted, target, distribution, design.minDistance);
+  const selection = selectThreads(permitted, target, distribution, design.minDistance, {
+    tone: request.tone,
+    floor,
+  });
 
+  if (selection.floorDropped > 0) {
+    conflicts.push(floorSentence(selection.floorDropped, selection.threads.length));
+  }
   if (selection.distanceLimited) {
     conflicts.push({
       kind: 'distance-limits-count',
@@ -269,6 +337,7 @@ export function resolveProfilePalette(request: ProfilePaletteRequest): ResolvedP
   } else if (
     design.count.mode === 'exact' &&
     selection.threads.length < target &&
+    selection.floorDropped === 0 &&
     target <= eligibleCount &&
     locks.length <= target
   ) {

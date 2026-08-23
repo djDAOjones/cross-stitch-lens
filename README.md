@@ -34,7 +34,13 @@ restores the latest design on reopen, and title-named files (DUR-01,
 SAVE-01). **Track D — creative control — opened 2026-08-23** with the
 colour swap (ICE-RECOLOUR-01, schema v11): every stitch the mapper
 gives one thread can be worked in another, chosen from the whole
-catalogue, and the key, counts and estimates follow.
+catalogue, and the key, counts and estimates follow. **Tone mode**
+(TONE-01, schema v12) landed 2026-08-24: a colour ↔ tone slider whose
+weighted metric runs through matching, selection and dither alike, a
+lightness ramp with cut handles and Equalise at the tone end-stop, a
+three-point lightness curve, a colour-use floor, and re-pick from the
+current frame — its user-facing names are still working labels
+pending the owner sitting.
 
 **M15 (colour & dithering profiles)** closed on both acceptance gates
 (D148): colour profiles as composition recipes with a kind-agnostic

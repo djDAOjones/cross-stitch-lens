@@ -300,3 +300,82 @@ describe('resolveProjectPalette applies the count limit last', () => {
     expect(conflict?.message).toContain('Lower the distance or the colour count');
   });
 });
+
+describe('tone-space selection and the colour-use floor (TONE-01)', () => {
+  const permitted = resolvePermitted(policy(), { catalogue });
+  const distribution = buildDistribution(gradient());
+
+  it('a disengaged tone option changes nothing — same picks, same order', () => {
+    const plain = selectThreads(permitted, 12, distribution);
+    const viaOptions = selectThreads(permitted, 12, distribution, 0, {
+      tone: { weight: 0, curve: [{ in: 0, out: 0 }, { in: 50, out: 50 }, { in: 100, out: 100 }], cuts: null },
+      floor: { on: false, minStitches: 100 },
+    });
+    expect(viaOptions.threads.map((t) => t.id)).toEqual(plain.threads.map((t) => t.id));
+    expect(viaOptions.floorDropped).toBe(0);
+  });
+
+  it('at the tone end-stop the picks ladder in lightness', () => {
+    // Weight 1: the objective is lightness coverage alone, so the
+    // eight picks must span a wide L* range even though the gradient
+    // is colourful.
+    const selection = selectThreads(permitted, 8, distribution, 0, {
+      tone: { weight: 1, curve: [{ in: 0, out: 0 }, { in: 50, out: 50 }, { in: 100, out: 100 }], cuts: null },
+    });
+    expect(selection.threads.length).toBe(8);
+    const scratch = new Float32Array(3);
+    const ls = selection.threads.map((t) => {
+      srgbToLab(t.rgb[0], t.rgb[1], t.rgb[2], scratch, 0);
+      return scratch[0] ?? 0;
+    });
+    expect(Math.max(...ls) - Math.min(...ls)).toBeGreaterThan(50);
+  });
+
+  it('the floor drops under-earners after the count and says how many', () => {
+    // A floor higher than any colour can earn among 240 stitches split
+    // 12 ways must drop colours; the palette only shrinks and never
+    // empties.
+    const generous = selectThreads(permitted, 12, distribution, 0, {
+      floor: { on: true, minStitches: 60 },
+    });
+    const baseline = selectThreads(permitted, 12, distribution);
+    expect(generous.floorDropped).toBeGreaterThan(0);
+    expect(generous.threads.length).toBe(baseline.threads.length - generous.floorDropped);
+    expect(generous.threads.length).toBeGreaterThanOrEqual(1);
+    // Every survivor was in the unfloored selection: the floor only
+    // removes, never substitutes.
+    const before = new Set(baseline.threads.map((t) => t.id));
+    for (const t of generous.threads) expect(before.has(t.id)).toBe(true);
+  });
+
+  it('an absurd floor keeps the last colour rather than emptying the palette', () => {
+    const floored = selectThreads(permitted, 6, distribution, 0, {
+      floor: { on: true, minStitches: 1_000_000 },
+    });
+    expect(floored.threads.length).toBe(1);
+    expect(floored.floorDropped).toBe(5);
+  });
+
+  it('Must-use seats are exempt from the floor', () => {
+    const withLock = resolvePermitted(
+      policy({ locked: [permitted.eligible[0]?.id ?? ''] }),
+      { catalogue },
+    );
+    const floored = selectThreads(withLock, 6, distribution, 0, {
+      floor: { on: true, minStitches: 1_000_000 },
+    });
+    // The seat survives any floor; every droppable colour went.
+    expect(floored.threads.some((t) => t.id === withLock.locks[0]?.id)).toBe(true);
+    expect(floored.threads.length).toBe(1);
+  });
+
+  it('the floor cascade is deterministic', () => {
+    const a = selectThreads(permitted, 10, distribution, 0, {
+      floor: { on: true, minStitches: 30 },
+    });
+    const b = selectThreads(permitted, 10, distribution, 0, {
+      floor: { on: true, minStitches: 30 },
+    });
+    expect(a.threads.map((t) => t.id)).toEqual(b.threads.map((t) => t.id));
+  });
+});

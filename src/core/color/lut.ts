@@ -7,6 +7,7 @@
 
 import { srgbToLab } from './convert.ts';
 import type { ColorMetric } from './metrics.ts';
+import { createToneMatcher, toneEngaged, toneNearest, type ToneConfig } from './tone.ts';
 import { paletteLab, paletteRgb } from '../palette.ts';
 import type { Palette } from '../types.ts';
 
@@ -98,12 +99,37 @@ export function nearestIndex(
  * Build the full 15-bit LUT for a palette + metric: LUT[key] = index
  * of the nearest palette entry to the bin's representative colour.
  * O(32768 × palette size); runs in the worker in production.
+ *
+ * With an engaged `tone` (TONE-01) the match runs in the tone space
+ * instead — the LUT *is* the matching, so the weight, curve and cuts
+ * are baked into its entries, which is why the cache key must carry
+ * them (D46; `toneFingerprint`). Disengaged tone takes the original
+ * loop untouched.
  */
-export function buildLut(palette: Palette, metric: ColorMetric): Uint16Array {
+export function buildLut(
+  palette: Palette,
+  metric: ColorMetric,
+  tone?: ToneConfig,
+): Uint16Array {
+  const lut = new Uint16Array(LUT_SIZE);
+  if (toneEngaged(metric, tone)) {
+    const matcher = createToneMatcher(palette, tone);
+    const labScratch = new Float32Array(3);
+    for (let rBin = 0; rBin < 32; rBin++) {
+      const r = binToChannel(rBin);
+      for (let gBin = 0; gBin < 32; gBin++) {
+        const g = binToChannel(gBin);
+        for (let bBin = 0; bBin < 32; bBin++) {
+          const key = (rBin << 10) | (gBin << 5) | bBin;
+          lut[key] = toneNearest(matcher, r, g, binToChannel(bBin), labScratch);
+        }
+      }
+    }
+    return lut;
+  }
   const palRgb = paletteRgb(palette);
   const palLab = metric === 'lab' ? paletteLab(palette) : new Float32Array(0);
   const labScratch = new Float32Array(3);
-  const lut = new Uint16Array(LUT_SIZE);
   for (let rBin = 0; rBin < 32; rBin++) {
     const r = binToChannel(rBin);
     for (let gBin = 0; gBin < 32; gBin++) {

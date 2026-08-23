@@ -7,8 +7,10 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { defaultTone } from '../src/core/color/tone.ts';
 import { DEFAULT_GRID_VALUES } from '../src/core/grid-style.ts';
 import {
+  DEFAULT_FLOOR,
   DEFAULT_PREVIEW,
   MAX_GRID_SIDE,
   MAX_PALETTE_ENTRIES,
@@ -36,6 +38,17 @@ function sampleProject(): ProjectFile {
       metric: 'lab',
       dither: { algorithm: 'floyd-steinberg', serpentine: true, strength: 1 },
       ditherProfileRef: null,
+      // Non-default tone (v12): an engaged weight, a bent curve and
+      // explicit cuts, so the round trip proves every field survives.
+      tone: {
+        weight: 0.5,
+        curve: [
+          { in: 0, out: 5 },
+          { in: 45, out: 60 },
+          { in: 100, out: 95 },
+        ],
+        cuts: [30.5, 62],
+      },
     },
     palette: {
       profileRef: { id: 'builtin:dmc', revision: 0 },
@@ -51,6 +64,7 @@ function sampleProject(): ProjectFile {
         minDistance: 12,
         mustUse: ['dmc:310'],
         swaps: [],
+        floor: { on: true, minStitches: 25 },
       },
       snapshot: loadDmcPalette().entries.slice(0, 3),
     },
@@ -711,6 +725,7 @@ describe('a saved project reopens with identical output', () => {
           : DMC,
       metric: file.pipeline.metric,
       dither: file.pipeline.dither,
+      tone: file.pipeline.tone,
     };
   }
 
@@ -738,7 +753,13 @@ describe('a saved project reopens with identical output', () => {
   const DMC_SNAPSHOT: ProjectFile['palette'] = {
     profileRef: { id: 'builtin:dmc', revision: 0 },
     recipe: { libraries: ['dmc'], ownedOnly: false, include: [], exclude: [], ranges: [] },
-    design: { count: { mode: 'all', n: 20 }, minDistance: 0, mustUse: [], swaps: [] },
+    design: {
+      count: { mode: 'all', n: 20 },
+      minDistance: 0,
+      mustUse: [],
+      swaps: [],
+      floor: { ...DEFAULT_FLOOR },
+    },
     snapshot: DMC.entries,
   };
 
@@ -757,6 +778,7 @@ describe('a saved project reopens with identical output', () => {
         metric: 'lab',
         dither: { algorithm: 'floyd-steinberg', serpentine: true, strength: 1 },
         ditherProfileRef: null,
+        tone: defaultTone(),
       },
       palette: DMC_SNAPSHOT,
     },
@@ -769,6 +791,7 @@ describe('a saved project reopens with identical output', () => {
         metric: 'rgb',
         dither: { algorithm: 'none' },
         ditherProfileRef: null,
+        tone: defaultTone(),
       },
       palette: DMC_SNAPSHOT,
     },
@@ -781,6 +804,7 @@ describe('a saved project reopens with identical output', () => {
         metric: 'lab',
         dither: { algorithm: 'none' },
         ditherProfileRef: null,
+        tone: defaultTone(),
       },
       palette: DMC_SNAPSHOT,
     },
@@ -793,6 +817,7 @@ describe('a saved project reopens with identical output', () => {
         metric: 'lab',
         dither: { algorithm: 'none' },
         ditherProfileRef: null,
+        tone: defaultTone(),
       },
       palette: null,
     },
@@ -805,6 +830,7 @@ describe('a saved project reopens with identical output', () => {
         metric: 'lab',
         dither: { algorithm: 'floyd-steinberg', serpentine: true, strength: 1 },
         ditherProfileRef: null,
+        tone: defaultTone(),
       },
       // The snapshot is what makes a reopen reproducible: this project
       // renders three threads whatever the catalogue or the library
@@ -818,7 +844,13 @@ describe('a saved project reopens with identical output', () => {
           exclude: [],
           ranges: [],
         },
-        design: { count: { mode: 'all', n: 20 }, minDistance: 0, mustUse: [], swaps: [] },
+        design: {
+      count: { mode: 'all', n: 20 },
+      minDistance: 0,
+      mustUse: [],
+      swaps: [],
+      floor: { ...DEFAULT_FLOOR },
+    },
         snapshot: DMC.entries.slice(0, 3),
       },
     },
@@ -831,6 +863,7 @@ describe('a saved project reopens with identical output', () => {
         metric: 'lab',
         dither: { algorithm: 'atkinson', serpentine: false, strength: 0.5 },
         ditherProfileRef: null,
+        tone: defaultTone(),
       },
       palette: DMC_SNAPSHOT,
     },
@@ -843,6 +876,7 @@ describe('a saved project reopens with identical output', () => {
         metric: 'lab',
         dither: { algorithm: 'blue-noise', strength: 1 },
         ditherProfileRef: null,
+        tone: defaultTone(),
       },
       palette: DMC_SNAPSHOT,
     },

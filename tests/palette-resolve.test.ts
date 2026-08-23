@@ -146,3 +146,63 @@ describe('resolveProfilePalette (the profile world)', () => {
     expect(problem?.message).toContain('inventory has no threads in this browser');
   });
 });
+
+describe('the colour-use floor sentence (TONE-01)', () => {
+  it('names the dropped count, the survivors, and both ways out', () => {
+    const resolved = resolveProfilePalette({
+      recipe: { ...emptyRecipe(), libraries: ['dmc'] },
+      design: {
+        count: { mode: 'max', n: 12 },
+        minDistance: 0,
+        mustUse: [],
+        floor: { on: true, minStitches: 60 },
+      },
+      inputs: { catalogue },
+      source: gradient(),
+      name: 'test',
+    });
+    expect(resolved.ok).toBe(true);
+    const note = resolved.conflicts.find((c) => c.kind === 'floor-dropped');
+    expect(note?.severity).toBe('warning');
+    expect(note?.message).toContain('fewer than 60 stitches');
+    expect(note?.message).toContain(`leaving ${String(resolved.selectedCount)}`);
+    expect(note?.message).toContain('turn it off');
+  });
+
+  it('applies without a count limit: use everything that earns its stitches', () => {
+    const all = resolveProfilePalette({
+      recipe: { ...emptyRecipe(), libraries: ['dmc'] },
+      design: {
+        count: { mode: 'all', n: 20 },
+        minDistance: 0,
+        mustUse: [],
+        floor: { on: true, minStitches: 10 },
+      },
+      inputs: { catalogue },
+      source: gradient(),
+      name: 'test',
+    });
+    expect(all.ok).toBe(true);
+    // 240 stitches at a 10-stitch floor cannot keep 489 DMC threads.
+    expect(all.selectedCount).toBeLessThanOrEqual(24);
+    expect(all.selectedCount).toBeGreaterThanOrEqual(1);
+    expect(all.conflicts.some((c) => c.kind === 'floor-dropped')).toBe(true);
+  });
+
+  it('an off floor changes nothing, even in mode all', () => {
+    const off = resolveProfilePalette({
+      recipe: { ...emptyRecipe(), libraries: ['dmc'] },
+      design: {
+        count: { mode: 'all', n: 20 },
+        minDistance: 0,
+        mustUse: [],
+        floor: { on: false, minStitches: 10 },
+      },
+      inputs: { catalogue },
+      source: gradient(),
+      name: 'test',
+    });
+    expect(off.selectedCount).toBe(off.eligibleCount);
+    expect(off.conflicts.some((c) => c.kind === 'floor-dropped')).toBe(false);
+  });
+});

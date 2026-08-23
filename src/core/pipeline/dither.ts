@@ -27,6 +27,14 @@
 import { nearestIndexPruned, type CandidateTable } from '../color/candidates.ts';
 import { nearestIndex } from '../color/lut.ts';
 import type { ColorMetric } from '../color/metrics.ts';
+import {
+  createToneMatcher,
+  toneEngaged,
+  toneNearestScaled,
+  toneQuery,
+  type ToneConfig,
+  type ToneMatcher,
+} from '../color/tone.ts';
 import { paletteLab, paletteRgb } from '../palette.ts';
 import { bayer8, blueNoise32, type ThresholdTile } from './threshold-tiles.ts';
 import { EMPTY_INDEX, type Palette, type PixelBuffer, type Stage } from '../types.ts';
@@ -94,6 +102,17 @@ export interface DitherParams {
    * and the table is rebuilt from it on load.
    */
   candidates?: CandidateTable;
+  /**
+   * Tone mode (TONE-01). When engaged, the whole stage moves into the
+   * tone space (curved L, w·a, w·b): matching runs there AND the error
+   * diffuses there — the D200 build must. The prototype measured what
+   * reusing this stage's sRGB error terms under a weighted match does:
+   * hue error read back as lightness, 6.9 vs 2.3 L* column spread on
+   * the hue-sweep fixture. The `candidates` table is a plain-Lab
+   * structure and is ignored when tone is engaged. Absent or
+   * disengaged, the stage is byte-identical to its pre-TONE-01 self.
+   */
+  tone?: ToneConfig;
 }
 
 /** One diffusion tap: x/y offsets (rightward scan) and its weight. */
@@ -373,9 +392,178 @@ function thresholdTs(
   return { width, height, data: out, indices };
 }
 
+/**
+ * The error-diffusion family in the tone space (TONE-01): the working
+ * buffer holds (curved L, w·a, w·b) per cell, matching runs over the
+ * scaled palette (or the ladder's bands), and the diffused error is
+ * the difference *in that space* — at the end-stop (w = 0) only
+ * lightness error feeds back, which is what stops hue error leaking
+ * into tone (the prototype's central measurement). The kernel-as-data
+ * loop, serpentine mirroring, empty-stitch skip (D9/D49) and the
+ * shared work buffer all carry over from {@link diffuseTs} unchanged;
+ * the curve applies once to each source value, never to a diffused
+ * perturbation, and palette L is never curved.
+ *
+ * Clamps mirror the sRGB path's `clamp255`: L to [0, 100], a/b to
+ * ±128·w — the working values the matcher reads stay inside the space
+ * the palette occupies while the buffer itself keeps the unclamped
+ * running error, exactly as the sRGB path does.
+ */
+function diffuseToneTs(
+  input: PixelBuffer,
+  params: DitherParams,
+  kernel: FlatKernel,
+  strength: number,
+  tone: ToneConfig,
+): PixelBuffer {
+  const { width, height } = input;
+  const src = input.data;
+  const out = new Uint8ClampedArray(src.length);
+  const indices = new Uint16Array(width * height).fill(EMPTY_INDEX);
+  const palRgb = paletteRgb(params.palette);
+  const matcher = createToneMatcher(params.palette, tone);
+  const palLab = matcher.palLab;
+  const labScratch = new Float32Array(3);
+  const abClamp = 128 * matcher.w;
+
+  // Tone-space working copy: every element written before any is
+  // read, so reusing the shared buffer stays unobservable (M5-PERF-25).
+  const work = workBufferFor(width * height * 3);
+  for (let p = 0; p < width * height; p++) {
+    toneQuery(
+      matcher,
+      src[p * 4] ?? 0,
+      src[p * 4 + 1] ?? 0,
+      src[p * 4 + 2] ?? 0,
+      labScratch,
+    );
+    work[p * 3] = labScratch[0] ?? 0;
+    work[p * 3 + 1] = labScratch[1] ?? 0;
+    work[p * 3 + 2] = labScratch[2] ?? 0;
+  }
+
+  const tapCount = kernel.count;
+  const tapDy = kernel.dy;
+  const tapWeight = kernel.weight;
+
+  for (let y = 0; y < height; y++) {
+    const rightward = !params.serpentine || y % 2 === 0;
+    const xStart = rightward ? 0 : width - 1;
+    const xEnd = rightward ? width : -1;
+    const xStep = rightward ? 1 : -1;
+    const tapDx = rightward ? kernel.dxRight : kernel.dxLeft;
+
+    for (let x = xStart; x !== xEnd; x += xStep) {
+      const oi = (y * width + x) * 4;
+      // Same empty-stitch contract as the sRGB path (D9/D49): no error
+      // crosses an empty-cell boundary in either direction.
+      if ((src[oi + 3] ?? 255) === 0) continue;
+
+      const wi = (y * width + x) * 3;
+      const rawL = work[wi] ?? 0;
+      const rawA = work[wi + 1] ?? 0;
+      const rawB = work[wi + 2] ?? 0;
+      const ql = rawL < 0 ? 0 : rawL > 100 ? 100 : rawL;
+      const qa = rawA < -abClamp ? -abClamp : rawA > abClamp ? abClamp : rawA;
+      const qb = rawB < -abClamp ? -abClamp : rawB > abClamp ? abClamp : rawB;
+
+      const entry = toneNearestScaled(matcher, ql, qa, qb);
+      indices[y * width + x] = entry;
+      const idx = entry * 3;
+      out[oi] = palRgb[idx] ?? 0;
+      out[oi + 1] = palRgb[idx + 1] ?? 0;
+      out[oi + 2] = palRgb[idx + 2] ?? 0;
+      out[oi + 3] = src[oi + 3] ?? 255;
+
+      const errL = (ql - (palLab[idx] ?? 0)) * strength;
+      const errA = (qa - (palLab[idx + 1] ?? 0)) * strength;
+      const errB = (qb - (palLab[idx + 2] ?? 0)) * strength;
+
+      for (let t = 0; t < tapCount; t++) {
+        const tx = x + (tapDx[t] ?? 0);
+        const ty = y + (tapDy[t] ?? 0);
+        if (tx < 0 || tx >= width || ty >= height) continue;
+        const weight = tapWeight[t] ?? 0;
+        const ti = (ty * width + tx) * 3;
+        work[ti] = (work[ti] ?? 0) + errL * weight;
+        work[ti + 1] = (work[ti + 1] ?? 0) + errA * weight;
+        work[ti + 2] = (work[ti + 2] ?? 0) + errB * weight;
+      }
+    }
+  }
+
+  return { width, height, data: out, indices };
+}
+
+/**
+ * Threshold base amplitude translated into L* units. The sRGB path
+ * adds one signed offset to all three channels, which is in effect a
+ * lightness perturbation; the tone-space analogue perturbs curved L
+ * alone, scaled by 100/255 so `strength` means the same visual
+ * magnitude in both spaces. (The prototype measured diffusion only —
+ * the kernel question is orthogonal, D200 — so this scaling is the
+ * stated working assumption for the threshold family.)
+ */
+const THRESHOLD_TONE_SCALE = 100 / 255;
+
+/**
+ * The threshold family in the tone space: offset curved L by the tile,
+ * match over the scaled palette (or bands). Pointwise, no feedback —
+ * the empty-stitch rule needs no boundary handling.
+ */
+function thresholdToneTs(
+  input: PixelBuffer,
+  params: DitherParams,
+  tile: ThresholdTile,
+  strength: number,
+  tone: ToneConfig,
+): PixelBuffer {
+  const { width, height } = input;
+  const src = input.data;
+  const out = new Uint8ClampedArray(src.length);
+  const indices = new Uint16Array(width * height).fill(EMPTY_INDEX);
+  const palRgb = paletteRgb(params.palette);
+  const matcher: ToneMatcher = createToneMatcher(params.palette, tone);
+  const labScratch = new Float32Array(3);
+  const amplitude = THRESHOLD_BASE_AMPLITUDE * strength * THRESHOLD_TONE_SCALE;
+
+  for (let y = 0; y < height; y++) {
+    const rowBase = (y % tile.size) * tile.size;
+    for (let x = 0; x < width; x++) {
+      const oi = (y * width + x) * 4;
+      if ((src[oi + 3] ?? 255) === 0) continue;
+
+      toneQuery(matcher, src[oi] ?? 0, src[oi + 1] ?? 0, src[oi + 2] ?? 0, labScratch);
+      const t = ((tile.thresholds[rowBase + (x % tile.size)] ?? 0.5) - 0.5) * amplitude;
+      const shifted = (labScratch[0] ?? 0) + t;
+      const ql = shifted < 0 ? 0 : shifted > 100 ? 100 : shifted;
+
+      const entry = toneNearestScaled(matcher, ql, labScratch[1] ?? 0, labScratch[2] ?? 0);
+      indices[y * width + x] = entry;
+      const idx = entry * 3;
+      out[oi] = palRgb[idx] ?? 0;
+      out[oi + 1] = palRgb[idx + 1] ?? 0;
+      out[oi + 2] = palRgb[idx + 2] ?? 0;
+      out[oi + 3] = src[oi + 3] ?? 255;
+    }
+  }
+
+  return { width, height, data: out, indices };
+}
+
 function ditherTs(input: PixelBuffer, params: DitherParams): PixelBuffer {
   const algorithm = params.algorithm ?? 'floyd-steinberg';
   const strength = params.strength ?? 1;
+  const tone = toneEngaged(params.metric, params.tone) ? params.tone : undefined;
+  if (tone !== undefined) {
+    if (algorithm === 'ordered') {
+      return thresholdToneTs(input, params, bayer8(), strength, tone);
+    }
+    if (algorithm === 'blue-noise') {
+      return thresholdToneTs(input, params, blueNoise32(), strength, tone);
+    }
+    return diffuseToneTs(input, params, flatKernel(algorithm), strength, tone);
+  }
   if (algorithm === 'ordered') return thresholdTs(input, params, bayer8(), strength);
   if (algorithm === 'blue-noise') return thresholdTs(input, params, blueNoise32(), strength);
   return diffuseTs(input, params, flatKernel(algorithm), strength);

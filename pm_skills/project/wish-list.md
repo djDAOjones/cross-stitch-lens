@@ -23,3 +23,5 @@ refer to `docs/requirements.md`.
 <!-- Triaged 2026-08-23 (D197): every line promoted or cut — the spec
      §25 parking lot goes back to being docs/requirements.md §25's
      alone. Append new ideas below this comment. -->
+- Tone-aware candidate pruning: tone mode skips the Lab candidate table (full scan per pixel under dither); extend the exclusion proof to the scaled/curved space if a large-palette tone design ever feels slow.
+- Ramp track click-to-move: tapping the ramp between handles could move the nearest cut there; today only the handles drag.

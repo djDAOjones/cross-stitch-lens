@@ -67,9 +67,10 @@ order, their spec shared in `tickets/CREATIVE-01.md` (the D149
 shared-file exception; it dies with the last slice). PAINT-01 still
 scopes separately.
 
-- [ ] **TONE-01 Tone mode: the weighted metric, the ramp and the curve** [detail] (2026-08-23)
+- [~] **TONE-01 Tone mode: the weighted metric, the ramp and the curve** [detail] (2026-08-23)
   Intent: slice 1 (D200), schema v12 — the colour↔tone slider in the metric with the count-limit selection carrying the same weight, ladder mode with cut handles on the ramp (control and provenance in one), natural cuts + Equalise, target shares at source-lightness quantiles, the three-point curve, the colour-use floor, re-pick from the current frame. Dither diffuses in the weighted space (the prototype's confirmed call); the LUT key carries the weight (D46).
   Done when: a ladder profile maps a photograph as tone at the end-stop, the ramp readout shows achieved shares under dither, and the in-slice naming items (mode name, floor label/unit, confetti wording, ramp shape) are settled with the owner.
+  Status: build landed and verified 2026-08-24 (D201) — everything above works in the app with working labels; open is the owner half of done-when: the four naming items, plus a keyboard pass on the ramp handles and curve points (the driven browser cannot prove native activation).
 - [ ] **ADJUST-01 Adjustments 2a: black/white point, curve and saturation as the third profile kind** [detail] (2026-08-23)
   Intent: slice 2a (D200), schema v13 — the adjust stage wakes (the identity hook exists), one three-point curve carrying the black/white points at its endpoints plus global saturation; read-only built-ins seeded from the nine prototype candidates plus editable copies; the selection source is the adjusted picture.
   Done when: the owner-signed starter set ships as built-ins, live capture holds ≥ 4 updates/s at ≤ 300² (D135), and the LUT fingerprint is untouched by adjustments.

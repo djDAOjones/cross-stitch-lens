@@ -60,9 +60,12 @@ export function trapTarget(
 /**
  * Mount a modal scaffold and run its lifecycle. `build` fills the
  * body region and returns the element to focus first; `onClose`
- * resolves the caller's promise exactly once.
+ * resolves the caller's promise exactly once. Exported for dialogs
+ * whose body is domain-shaped (the symbol picker's glyph grid,
+ * ICE-SYMBOL-UI-01) so they share the one trap, Escape and
+ * focus-return contract instead of re-implementing it.
  */
-function runModal<T>(
+export function runModal<T>(
   doc: Document,
   title: string,
   build: (body: HTMLElement, close: (value: T) => void) => HTMLElement,

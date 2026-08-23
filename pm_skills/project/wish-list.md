@@ -95,3 +95,4 @@ refer to `docs/requirements.md`.
 - The `#export-size` readout says "chart 2000 × 2000 px" while the file is 2037 px (label gutter + pad omitted) (from: 2026-08-23 M16 pack)
 - Print from a phone or share the PDF to one — D188 reads phones as still-image users; revisit once the print plan exists (from: 2026-08-23 PRINT scoping)
 - Embed an accessibility text face for the PDF key (Atkinson's, or IBM Plex Sans — both open-licensed) if the proof set shows 1/l/I or 6/9 confusion — needs `@pdf-lib/fontkit`, a new runtime dependency (from: 2026-08-23 PRINT-01 scoping)
+- Explicit symbol swap: take another thread's glyph and hand it yours in one act — needs a model verb (`swapSymbols`) beside `setOverride`; the picker lists the unused pool only (from: 2026-08-23 ICE-SYMBOL-UI-01, D191)

@@ -61,7 +61,6 @@ they no longer imply sequence.
 Promoted from the Icebox at the 2026-08-23 triage (D188): small,
 mechanism known, gateless-able; one run, in this order.
 
-- [ ] **ICE-SYMBOL-UI-01 Manual symbol override picker** — M9's v1-optional slice (D170): reassign a thread's glyph from the *unused* pool only; taking another's is an explicit swap, never a conflict (D160-3). Model and persistence exist (`src/core/symbols/assignment.ts`) — UI alone. Done when the override survives save/load. Before M16's sitting.
 - [ ] **ICE-LIMIT-01 Rescale the colour-limit slider** — signed (D188): floor 2, ceiling 512, a log scale with the midpoint near 16; the number input already reaches 512. The stored value is `n`, so old projects load unchanged. Done when the slider follows the scale and a test pins the mapping.
 - [ ] **ICE-WIDTH-01 Judge the shell at its designed-for width** — decided (D188): the floor stays 320 px; the app is *designed for* 400 px (a phone in portrait, a strip beside an editor); phones are still-image users — mobile browsers have no `getDisplayMedia`. Done when the shell is read at 400 and 320 px in the running app and what fails is fixed or ticketed.
 - [ ] **ICE-WIDTH-02 The width readout goes behind `?diag=1`** — the header's two-line "works down to 320 px" sentence (`src/main.ts`) was a maintainer aid: the public header drops it; the readout renders only under the `diagnosticsRequested` rule (D175). Done when the public header is two lines shorter and `?diag=1` still shows it.

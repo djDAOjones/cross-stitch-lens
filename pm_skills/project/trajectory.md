@@ -17,6 +17,16 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
+## Small UI batch (IN PROGRESS, from 2026-08-23)
+
+**Outcome:** the five Icebox promotions of D188 plus the UI defects the
+wish-list triage surfaced, run gateless in the owner's order (D189).
+
+- ICE-SYMBOL-UI-01 (2026-08-23) — the Colours-used table is the live
+  symbol key: a Symbol column with a picker over the unused glyphs,
+  live grants for palettes that fit the 64-glyph set, overrides
+  persisting through the existing `symbols` block. See D191.
+
 ## Track B — Durability & identity (SHIPPED 2026-08-23)
 
 **Outcome:** the app no longer loses your work and can tell two designs

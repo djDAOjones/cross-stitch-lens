@@ -835,3 +835,48 @@ against the ~600 per-entry guard, the newest entry so it cannot archive — note
 the seven `[detail]` tickets over their soft ~600 words shrink only by
 lifecycle eviction. No archive file created; `archive/INDEX.md`
 unchanged.
+
+## D191 — ICE-SYMBOL-UI-01 ships: the Colours-used table is the live symbol key, with a picker over the unused pool (2026-08-23)
+
+**Context.** M9 left the manual override as a v1-optional slice
+(D170): `setOverride` / `clearOverride` existed in
+`src/core/symbols/assignment.ts` with nothing calling them, and
+symbols reached the user only inside a symbol-chart export. The owner
+ran the small UI batch gateless (`auto-jazz-lite`, D188/D189); the
+assumptions below were stated, not gated.
+
+**Decision.** The Colours-used row gains a **Symbol** column — the
+key the chart will print, as data, so its header is visible unlike the
+control-only Highlight and Remove columns. Each cell is a text button
+(the glyph inline in `currentColor` beside its name; accessible name
+"{name}: change the symbol for {thread}", the A2 pattern) opening a
+Carbon dialog over `runModal`: a grid of every **unused** glyph in
+catalogue order (D160-3 — a collision is as unrepresentable from the
+UI as from the model), "Let the app choose" when an override is
+recorded, Cancel. **Grants happen live** as frames arrive, in palette
+order, **only while every palette entry could hold a symbol**
+(`entries.length ≤ 64`): past that, live grants would let threads that
+came and went exhaust the queue and turn a later export into a refusal
+the export-time grant would never have made, so larger palettes keep
+D160's "export is the moment of need" and read "Auto". The column is
+absent — not full of "Auto" — without a thread palette or per-stitch
+identities. An override is project data in the `symbols` block, so
+the history and a save carry it with no new wiring (D179). The table
+rebuild now restores focus to the same row and slot — the picker's
+return-to-invoker was landing on a replaced button, and a Highlight
+pressed mid-capture had the same hole.
+
+**Not built.** The explicit swap (taking another thread's symbol)
+needs a model verb; wish-listed. Catalogue order, not queue order, for
+the pool: the queue reshuffles as symbols are released.
+
+**Verification.** Gate green (+8 tests: the pool, the row's glyph
+before and after a grant, save → load → grant with the override
+winning). In the running app: live key on the sample picture, pick →
+row and status update with focus kept, "Let the app choose" clears the
+override, a real `.pmproj` save → disturb → load restored the chosen
+glyph, Threadify off hides the column and on brings the grants back.
+
+**Scope.** `src/ui/symbol-picker.ts` (new), `info-panel.ts`,
+`modal.ts` (exports `runModal`), `main.ts`, `shell.css`;
+`tests/symbol-picker.test.ts`. No schema change.

@@ -8,10 +8,15 @@
  * about empty states through `onContent`. The row model is pure
  * (tested in node); only createInfoPanel touches the DOM. Thread
  * colours in swatches are content, not UI tokens (UI-STANDARDS →
- * "Colour fidelity").
+ * "Colour fidelity"). Since ICE-SYMBOL-UI-01 the table is also the
+ * live symbol key: a Symbol column (present only while the design can
+ * carry symbols) shows each thread's glyph with a button into the
+ * override picker (`symbol-picker.ts`).
  */
 
 import type { ColorUsage, DesignStats } from '../core/stats.ts';
+import type { SymbolGlyph } from '../core/symbols/glyphs.ts';
+import { glyphElement } from './symbol-picker.ts';
 
 /** Rows above the cap collapse into one aggregate line. */
 export const ROW_CAP = 30;
@@ -105,6 +110,8 @@ export function buildRows(perColor: ColorUsage[], options: RowOptions = {}): Row
 export interface InfoPanel {
   element: HTMLElement;
   update(stats: DesignStats): void;
+  /** Re-render the last stats — for state that changed under an unchanged frame (a symbol pick). */
+  refresh(): void;
   /** Clear any thread highlight (fires onChange if one was set). */
   clearHighlight(): void;
 }
@@ -138,6 +145,21 @@ export interface InfoPanelHighlightOptions {
   onRemove?(index: number, label: string): void;
 }
 
+/** Symbol column wiring (ICE-SYMBOL-UI-01). */
+export interface InfoPanelSymbolOptions {
+  /**
+   * Whether the design can carry symbols at all — a thread palette
+   * with per-stitch identities. The column is absent otherwise rather
+   * than full of "Auto": a chart that cannot be a symbol chart has no
+   * symbols to show.
+   */
+  available(): boolean;
+  /** The glyph this thread wears (or will), or null for "assigned at export". */
+  glyphFor(usage: ColorUsage): SymbolGlyph | null;
+  /** The row's symbol button was pressed. */
+  onPick(usage: ColorUsage, label: string): void;
+}
+
 /**
  * Build the panel content. Starts empty until the first update.
  *
@@ -152,6 +174,7 @@ export function createInfoPanel(
   brandNames?: ReadonlyMap<string, string>,
   onContent?: InfoPanelContentListener,
   highlight?: InfoPanelHighlightOptions,
+  symbols?: InfoPanelSymbolOptions,
 ): InfoPanel {
   const element = doc.createElement('div');
   element.className = 'info-panel';
@@ -181,6 +204,18 @@ export function createInfoPanel(
     th.textContent = text;
     if (text !== 'Colour') th.className = 'num';
     headRow.append(th);
+  }
+  // The Symbol column (ICE-SYMBOL-UI-01) is data — the key the chart
+  // will print — so its header is visible, unlike the control-only
+  // Highlight and Remove columns. It renders only while the design
+  // can carry symbols; the header follows per update.
+  let symbolHeader: HTMLTableCellElement | null = null;
+  if (symbols !== undefined) {
+    symbolHeader = doc.createElement('th');
+    symbolHeader.scope = 'col';
+    symbolHeader.textContent = 'Symbol';
+    symbolHeader.hidden = true;
+    headRow.append(symbolHeader);
   }
   if (highlight?.onRemove !== undefined) {
     const th = doc.createElement('th');
@@ -224,13 +259,33 @@ export function createInfoPanel(
     changeSelection(null);
   });
 
+  let lastStats: DesignStats | null = null;
+
   function update(stats: DesignStats): void {
+    lastStats = stats;
     const { rows, overflow } = buildRows(stats.perColor, { brandNames });
-    const columns = highlight === undefined ? 3 : highlight.onRemove === undefined ? 4 : 5;
+    const showSymbols = symbols !== undefined && symbols.available();
+    if (symbolHeader !== null) symbolHeader.hidden = !showSymbols;
+    const columns =
+      (highlight === undefined ? 3 : highlight.onRemove === undefined ? 4 : 5) +
+      (showSymbols ? 1 : 0);
+    // A rebuild must not drop focus (UI-STANDARDS → shell state): a
+    // button pressed mid-capture, or the symbol button a picker just
+    // returned focus to, is re-found by its row's thread and its slot
+    // in the row after the new rows mount.
+    const active = doc.activeElement;
+    let restore: { key: string; slot: number } | null = null;
+    if (active instanceof HTMLElement && tbody.contains(active)) {
+      const tr = active.closest('tr');
+      const key = tr?.dataset['key'];
+      const slot = tr === null ? -1 : [...tr.querySelectorAll('button')].indexOf(active as HTMLButtonElement);
+      if (key !== undefined && slot >= 0) restore = { key, slot };
+    }
     tbody.replaceChildren();
     highlightButtons.clear();
     rows.forEach((row, i) => {
       const tr = doc.createElement('tr');
+      tr.dataset['key'] = stats.perColor[i]?.thread?.id ?? row.hex;
       if (highlight !== undefined) {
         // buildRows maps perColor 1:1 under the cap, so the raw usage
         // for this rendered row is perColor[i].
@@ -273,6 +328,36 @@ export function createInfoPanel(
       percent.className = 'num';
       percent.textContent = row.percentText;
       tr.append(colour, count, percent);
+      if (showSymbols && symbols !== undefined) {
+        const cell = doc.createElement('td');
+        cell.className = 'symbol-cell';
+        const raw = stats.perColor[i];
+        if (raw?.thread !== undefined) {
+          const plainLabel = row.label.split(' · #')[0] ?? row.label;
+          const glyph = symbols.glyphFor(raw);
+          const button = doc.createElement('button');
+          button.type = 'button';
+          button.className = 'symbol-button';
+          const name = doc.createElement('span');
+          // The visible text is the glyph's name (or "Auto"); the
+          // accessible name starts with it and adds the thread — the
+          // A2 pattern the Highlight button uses.
+          name.textContent = glyph === null ? 'Auto' : glyph.name;
+          if (glyph !== null) button.append(glyphElement(doc, glyph));
+          button.append(name);
+          button.setAttribute(
+            'aria-label',
+            glyph === null
+              ? `Auto: choose the symbol for ${plainLabel}`
+              : `${glyph.name}: change the symbol for ${plainLabel}`,
+          );
+          button.addEventListener('click', () => {
+            symbols.onPick(raw, plainLabel);
+          });
+          cell.append(button);
+        }
+        tr.append(cell);
+      }
       if (highlight?.onRemove !== undefined) {
         const cell = doc.createElement('td');
         const raw = stats.perColor[i];
@@ -302,6 +387,10 @@ export function createInfoPanel(
       tr.append(td);
       tbody.append(tr);
     }
+    if (restore !== null) {
+      const again = [...tbody.querySelectorAll('tr')].find((tr) => tr.dataset['key'] === restore.key);
+      again?.querySelectorAll('button')[restore.slot]?.focus();
+    }
     // The host hides the whole section while there is nothing to
     // show (M14-EXT-41) — an open heading over an empty table is the
     // blank-panel anti-pattern.
@@ -311,6 +400,9 @@ export function createInfoPanel(
   return {
     element,
     update,
+    refresh(): void {
+      if (lastStats !== null) update(lastStats);
+    },
     clearHighlight(): void {
       if (selectedIndex !== null) changeSelection(null);
     },

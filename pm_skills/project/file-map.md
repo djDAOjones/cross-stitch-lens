@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 293 file(s) across 12 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 295 file(s) across 12 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 13 file(s)
 - `.claude` — 2 file(s)
 - `.githooks` — 1 file(s)
@@ -26,8 +26,8 @@
 - `docs` — 16 file(s)
 - `public` — 7 file(s)
 - `scripts` — 22 file(s)
-- `src` — 104 file(s)
-- `tests` — 121 file(s)
+- `src` — 105 file(s)
+- `tests` — 122 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -207,7 +207,7 @@
 - `src/ui/diagnostics-button.ts` — the Debug menu: Report a problem (project document + redacted log + mailto, DIAG-02), Copy diagnostics, Download log; announced status line; `DEV_EMAIL`
 - `src/ui/dither-model.ts` — pure Dither-controls model: algorithm options, per-family strength, evidence-bearing presets, session memory
 - `src/ui/import.ts` — import routes → decode: filter (pure) + blob→PixelBuffer
-- `src/ui/info-panel.ts` — "Colours used" table content: pure row model + thin DOM half, hosted by a section (M14-EXT-41)
+- `src/ui/info-panel.ts` — "Colours used" table content: pure row model + thin DOM half, hosted by a section (M14-EXT-41); the live symbol key column (ICE-SYMBOL-UI-01); focus kept across rebuilds
 - `src/ui/modal.ts` — Carbon modals (text prompt, choices, danger confirm, live-apply form): trap arithmetic pure, focus restore, Escape/backdrop cancel
 - `src/ui/notices.ts` — licences and notices: `?raw` imports of `LICENSE` + `THIRD-PARTY-NOTICES.md`, a pure document parser, the Close-only dialog and the ghost header button (PUB-01)
 - `src/ui/preferences.ts` — Shell preferences (per-disclosure open state) in localStorage; parse falls back to defaults for anything unreadable. Never project data.
@@ -222,6 +222,7 @@
 - `src/ui/styles/base.css` — element layer: reset, [hidden] contract, focus ring, type ramp, generic fields/buttons/toggle/tables
 - `src/ui/styles/shell.css` — shell chrome: header, columns, preview host, focus-mode chain, capture surfaces, panel containers
 - `src/ui/styles/tokens.css` — design tokens: project + Carbon-convention systems, both schemes, @pair contrast contract (D80)
+- `src/ui/symbol-picker.ts` — symbol override picker (ICE-SYMBOL-UI-01): pure model (unused pool in catalogue order, the row's glyph), inline-SVG glyph element, the Carbon picker dialog over `runModal`
 - `src/ui/viewport.ts` — pure viewport maths: fit, anchored zoom, pan clamp
 - `src/vite-env.d.ts` — ambient types for injected version/build globals
 - `src/worker/backend-select.ts` — per-workload dither routing (metric-categorical, M5-PERF-27) + recorded per-stage override map
@@ -338,6 +339,7 @@
 - `tests/scales.test.ts` — The 4×4 independence matrix (identity, not equality) plus the label-distinctness checks.
 - `tests/shell.test.ts` — Shell visibility composition, panel/focus label state, and preference fallback including a throwing storage.
 - `tests/stats.test.ts` — stats partition/sum/sort/reference invariants
+- `tests/symbol-picker.test.ts` — picker model: unused pool order, row glyph before/after a grant, an override surviving save → load and winning at the next grant
 - `tests/symbols-assignment.test.ts` — assignment-model semantics: grants, release-to-back, disjoint reset, overrides, exhaustion, reconcile (D165)
 - `tests/symbols-glyphs.test.ts` — glyph catalogue invariants: pinned canonical order (append-only tripwire), path grammar, bounds (D165)
 - `tests/thread-equivalents.test.ts` — Nearest cross-brand equivalent: ordering, labelling, curated over computed

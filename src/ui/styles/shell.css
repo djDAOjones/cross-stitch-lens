@@ -306,6 +306,55 @@ main {
   white-space: nowrap;
 }
 
+/* Symbol column (ICE-SYMBOL-UI-01): the glyph rides inside the text
+  button beside its name, in the text colour — a symbol is monochrome
+  UI content, not a thread colour. The cell hugs like the highlight
+  cell so the colour column keeps the width. */
+.info-panel td.symbol-cell {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.symbol-glyph {
+  width: 1.25rem;
+  height: 1.25rem;
+  vertical-align: -0.3rem;
+  margin-right: var(--csl-spacing-03);
+  flex: none;
+}
+
+/* The picker's grid: every unused glyph as a button with its name
+  visible under the shape (the name is the accessible name, so the
+  label-in-name rule holds without ARIA). Three-up at the dialog's
+  width; the dialog scrolls when the pool is long. */
+.symbol-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+  gap: var(--csl-spacing-03);
+  margin-top: var(--csl-spacing-04);
+}
+
+.symbol-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--csl-spacing-02);
+  padding: var(--csl-spacing-03);
+  min-height: 4.5rem;
+  text-align: center;
+}
+
+.symbol-option .symbol-glyph {
+  width: 1.75rem;
+  height: 1.75rem;
+  margin: 0;
+}
+
+.symbol-grid .meta {
+  grid-column: 1 / -1;
+}
+
 /* The preview unit (header + strip + canvas) stays in view while the
   settings scroll (M14-EXT-09; the header joined at M14-EXT-31):
   sticky in both layouts, above the content that slides beneath it.

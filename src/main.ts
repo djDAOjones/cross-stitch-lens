@@ -107,15 +107,17 @@ import {
   type SnapshotStore,
 } from './library/snapshots.ts';
 import {
+  clearOverride,
   effectiveSymbols,
   grantNeeded,
   initialSymbolState,
   reconcileSymbolState,
+  setOverride,
   syncPalette,
 } from './core/symbols/assignment.ts';
-import { glyphById, SYMBOL_IDS } from './core/symbols/glyphs.ts';
+import { glyphById, SYMBOL_GLYPHS, SYMBOL_IDS } from './core/symbols/glyphs.ts';
 import { computeStats } from './core/stats.ts';
-import type { PixelBuffer, Thread } from './core/types.ts';
+import type { Palette, PixelBuffer, Thread } from './core/types.ts';
 import {
   mergeOwned,
   parseInventory,
@@ -170,6 +172,7 @@ import { createSection, type AccordionSection } from './ui/accordion.ts';
 import { choicesModal, formModal, textPromptModal } from './ui/modal.ts';
 import { createNoticesButton } from './ui/notices.ts';
 import { SAMPLE_NAME, sampleBuffer } from './ui/sample.ts';
+import { displayGlyph, symbolPickerModal, symbolPickerModel } from './ui/symbol-picker.ts';
 import { loadPreferences, savePreferences, type ShellPreferences } from './ui/preferences.ts';
 import { PreviewController } from './ui/preview.ts';
 import {
@@ -497,6 +500,45 @@ function build(app: HTMLElement): void {
    * a loaded project replaces the whole state from its file.
    */
   let symbolState = initialSymbolState(SYMBOL_IDS);
+
+  /**
+   * Whether the last processed frame carried per-stitch identities —
+   * the precondition for any symbol (the retired reduce-first order
+   * loses them). Read by the Colours-used symbol column.
+   */
+  let lastFrameHasIndices = false;
+
+  /**
+   * Grant symbols to the threads a frame uses, in palette order (so
+   * the sequence never depends on stitch counts or frame content).
+   * Shared by the symbol-mode export and the live Colours-used key
+   * (ICE-SYMBOL-UI-01). Grants persist even when some threads are
+   * left bare: the need happened, and a later narrower export keeps
+   * these symbols stable.
+   */
+  function grantSymbolsForUsed(usedIds: ReadonlySet<string>, palette: Palette): readonly string[] {
+    const needs = palette.entries.map((e) => e.id).filter((id) => usedIds.has(id));
+    const granted = grantNeeded(symbolState, needs);
+    symbolState = granted.state;
+    return granted.unassigned;
+  }
+
+  /**
+   * The live key (ICE-SYMBOL-UI-01): grant as frames arrive — but only
+   * while every palette entry could hold a symbol. Past the glyph
+   * set's size, live grants would let threads that came and went
+   * exhaust the queue and turn a later export into a refusal the
+   * export-time grant would never have made; those palettes keep D160's
+   * "export is the moment of need" and their rows read "Auto".
+   */
+  function grantSymbolsLive(perColor: readonly { thread?: Thread }[]): void {
+    const palette = config.palette;
+    if (palette === null || !lastFrameHasIndices) return;
+    if (palette.entries.length > SYMBOL_IDS.length) return;
+    const used = new Set<string>();
+    for (const usage of perColor) if (usage.thread !== undefined) used.add(usage.thread.id);
+    grantSymbolsForUsed(used, palette);
+  }
 
   /** Release/reset symbol grants against the current palette. */
   function syncSymbolsToPalette(): void {
@@ -986,7 +1028,45 @@ function build(app: HTMLElement): void {
         designRecipeEdited();
       },
     },
+    // The symbol column (ICE-SYMBOL-UI-01): the key the chart will
+    // print, live, with a picker over the unused pool. An override is
+    // project data in the `symbols` block, so the history and a save
+    // carry it with no extra step (DUR-01).
+    {
+      available: () => config.palette !== null && lastFrameHasIndices,
+      glyphFor: (usage) =>
+        usage.thread === undefined
+          ? null
+          : displayGlyph(symbolState, usage.thread.id, SYMBOL_GLYPHS),
+      onPick: (usage, label) => {
+        const id = usage.thread?.id;
+        if (id === undefined) return;
+        void pickSymbol(id, label);
+      },
+    },
   );
+
+  /** Open the picker for one thread and apply the answer. */
+  async function pickSymbol(threadId: string, label: string): Promise<void> {
+    const model = symbolPickerModel(symbolState, threadId, SYMBOL_GLYPHS);
+    const pick = await symbolPickerModal(document, { label, model });
+    if (pick === null) return;
+    if (pick.kind === 'auto') {
+      symbolState = clearOverride(symbolState, threadId);
+      status.textContent = `${label} — the app chooses its symbol again.`;
+    } else {
+      const result = setOverride(symbolState, threadId, pick.id);
+      if (!result.ok) {
+        status.textContent = result.reason ?? 'That symbol cannot be used.';
+        return;
+      }
+      symbolState = result.state;
+      const name = glyphById(pick.id)?.name ?? pick.id;
+      status.textContent = `${label} now uses ${name}.`;
+      log.info('symbols', 'override set', { threadId, symbolId: pick.id });
+    }
+    info.refresh();
+  }
   highlightInvalidated = () => {
     info.clearHighlight();
   };
@@ -2385,16 +2465,10 @@ function build(app: HTMLElement): void {
         c.thread === undefined ? [] : [c.thread.id],
       ),
     );
-    // Grant in palette order, so the sequence never depends on stitch
-    // counts or frame content.
-    const needs = palette.entries.map((e) => e.id).filter((id) => used.has(id));
-    const granted = grantNeeded(symbolState, needs);
-    // Grants persist even when a refusal follows: the need happened,
-    // and a later narrower export keeps these symbols stable.
-    symbolState = granted.state;
-    if (granted.unassigned.length > 0) {
+    const unassigned = grantSymbolsForUsed(used, palette);
+    if (unassigned.length > 0) {
       return {
-        refusal: `This design uses ${String(needs.length)} colours; the symbol set has ${String(SYMBOL_IDS.length)}. Reduce the colour count, or export the colour chart.`,
+        refusal: `This design uses ${String(used.size)} colours; the symbol set has ${String(SYMBOL_IDS.length)}. Reduce the colour count, or export the colour chart.`,
       };
     }
     const effective = effectiveSymbols(symbolState);
@@ -4127,6 +4201,8 @@ function build(app: HTMLElement): void {
     // (a one-off manual reprocess should not flip preview quality).
     if (stopPump !== null) setDraftMode(draftGovernor.sample(total));
     const stats = computeStats(frame.buffer, config.palette ?? undefined);
+    lastFrameHasIndices = frame.buffer.indices !== undefined;
+    grantSymbolsLive(stats.perColor);
     info.update(stats);
     debugPanel?.update(frame.timings, client.droppedFrames);
     for (const timing of frame.timings) activeBackends[timing.stage] = timing.backend;

@@ -4,11 +4,14 @@
  * schema — stage params objects are the single source of truth for
  * both UI controls and the project file (conventions.md).
  *
- * v1 persists settings only: the pipeline configuration (palette by
- * name reference, not data), chart/grid styling, and export
- * preferences. The source image is not embedded — a loaded project
- * applies its settings to the next imported image; source references
- * arrive with live capture (M4).
+ * The document is settings: the pipeline configuration, the palette
+ * (intent plus snapshot), symbols, chart/grid styling, export and
+ * estimation preferences. The picture does **not** live in the JSON —
+ * since schema v10 (DUR-01, D171) a saved project is a package
+ * (`project-package.ts`) holding this document beside the source image
+ * verbatim, and the `source` block here only names that entry. A
+ * settings-only document (a legacy `.json`, or a design that never had
+ * a picture) carries `source: null` and applies to the next import.
  *
  * Invariants (AGENTS.md): loaders migrate older `schemaVersion`s
  * forward, never fail on them; save → load → save is byte-identical,
@@ -28,7 +31,16 @@ import type { SymbolPair } from './symbols/assignment.ts';
 import type { Provenance, Thread, ThreadStatus } from './types.ts';
 
 /** Current project-file schema version. Bump with a forward migration. */
-export const SCHEMA_VERSION = 9;
+export const SCHEMA_VERSION = 10;
+
+/**
+ * Extension of a saved project (DUR-01): a store-only zip package —
+ * see `project-package.ts`. Legacy `.json` settings files keep loading.
+ */
+export const PROJECT_EXTENSION = '.pmproj';
+
+/** Source-name ceiling — a filename or a capture label, never a paragraph. */
+export const MAX_SOURCE_NAME = 255;
 
 /**
  * Hard ceiling on a persisted palette snapshot.
@@ -200,7 +212,24 @@ export interface ProjectExport {
   };
 }
 
-/** The full project file. This shape is schema v7, verbatim. */
+/**
+ * Where the design's picture lives beside this document (schema v10,
+ * DUR-01): the package entry holding the bytes **verbatim** — never
+ * re-encoded, or save → load → save would stop being byte-identical
+ * (D171) — the MIME type they decode as, and the name the picture
+ * arrived under (a filename or a capture label, shown as the source
+ * name). `null` is a settings-only project.
+ */
+export interface ProjectSource {
+  /** Package entry name, e.g. `source.png`: 1–64 safe characters, never a path. */
+  entry: string;
+  /** MIME type the bytes decode as, e.g. `image/jpeg`. */
+  type: string;
+  /** The name the picture arrived under; at most {@link MAX_SOURCE_NAME} characters. */
+  name: string;
+}
+
+/** The full project file. This shape is schema v10, verbatim. */
 export interface ProjectFile {
   schemaVersion: typeof SCHEMA_VERSION;
   /**
@@ -209,6 +238,8 @@ export interface ProjectFile {
    * serialised; save → load → save stays byte-identical.
    */
   migratedFrom?: number;
+  /** The picture's entry in the package, or null for settings only (schema v10, DUR-01). */
+  source: ProjectSource | null;
   pipeline: ProjectPipeline;
   /** `null` = full-RGB mode: no colour reduction, no dithering (§5.1). */
   palette: ProjectPalette | null;
@@ -225,9 +256,59 @@ export interface ProjectFile {
 /** The v2 preview block a migrated v1 file gets: fit to the space. */
 export const DEFAULT_PREVIEW: ProjectPreview = { mode: 'space', cssPxPerStitch: 1 };
 
-/** Download name from the grid size, e.g. `project-200x200.json`. */
-export function projectFilename(width: number, height: number): string {
-  return `project-${width}x${height}.json`;
+/** What names a saved file (SAVE-01), in order of preference. */
+export interface ProjectNameParts {
+  /** The Design title field — the owner's own name for the design; may be empty. */
+  title: string;
+  width: number;
+  height: number;
+  /** The picture's name (a filename or a capture label), or null without one. */
+  sourceName: string | null;
+  /** A {@link projectStamp} value, used only when neither name exists. */
+  stamp: string;
+}
+
+/** Longest name stem a download keeps readable; the size suffix follows it. */
+const MAX_NAME_STEM = 60;
+
+/**
+ * A filename-safe stem from free text: the characters every filesystem
+ * refuses (`/ \ : * ? " < > |` and controls) and runs of whitespace
+ * become single dashes, letters and digits of any script survive, and
+ * trailing dots or dashes go (Windows drops a trailing dot silently).
+ * Empty when nothing survives — the caller falls through to its next
+ * name, never to a bare dash.
+ */
+function nameStem(text: string): string {
+  return text
+    .normalize('NFC')
+    .replace(/[^\p{L}\p{N}_-]+/gu, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^[-.]+|[-.]+$/g, '')
+    .slice(0, MAX_NAME_STEM)
+    .replace(/[-.]+$/g, '');
+}
+
+/** `YYYYMMDD-HHMM` in local time — the stamp a nameless design saves under. */
+export function projectStamp(date: Date): string {
+  const two = (n: number): string => String(n).padStart(2, '0');
+  return `${String(date.getFullYear())}${two(date.getMonth() + 1)}${two(date.getDate())}-${two(date.getHours())}${two(date.getMinutes())}`;
+}
+
+/**
+ * Download name for a saved project (SAVE-01): the Design title names
+ * the file; without one the picture's name does (minus its extension);
+ * without either the stamp does — so two untitled 200 × 200 designs
+ * saved minutes apart never collide, which the old grid-only name
+ * guaranteed they would. The grid size always follows, e.g.
+ * `Fox-sketch-200x150.pmproj`.
+ */
+export function projectFilename(parts: ProjectNameParts): string {
+  const fromTitle = nameStem(parts.title);
+  const fromSource =
+    parts.sourceName === null ? '' : nameStem(parts.sourceName.replace(/\.[A-Za-z0-9]{1,5}$/, ''));
+  const stem = fromTitle !== '' ? fromTitle : fromSource !== '' ? fromSource : `design-${parts.stamp}`;
+  return `${stem}-${String(parts.width)}x${String(parts.height)}${PROJECT_EXTENSION}`;
 }
 
 /**
@@ -335,6 +416,10 @@ function canonicalDither(dither: DitherConfig): DitherConfig {
 export function serializeProject(file: ProjectFile): string {
   const canonical: ProjectFile = {
     schemaVersion: file.schemaVersion,
+    source:
+      file.source === null
+        ? null
+        : { entry: file.source.entry, type: file.source.type, name: file.source.name },
     pipeline: {
       preset: file.pipeline.preset,
       grid: { width: file.pipeline.grid.width, height: file.pipeline.grid.height },
@@ -652,6 +737,33 @@ function parseSymbols(value: unknown): ProjectSymbols {
   };
 }
 
+/** Package entry names: one segment of safe characters, never a path. */
+const ENTRY_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+/** A MIME type's shape (`image/png`); the decoder, not this, judges the bytes. */
+const MIME_TYPE = /^[a-z0-9][a-z0-9.+-]{0,63}\/[a-z0-9][a-z0-9.+-]{0,63}$/i;
+
+/**
+ * Validate the v10 source block; `null` (or absent, the forward-
+ * friendly reading) is a settings-only project. The entry name is the
+ * one field that reaches the package reader by value, so it is the one
+ * that must never carry a path.
+ */
+function parseSource(value: unknown): ProjectSource | null {
+  if (value === null || value === undefined) return null;
+  const raw = asRecord(value, 'source');
+  const entry = asString(raw['entry'], 'source.entry');
+  if (!ENTRY_NAME.test(entry)) {
+    fail('source.entry', 'an entry name of 1–64 letters, digits, dots, dashes or underscores');
+  }
+  const type = asString(raw['type'], 'source.type');
+  if (!MIME_TYPE.test(type)) fail('source.type', 'a MIME type such as "image/png"');
+  const name = asString(raw['name'], 'source.name');
+  if (name.length > MAX_SOURCE_NAME) {
+    fail('source.name', `a name of at most ${String(MAX_SOURCE_NAME)} characters`);
+  }
+  return { entry, type, name };
+}
+
 /** Validate the optional dither profile reference (absent = null). */
 function parseDitherRef(value: unknown): { id: string; revision: number } | null {
   if (value === null || value === undefined) return null;
@@ -751,6 +863,10 @@ function migrateProject(raw: Record<string, unknown>, version: number): Record<s
     if (at === 9 && doc['estimates'] === undefined) {
       doc = { ...doc, estimates: { ...DEFAULT_ESTIMATES } };
     }
+    // v9 → v10: the picture joins the saved file (DUR-01). Older files
+    // never carried one, which `source: null` states exactly — they
+    // keep applying their settings to the next imported image.
+    if (at === 10 && doc['source'] === undefined) doc = { ...doc, source: null };
     doc = { ...doc, schemaVersion: at };
   }
   return doc;
@@ -928,6 +1044,7 @@ export function parseProject(json: string): ProjectFile {
   return {
     schemaVersion: SCHEMA_VERSION,
     ...(migratedFrom === undefined ? {} : { migratedFrom }),
+    source: parseSource(doc['source']),
     pipeline: {
       preset: asOneOf(pipeline['preset'], 'pipeline.preset', ['resize-first', 'reduce-first']),
       grid: {

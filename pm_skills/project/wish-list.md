@@ -93,3 +93,5 @@ refer to `docs/requirements.md`.
 - `resolvePalette`'s log record names each conflict by kind only; the ids and the sentence are not logged — a one-line widening if a report ever needs them (from: 2026-08-23 DIAG-02)
 - `eslint .` lints untracked files in gitignored `bench-reports/` — a probe script dropped there turns the gate red; one `ignores` line (from: 2026-08-23 M16 pack)
 - The `#export-size` readout says "chart 2000 × 2000 px" while the file is 2037 px (label gutter + pad omitted) (from: 2026-08-23 M16 pack)
+- Print from a phone or share the PDF to one — D188 reads phones as still-image users; revisit once the print plan exists (from: 2026-08-23 PRINT scoping)
+- Embed an accessibility text face for the PDF key (Atkinson's, or IBM Plex Sans — both open-licensed) if the proof set shows 1/l/I or 6/9 confusion — needs `@pdf-lib/fontkit`, a new runtime dependency (from: 2026-08-23 PRINT-01 scoping)

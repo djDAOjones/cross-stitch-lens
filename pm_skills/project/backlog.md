@@ -58,11 +58,26 @@ they no longer imply sequence.
 Build-complete — M9, M11, M10 and M12 shipped (D165–D170), so the
 brief's second success criterion is met. One owner-gated item remains.
 
-- [ ] **M16 Print-sized export defaults** [sign-off] (2026-08-09)
-  Intent: export defaults sized for print, not screen — enlarged PNG ~2k px on its longest side, grid and numbering on by default, across all four exporters (demoted at D149; waited on M9's symbol decision, now landed).
-  Done when: the owner signs the defaults per exporter, what stays configurable, and how saved projects' export settings migrate.
-  Absorbs, on one sitting (D170): M9's print inspection (every chart mode at typical cell sizes, grayscale/low-ink, key↔chart agreement) and M12's estimate defaults-and-wording review.
-  Sitting pack (2026-08-23) at `bench-reports/m16-sitting/`, machine-local: `00-README.md` is the reading order; `04-sign-off-form.md` holds the 14 proposed defaults, unsigned.
+- [ ] **M16 The print standard: sign the floors and presets on paper** [sign-off] (2026-08-09, re-aimed 2026-08-23)
+  Intent: the owner's sitting with a printer signs the Readable / Large print / Compact values (text pt, number pt, mm per stitch), the default assembly mode and key placement, and records M9's print inspection and M12's estimate review (D170) — the evidence PRINT-01 builds to. The pack at `bench-reports/m16-sitting/` is the material; its form's items 2–9 and 13 are superseded by PRINT-01's model.
+  Done when: the preset table and the defaults are signed in the decision log, M9's inspection and M12's review are recorded pass/fail, and Track A's close is decided — on the signed standard, or on PRINT-01 shipping.
+
+### Print — the paper output (scoped 2026-08-23; builds at the end of the cycle)
+
+The owner's calls at scoping: the preset sizes stand as starting values;
+every print size derives from one type scale so a later "+2 pt" is one
+edit; no backward compatibility for print settings (files still load);
+M16's sitting signs the standard first. Scope in PRINT-01's ticket.
+
+- [ ] **PRINT-01 The print plan: size presets with floors, a planner that fits the paper** [detail] (2026-08-23)
+  Intent: replace "fit the raster to the page" with a print standard — Readable / Large print / Compact presets carrying text and cell floors, furniture as ratios of the cell, balanced tiles, paper and orientation alternatives with a page stepper, A3 and a true-size large-format page, key with the chart or separate; a pixel face for the numbers is a design option.
+  Done when: a 200² design prints at ≥ 3.5 mm per stitch with ≥ 10 pt numbers by default, the Export section shows the alternatives and picks the best, the print-plan model replaces `export.pdf` (old files load under the migrated note, round trip intact), and PRINT-TEST-01 is green at every preset.
+- [ ] **PRINT-02 Assembly and sequence: join, work page by page, a key per page** [detail] (2026-08-23)
+  Intent: the two ways a tiled chart is used — taped into one sheet (lettered tiles, glue tabs, registration marks, an assembly page) or stitched page by page (shaded overlap, "continues on page N" labels, stitching-order pages, a per-page key of only that page's colours); key placement with the chart, separate, or per page.
+  Done when: both modes print from the plan, the cover explains assembly, a per-page key lists exactly the page's colours, and the pages tape together by their marks.
+- [ ] **PRINT-TEST-01 The proof set: one command prints every case with a checklist** [detail] (2026-08-23)
+  Intent: `npm run print:proof` renders every chart style × preset × paper × mode with a proof strip on each sheet (id, settings, expected mm per stitch, build id, a 50 mm scale bar) and writes the matching tick-box checklist, so a print change is verified at the printer in one sitting.
+  Done when: the set renders from one command, every sheet identifies itself, the checklist covers the accessibility floors, and a ruler on the scale bar proves 100 %.
 
 ### Track C — Publication
 

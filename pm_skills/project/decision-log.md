@@ -1683,3 +1683,47 @@ the Preview section's census).
 
 **Link:** both reporter files now open to a one-click way out; MUST-01's
 seat semantics and DIAG-02's report half remain open.
+
+## D177 — PUB-01 ships: the licences and notices are reachable from the app (2026-08-23)
+
+**Context.** D161 committed `LICENSE` and `THIRD-PARTY-NOTICES.md`; D172
+gave the app a deploy to ship them with. What remained was placement
+and mechanism; the owner picked the placement, relayed through the
+coordinator of the 2026-08-23 parallel run (branch `pub-01`).
+
+**Decision.** A ghost (borderless) **Licences** button after Source in
+the shell bar — Carbon's header anatomy, no added height because it
+sits in the existing 44 px utility row, and borderless keeps a legal
+link subordinate to the product action beside it; visible on first
+landing because `applyShell` hides the Source button, never the bar.
+It opens a Close-only `formModal`, "Licences and notices", whose first
+`h3` takes initial focus so the dialog opens at the top. The two root
+files arrive by `?raw` import, so the bundle carries the documents: no
+fetch, nothing root-relative, base-path-proof by construction (the
+D172 lesson), still fully offline. A ~25-line pure parser renders
+headings and wrapped paragraphs, not a `<pre>` dump — the hard-wrapped
+MIT texts would force sideways scrolling at 320 px. A test pins each
+shipped text byte-for-byte to its repo file; a source guard rejects
+`fetch(` and `/LICENSE`-style paths.
+
+**Alternatives.** Beside the build id inside `.header-id` (the header
+grows a line at wide widths — the dead space fought at M14-EXT-39 /
+ICE-WIDTH-02); an inline link-styled control in the version sentence
+(the first non-button control against D50); the Project-section foot
+(identity left it at D88); the Debug menu (opt-in only). Declined: a
+wide modal variant, and a generic `.button-ghost` in `base.css` —
+scoped under `.app-header` until a second ghost earns it.
+
+**Verification.** Gate green at merge (1,276 tests); live in dev and a
+Pages-base build: a 91 × 44 px target, an `aria-modal` dialog opening
+at the top, Tab trap, Escape restoring focus, dark scheme, no console
+errors. Human remainder: native Enter/Space activation, in-dialog
+scrolling, a VoiceOver pass (A11Y-VO-01 grows by one).
+
+**Scope.** `src/ui/notices.ts` and `tests/notices.test.ts` (new),
+`src/main.ts`, `src/ui/styles/shell.css`, README's licence line,
+memory; deltas ledgered for `UI-STANDARDS.md`, `docs/ui-spec.md` and
+`docs/ui-evidence.md`.
+
+**Link:** merged as `6b3d839`; Track C's open items are PUB-02 (the
+rights gate) and the promoted PUB-05/PUB-06.

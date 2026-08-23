@@ -43,9 +43,16 @@ names it.
 ## Track C — Publication (IN PROGRESS, owner-paced)
 
 **Outcome:** the app has a public URL. Licences and notices landed
-(D161), publication proceeds in this repository (D164), and the deploy
-pipeline ships the built bundle from a green gate.
+(D161) and are readable in the app (D177), publication proceeds in
+this repository (D164), and the deploy pipeline ships the built bundle
+from a green gate.
 
+- PUB-01 (2026-08-23) — the notices are reachable from the app: a ghost
+  "Licences" button in the header's utility row opens a Close-only
+  dialog carrying `LICENSE` and `THIRD-PARTY-NOTICES.md`, imported at
+  build time so the bundle carries the documents and nothing is
+  fetched. Human remainder: native activation, in-dialog scrolling, a
+  VoiceOver pass. See D177.
 - PUB-04 (2026-08-22) — GitHub Pages serves the built app, not the
   raw branch: a green `check` on `main` rebuilds with
   `--base /pattern-mapper/`, uploads `dist` and deploys it, Rust engine

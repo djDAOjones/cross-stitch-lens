@@ -137,3 +137,9 @@ The permanent rules live in [`AGENTS.md`](AGENTS.md),
 (brief, architecture, backlog, decisions) is in
 [`pm_skills/project/`](pm_skills/project/); this project is managed with
 the PM-Skills framework in `pm_skills/`.
+
+## Licence
+
+All rights reserved — see [`LICENSE`](LICENSE); third-party terms are in
+[`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md). Both are readable in
+the app via the header's **Licences** button (D177).

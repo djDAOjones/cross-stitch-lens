@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 283 file(s) across 12 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 285 file(s) across 12 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 13 file(s)
 - `.claude` — 2 file(s)
 - `.githooks` — 1 file(s)
@@ -26,8 +26,8 @@
 - `docs` — 16 file(s)
 - `public` — 7 file(s)
 - `scripts` — 20 file(s)
-- `src` — 101 file(s)
-- `tests` — 116 file(s)
+- `src` — 102 file(s)
+- `tests` — 117 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -205,6 +205,7 @@
 - `src/ui/import.ts` — import routes → decode: filter (pure) + blob→PixelBuffer
 - `src/ui/info-panel.ts` — "Colours used" table content: pure row model + thin DOM half, hosted by a section (M14-EXT-41)
 - `src/ui/modal.ts` — Carbon modals (text prompt, choices, danger confirm, live-apply form): trap arithmetic pure, focus restore, Escape/backdrop cancel
+- `src/ui/notices.ts` — licences and notices: `?raw` imports of `LICENSE` + `THIRD-PARTY-NOTICES.md`, a pure document parser, the Close-only dialog and the ghost header button (PUB-01)
 - `src/ui/preferences.ts` — Shell preferences (per-disclosure open state) in localStorage; parse falls back to defaults for anything unreadable. Never project data.
 - `src/ui/preview.ts` — preview controller: toolbar, wheel/drag/keys → worker
 - `src/ui/profile-editor-colour.ts` — colour profile kind: libraries, pins, ranges, custom colours, fingerprinted readout; pure halves exported
@@ -313,6 +314,7 @@
 - `tests/lut-cache.test.ts` — cache identity by palette content, LRU bound, GPU-LUT sanity rejection
 - `tests/matrix/rows.ts` — the correctness matrix: row definitions with `proves` text, adversarial palettes, seeded sources
 - `tests/modal.test.ts` — pure halves: focus-trap decisions + aria-describedby list arithmetic
+- `tests/notices.test.ts` — parser invariants, byte-for-byte pin of the shipped texts to the repo files, no-fetch / no-root-URL guard (D172)
 - `tests/palette-policy.test.ts` — Policy resolution: brands/source/inventory/exclusions and every explained conflict
 - `tests/palette-presets.test.ts` — Preset semantics: real references, enabled-brand only, visible degradation, stated rules
 - `tests/palette-resolve.test.ts` — The profile-world resolver’s own pins (COUNT-01 / MUST-01): a seat outside membership stays a Note, the count sentence is grammatical, an empty My-threads inventory resolves empty and not ok

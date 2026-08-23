@@ -65,7 +65,7 @@ realism (D149; the first live-app ask, D173). The swap shipped (D199);
 everything else runs through two scoping tickets with sessions,
 prototypes and sign-off sittings of their own.
 
-- [ ] **CREATIVE-01 Scope the creative and diagnostic image features** [sign-off] [detail] (2026-08-23)
+- [~] **CREATIVE-01 Scope the creative and diagnostic image features** [sign-off] [detail] (2026-08-23)
   Intent: one signed programme — what ships, in what order, where each lives (stage, stage parameter, profile kind or view), the first slice — for the candidates the triage kept: tone-only matching (RECOLOUR C1), adjustments as a third profile kind (ICE-ADJUST-01), the contact sheet as a mechanism (ICE-VARIANTS-01), the tonal provenance view (ICE-PROVENANCE-01, the diagnostic half), PICK-01's in-app half, the target % distribution (RECOLOUR C2) and the ICE-PROFILES-02 hook. The IDs stay greppable here; the intent lives in the ticket.
   Done when: the owner signs the list, order, placements, persistence and UI homes; each signed feature becomes its own Track D item.
 - [ ] **PAINT-01 Scope the pixel editor** [sign-off] [detail] (2026-08-23)

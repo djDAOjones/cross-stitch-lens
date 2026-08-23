@@ -259,3 +259,72 @@ rig and `npm run audit` with two to four ladder profiles. (2) the
 **contact-sheet modal** (dither axis). Evidence to `bench-reports/`
 or here; then the sign-off sitting signs the programme and the
 slices become Track D items.
+
+## Prototype 1 findings — tone mode (2026-08-23)
+
+Built at `7897ff2` on the worktree branch `creative-01-proto`
+(`~/pm-worktrees/creative-01-proto`); branch-local, never merges — the
+signed build re-derives from this ticket. Playground: `npm run dev` in
+the worktree, open `/tone-proto.html` — source picker over the sample
+card and the six-photograph rig, both ramp control shapes, the
+three-point curve, live dither-variant compare, and a "whole
+catalogue, 8 by weight" palette that shows the weighted selection
+working. Evidence twin runs inside `npm run audit`
+(`tests/audits/tone-mode.audit.test.ts`), writing
+`bench-reports/creative-01-proto-tone-<sha>.json` plus the
+before/after gallery `creative-01-proto-tone-gallery.html` (Delft
+blue, Ukiyo-e and two programmatic hue-window ladders).
+
+### The central measurement — the dither error space
+
+Hue sweep at constant L\* (the adversarial fixture), Delft blue,
+t = 1, natural cuts; per-column mean output L\* minus source:
+
+| dither         | column spread | σ    | mean bias |
+| -------------- | ------------- | ---- | --------- |
+| none (hard)    | 0.34 L*       | 0.08 | −1.79     |
+| srgb-error     | 6.88 L*       | 2.42 | +0.34     |
+| weighted-error | 2.28 L*       | 0.32 | −0.01     |
+
+Diffusing in the weighted space (curved L, w·a, w·b) cuts the
+hue→lightness leak roughly 3× in spread and 7× in σ against reusing
+the production sRGB error path unchanged, and holds mean tone almost
+exactly; on `landscape-1.jpg` live the gap is starker still — L* bias
+7.31 (srgb-error) against 0.03 (weighted-error). The decision-of-
+record hypothesis is confirmed: when the weight is engaged, the
+shipped dither must diffuse the error the metric sees.
+
+### Supporting results
+
+- **Quantile shares.** Undithered Equalise lands 2–3 % total-
+  variation drift on the sample card — bounded by ties (a flat region
+  shares one L*, so no cut can split it), not by the mechanism; the
+  programmatic ladders on smooth content land 0.0 %. Dither then
+  trades shares for tone fidelity: 12–32 % drift with either error
+  space, because diffusion is precisely what splits the flat regions
+  a cut lands in across neighbouring rungs. The sitting should hear
+  "exact at any N" as "exact undithered, up to flat regions" — and
+  the ramp readout should show achieved shares whenever dither is on,
+  not restate targets.
+- **Curve.** The inverted three-point curve inverts a lightness ramp
+  cleanly (mean L* 27→74 becomes 74→27); identity is a true no-op.
+- **Weighted selection.** The prototype's greedy copy at t = 0 equals
+  production `selectThreads` exactly (asserted in the audit). At
+  t = 1 over the whole catalogue at limit 8 it discovers a lightness
+  ladder — picks spanning L* 9–92 — which is the PROFILES-02 story
+  working from the metric alone.
+- **Ladder mode as bands.** Natural cuts (rung midpoints) reproduce
+  L-only nearest matching by construction; Equalise is quantile cuts;
+  both live behind one ramp strip that doubles as the provenance
+  readout, per the qualifier-idiom sketch.
+
+### What the prototype leaves open
+
+- Softness: diffusion already mixes rungs near a cut (the share drift
+  is that mixing), but it is not *confined* to a falloff zone — a
+  confined zone is new maths, so hard cuts ship first, per the
+  decision of record.
+- Control shapes: gradient strip and histogram-backed strip are both
+  built; the histogram-backed one reads better on photographs (the
+  handles land where the mass is). The sitting picks.
+- Prototype 2 (the contact-sheet modal) is not started.

@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 290 file(s) across 12 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 293 file(s) across 12 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 13 file(s)
 - `.claude` — 2 file(s)
 - `.githooks` — 1 file(s)
@@ -25,9 +25,9 @@
 - `crates` — 4 file(s)
 - `docs` — 16 file(s)
 - `public` — 7 file(s)
-- `scripts` — 20 file(s)
+- `scripts` — 22 file(s)
 - `src` — 104 file(s)
-- `tests` — 120 file(s)
+- `tests` — 121 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -42,9 +42,9 @@
 - `cspell.json` — spelling dictionary + ignore paths for the docs gate
 - `eslint.config.js` — flat config; core-isolation + no-console rules
 - `index.html` — Vite entry; dev-shell styles (AAA contrast, pixelated preview)
-- `package.json` — scripts (dev/build/test/check) + dev dependencies
+- `package.json` — scripts (dev/build/test/check/verify:deploy) + dev dependencies
 - `tsconfig.json` — strict TS config (ES2022, bundler resolution)
-- `vite.config.ts` — Vite + Vitest config; injects version/build identity
+- `vite.config.ts` — Vite + Vitest config; injects version/build identity; `bundleInputs()` drops the bench harness when `PM_PUBLIC_BUNDLE=1` (PUB-06)
 
 ## .claude
 
@@ -57,7 +57,7 @@
 
 ## .github
 
-- `.github/workflows/lint.yml` — CI: `npm run check` on Node 22 per push/PR; a green default-branch push then rebuilds with the Pages base and publishes `dist` to GitHub Pages (D172)
+- `.github/workflows/lint.yml` — CI: `npm run check` on Node 22 per push/PR; a green default-branch push then rebuilds with the Pages base and `PM_PUBLIC_BUNDLE=1` (no harness) and publishes `dist` to GitHub Pages (D172), then `verify-deploy` confirms the live build id (D180)
 
 ## .windsurf
 
@@ -124,6 +124,8 @@
 - `scripts/gen-golden-hello.mjs` — one-time generator of the M0 hello fixtures
 - `scripts/gen-symbol-evidence.mjs` — M9 print-evidence generator: renders the glyph catalogue as a vector PDF (batch pages + distinctness page) to bench-reports/ for owner signature (`symbols:evidence`)
 - `scripts/save-transcript.mjs` — saves a chat-session transcript into _transcripts/ (`npm run transcript`)
+- `scripts/verify-deploy.d.mts` — types for the verify-deploy helpers (plain-JS module, typed for the test suite — the bench-auto-lib.d.mts pattern)
+- `scripts/verify-deploy.mjs` — post-deploy verification CLI + pure helpers: fetch the live index, resolve the hashed entry asset, read its build id, compare the SHA with the pushed commit; `--wait` polls; exit 0/1/2 (PUB-05)
 - `scripts/write-acceptance-matrix.mjs` — regenerates the coverage table (the fixer; `check` only compares)
 
 ## src
@@ -350,6 +352,7 @@
 - `tests/ui-baseline/source.ts` — Seeded fixture generator + minimal PNG encoder for the baseline
 - `tests/ui-import.test.ts` — image-file filtering (pure half of import)
 - `tests/ui-styles.test.ts` — stylesheet invariant greps: [hidden]!important, no CSS order, dev-shell absence, import order
+- `tests/verify-deploy.test.ts` — verify-deploy pure helpers with the network off: entry-script discovery, build-id parsing, SHA prefix match, verdict line, arg parsing (PUB-05)
 - `tests/viewport.test.ts` — viewport maths exact cases (fit/anchor/clamp)
 - `tests/wasm-dither.test.ts` — wasm↔TS bit-exact parity: golden fixture, metrics/scan modes, full DMC Lab
 - `tests/webgpu-lut.test.ts` — GPU tolerance suite: f32-mirror near-tie bound, static shader scans, skipIf real-GPU parity

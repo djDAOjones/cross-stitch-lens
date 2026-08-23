@@ -91,6 +91,7 @@ npm run build      # production build to dist/
 npm run build:wasm # Rust→WASM crate build (crates/stitch-engine)
 npm test           # Vitest, including the golden suite
 npm run check      # quality gate: typecheck + lint + test + wasm + build
+npm run verify:deploy -- --wait 600  # after a push: the live site serves this commit
 ```
 
 `localhost` is a secure context, so screen capture and WebGPU work in
@@ -101,6 +102,10 @@ bundle to GitHub Pages at <https://djdaojones.github.io/pattern-mapper/>
 (the `deploy` job in `.github/workflows/lint.yml`, D172). To preview
 that bundle locally under the same base path:
 `npx vite build --base /pattern-mapper/ && npx vite preview --base /pattern-mapper/`.
+After a push, `npm run verify:deploy -- --wait 600` waits out the deploy
+and confirms the live site serves that commit (D180); CI runs the same
+check after the deploy job. The public bundle omits the bench harness
+(`PM_PUBLIC_BUNDLE=1`, D181).
 
 ## Key modules and entry points
 

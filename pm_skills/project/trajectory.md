@@ -67,8 +67,14 @@ names it.
 **Outcome:** the app has a public URL. Licences and notices landed
 (D161) and are readable in the app (D177), publication proceeds in
 this repository (D164), and the deploy pipeline ships the built bundle
-from a green gate.
+from a green gate and then proves the live site serves it (D180).
 
+- PUB-06 (2026-08-23) — `PM_PUBLIC_BUNDLE=1` drops `bench.html` /
+  `bench-source.html` from the public Pages build; every other build
+  keeps the harness. See D181.
+- PUB-05 (2026-08-23) — `npm run verify:deploy` compares the live build
+  id's SHA with the pushed commit (`--wait` polls through the ~4-min
+  deploy), and CI runs it after the deploy job. See D180.
 - PUB-01 (2026-08-23) — the notices are reachable from the app: a ghost
   "Licences" button in the header's utility row opens a Close-only
   dialog carrying `LICENSE` and `THIRD-PARTY-NOTICES.md`, imported at

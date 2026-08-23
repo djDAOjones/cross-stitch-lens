@@ -84,3 +84,5 @@ refer to `docs/requirements.md`.
 - The Design title's helper text (Export group) should say it also names the saved file (from: 2026-08-23 SAVE-01)
 - History management beyond the picker: remove one design, clear the history, and "Keep more designs" reachable outside the near-quota window (from: 2026-08-23 DUR-01)
 - A restored capture returns as a still; a "start a new capture of the same window" offer on restore would close the loop (from: 2026-08-23 DUR-01)
+- The harness popup path `/bench-source.html` (`src/bench-browser.ts`) is root-relative, so it 404s under any build served from a base path that includes the harness; PUB-06 removed the public-facing symptom, but the latent bug remains for harness builds under a base path — fix with `import.meta.env.BASE_URL` (from: 2026-08-23 PUB-06)
+- `verify:deploy` could take a `--fetch` flag to `git fetch` before resolving `origin/main`, so the default target is correct from any machine without a manual fetch or an explicit SHA (from: 2026-08-23 PUB-05)

@@ -1838,3 +1838,74 @@ two suites, a fixture), `project.ts`, `library/store.ts`, `main.ts`,
 and `docs/ui-spec.md`.
 
 **Link:** merged as `fb1aabf`; Track B closes with it.
+
+## D180 — PUB-05 ships: `verify:deploy` proves the live site serves the pushed commit (2026-08-23)
+
+**Context.** D172 left "verify the live URL serves the buildId" as a
+manual step. Promoted from the wish-list for the 2026-08-23 parallel
+run and built on the `infra` branch; the three delegated decisions
+(`--wait` kept, the `.d.mts` sibling, CI wiring) were the owner's,
+relayed through the coordinator.
+
+**Decision.** `scripts/verify-deploy.mjs` (`npm run verify:deploy`).
+The live `index.html` carries no build id — `__BUILD_ID__` is a Vite
+define, so the id lives in the content-hashed entry asset: the script
+fetches the index cache-busted (Pages serves it `max-age=600` behind a
+CDN), resolves its single `<script type="module">`, fetches that asset
+and reads the id; the hashed name means it can never be a stale copy.
+SHAs compare by prefix (`git --short` auto-abbreviates and can grow).
+The default target is `origin/main` resolved locally — current after a
+local push; pass a SHA or fetch elsewhere — and `--wait N` polls every
+15 s because a deploy takes ~4 min, which makes
+`git push && npm run verify:deploy -- --wait 600` genuinely one
+command. One stdout line; exit 0/1/2 = PASS/FAIL/ERROR. Kept out of
+`check` (it needs the network); the pure helpers are exported and
+unit-tested with the network off, and `main()` runs only when the file
+is the process entry. CI runs it in the deploy job after
+`actions/deploy-pages` (`--wait 300` against `$GITHUB_SHA`), so a
+mismatch reddens the run without un-deploying; no `npm ci` there — the
+script has no dependencies.
+
+**Alternatives.** Reading the id from the index (it is not there); a
+fetch in the default path (a local push already makes `origin/main`
+current — a `--fetch` flag is wish-listed).
+
+**Scope.** `scripts/verify-deploy.mjs`, `scripts/verify-deploy.d.mts`,
+`tests/verify-deploy.test.ts` (new), `package.json`,
+`.github/workflows/lint.yml`; `DEV-INFRASTRUCTURE.md` deltas ledgered.
+
+**Link:** merged as `1a5efdb` with PUB-06 (D181); first live run
+`PASS` from the worktree against the deployed `72d9db7`.
+
+## D181 — PUB-06: the public bundle drops the bench harness; every other build keeps it (2026-08-23)
+
+**Context.** The harness rode into the public bundle because
+`bench.html` / `bench-source.html` are unconditional rollup inputs
+(D172 parked the question). At a public URL it was a maintainer
+instrument with a broken root-relative popup (`/bench-source.html`
+404s under `/<repo>/`, confirmed) and a ~2 GiB `?auto=mem` probe.
+
+**Decision.** Option 2, the owner's through the coordinator:
+`vite.config.ts` builds `main` alone when `PM_PUBLIC_BUNDLE=1`, set by
+the CI Pages-build step; the default `vite build` — the gate's compile
+proof and what `bench:auto` / `bench:browser` serve at base `/` — still
+carries the harness. Keyed on an explicit env, not `--mode`:
+`import.meta.env.MODE` / `DEV` are written into bench reports and gate
+the debug panel, whereas the env changes nothing but the input list.
+Verified by building both ways and listing `dist/`. For the record, in
+D172's framing: the gate's build stays a compile proof, not a
+byte-identical artefact proof — the public bundle's chunk graph differs
+(shared chunks fold into `main`).
+
+**Alternatives.** Keep shipping it (a partly broken maintainer page at
+a public URL); exclude it from all builds (not viable — the harness
+exists to measure the production build; dev-server figures are what
+M5-PERF-23 gated out after D47).
+
+**Scope.** `vite.config.ts` (`bundleInputs()`),
+`.github/workflows/lint.yml`; the latent root-relative popup path is
+wish-listed.
+
+**Link:** merged as `1a5efdb` with PUB-05 (D180); the first deploy
+after this merge is the first to exclude the harness —
+`/pattern-mapper/bench.html` starts 404-ing on Pages by design.

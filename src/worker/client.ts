@@ -24,6 +24,15 @@ import type {
 export interface FrameResult {
   buffer: PixelBuffer;
   timings: StageTiming[];
+  /**
+   * The config this frame actually ran with. Readers of the sidecar
+   * must interpret it against *this* palette, not whatever the live
+   * config holds by the time the frame lands — one frame after any
+   * palette change the two differ, and stats read against the wrong
+   * palette under-reported the design (COUNT-01's "colours: 2" against
+   * a 489-entry render; a must-fix for ICE-RECOLOUR-01, D197).
+   */
+  config: PipelineConfig;
 }
 
 /**
@@ -73,6 +82,13 @@ export class PipelineClient {
   private nextId = 0;
   private onResult: ((frame: FrameResult) => void) | null = null;
   private observer: JobObserver | null = null;
+  /**
+   * The preview job the worker is running, keyed by request id. The
+   * coalescer allows one in flight, so this never holds more than one
+   * entry; a map rather than a field so an export response (its own
+   * id space, never in here) can never be mistaken for it.
+   */
+  private readonly inFlight = new Map<number, PipelineConfig>();
   /** Export runs awaiting their result, keyed by request id. */
   private readonly pendingExports = new Map<
     number,
@@ -188,6 +204,7 @@ export class PipelineClient {
       config: job.config,
       ...(job.force === undefined ? {} : { force: job.force }),
     };
+    this.inFlight.set(request.id, job.config);
     this.observer?.jobStarted(request.id, absNow());
     this.worker.postMessage(request, [request.pixels]);
   }
@@ -208,14 +225,17 @@ export class PipelineClient {
       pending?.reject(new Error(response.message));
       return;
     }
+    const config = this.inFlight.get(response.id);
+    this.inFlight.delete(response.id);
     if (response.type === 'error') {
       log.error('worker', 'frame failed', { message: response.message });
       this.observer?.jobSettled(response.id, absNow(), 'error');
-    } else {
+    } else if (config !== undefined) {
       this.observer?.jobSettled(response.id, absNow(), 'result', response.marks);
       this.onResult?.({
         buffer: toBuffer(response.width, response.height, response.pixels, response.indices),
         timings: response.timings,
+        config,
       });
     }
     const next = this.coalescer.complete();

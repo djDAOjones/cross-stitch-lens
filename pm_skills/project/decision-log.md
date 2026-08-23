@@ -1153,3 +1153,64 @@ removed afterwards.
 `tests/verify-deploy.test.ts`, one stale phrase in `vite.config.ts`'s
 bundle-inputs comment. `DEV-INFRASTRUCTURE.md`'s `verify:deploy` rows
 do not yet name `--fetch` — a doc-deltas line.
+
+## D199 — ICE-RECOLOUR-01 ships: the colour swap is a pure stage over the sidecar, a design rule at schema v11, and a verb on the Colours-used row (2026-08-23)
+
+**Context.** Signed and optioned at D182, narrowed to layer A at
+D188; built in full mode from the plan gate, the owner approving the
+plan's four defaults and its validation in one sitting. Closes
+MUST-01's presence half: a user can now say "*this* thread, *here*"
+for every stitch the mapper gave one colour.
+
+**Built.** `src/core/pipeline/swap.ts`: `renderPalette()` derives the
+render palette — the selected entries, indices unchanged, then every
+render-only target appended by id in swap order — plus an index map
+applied exactly once per cell, which is the no-chain rule by
+construction (an appended target can never be a `from`); a target
+already selected is a merge. `buildStages` appends the stage to the
+colour group only while the map changes something (the
+`adjustIsIdentity` precedent), so under `reduce-first` it runs at
+source resolution before the resize drops the sidecar.
+`PipelineConfig.swaps` is optional (absent = none) so the twenty-eight
+config literals in tests and bench stayed untouched; the persisted
+`design.swaps` is required at v11 — `{ from, to }` with `to` a full
+record (D55), unique `from` refused on read, the list capped at
+`MAX_PALETTE_ENTRIES`, v10 → v11 seeding `[]`. `config.palette` stays
+the selected palette: LUT, candidates, both backends and every golden
+hash unmoved; only the `projectJson` baseline pin moved. Every
+sidecar reader in `main.ts` — stats, key, highlight `indexFor`,
+symbol grants and sync, `symbolTableFor` — goes through one
+`renderPaletteOf()`; a frame's stats read against the config *it ran
+with* (`FrameResult.config`), which is the D197 stats-race fix.
+
+**UI.** Swap… is the third verb on the Colours-used row; a target's
+row reads "swapped from X" as visible text and Swap… there
+re-targets every swap onto it (a merge target's own swap needs the
+chip removed first — the signed wording taken literally); a
+render-only target has no Remove. The picker is a `runModal` over the
+shared browse table, the whole universe, ownership ignored. A Swaps
+chip list sits under Must-use, shown only once a swap exists; a
+dangling swap reads "(X is not in the palette now — kept)". Focus
+follows a swapped thread's stitches to the target row after the
+frame rebuild (found in the browser pass, fixed in the panel).
+
+**Verification.** 1,407 tests (29 new: stage, config placement,
+executor render-space sidecar, v11 round trip / migration / refusals,
+swap through the real export route, row notes); gate green. In the
+app: merge and render-only swaps, re-target, highlight on a target,
+`.pmproj` save → load with the swap, the design history restoring
+it, dangling on a count change, Threadify off/on, a symbol-mode PDF
+keyed against the render palette (8 entries, no refusal), the swap
+stage at ~2 % of a frame. Human remainder: the modal's Escape and
+focus return under a real keyboard, VoiceOver over the chips.
+
+**Assumptions at the gates.** Inventory-in-file stays out (its own
+bump); the cap is on the list, the render palette bounded by
+construction; a multi-source target re-targets all its sources at
+once.
+
+**Scope.** `swap.ts` (new), `config.ts`, `project.ts`, `client.ts`,
+`main.ts`, `info-panel.ts`, `colour-section.ts`; seven test files +
+`tests/swap.test.ts`; `hashes.json`. Deltas ledgered for `AGENTS.md`,
+`architecture.md` and `docs/ui-spec.md`; README updated. The ticket
+is deleted with the item.

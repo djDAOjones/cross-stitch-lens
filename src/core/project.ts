@@ -27,11 +27,12 @@ import type { GridStyleValues } from './grid-style.ts';
 import type { CountMode } from './palette-policy.ts';
 import type { DitherConfig, OrderPreset } from './pipeline/config.ts';
 import type { ResizeMode } from './pipeline/resize.ts';
+import type { ThreadSwap } from './pipeline/swap.ts';
 import type { SymbolPair } from './symbols/assignment.ts';
 import type { Provenance, Thread, ThreadStatus } from './types.ts';
 
 /** Current project-file schema version. Bump with a forward migration. */
-export const SCHEMA_VERSION = 10;
+export const SCHEMA_VERSION = 11;
 
 /**
  * Extension of a saved project (DUR-01): a store-only zip package —
@@ -100,7 +101,10 @@ export interface ProjectPipeline {
  *   what a refresh re-resolves from, and where design-context edits
  *   land (the (edited)-copy pattern) without touching the library.
  * - `design` carries the design-layer rules beside the recipe:
- *   count, minimum distance, Must-use seats (M15-CORE-03).
+ *   count, minimum distance, Must-use seats (M15-CORE-03) and, from
+ *   v11, colour swaps (ICE-RECOLOUR-01, D182) — `from` a selected
+ *   entry's id, `to` a full thread record with the snapshot's
+ *   semantics, so the file renders the swap without the catalogue.
  * - `snapshot` is the exact ordered thread data that **rendered**
  *   this project. It is authoritative on reopen.
  */
@@ -111,6 +115,7 @@ export interface ProjectPalette {
     count: { mode: CountMode; n: number };
     minDistance: number;
     mustUse: string[];
+    swaps: ThreadSwap[];
   };
   /** Ordered threads exactly as rendered. Empty means "not yet run". */
   snapshot: Thread[];
@@ -362,6 +367,10 @@ function canonicalPalette(palette: ProjectPalette): ProjectPalette {
       count: { mode: palette.design.count.mode, n: palette.design.count.n },
       minDistance: palette.design.minDistance,
       mustUse: [...palette.design.mustUse],
+      swaps: palette.design.swaps.map((swap) => ({
+        from: swap.from,
+        to: canonicalThread(swap.to),
+      })),
     },
     snapshot: palette.snapshot.map(canonicalThread),
   };
@@ -543,6 +552,33 @@ function asIdList(value: unknown, path: string): string[] {
   });
 }
 
+/**
+ * Validate the v11 swap list. Each `from` must be unique — the UI
+ * re-targets a swap rather than adding a second rule for the same
+ * entry, so a duplicate can only mean a hand-edited file, and refusing
+ * it beats guessing which rule wins. The list shares the snapshot's
+ * ceiling; the render palette it can produce is bounded by the
+ * selected entries plus these targets, far below the sidecar's
+ * `EMPTY_INDEX`.
+ */
+function asSwaps(value: unknown, path: string): ThreadSwap[] {
+  if (!Array.isArray(value)) fail(path, 'an array of colour swaps');
+  if (value.length > MAX_PALETTE_ENTRIES) {
+    fail(path, `at most ${String(MAX_PALETTE_ENTRIES)} entries`);
+  }
+  const seen = new Set<string>();
+  return value.map((entry, i) => {
+    const raw = asRecord(entry, `${path}[${String(i)}]`);
+    const from = asString(raw['from'], `${path}[${String(i)}].from`);
+    if (from.length === 0 || from.length > 128) {
+      fail(`${path}[${String(i)}].from`, 'a thread id of 1–128 characters');
+    }
+    if (seen.has(from)) fail(`${path}[${String(i)}].from`, 'a thread id swapped only once');
+    seen.add(from);
+    return { from, to: asThread(raw['to'], `${path}[${String(i)}].to`) };
+  });
+}
+
 /** Validate one persisted thread record. */
 function asThread(value: unknown, path: string): Thread {
   const raw = asRecord(value, path);
@@ -658,6 +694,7 @@ function parsePalette(value: unknown): ProjectPalette | null {
       },
       minDistance: asNumber(designRaw['minDistance'], 'palette.design.minDistance', 0, 200),
       mustUse: asIdList(designRaw['mustUse'], 'palette.design.mustUse'),
+      swaps: asSwaps(designRaw['swaps'], 'palette.design.swaps'),
     },
     snapshot: snapshotRaw.map((entry, i) => asThread(entry, `palette.snapshot[${String(i)}]`)),
   };
@@ -867,9 +904,25 @@ function migrateProject(raw: Record<string, unknown>, version: number): Record<s
     // never carried one, which `source: null` states exactly — they
     // keep applying their settings to the next imported image.
     if (at === 10 && doc['source'] === undefined) doc = { ...doc, source: null };
+    // v10 → v11: colour swaps join the design rules (ICE-RECOLOUR-01).
+    // Older files never swapped a thread, which the empty list states
+    // exactly; a full-RGB file (`palette: null`) has no rules to seed.
+    if (at === 11) doc = migrateV10Swaps(doc);
     doc = { ...doc, schemaVersion: at };
   }
   return doc;
+}
+
+/** Seed `palette.design.swaps` as empty where a palette block exists. */
+function migrateV10Swaps(doc: Record<string, unknown>): Record<string, unknown> {
+  const palette = doc['palette'];
+  if (palette === null || typeof palette !== 'object') return doc;
+  const paletteRaw = palette as Record<string, unknown>;
+  const design = paletteRaw['design'];
+  if (design === null || typeof design !== 'object') return doc;
+  const designRaw = design as Record<string, unknown>;
+  if (designRaw['swaps'] !== undefined) return doc;
+  return { ...doc, palette: { ...paletteRaw, design: { ...designRaw, swaps: [] } } };
 }
 
 /** Add the v8 PDF pagination fields, filling only what is absent. */

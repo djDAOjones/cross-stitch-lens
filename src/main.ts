@@ -47,6 +47,7 @@ import {
   type DitherConfig,
   type PipelineConfig,
 } from './core/pipeline/config.ts';
+import { renderPalette, type ThreadSwap } from './core/pipeline/swap.ts';
 import {
   builtInProfiles,
   emptyRecipe,
@@ -62,7 +63,11 @@ import { paletteOf } from './core/palette.ts';
 import { resolveProfilePalette } from './core/palette-resolve.ts';
 import type { ProfileInputs } from './core/color-profile.ts';
 import { loadCatalogue } from './core/thread-catalogue.ts';
-import { createColourSection, type ColourSectionState } from './ui/colour-section.ts';
+import {
+  createColourSection,
+  type ColourSectionState,
+  type SwapChip,
+} from './ui/colour-section.ts';
 import { createBrowseTable } from './ui/browse-table.ts';
 import { createProfileEditor } from './ui/profile-editor.ts';
 import {
@@ -169,7 +174,7 @@ import { asDitherConfig, createDitherKindAdapter } from './ui/profile-editor-dit
 import { decodeImageBlob, imageFiles } from './ui/import.ts';
 import { createInfoPanel } from './ui/info-panel.ts';
 import { createSection, type AccordionSection } from './ui/accordion.ts';
-import { choicesModal, formModal, textPromptModal } from './ui/modal.ts';
+import { choicesModal, formModal, runModal, textPromptModal } from './ui/modal.ts';
 import { createNoticesButton } from './ui/notices.ts';
 import { createInlineNotification } from './ui/notification.ts';
 import { SAMPLE_NAME, sampleBuffer } from './ui/sample.ts';
@@ -423,11 +428,35 @@ function build(app: HTMLElement): void {
   let designRecipe: ColorProfileRecipe = { ...emptyRecipe(), libraries: ['dmc'] };
   let profileRef: { id: string; revision: number } | null = { id: 'builtin:dmc', revision: 0 };
   let designEdited = false;
-  let designRules: { count: { mode: CountMode; n: number }; minDistance: number; mustUse: string[] } = {
+  let designRules: {
+    count: { mode: CountMode; n: number };
+    minDistance: number;
+    mustUse: string[];
+    swaps: ThreadSwap[];
+  } = {
     count: { mode: 'max', n: 8 },
     minDistance: 0,
     mustUse: [],
+    swaps: [],
   };
+
+  /**
+   * The render palette of a config (ICE-RECOLOUR-01, D182): the
+   * selected entries plus every render-only swap target, appended in
+   * swap order — the vocabulary the sidecar speaks after the swap
+   * stage. Every reader of a frame's indices (stats, the key, the
+   * highlight, symbol grants) goes through this, and for a *frame*
+   * through the config that frame ran with, never the live one.
+   */
+  function renderPaletteOf(source: PipelineConfig): Palette | null {
+    if (source.palette === null) return null;
+    return renderPalette(source.palette, source.swaps ?? []).palette;
+  }
+
+  /** Whether an id is one of the selected entries (a swap's `from` must be). */
+  function isSelected(id: string): boolean {
+    return config.palette?.entries.some((entry) => entry.id === id) ?? false;
+  }
   let paletteMode = true;
   let paletteConflicts: PaletteConflict[] = [];
   let eligibleCount = 0;
@@ -532,8 +561,10 @@ function build(app: HTMLElement): void {
    * export-time grant would never have made; those palettes keep D160's
    * "export is the moment of need" and their rows read "Auto".
    */
-  function grantSymbolsLive(perColor: readonly { thread?: Thread }[]): void {
-    const palette = config.palette;
+  function grantSymbolsLive(
+    perColor: readonly { thread?: Thread }[],
+    palette: Palette | null,
+  ): void {
     if (palette === null || !lastFrameHasIndices) return;
     if (palette.entries.length > SYMBOL_IDS.length) return;
     const used = new Set<string>();
@@ -543,7 +574,9 @@ function build(app: HTMLElement): void {
 
   /** Release/reset symbol grants against the current palette. */
   function syncSymbolsToPalette(): void {
-    const ids = (config.palette?.entries ?? []).map((e) => e.id);
+    // Membership for symbols is the render palette: a swap target
+    // holds stitches, so it holds a symbol (ICE-RECOLOUR-01).
+    const ids = (renderPaletteOf(config)?.entries ?? []).map((e) => e.id);
     // Full-RGB mode (no palette) keeps grants dormant rather than
     // releasing them: turning Threadify off and on must not re-symbol
     // the design.
@@ -578,6 +611,7 @@ function build(app: HTMLElement): void {
         count: designRules.count,
         minDistance: designRules.minDistance,
         mustUse: [...designRules.mustUse],
+        swaps: designRules.swaps.length,
         membership: resolved.eligibleCount,
         selected: resolved.selectedCount,
         locked: resolved.lockedCount,
@@ -585,10 +619,16 @@ function build(app: HTMLElement): void {
         source: selectionSource !== null,
       });
     }
+    // The swap rules ride on the config; the worker derives the render
+    // palette against the selected entries at build time, so a swap
+    // whose entry left the palette is inert there too.
+    config.swaps = designRules.swaps;
     // A thread highlight is keyed by palette index (M14-EXT-17); when
     // the entry list changes the indices remap, and a held selection
     // would silently point at a different thread — clear it instead.
-    const nextFingerprint = (config.palette?.entries ?? []).map((e) => e.id).join('|');
+    // The render palette is the index space, so a swap change remaps
+    // too (D182).
+    const nextFingerprint = (renderPaletteOf(config)?.entries ?? []).map((e) => e.id).join('|');
     if (nextFingerprint !== paletteEntriesFingerprint) {
       paletteEntriesFingerprint = nextFingerprint;
       highlightInvalidated?.();
@@ -1017,10 +1057,13 @@ function build(app: HTMLElement): void {
     // the entry order — the sidecar's own vocabulary. Session state,
     // never project data.
     {
+      // Rows index the render palette (ICE-RECOLOUR-01): a swap
+      // target's row highlights the cells the sidecar gave it.
       indexFor: (usage) => {
         const id = usage.thread?.id;
-        if (id === undefined || config.palette === null) return null;
-        const index = config.palette.entries.findIndex((entry) => entry.id === id);
+        const palette = renderPaletteOf(config);
+        if (id === undefined || palette === null) return null;
+        const index = palette.entries.findIndex((entry) => entry.id === id);
         return index === -1 ? null : index;
       },
       onChange: (selection) => {
@@ -1039,6 +1082,16 @@ function build(app: HTMLElement): void {
         status.textContent = `${label} removed from this design's colours.`;
         designRecipeEdited();
       },
+      // A render-only swap target is not in the profile: no Remove.
+      removable: (usage) => usage.thread === undefined || isSelected(usage.thread.id),
+      // Swap… (ICE-RECOLOUR-01): the row's thread becomes a swap's
+      // `from` — or, on a row already labelled "swapped from", the
+      // picker re-targets that swap (D182).
+      onSwap: (index, label) => {
+        const id = renderPaletteOf(config)?.entries[index]?.id;
+        if (id === undefined) return;
+        void pickSwap(id, label);
+      },
     },
     // The symbol column (ICE-SYMBOL-UI-01): the key the chart will
     // print, live, with a picker over the unused pool. An override is
@@ -1056,7 +1109,116 @@ function build(app: HTMLElement): void {
         void pickSymbol(id, label);
       },
     },
+    // "swapped from X" on a target's row: only live swaps label it — a
+    // dangling one moves no stitches, and the chip list says so.
+    {
+      swappedFrom: (threadId) =>
+        designRules.swaps
+          .filter((swap) => swap.to.id === threadId && isSelected(swap.from))
+          .map((swap) => labelForId(swap.from)),
+      targetOf: (threadId) =>
+        designRules.swaps.find((swap) => swap.from === threadId && isSelected(swap.from))?.to.id ??
+        null,
+    },
   );
+
+  /**
+   * The swap picker (ICE-RECOLOUR-01, D182): "Swap X for…" over the
+   * whole universe — every brand, the generated maps, custom colours,
+   * any other palette entry — because a target never enters
+   * selection, so it cannot break what the profile promises; "only
+   * threads I own" is ignored on purpose (the key lists it to buy). A
+   * row that is already a swap target re-targets every swap onto it
+   * rather than starting a chain. A pick applies and closes; picking
+   * the entry itself removes the rule (a self-swap is no swap).
+   */
+  async function pickSwap(id: string, label: string): Promise<void> {
+    const onto = designRules.swaps.filter((swap) => swap.to.id === id && isSelected(swap.from));
+    const froms = onto.length > 0 ? onto.map((swap) => swap.from) : [id];
+    const fromLabel = onto.length > 0 ? onto.map((swap) => labelForId(swap.from)).join(', ') : label;
+    const picked = await runModal<string | null>(
+      document,
+      `Swap ${fromLabel} for…`,
+      (body, close) => {
+        const intro = document.createElement('p');
+        intro.className = 'helper';
+        intro.textContent =
+          'Every stitch the mapper gives this colour is worked in the one you choose. Any thread, map colour or custom colour can be the target; the key lists it to buy.';
+        const table = createBrowseTable(document, {
+          searchId: 'swap-search',
+          searchLabel: 'Find a colour to swap in',
+          rowsFor: (query) => browseRowsFor(CATALOGUE, [...userColorsMap.values()], null, query),
+          rowActions: (row) => {
+            const choose = document.createElement('button');
+            choose.type = 'button';
+            choose.textContent = 'Swap';
+            choose.setAttribute('aria-label', `Swap ${fromLabel} for ${row.label}`);
+            choose.addEventListener('click', () => {
+              close(row.id);
+            });
+            return [choose];
+          },
+          emptyText: 'Nothing here yet.',
+        });
+        const cancel = document.createElement('button');
+        cancel.type = 'button';
+        cancel.textContent = 'Cancel';
+        cancel.addEventListener('click', () => {
+          close(null);
+        });
+        const actions = document.createElement('div');
+        actions.className = 'modal-actions';
+        actions.append(cancel);
+        body.append(intro, table.element, actions);
+        const search = table.element.querySelector<HTMLInputElement>('#swap-search');
+        return search ?? cancel;
+      },
+      null,
+    );
+    if (picked === null) return;
+    const to = threadForId(picked);
+    if (to === undefined) return;
+    for (const from of froms) {
+      const at = designRules.swaps.findIndex((swap) => swap.from === from);
+      if (to.id === from) {
+        if (at !== -1) designRules.swaps.splice(at, 1);
+      } else if (at === -1) {
+        designRules.swaps.push({ from, to });
+      } else {
+        designRules.swaps[at] = { from, to };
+      }
+    }
+    log.info('palette', 'swap set', { from: froms, to: to.id });
+    applySwaps();
+    status.textContent =
+      to.id === froms[0]
+        ? `${fromLabel} is stitched as itself again.`
+        : `${fromLabel} is stitched as ${labelForId(to.id)}.`;
+  }
+
+  /** Push the swap rules into the pipeline and every reader of its sidecar. */
+  function applySwaps(): void {
+    config.swaps = designRules.swaps;
+    // The render palette changed, so the highlight index space and the
+    // symbol membership did too (D182: `highlightInvalidated` fires on
+    // any swap change).
+    paletteEntriesFingerprint = (renderPaletteOf(config)?.entries ?? [])
+      .map((e) => e.id)
+      .join('|');
+    highlightInvalidated?.();
+    syncSymbolsToPalette();
+    colourSection.update(sectionState());
+    reprocess();
+  }
+
+  /** The full thread record behind any browse id — catalogue, custom or map entry. */
+  function threadForId(id: string): Thread | undefined {
+    return (
+      CATALOGUE.byId.get(id) ??
+      userColorsMap.get(id) ??
+      browseUniverse(CATALOGUE, [], null).find((e) => e.id === id)
+    );
+  }
 
   /** Open the picker for one thread and apply the answer. */
   async function pickSymbol(threadId: string, label: string): Promise<void> {
@@ -1784,10 +1946,21 @@ function build(app: HTMLElement): void {
       count: designRules.count,
       minDistance: designRules.minDistance,
       mustUse: designRules.mustUse,
+      swaps: swapChips(),
       conflicts: paletteConflicts,
       eligibleCount,
       inventoryEmpty: owned.size === 0,
     };
+  }
+
+  /** The swap rules as the Colour section's chips show them. */
+  function swapChips(): SwapChip[] {
+    return designRules.swaps.map((swap) => ({
+      from: swap.from,
+      fromLabel: labelForId(swap.from),
+      toLabel: entryLabel(swap.to, CATALOGUE),
+      dangling: !isSelected(swap.from),
+    }));
   }
 
   /** Re-resolve, refresh the section, and run the pipeline once. */
@@ -1893,6 +2066,7 @@ function build(app: HTMLElement): void {
     count: designRules.count,
     minDistance: designRules.minDistance,
     mustUse: designRules.mustUse,
+    swaps: [],
     conflicts: paletteConflicts,
     eligibleCount,
     inventoryEmpty: owned.size === 0,
@@ -2010,6 +2184,13 @@ function build(app: HTMLElement): void {
       status.textContent = left
         ? `${labelForId(id)} is no longer guaranteed and leaves this design's colours.`
         : `${labelForId(id)} is no longer guaranteed.`;
+    },
+    removeSwap: (from) => {
+      const gone = designRules.swaps.find((swap) => swap.from === from);
+      designRules.swaps = designRules.swaps.filter((swap) => swap.from !== from);
+      log.info('palette', 'swap removed', { from, to: gone?.to.id ?? null });
+      applySwaps();
+      status.textContent = `${labelForId(from)} is stitched as itself again.`;
     },
     openEditor: () => {
       void openProfileEditor('colour', profileRef?.id);
@@ -2491,7 +2672,7 @@ function build(app: HTMLElement): void {
    * Refusal is the contract: a symbol chart never repeats a glyph.
    */
   function symbolTableFor(frame: PixelBuffer): { symbols: ChartSymbols } | { refusal: string } {
-    const palette = config.palette;
+    const palette = renderPaletteOf(config);
     if (palette === null) {
       return {
         refusal: 'Symbol charts need a thread palette — turn Threadify on, or export the colour chart.',
@@ -2606,7 +2787,7 @@ function build(app: HTMLElement): void {
       // explain the chart (M9).
       const entries: KeyEntry[] = buildKeyEntries(
         frame,
-        config.palette,
+        renderPaletteOf(config),
         BRAND_NAMES,
         chartMode === 'color' ? undefined : effectiveSymbols(symbolState),
       );
@@ -3344,7 +3525,9 @@ function build(app: HTMLElement): void {
       count: { ...loaded.design.count },
       minDistance: loaded.design.minDistance,
       mustUse: [...loaded.design.mustUse],
+      swaps: loaded.design.swaps.map((swap) => ({ from: swap.from, to: swap.to })),
     };
+    config.swaps = designRules.swaps;
     // The edited flag re-derives against the live library; drift is
     // reported by the flag, never repaired (D55).
     void refreshProfilesCache().then(() => {
@@ -4247,9 +4430,15 @@ function build(app: HTMLElement): void {
     // Draft governor: only live-pump frames inform the load signal
     // (a one-off manual reprocess should not flip preview quality).
     if (stopPump !== null) setDraftMode(draftGovernor.sample(total));
-    const stats = computeStats(frame.buffer, config.palette ?? undefined);
+    // Against the palette this frame rendered with, never the live
+    // one: one frame after a palette change they differ, and reading
+    // the sidecar against the wrong palette under-reported the design
+    // (COUNT-01's "colours: 2"; the D197 must-fix). With swaps the
+    // vocabulary is the render palette.
+    const framePalette = renderPaletteOf(frame.config);
+    const stats = computeStats(frame.buffer, framePalette ?? undefined);
     lastFrameHasIndices = frame.buffer.indices !== undefined;
-    grantSymbolsLive(stats.perColor);
+    grantSymbolsLive(stats.perColor, framePalette);
     info.update(stats);
     debugPanel?.update(frame.timings, client.droppedFrames);
     for (const timing of frame.timings) activeBackends[timing.stage] = timing.backend;

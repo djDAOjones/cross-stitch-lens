@@ -11,7 +11,9 @@
  * "Colour fidelity"). Since ICE-SYMBOL-UI-01 the table is also the
  * live symbol key: a Symbol column (present only while the design can
  * carry symbols) shows each thread's glyph with a button into the
- * override picker (`symbol-picker.ts`).
+ * override picker (`symbol-picker.ts`). Since ICE-RECOLOUR-01 a row
+ * can also be a swap target — "swapped from X" beside its label — and
+ * carries the Swap… verb that opens the swap picker (D182).
  */
 
 import type { ColorUsage, DesignStats } from '../core/stats.ts';
@@ -36,6 +38,12 @@ export interface ColorRow {
   percentText: string;
   /** Hover tooltip; always carries the hex (colour-fidelity rule). */
   title: string;
+  /**
+   * "swapped from X" when this thread renders another entry's stitches
+   * (ICE-RECOLOUR-01); visible text, so it reaches AT — never only a
+   * tooltip. Absent for an ordinary row.
+   */
+  note?: string;
 }
 
 /** Options for {@link buildRows}. */
@@ -43,6 +51,12 @@ export interface RowOptions {
   /** Brand id → display name, e.g. `"dmc"` → `"DMC"`. */
   brandNames?: ReadonlyMap<string, string> | undefined;
   cap?: number | undefined;
+  /**
+   * The plain labels of the entries swapped onto this thread, in swap
+   * order — empty when none. The host answers from its swap rules; the
+   * row model only phrases the note.
+   */
+  swappedFrom?: ((threadId: string) => readonly string[]) | undefined;
 }
 
 /** The capped row set plus what the cap folded away. */
@@ -87,6 +101,8 @@ export function buildRows(perColor: ColorUsage[], options: RowOptions = {}): Row
     // DATA-05 ahead of DATA-03's relabel).
     const provenance =
       thread.provenance === 'mapped' ? ' · colour mapped from its DMC equivalent' : '';
+    const sources = options.swappedFrom?.(thread.id) ?? [];
+    const note = sources.length === 0 ? undefined : `swapped from ${sources.join(', ')}`;
     return {
       hex: usage.hex,
       // Hex rides in the visible label (audit A14): a title tooltip is
@@ -94,7 +110,8 @@ export function buildRows(perColor: ColorUsage[], options: RowOptions = {}): Row
       label: `${brand} ${thread.reference} ${thread.name}`.trim() + ` · ${usage.hex}`,
       count: usage.count,
       percentText: formatPercent(usage.percent),
-      title: `${usage.hex} · ${thread.name}${provenance}`,
+      title: `${usage.hex} · ${thread.name}${provenance}${note === undefined ? '' : ` · ${note}`}`,
+      ...(note === undefined ? {} : { note }),
     };
   });
   const rest = perColor.slice(cap);
@@ -145,6 +162,20 @@ export interface InfoPanelHighlightOptions {
    * action column.
    */
   onRemove?(index: number, label: string): void;
+  /**
+   * Whether Remove applies to this row (default: yes). A render-only
+   * swap target is not in the profile, so there is nothing to remove
+   * — its row shows no button rather than one that would do nothing
+   * (ICE-RECOLOUR-01).
+   */
+  removable?(usage: ColorUsage): boolean;
+  /**
+   * Swap this colour for another (ICE-RECOLOUR-01, D182): opens the
+   * picker for the row's thread — or, on a row that is already a swap
+   * target, re-targets that swap. Omit to hide the column. Rows past
+   * the cap carry no verb (accepted at sign-off).
+   */
+  onSwap?(index: number, label: string): void;
 }
 
 /** Symbol column wiring (ICE-SYMBOL-UI-01). */
@@ -162,6 +193,19 @@ export interface InfoPanelSymbolOptions {
   onPick(usage: ColorUsage, label: string): void;
 }
 
+/** Swap-target wiring (ICE-RECOLOUR-01). */
+export interface InfoPanelSwapOptions {
+  /** Plain labels of the entries swapped onto this thread; empty when none. */
+  swappedFrom(threadId: string): readonly string[];
+  /**
+   * The thread this entry's stitches now render as, or null when it is
+   * not swapped. Used only to keep focus: after a pick the swapped
+   * thread's row disappears with the next frame, and the focus that
+   * was on its Swap… button follows the stitches to the target's row.
+   */
+  targetOf(threadId: string): string | null;
+}
+
 /**
  * Build the panel content. Starts empty until the first update.
  *
@@ -177,9 +221,11 @@ export function createInfoPanel(
   onContent?: InfoPanelContentListener,
   highlight?: InfoPanelHighlightOptions,
   symbols?: InfoPanelSymbolOptions,
+  swaps?: InfoPanelSwapOptions,
 ): InfoPanel {
   const element = doc.createElement('div');
   element.className = 'info-panel';
+  const swappedFrom = swaps === undefined ? undefined : (id: string) => swaps.swappedFrom(id);
 
   const table = doc.createElement('table');
   // The visible heading is the section header; the caption keeps the
@@ -218,6 +264,15 @@ export function createInfoPanel(
     symbolHeader.textContent = 'Symbol';
     symbolHeader.hidden = true;
     headRow.append(symbolHeader);
+  }
+  if (highlight?.onSwap !== undefined) {
+    const th = doc.createElement('th');
+    th.scope = 'col';
+    const hidden = doc.createElement('span');
+    hidden.className = 'visually-hidden';
+    hidden.textContent = 'Swap colour';
+    th.append(hidden);
+    headRow.append(th);
   }
   if (highlight?.onRemove !== undefined) {
     const th = doc.createElement('th');
@@ -265,11 +320,14 @@ export function createInfoPanel(
 
   function update(stats: DesignStats): void {
     lastStats = stats;
-    const { rows, overflow } = buildRows(stats.perColor, { brandNames });
+    const { rows, overflow } = buildRows(stats.perColor, { brandNames, swappedFrom });
     const showSymbols = symbols !== undefined && symbols.available();
     if (symbolHeader !== null) symbolHeader.hidden = !showSymbols;
     const columns =
-      (highlight === undefined ? 3 : highlight.onRemove === undefined ? 4 : 5) +
+      3 +
+      (highlight === undefined ? 0 : 1) +
+      (highlight?.onRemove === undefined ? 0 : 1) +
+      (highlight?.onSwap === undefined ? 0 : 1) +
       (showSymbols ? 1 : 0);
     // A rebuild must not drop focus (UI-STANDARDS → shell state): a
     // button pressed mid-capture, or the symbol button a picker just
@@ -323,6 +381,12 @@ export function createInfoPanel(
       swatch.style.background = row.hex;
       swatch.setAttribute('aria-hidden', 'true');
       colour.append(swatch, doc.createTextNode(row.label));
+      if (row.note !== undefined) {
+        const note = doc.createElement('span');
+        note.className = 'meta';
+        note.textContent = ` · ${row.note}`;
+        colour.append(note);
+      }
       const count = doc.createElement('td');
       count.className = 'num';
       count.textContent = formatCount(row.count);
@@ -360,11 +424,31 @@ export function createInfoPanel(
         }
         tr.append(cell);
       }
-      if (highlight?.onRemove !== undefined) {
+      if (highlight?.onSwap !== undefined) {
         const cell = doc.createElement('td');
         const raw = stats.perColor[i];
         const index = raw === undefined ? null : highlight.indexFor(raw);
         if (index !== null) {
+          const plainLabel = row.label.split(' · #')[0] ?? row.label;
+          const swap = doc.createElement('button');
+          swap.type = 'button';
+          swap.textContent = 'Swap…';
+          swap.setAttribute(
+            'aria-label',
+            row.note === undefined ? `Swap ${plainLabel}` : `Re-target the swap onto ${plainLabel}`,
+          );
+          swap.addEventListener('click', () => {
+            highlight.onSwap?.(index, plainLabel);
+          });
+          cell.append(swap);
+        }
+        tr.append(cell);
+      }
+      if (highlight?.onRemove !== undefined) {
+        const cell = doc.createElement('td');
+        const raw = stats.perColor[i];
+        const index = raw === undefined ? null : highlight.indexFor(raw);
+        if (index !== null && (raw === undefined || (highlight.removable?.(raw) ?? true))) {
           const plainLabel = row.label.split(' · #')[0] ?? row.label;
           const remove = doc.createElement('button');
           remove.type = 'button';
@@ -390,7 +474,14 @@ export function createInfoPanel(
       tbody.append(tr);
     }
     if (restore !== null) {
-      const again = [...tbody.querySelectorAll('tr')].find((tr) => tr.dataset['key'] === restore.key);
+      const rowsNow = [...tbody.querySelectorAll('tr')];
+      let again = rowsNow.find((tr) => tr.dataset['key'] === restore.key);
+      // A swapped-out thread has no row any more: its stitches moved to
+      // the target, and so does the focus (the same slot in that row).
+      if (again === undefined && swaps !== undefined) {
+        const target = swaps.targetOf(restore.key);
+        if (target !== null) again = rowsNow.find((tr) => tr.dataset['key'] === target);
+      }
       again?.querySelectorAll('button')[restore.slot]?.focus();
     }
     // The host hides the whole section while there is nothing to

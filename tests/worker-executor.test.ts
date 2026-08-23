@@ -79,6 +79,27 @@ describe('executeRequest', () => {
     for (const t of response.timings) expect(t.ms).toBeGreaterThanOrEqual(0);
   });
 
+  it('a swap returns a sidecar in render space — an index past the selected entries (ICE-RECOLOUR-01)', () => {
+    const red = thread('R', 'red', [255, 0, 0]);
+    const black = PALETTE.entries[0];
+    if (black === undefined) throw new Error('fixture');
+    const response = executeRequest(request({ swaps: [{ from: black.id, to: red }] }));
+    expect(response.type).toBe('result');
+    if (response.type !== 'result') return;
+    expect(response.timings.map((t) => t.stage)).toEqual(['resize', 'reduce', 'swap']);
+    expect(response.indices).not.toBeNull();
+    const indices = new Uint16Array(response.indices ?? new ArrayBuffer(0));
+    const out = new Uint8ClampedArray(response.pixels);
+    // The darkest cells matched black (index 0) and now carry the
+    // appended target's index and colour; white cells are untouched.
+    expect([...indices]).toContain(2);
+    expect([...indices]).not.toContain(0);
+    for (let cell = 0; cell < indices.length; cell++) {
+      const rgb = [out[cell * 4], out[cell * 4 + 1], out[cell * 4 + 2]];
+      expect(rgb).toEqual(indices[cell] === 2 ? [255, 0, 0] : [255, 255, 255]);
+    }
+  });
+
   it('returns an error response instead of throwing (worker survives)', () => {
     const bad = request();
     bad.config.grid.width = 4096; // out of range → RangeError in resize

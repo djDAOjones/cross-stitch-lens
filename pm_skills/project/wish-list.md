@@ -23,3 +23,4 @@ refer to `docs/requirements.md`.
 <!-- Triaged 2026-08-23 (D197): every line promoted or cut — the spec
      §25 parking lot goes back to being docs/requirements.md §25's
      alone. Append new ideas below this comment. -->
+- A status sentence set beside a reprocess ("X is stitched as Y.", the Must-use sentences) shows only until the frame's "Preview updated." replaces it a second later — the status line needs a way to keep a user-facing sentence across one reprocess (from: 2026-08-23 ICE-RECOLOUR-01)

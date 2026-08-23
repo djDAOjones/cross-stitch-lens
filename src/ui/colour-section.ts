@@ -33,6 +33,13 @@ export interface ColourSectionState {
   count: { mode: 'all' | 'max' | 'exact'; n: number };
   minDistance: number;
   mustUse: string[];
+  /**
+   * The design's colour swaps (ICE-RECOLOUR-01, D182), already
+   * labelled by the host. A dangling swap — `from` no longer in the
+   * palette — is kept and said so (the D178 drift rule), never
+   * silently dropped.
+   */
+  swaps: SwapChip[];
   conflicts: PaletteConflict[];
   eligibleCount: number;
   /**
@@ -41,6 +48,15 @@ export interface ColourSectionState {
    * select says so instead of offering it (MYTHREADS-01).
    */
   inventoryEmpty: boolean;
+}
+
+/** One swap as the chip list shows it. */
+export interface SwapChip {
+  /** The swapped entry's id — the key `removeSwap` takes. */
+  from: string;
+  fromLabel: string;
+  toLabel: string;
+  dangling: boolean;
 }
 
 /** Everything the section calls back into the host for. */
@@ -55,6 +71,8 @@ export interface ColourSectionActions {
   setMinDistance(value: number): void;
   addMustUse(id: string): void;
   removeMustUse(id: string): void;
+  /** Drop the swap rule for this entry (Remove is the undo — D182). */
+  removeSwap(from: string): void;
   openEditor(): void;
   /** Row model for the Must-use add search (the whole universe). */
   browseRows(query: string): { rows: BrowseRow[]; total: number };
@@ -303,6 +321,23 @@ export function createColourSection(
   addBody.className = 'depth-reveal-body';
   addDetails.append(addSummary, addBody);
 
+  // --- Swaps (ICE-RECOLOUR-01) --------------------------------------
+  // Presence, where Must-use is a seat: a swap says which thread the
+  // stitches the mapper gave X are worked in. Made from the Colours
+  // used table's Swap… verb; this list is the rule's second home, the
+  // one place a dangling swap can still be seen and removed.
+  const swapsLabel = doc.createElement('p');
+  swapsLabel.className = 'group-label';
+  swapsLabel.textContent = 'Swaps';
+  const swapsHelper = doc.createElement('p');
+  swapsHelper.className = 'helper';
+  swapsHelper.id = 'swaps-helper';
+  swapsHelper.textContent =
+    'Stitches the mapper gives one colour are worked in another. Swap a colour from the Colours used table; a swap whose colour leaves the palette is kept until you remove it.';
+  const swapChips = doc.createElement('div');
+  swapChips.className = 'pin-chips';
+  swapChips.setAttribute('role', 'list');
+
   // --- conflicts (the never-silent surface) ------------------------
   const summary = doc.createElement('p');
   summary.className = 'meta';
@@ -332,6 +367,9 @@ export function createColourSection(
     mustUseHelper,
     chipList,
     addDetails,
+    swapsLabel,
+    swapsHelper,
+    swapChips,
     summary,
     conflictList,
     inventoryDetails,
@@ -361,6 +399,7 @@ export function createColourSection(
 
   let lastOptionsFp = '';
   let lastChipsFp = '';
+  let lastSwapsFp = '';
   let lastConflictsFp = '';
 
   function update(next: ColourSectionState): void {
@@ -379,6 +418,9 @@ export function createColourSection(
       mustUseHelper,
       chipList,
       addDetails,
+      swapsLabel,
+      swapsHelper,
+      swapChips,
       summary,
       conflictList,
     ]) {
@@ -481,6 +523,46 @@ export function createColourSection(
       }
       chipList.hidden = next.mustUse.length === 0;
     }
+
+    const swapsFp = next.swaps
+      .map((s) => [s.from, s.fromLabel, s.toLabel, s.dangling].join('\u0000'))
+      .join('\n');
+    if (swapsFp !== lastSwapsFp) {
+      lastSwapsFp = swapsFp;
+      swapChips.replaceChildren();
+      for (const swap of next.swaps) {
+        const chip = doc.createElement('span');
+        chip.className = 'pin-chip';
+        chip.setAttribute('role', 'listitem');
+        const text = doc.createElement('span');
+        // The arrow reads "right arrow" to AT — close enough; the
+        // button's accessible name says it in words.
+        text.textContent = swap.dangling
+          ? `${swap.fromLabel} → ${swap.toLabel} (${swap.fromLabel} is not in the palette now — kept)`
+          : `${swap.fromLabel} → ${swap.toLabel}`;
+        const remove = doc.createElement('button');
+        remove.type = 'button';
+        remove.textContent = 'Remove';
+        remove.setAttribute(
+          'aria-label',
+          `Remove the swap of ${swap.fromLabel} for ${swap.toLabel}`,
+        );
+        remove.addEventListener('click', () => {
+          actions.removeSwap(swap.from);
+        });
+        chip.append(text, remove);
+        swapChips.append(chip);
+      }
+    }
+    // The group shows only once a swap exists: an empty "Swaps"
+    // heading over nothing is the blank-panel anti-pattern, and the
+    // verb that creates one lives in the table below. Re-applied every
+    // update because the mode loop above unhides the group with the
+    // rest of the section.
+    const noSwaps = next.swaps.length === 0;
+    swapsLabel.hidden = noSwaps;
+    swapsHelper.hidden = noSwaps;
+    swapChips.hidden = noSwaps;
 
     // The consequence beside the cause (COUNT-01): with no palette the
     // preview shows the picture as it is, and the count and Must-use

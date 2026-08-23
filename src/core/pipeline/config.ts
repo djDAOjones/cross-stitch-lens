@@ -18,6 +18,7 @@ import {
 } from './dither.ts';
 import { reduceStage } from './reduce.ts';
 import { resizeStage, type ResizeMode } from './resize.ts';
+import { renderPalette, swapStage, type ThreadSwap } from './swap.ts';
 import { stageInstance, type Palette, type StageInstance } from '../types.ts';
 
 /** The two §7 comparison presets. 'resize-first' is the D3 default. */
@@ -58,6 +59,12 @@ export interface PipelineConfig {
   metric: ColorMetric;
   /** 'none' = plain nearest via reduce; anything else runs the dither stage. */
   dither: DitherConfig;
+  /**
+   * Colour swaps over the sidecar (ICE-RECOLOUR-01, D182). Optional so
+   * the many configs built before swaps existed stay valid; absent
+   * means none. Meaningless without a palette.
+   */
+  swaps?: ThreadSwap[];
 }
 
 /**
@@ -68,7 +75,7 @@ export interface PipelineConfig {
  * shown is exactly the colour reduction.
  */
 export function fullRgbVariant(config: PipelineConfig): PipelineConfig {
-  return { ...config, palette: null, dither: { algorithm: 'none' } };
+  return { ...config, palette: null, dither: { algorithm: 'none' }, swaps: [] };
 }
 
 /** Optional LUT supplier so a host (the worker) can inject its cache. */
@@ -146,6 +153,14 @@ export function buildStages(
         }),
       );
     }
+    // The swap stage belongs to the colour group: it reads the sidecar
+    // the quantiser just wrote, so under 'reduce-first' it too runs at
+    // source resolution before the resize drops that sidecar. Left out
+    // while it could change nothing (the `adjustIsIdentity` precedent —
+    // no swap, every swap dangling, or a self-swap), so an unused rule
+    // costs no pass and no copy.
+    const render = renderPalette(config.palette, config.swaps ?? []);
+    if (render.active) colour.push(stageInstance(swapStage, render));
   }
 
   if (config.preset === 'resize-first') {

@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 297 file(s) across 12 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 299 file(s) across 12 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 13 file(s)
 - `.claude` — 2 file(s)
 - `.githooks` — 1 file(s)
@@ -26,8 +26,8 @@
 - `docs` — 16 file(s)
 - `public` — 7 file(s)
 - `scripts` — 22 file(s)
-- `src` — 106 file(s)
-- `tests` — 123 file(s)
+- `src` — 107 file(s)
+- `tests` — 124 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -172,16 +172,17 @@
 - `src/core/palettes/thread-list.csv` — owner-supplied 8-brand thread list (protected)
 - `src/core/palettes/thread-map-proposed.csv` — proposed cross-reference schema, no data yet (protected)
 - `src/core/pipeline/adjust.ts` — adjust hook stage: identity until §9 ops land
-- `src/core/pipeline/config.ts` — PipelineConfig → stage list; §7 presets; full-RGB twin
+- `src/core/pipeline/config.ts` — PipelineConfig → stage list; §7 presets; full-RGB twin; the swap stage joins the colour group when active (`swaps?`)
 - `src/core/pipeline/dither-presets.ts` — canonical dither presets + structural equality + built-in matching (M15-DITH-01; moved from ui)
 - `src/core/pipeline/dither.ts` — Floyd–Steinberg dither: exact errors, serpentine
 - `src/core/pipeline/identity.ts` — identity stage: hello-world purity demo
 - `src/core/pipeline/index.ts` — pipeline executor: backend pick + ts fallback
 - `src/core/pipeline/reduce.ts` — reduce stage: LUT + exact paths, alpha passthrough
 - `src/core/pipeline/resize.ts` — resize stage: area-average, 4 modes, empty cells
+- `src/core/pipeline/swap.ts` — swap stage (ICE-RECOLOUR-01): `renderPalette()` (selected entries + render-only targets, index map, no-chain) and the pure sidecar remap + repaint
 - `src/core/pipeline/threshold-tiles.ts` — Bayer + void-and-cluster blue-noise threshold tiles: fixed data, documented provenance, memoised
 - `src/core/project-package.ts` — store-only zip project package (`.pmproj`): deterministic writer (fixed 1980 stamps), bounded reader with named refusals, format detection, readProjectBytes/writeProjectBytes (DUR-01)
-- `src/core/project.ts` — project file (§20): schema v10 with the `source` block, v1→v10 migrations, canonical (de)serialisation, title-driven `projectFilename` + stamp fallback, `PROJECT_EXTENSION` (DUR-01/SAVE-01)
+- `src/core/project.ts` — project file (§20): schema v11 with the `source` block and `design.swaps`, v1→v11 migrations, canonical (de)serialisation, title-driven `projectFilename` + stamp fallback, `PROJECT_EXTENSION` (DUR-01/SAVE-01)
 - `src/core/stats.ts` — design stats §11 subset: counts, %, thread refs
 - `src/core/symbols/assignment.ts` — symbol assignment as persisted state (D160-4): need-based grants, release-to-back queue, survivor-free reset, overrides, load reconcile
 - `src/core/symbols/glyphs.ts` — the app-owned 64-glyph catalogue in canonical append-only order; fill-only M/L/C/Z paths rendered identically by Path2D and drawSvgPath (D165)
@@ -201,13 +202,13 @@
 - `src/main.ts` — app entry: M2 shell — import, control panel, preview, info panel
 - `src/ui/accordion.ts` — Carbon accordion section: h2-wrapped toggle, hidden panel, derived closed-state summary
 - `src/ui/browse-table.ts` — shared capped search table (the 60-row pattern extracted; D117 seam 3)
-- `src/ui/colour-section.ts` — recut Colour section: profile select + (edited) verbs, count (log-scale slider, ICE-LIMIT-01) + minimum distance, Must-use chips, inventory reveal (M15-UI-01)
+- `src/ui/colour-section.ts` — recut Colour section: profile select + (edited) verbs, count (log-scale slider, ICE-LIMIT-01) + minimum distance, Must-use chips, Swaps chips (ICE-RECOLOUR-01), inventory reveal (M15-UI-01)
 - `src/ui/controls.ts` — Carbon-style field builders: toggle/number/colour/select + clampInt
 - `src/ui/debug-panel.ts` — dev-only profiling panel: rolling timing window (pure) + disclosure DOM
 - `src/ui/diagnostics-button.ts` — the Debug menu: Report a problem (project document + redacted log + mailto, DIAG-02), Copy diagnostics, Download log; announced status line; `DEV_EMAIL`
 - `src/ui/dither-model.ts` — pure Dither-controls model: algorithm options, per-family strength, evidence-bearing presets, session memory
 - `src/ui/import.ts` — import routes → decode: filter (pure) + blob→PixelBuffer
-- `src/ui/info-panel.ts` — "Colours used" table content: pure row model + thin DOM half, hosted by a section (M14-EXT-41); the live symbol key column (ICE-SYMBOL-UI-01); focus kept across rebuilds
+- `src/ui/info-panel.ts` — "Colours used" table content: pure row model + thin DOM half, hosted by a section (M14-EXT-41); the live symbol key column (ICE-SYMBOL-UI-01); the Swap… verb and "swapped from" note (ICE-RECOLOUR-01); focus kept across rebuilds, following a swap to its target
 - `src/ui/modal.ts` — Carbon modals (text prompt, choices, danger confirm, live-apply form): trap arithmetic pure, focus restore, Escape/backdrop cancel
 - `src/ui/notices.ts` — licences and notices: `?raw` imports of `LICENSE` + `THIRD-PARTY-NOTICES.md`, a pure document parser, the Close-only dialog and the ghost header button (PUB-01)
 - `src/ui/notification.ts` — Carbon inline notification (CAPTURE-END-01): one sentence, kind edge, text Dismiss with deliberate focus return; role=status
@@ -227,7 +228,7 @@
 - `src/ui/viewport.ts` — pure viewport maths: fit, anchored zoom, pan clamp
 - `src/vite-env.d.ts` — ambient types for injected version/build globals
 - `src/worker/backend-select.ts` — per-workload dither routing (metric-categorical, M5-PERF-27) + recorded per-stage override map
-- `src/worker/client.ts` — main-thread client: Worker + coalescing + transfer + optional measurement observer
+- `src/worker/client.ts` — main-thread client: Worker + coalescing + transfer + optional measurement observer; a frame returns with the config it ran with
 - `src/worker/coalesce.ts` — latest-wins scheduler (no queue), drop counter
 - `src/worker/execute.ts` — timed frame execution; errors become responses
 - `src/worker/grid.ts` — pure grid/tick geometry: line placement, auto-hide, label thinning
@@ -341,6 +342,7 @@
 - `tests/scales.test.ts` — The 4×4 independence matrix (identity, not equality) plus the label-distinctness checks.
 - `tests/shell.test.ts` — Shell visibility composition, panel/focus label state, and preference fallback including a throwing storage.
 - `tests/stats.test.ts` — stats partition/sum/sort/reference invariants
+- `tests/swap.test.ts` — render palette (append, merge, dangling, re-target, no-chain) and the swap stage (remap, empty cells, no sidecar, purity)
 - `tests/symbol-picker.test.ts` — picker model: unused pool order, row glyph before/after a grant, an override surviving save → load and winning at the next grant
 - `tests/symbols-assignment.test.ts` — assignment-model semantics: grants, release-to-back, disjoint reset, overrides, exhaustion, reconcile (D165)
 - `tests/symbols-glyphs.test.ts` — glyph catalogue invariants: pinned canonical order (append-only tripwire), path grammar, bounds (D165)

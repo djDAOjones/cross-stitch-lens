@@ -11,6 +11,7 @@ import { DEFAULT_GRID_VALUES } from '../src/core/grid-style.ts';
 import {
   DEFAULT_PREVIEW,
   MAX_GRID_SIDE,
+  MAX_PALETTE_ENTRIES,
   parseProject,
   projectFilename,
   projectStamp,
@@ -49,6 +50,7 @@ function sampleProject(): ProjectFile {
         count: { mode: 'max', n: 20 },
         minDistance: 12,
         mustUse: ['dmc:310'],
+        swaps: [],
       },
       snapshot: loadDmcPalette().entries.slice(0, 3),
     },
@@ -565,6 +567,81 @@ describe('migration from schema v9 source', () => {
   });
 });
 
+describe('colour swaps (schema v11, ICE-RECOLOUR-01)', () => {
+  const DMC = loadDmcPalette();
+  const swap = () => ({ from: 'dmc:310', to: DMC.entries[5] ?? DMC.entries[0] });
+
+  function withSwaps(): ProjectFile {
+    const file = sampleProject();
+    if (file.palette === null) throw new Error('fixture');
+    const target = swap();
+    if (target.to === undefined) throw new Error('fixture');
+    file.palette.design.swaps = [{ from: target.from, to: target.to }];
+    return file;
+  }
+
+  function swapsDoc(mutate: (swaps: unknown[]) => unknown): string {
+    const doc = JSON.parse(serializeProject(withSwaps())) as Record<string, unknown>;
+    const palette = doc['palette'] as Record<string, unknown>;
+    const design = palette['design'] as Record<string, unknown>;
+    design['swaps'] = mutate(design['swaps'] as unknown[]);
+    return JSON.stringify(doc);
+  }
+
+  it('round-trips a swap byte-identically, the target as a full record (persistence)', () => {
+    const json = serializeProject(withSwaps());
+    const loaded = parseProject(json);
+    expect(serializeProject(loaded)).toBe(json);
+    expect(loaded.palette?.design.swaps).toEqual(withSwaps().palette?.design.swaps);
+    expect(json).toContain('"swaps": [');
+    expect(json).toContain('"from": "dmc:310"');
+  });
+
+  it('a v10 file migrates with an empty swap list; full-RGB files stay null', () => {
+    const doc = JSON.parse(serializeProject(sampleProject())) as Record<string, unknown>;
+    const palette = doc['palette'] as Record<string, unknown>;
+    delete (palette['design'] as Record<string, unknown>)['swaps'];
+    doc['schemaVersion'] = 10;
+    const loaded = parseProject(JSON.stringify(doc));
+    expect(loaded.migratedFrom).toBe(10);
+    expect(loaded.palette?.design.swaps).toEqual([]);
+    const migrated = serializeProject(loaded);
+    expect(serializeProject(parseProject(migrated))).toBe(migrated);
+
+    const rgb = JSON.parse(serializeProject(sampleProject())) as Record<string, unknown>;
+    rgb['palette'] = null;
+    rgb['schemaVersion'] = 10;
+    expect(parseProject(JSON.stringify(rgb)).palette).toBeNull();
+  });
+
+  it('refuses a duplicate from, a malformed target and a missing list, naming the path (error)', () => {
+    expect(() => parseProject(swapsDoc((swaps) => [...swaps, ...swaps]))).toThrow(
+      'palette.design.swaps[1].from',
+    );
+    expect(() => parseProject(swapsDoc(() => [{ from: 'dmc:310', to: 'dmc:311' }]))).toThrow(
+      'palette.design.swaps[0].to',
+    );
+    expect(() => parseProject(swapsDoc(() => [{ to: swap().to }]))).toThrow(
+      'palette.design.swaps[0].from',
+    );
+    expect(() => parseProject(swapsDoc(() => 'none' as unknown as unknown[]))).toThrow(
+      'palette.design.swaps',
+    );
+  });
+
+  it('caps the list at the palette ceiling (boundary)', () => {
+    const target = swap().to;
+    if (target === undefined) throw new Error('fixture');
+    const many = Array.from({ length: MAX_PALETTE_ENTRIES + 1 }, (_, i) => ({
+      from: `test:${String(i)}`,
+      to: target,
+    }));
+    expect(() => parseProject(swapsDoc(() => many))).toThrow('at most');
+    expect(parseProject(swapsDoc(() => many.slice(0, MAX_PALETTE_ENTRIES))).palette?.design.swaps)
+      .toHaveLength(MAX_PALETTE_ENTRIES);
+  });
+});
+
 describe('source block validation (schema v10)', () => {
   function withSource(source: unknown): string {
     const doc = JSON.parse(serializeProject(sampleProject())) as Record<string, unknown>;
@@ -661,7 +738,7 @@ describe('a saved project reopens with identical output', () => {
   const DMC_SNAPSHOT: ProjectFile['palette'] = {
     profileRef: { id: 'builtin:dmc', revision: 0 },
     recipe: { libraries: ['dmc'], ownedOnly: false, include: [], exclude: [], ranges: [] },
-    design: { count: { mode: 'all', n: 20 }, minDistance: 0, mustUse: [] },
+    design: { count: { mode: 'all', n: 20 }, minDistance: 0, mustUse: [], swaps: [] },
     snapshot: DMC.entries,
   };
 
@@ -741,7 +818,7 @@ describe('a saved project reopens with identical output', () => {
           exclude: [],
           ranges: [],
         },
-        design: { count: { mode: 'all', n: 20 }, minDistance: 0, mustUse: [] },
+        design: { count: { mode: 'all', n: 20 }, minDistance: 0, mustUse: [], swaps: [] },
         snapshot: DMC.entries.slice(0, 3),
       },
     },

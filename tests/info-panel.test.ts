@@ -75,6 +75,31 @@ describe('buildRows', () => {
     expect(rows[0]?.title).toBe('#000000 · Black');
   });
 
+  it('labels a swap target "swapped from X" as visible text and in the tooltip (ICE-RECOLOUR-01)', () => {
+    const target = thread('817', 'Coral red', [255, 0, 0], { brandId: 'dmc' });
+    const { rows } = buildRows(
+      [
+        usage({ thread: target, hex: target.hex, rgb: target.rgb }),
+        usage({ thread: thread('310', 'Black', [0, 0, 0], { brandId: 'dmc' }) }),
+      ],
+      {
+        brandNames: BRANDS,
+        swappedFrom: (id) => (id === target.id ? ['DMC 310 Black', 'DMC 311 Navy'] : []),
+      },
+    );
+    expect(rows[0]?.note).toBe('swapped from DMC 310 Black, DMC 311 Navy');
+    expect(rows[0]?.title).toContain('swapped from DMC 310 Black, DMC 311 Navy');
+    // The label itself is unchanged: the verbs' accessible names split on it.
+    expect(rows[0]?.label).toBe('DMC 817 Coral red · #ff0000');
+    expect(rows[1]?.note).toBeUndefined();
+    expect(rows[1]?.title).toBe('#000000 · Black');
+  });
+
+  it('an unidentified row never carries a note, whatever the host answers', () => {
+    const { rows } = buildRows([usage({ hex: '#123456' })], { swappedFrom: () => ['X'] });
+    expect(rows[0]?.note).toBeUndefined();
+  });
+
   it('returns no overflow when everything fits the cap', () => {
     const { rows, overflow } = buildRows([usage(), usage({ hex: '#111111' })]);
     expect(rows).toHaveLength(2);

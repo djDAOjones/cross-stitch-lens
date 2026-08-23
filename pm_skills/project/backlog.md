@@ -61,18 +61,15 @@ they no longer imply sequence.
 
 Opened 2026-08-23 at the icebox triage (D188). One subject: the user
 controls the final picture *inside* the app, beyond nearest-colour
-realism (D149; the first live-app ask, D173). The swap is build-ready;
+realism (D149; the first live-app ask, D173). The swap shipped (D199);
 everything else runs through two scoping tickets with sessions,
 prototypes and sign-off sittings of their own.
 
-- [ ] **ICE-RECOLOUR-01 Colour swap (layer A)** [detail] (2026-08-22, signed 2026-08-23)
-  Signed and optioned (D182): a design rule in `palette.design.swaps`, a pure stage over the sidecar with a render palette, targets from the whole universe, Swap… on the Colours-used row plus a Swaps chip list; builds as schema v11 in full mode from the plan gate. Closes MUST-01's presence half; layers B and C moved to PAINT-01 and CREATIVE-01 (D188).
-  Done when: layer A ships with the round trip intact and a swap target reaching Colours used, the key and the estimates.
 - [ ] **CREATIVE-01 Scope the creative and diagnostic image features** [sign-off] [detail] (2026-08-23)
   Intent: one signed programme — what ships, in what order, where each lives (stage, stage parameter, profile kind or view), the first slice — for the candidates the triage kept: tone-only matching (RECOLOUR C1), adjustments as a third profile kind (ICE-ADJUST-01), the contact sheet as a mechanism (ICE-VARIANTS-01), the tonal provenance view (ICE-PROVENANCE-01, the diagnostic half), PICK-01's in-app half, the target % distribution (RECOLOUR C2) and the ICE-PROFILES-02 hook. The IDs stay greppable here; the intent lives in the ticket.
   Done when: the owner signs the list, order, placements, persistence and UI homes; each signed feature becomes its own Track D item.
 - [ ] **PAINT-01 Scope the pixel editor** [sign-off] [detail] (2026-08-23)
-  Intent: an editor a stitcher can work in, not a demo brush — tools, the interaction model by pointer, keyboard and touch, persistence and clearing, undo, its composition with the swap's render palette, and the v1 slice. Stills only in v1, after layer A (D182-3/4).
+  Intent: an editor a stitcher can work in, not a demo brush — tools, the interaction model by pointer, keyboard and touch, persistence and clearing, undo, its composition with the swap's render palette (shipped, D199), and the v1 slice. Stills only in v1 (D182-3/4).
   Done when: the owner signs the v1 tool set, interaction model, persistence and build slices; each slice becomes its own Track D item.
 - [ ] **PICK-01 Eyedropper: grab a colour from the picture, the design or the screen** (2026-08-23)
   Intent: pick from the source picture or the rendered design — and, where the browser has the EyeDropper API, from anything on screen — and resolve it to the nearest threads with their distance, feeding Must-use (pins, D178), swap targets (D182) and the inventory. The editor's pick-up tool is PAINT-01's.

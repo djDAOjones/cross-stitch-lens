@@ -27,7 +27,7 @@ export function sampleProject(): ProjectFile {
     palette: {
       profileRef: { id: 'builtin:dmc', revision: 0 },
       recipe: { libraries: ['dmc'], ownedOnly: false, include: [], exclude: [], ranges: [] },
-      design: { count: { mode: 'max', n: 8 }, minDistance: 0, mustUse: [] },
+      design: { count: { mode: 'max', n: 8 }, minDistance: 0, mustUse: [], swaps: [] },
       snapshot: loadDmcPalette().entries.slice(0, 2),
     },
     symbols: { assigned: [], queue: [], overrides: [] },

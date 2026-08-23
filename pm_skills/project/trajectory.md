@@ -22,6 +22,14 @@
 **Outcome:** opened 2026-08-23 (D188/D189); the gate was made safe for
 the worktree round its scoping tickets open before any of them ran.
 
+- ICE-RECOLOUR-01 (2026-08-23) — the colour swap, layer A: a pure
+  `swap` stage after the colour stage remaps the sidecar through a
+  render palette (selected entries + render-only targets); a design
+  rule at schema v11; Swap… on the Colours-used row with a picker over
+  the whole universe, "swapped from X" on the target's row, a Swaps
+  chip list that keeps and explains a dangling swap; stats read
+  against the frame's own config. Closes MUST-01's presence half. See
+  D199.
 - INFRA-02 (2026-08-23) — four gate riders: the bench harness popup
   follows `BASE_URL`, `check:docs` passes on its own in a fresh tree
   (the wasm pkg is generated output), `eslint` ignores

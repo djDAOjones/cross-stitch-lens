@@ -31,6 +31,7 @@ import { describe, expect, it } from 'vitest';
 
 import { buildChartPdf, keyLabel, MM_TO_PT, type KeyEntry } from '../src/export/pdf.ts';
 import { buildKeyEntries } from '../src/export/key-entries.ts';
+import { renderPalette, type ThreadSwap } from '../src/core/pipeline/swap.ts';
 import { chartLayout, maxCellPx } from '../src/export/chart.ts';
 import { MAX_OUTPUT_SIDE, oversizeMessage, scaleNearest } from '../src/export/png.ts';
 import { executeRequest } from '../src/worker/execute.ts';
@@ -69,7 +70,7 @@ const WEBSAFE: Palette = (() => {
 })();
 
 /** The real worker entry — same route the app's export takes. */
-function pipelineFrame(palette: Palette = PALETTE): PixelBuffer {
+function pipelineFrame(palette: Palette = PALETTE, swaps: ThreadSwap[] = []): PixelBuffer {
   const src = source();
   const response: WorkerResponse = executeRequest({
     type: 'process',
@@ -84,6 +85,7 @@ function pipelineFrame(palette: Palette = PALETTE): PixelBuffer {
       metric: 'lab',
       palette,
       dither: { algorithm: 'floyd-steinberg', serpentine: true, strength: 1 },
+      swaps,
     },
   });
   if (response.type !== 'result') throw new Error(`pipeline failed: ${JSON.stringify(response)}`);
@@ -463,5 +465,47 @@ describe('the PDF artefact', () => {
         expect({ row, hexes: hexes.length }).toEqual({ row, hexes: 1 });
       }
     });
+  });
+});
+
+// A colour swap (ICE-RECOLOUR-01) through the real export route: the
+// frame is re-run with the rule, the key is built against the render
+// palette — the only vocabulary the sidecar speaks after the stage.
+describe('a colour swap reaches the key (ICE-RECOLOUR-01)', () => {
+  const before = buildKeyEntries(FRAME, PALETTE, new Map([['dmc', 'DMC']]));
+  const top = before[0];
+  if (top === undefined || top.reference === undefined) throw new Error('fixture: no thread row');
+  const fromId = `dmc:${top.reference}`;
+  const target = WEBSAFE.entries[3];
+  if (target === undefined) throw new Error('fixture: no map entry');
+  const swaps: ThreadSwap[] = [{ from: fromId, to: target }];
+  const frame = pipelineFrame(PALETTE, swaps);
+  const render = renderPalette(PALETTE, swaps).palette;
+  const after = buildKeyEntries(frame, render, new Map([['dmc', 'DMC']]));
+
+  it('the swapped-out thread leaves the key; the target arrives with its stitches (happy path)', () => {
+    expect(after.some((e) => e.reference === top.reference)).toBe(false);
+    const row = after.find((e) => e.hex === target.hex);
+    expect(row?.count).toBe(top.count);
+  });
+
+  it('a generated target keeps its synthetic label — no invented manufacturer', () => {
+    const row = after.find((e) => e.hex === target.hex);
+    expect(row?.reference).toBe('');
+    expect(row?.brand).toContain(target.hex);
+  });
+
+  it('every other row is untouched — the swap moves exactly one colour', () => {
+    const rest = (entries: KeyEntry[]) =>
+      entries
+        .filter((e) => e.hex !== target.hex && e.reference !== top.reference)
+        .map((e) => [e.hex, e.count])
+        .sort();
+    expect(rest(after)).toEqual(rest(before));
+  });
+
+  it('read against the selected palette instead, the target is invisible — the bug the render palette exists to prevent', () => {
+    const wrong = buildKeyEntries(frame, PALETTE, new Map([['dmc', 'DMC']]));
+    expect(wrong.some((e) => e.hex === target.hex)).toBe(false);
   });
 });

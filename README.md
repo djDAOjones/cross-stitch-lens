@@ -31,7 +31,10 @@ M16's print-sized export defaults sitting.
 **Track B — durability — shipped 2026-08-23**: `.pmproj` project
 packages (schema v10) with the picture embedded, a design history that
 restores the latest design on reopen, and title-named files (DUR-01,
-SAVE-01).
+SAVE-01). **Track D — creative control — opened 2026-08-23** with the
+colour swap (ICE-RECOLOUR-01, schema v11): every stitch the mapper
+gives one thread can be worked in another, chosen from the whole
+catalogue, and the key, counts and estimates follow.
 
 **M15 (colour & dithering profiles)** closed on both acceptance gates
 (D148): colour profiles as composition recipes with a kind-agnostic

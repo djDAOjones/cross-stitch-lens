@@ -113,7 +113,10 @@ function defaultProject(config: PipelineConfig): ProjectFile {
     palette: {
       profileRef: { id: 'builtin:dmc', revision: 0 },
       recipe: { libraries: ['dmc'], ownedOnly: false, include: [], exclude: [], ranges: [] },
-      design: { count: { mode: 'max', n: 8 }, minDistance: 0, mustUse: [] },
+      // Schema v11 (ICE-RECOLOUR-01): no swaps in the stated default —
+      // the projectJson pin moved for the bump; the engine hashes never
+      // move.
+      design: { count: { mode: 'max', n: 8 }, minDistance: 0, mustUse: [], swaps: [] },
       snapshot: config.palette?.entries ?? [],
     },
     // Schema v7 (M11): screen + print halves, both at the defaults a

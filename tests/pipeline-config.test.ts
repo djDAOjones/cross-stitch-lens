@@ -134,6 +134,52 @@ describe('pipeline config builder', () => {
   });
 });
 
+describe('swap stage placement (ICE-RECOLOUR-01)', () => {
+  const RED = thread('R', 'red', [255, 0, 0]);
+  const swaps = [{ from: PALETTE.entries[0]?.id ?? '', to: RED }];
+
+  it('follows the quantiser in both presets, for reduce and for dither', () => {
+    expect(names(config({ swaps }))).toEqual(['resize', 'reduce', 'swap']);
+    expect(names(config({ swaps, dither: FS }))).toEqual(['resize', 'dither', 'swap']);
+    // Under reduce-first the swap runs at source resolution too, before
+    // the resize that drops the sidecar — as the colour stage does.
+    expect(names(config({ swaps, preset: 'reduce-first' }))).toEqual(['reduce', 'swap', 'resize']);
+  });
+
+  it('is omitted while it could change nothing — absent, empty, dangling or a self-swap (empty)', () => {
+    expect(names(config())).toEqual(['resize', 'reduce']);
+    expect(names(config({ swaps: [] }))).toEqual(['resize', 'reduce']);
+    expect(names(config({ swaps: [{ from: 'test:nope', to: RED }] }))).toEqual(['resize', 'reduce']);
+    const black = PALETTE.entries[0];
+    if (black === undefined) throw new Error('fixture');
+    expect(names(config({ swaps: [{ from: black.id, to: black }] }))).toEqual(['resize', 'reduce']);
+  });
+
+  it('carries the render palette and map as its params', () => {
+    const stage = buildStages(config({ swaps })).find((s) => s.stage.name === 'swap');
+    const params = stage?.params as { palette: Palette; map: Uint16Array } | undefined;
+    expect(params?.palette.entries.map((e) => e.id)).toEqual([...PALETTE.entries.map((e) => e.id), RED.id]);
+    expect([...(params?.map ?? [])]).toEqual([2, 1]);
+  });
+
+  it('the full-RGB variant drops the swaps with the palette', () => {
+    const variant = fullRgbVariant(config({ swaps }));
+    expect(variant.swaps).toEqual([]);
+    expect(names(variant)).toEqual(['resize']);
+  });
+
+  it('allocates its own output like every other stage (the ownership invariant)', () => {
+    const stages = buildStages(config({ swaps }));
+    const input = { width: 8, height: 8, data: new Uint8ClampedArray(8 * 8 * 4).fill(120) };
+    let buffer = input;
+    for (const s of stages) {
+      const out = (s.stage.backends.ts as (b: typeof input, p: unknown) => typeof input)(buffer, s.params);
+      expect(out.data.buffer).not.toBe(buffer.data.buffer);
+      buffer = out;
+    }
+  });
+});
+
 describe('adjust identity hook (M5-PERF-25)', () => {
   it('reports identity for empty params and non-identity once populated', () => {
     expect(adjustIsIdentity({})).toBe(true);

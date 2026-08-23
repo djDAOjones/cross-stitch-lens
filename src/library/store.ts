@@ -146,8 +146,8 @@ const USER_COLOR_STORE = 'user-colors';
 /** Single-row key in the inventory store; the set is written whole. */
 const OWNED_KEY = 'owned';
 
-/** Promisify one IDBRequest. */
-function request<T>(req: IDBRequest<T>): Promise<T> {
+/** Promisify one IDBRequest (shared with the design history, `snapshots.ts`). */
+export function request<T>(req: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
     req.onsuccess = () => {
       resolve(req.result);

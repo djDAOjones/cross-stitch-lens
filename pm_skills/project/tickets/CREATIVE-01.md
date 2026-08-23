@@ -327,4 +327,41 @@ shipped dither must diffuse the error the metric sees.
 - Control shapes: gradient strip and histogram-backed strip are both
   built; the histogram-backed one reads better on photographs (the
   handles land where the mass is). The sitting picks.
-- Prototype 2 (the contact-sheet modal) is not started.
+
+## Prototype 2 findings — the contact sheet (2026-08-23)
+
+Built at `c10687a` on the same branch; `npm run dev` in the worktree,
+open `/contact-proto.html`. The mechanism as agreed: the still and
+its palette freeze at open, N labelled variants render off the live
+path, a pick adopts. Axis 1 is the seven shipped dither presets
+(`DITHER_PRESETS`, owner-signed labels D159) through the real
+pipeline, resize included — a sheet render is priced like an export,
+because exports re-run the pipeline.
+
+- **The render budget is a non-question at this scale.** All seven
+  variants at 300² render in 128–140 ms total (9–26 ms each) on the
+  sample card and the portrait photo, sequenced with a
+  requestAnimationFrame yield between variants so the page never
+  blocks longer than one variant. The worker route is still the right
+  shipping home, but the budget forces no design compromise: later
+  axes (adjustment presets, colour profiles) can afford full-pipeline
+  cells too.
+- **Modal vs panel: both built behind one sheet builder.** The modal
+  reads as "compare, decide, return" — adopting closes it. The panel
+  reads as "keep comparing" — adopting leaves it open and the current
+  render updates beside it. Inside the 400 px shell frame the panel
+  pushes the preview off-screen, so the modal fits the companion
+  window better; on a wide window the panel is the nicer instrument.
+  Sitting call, with both on screen to judge.
+- **Cell size at 400 px:** two-up gives ~164 px cells, and the dither
+  character (ordered's grid, Floyd–Steinberg's grain) reads at that
+  size on the portrait; the sample card's fine structure wants one-up
+  (~340 px). Cells-per-row as a user control looks right rather than
+  a fixed answer.
+- **Adoption wording met STATUS-01.** The "Adopted: Jarvis." sentence
+  was eaten by the re-render's ready message — STATUS-01's mechanism
+  reproduced in miniature. One line fixes it in the prototype; the
+  app's status line still needs STATUS-01 itself when the sheet
+  ships.
+- The preset `basis` lines (the D61 evidence sentences) ride along
+  unused — a natural "Why:" hover for the shipped sheet.

@@ -108,6 +108,8 @@ item stays open and is now the pressing one.
   Intent: the flat-graphic demo slot is third-party fan art with a two-layer rights problem (the artist's copyright, and the underlying mark). The owner replaces it; the `PHOTO_SLOTS` contract keeps the name `graphic.jpg`, zero code changes. The item **gates public deploy** (D150: fix HEAD, keep history). The 2026-08-22 branch deploy already published HEAD's copy; PUB-04 narrowed the public surface to `dist`, which still carries the slot.
   Done when: `graphic.jpg` at HEAD is rights-clean, and the five photographs are confirmed as the owner's own (`landscape-1.jpg` is load-bearing twice: it seeded the M8 golden crop).
   Owner's replacement plan (2026-08-12): render it — a cube in Blender lit by three RGB lights aimed at the visible corners, giving both a colour spread and a luminance ramp across flat faces, which is exactly what the slot tests. Wholly self-produced from primitives, so the two-layer rights problem dissolves rather than being swapped for another.
+- [ ] **PUB-05 Post-deploy verification as one command** (2026-08-23) — fetch the live index and compare its `buildId` with the commit just pushed; today a manual step (promoted from the wish-list; from 2026-08-22 PUB-04).
+- [ ] **PUB-06 The bench harness ships inside the Pages bundle — decide whether the public bundle should carry it** (2026-08-23) — `bench.html` and `bench-source.html` are rollup inputs, so they ride in the Pages bundle, and the popup path is root-relative; keep, exclude from the Pages build only, or exclude from all builds (promoted from the wish-list; from 2026-08-22 PUB-04).
 
 ### Icebox
 

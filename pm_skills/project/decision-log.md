@@ -988,3 +988,40 @@ and the exported PNG decoded at 2037 × 2037; the helper is wired by
 **Scope.** `src/ui/info-panel.ts`, `src/main.ts`,
 `tests/info-panel.test.ts`. `docs/ui-spec.md` § 280 still quotes the
 old mapped-colour helper — a doc-deltas line.
+
+## D195 — FIT-01 and GRID-DPR-01 ship: the zoom bounds are CSS px at any density; the grid style and the preview surface follow a device-pixel-ratio change (2026-08-23)
+
+**Context.** Two wish-list defects from DUR-01 and M11, promoted into
+the gateless batch. `viewport.ts` clamped its scale in device px
+(0.05–64) while the schema bounds `cssPxPerStitch` in CSS px with the
+same numbers, so on a 2× display a collapsed preview fitted at
+0.025 CSS px — below what `parseProject` accepts; the save path
+clamped it, the fit kept producing it — and the zoom ceiling halved
+to 32 CSS px. Separately `sendGridStyle` premultiplied
+`devicePixelRatio` but re-sent only on a colour-scheme change, so a
+window moved to a display of another density kept stale line
+thickness and tick font until the next style edit.
+
+**Decision.** The viewport's bounds are declared **CSS px per stitch**
+and every clamp (`fitView`, `scaledView`, `zoomAt`, `clampScale`)
+takes the ratio, defaulting to 1 so the module stays pure and its
+existing tests stand; the controller passes
+`window.devicePixelRatio` at its five call sites. A test pins
+`MIN_SCALE`/`MAX_SCALE` equal to the schema's constants so the two
+modules cannot drift apart again. For the ratio change: there is no
+DPR event, so a media query for the current ratio
+(`(resolution: <ratio>dppx)`) fires once when it stops matching and is
+re-armed for the new one; it re-sends the grid style and calls a new
+`PreviewController.displayChanged()` (re-size the backing store,
+re-derive the device-px view from the CSS values the controller
+keeps — a manual zoom re-centres, which a display move can bear).
+
+**Verification.** +3 viewport tests (a collapsed fit lands at the CSS
+floor at 2×, a zoom reaches the CSS ceiling at 2×, the constants
+match). In the app at DPR 2: forty Zoom-in presses read 6400 % and
+forty Zoom-out presses 5 % (3200 % and 3 % before). The DPR change
+itself is a human check — drag the window between displays of
+different density and watch the grid's line weight hold.
+
+**Scope.** `src/ui/viewport.ts`, `src/ui/preview.ts`, `src/main.ts`;
+`tests/viewport.test.ts`.

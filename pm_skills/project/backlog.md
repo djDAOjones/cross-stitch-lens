@@ -62,8 +62,6 @@ Promoted from the Icebox at the 2026-08-23 triage (D188) — the five
 shipped (D191–D194) — and, from the wish-list triage the same day, the
 UI defects the owner ran in the same gateless batch; this order.
 
-- [ ] **FIT-01 Preview fit unit mismatch** — `fitView` clamps in device px while the schema bounds CSS px, so a collapsed preview on a 2× display fits at 0.025 CSS px; the save path clamps, the fit still produces it (`src/ui/viewport.ts`). Done when the fit clamps in the unit it persists.
-- [ ] **GRID-DPR-01 Grid style follows the display** — `sendGridStyle` premultiplies `devicePixelRatio` but re-sends only on colour-scheme change, so a window moved to a different-DPR display keeps stale thickness and font until the next style edit (`src/main.ts`). Done when a DPR change re-sends the style.
 - [ ] **CAPTURE-END-01 End-of-capture salience** — the external-stop line ("Screen capture ended (sharing was stopped).") is truthful but easy to miss (owner sitting, D134). Done when the end of a capture is announced with a Carbon inline notification the user cannot miss, dismissible, in addition to the status line.
 
 ### Next — Track D Creative control of the image

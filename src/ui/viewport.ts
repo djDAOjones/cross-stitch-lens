@@ -13,7 +13,16 @@ export interface ViewState {
   ty: number;
 }
 
-/** Zoom bounds in device px per stitch: 5% – 6400% of 1:1. */
+/**
+ * Zoom bounds in **CSS** px per stitch: 5% – 6400% of 1:1. The unit
+ * the schema persists (`MIN_PREVIEW_CSS_PX` / `MAX_PREVIEW_CSS_PX` in
+ * `core/project.ts` carry the same numbers; `tests/viewport.test.ts`
+ * pins the equality). Every clamp here multiplies by the display's
+ * device-pixel ratio, so the bound a user meets is the same on a 1×
+ * and a 2× display — before FIT-01 the clamp was in device px, and a
+ * collapsed preview on a 2× display fitted at 0.025 CSS px while the
+ * zoom ceiling halved.
+ */
 export const MIN_SCALE = 0.05;
 export const MAX_SCALE = 64;
 
@@ -45,6 +54,7 @@ export function fitView(
   viewH: number,
   margin = 0,
   axis: FitAxis = 'space',
+  dpr = 1,
 ): ViewState {
   const availW = Math.max(1, viewW - 2 * margin);
   const availH = Math.max(1, viewH - 2 * margin);
@@ -52,6 +62,7 @@ export function fitView(
   const byHeight = availH / imgH;
   const scale = clampScale(
     axis === 'width' ? byWidth : axis === 'height' ? byHeight : Math.min(byWidth, byHeight),
+    dpr,
   );
   return {
     scale,
@@ -94,8 +105,9 @@ export function scaledView(
   viewW: number,
   viewH: number,
   scale: number,
+  dpr = 1,
 ): ViewState {
-  const clamped = clampScale(scale);
+  const clamped = clampScale(scale, dpr);
   return {
     scale: clamped,
     tx: (viewW - imgW * clamped) / 2,
@@ -103,9 +115,12 @@ export function scaledView(
   };
 }
 
-/** Clamp a scale into the zoom bounds. */
-export function clampScale(scale: number): number {
-  return Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale));
+/**
+ * Clamp a device-px-per-stitch scale into the zoom bounds, which are
+ * CSS px per stitch — hence the ratio.
+ */
+export function clampScale(scale: number, dpr = 1): number {
+  return Math.min(MAX_SCALE * dpr, Math.max(MIN_SCALE * dpr, scale));
 }
 
 /**
@@ -117,8 +132,9 @@ export function zoomAt(
   factor: number,
   ax: number,
   ay: number,
+  dpr = 1,
 ): ViewState {
-  const scale = clampScale(view.scale * factor);
+  const scale = clampScale(view.scale * factor, dpr);
   const ratio = scale / view.scale;
   return {
     scale,

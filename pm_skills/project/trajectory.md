@@ -42,6 +42,11 @@ wish-list triage surfaced, run gateless in the owner's order (D189).
   names its source instead of "not measured", the Design title's
   helper says it names the saved file, and the chart-size readout
   counts the label gutter (2037, not 2000). See D194.
+- FIT-01 (2026-08-23) — the preview's zoom bounds are CSS px per
+  stitch at any density: a collapsed preview fits at the schema floor
+  and a zoom reaches the ceiling on a 2× display. See D195.
+- GRID-DPR-01 (2026-08-23) — a device-pixel-ratio change re-sends the
+  grid style and re-derives the preview surface. See D195.
 
 ## Track B — Durability & identity (SHIPPED 2026-08-23)
 

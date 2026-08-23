@@ -19,6 +19,7 @@ import {
   zoomAt,
   hugHeight,
 } from '../src/ui/viewport.ts';
+import { MAX_PREVIEW_CSS_PX, MIN_PREVIEW_CSS_PX } from '../src/core/project.ts';
 
 describe('fitView', () => {
   it('letterboxes and centres a wide image in a square view', () => {
@@ -138,6 +139,30 @@ describe('clampScale', () => {
     expect(clampScale(1)).toBe(1);
     expect(clampScale(MIN_SCALE)).toBe(MIN_SCALE);
     expect(clampScale(MAX_SCALE)).toBe(MAX_SCALE);
+  });
+});
+
+describe('the zoom bounds are CSS px per stitch at any density (FIT-01)', () => {
+  it('carries the same numbers the schema persists', () => {
+    expect(MIN_SCALE).toBe(MIN_PREVIEW_CSS_PX);
+    expect(MAX_SCALE).toBe(MAX_PREVIEW_CSS_PX);
+  });
+
+  it('fits a collapsed view at the CSS floor on a 2× display, not half of it', () => {
+    // 200×200 into a 1×1 surface: unclamped 0.005 device px/stitch.
+    const one = fitView(200, 200, 1, 1, 0, 'space', 1);
+    const two = fitView(200, 200, 1, 1, 0, 'space', 2);
+    expect(one.scale).toBe(MIN_SCALE);
+    expect(two.scale).toBe(MIN_SCALE * 2);
+    expect(two.scale / 2).toBe(MIN_PREVIEW_CSS_PX);
+  });
+
+  it('lets a zoom reach the CSS ceiling on a 2× display instead of stopping at half', () => {
+    const view = { scale: 100, tx: 0, ty: 0 };
+    expect(zoomAt(view, 10, 0, 0, 1).scale).toBe(MAX_SCALE);
+    expect(zoomAt(view, 10, 0, 0, 2).scale).toBe(MAX_SCALE * 2);
+    expect(scaledView(10, 10, 100, 100, 1000, 2).scale).toBe(MAX_SCALE * 2);
+    expect(clampScale(0.001, 2)).toBe(MIN_SCALE * 2);
   });
 });
 

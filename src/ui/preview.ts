@@ -119,6 +119,17 @@ export class PreviewController {
     this.syncSurfaceSize();
   }
 
+  /**
+   * The device-pixel ratio changed under the window (a move to another
+   * display, browser zoom — GRID-DPR-01). Nothing in CSS px moved, so
+   * no ResizeObserver fires; the backing store and the device-px view
+   * are re-derived from the CSS values the controller keeps.
+   */
+  displayChanged(): void {
+    this.syncSurfaceSize();
+    if (this.imgW > 0) this.applyMode();
+  }
+
   /** The current view mode and scale, for persistence and readouts. */
   scale(): PreviewScale {
     return {
@@ -197,8 +208,9 @@ export class PreviewController {
     if (this.mode !== 'manual') this.hugHost();
     const { w, h } = this.surfaceSize();
     if (this.mode === 'manual') {
-      const device = toDevicePxPerStitch(this.manualCssPxPerStitch, window.devicePixelRatio);
-      this.setView(scaledView(this.imgW, this.imgH, w, h, device));
+      const dpr = window.devicePixelRatio;
+      const device = toDevicePxPerStitch(this.manualCssPxPerStitch, dpr);
+      this.setView(scaledView(this.imgW, this.imgH, w, h, device, dpr));
       return;
     }
     // Legacy 'width'/'height' modes can only arrive from an old saved
@@ -212,6 +224,7 @@ export class PreviewController {
         h,
         this.labelGutter(Math.max(this.imgW, this.imgH)) * window.devicePixelRatio,
         this.mode,
+        window.devicePixelRatio,
       ),
     );
   }
@@ -233,7 +246,7 @@ export class PreviewController {
     if (this.view === null) return;
     const { w, h } = this.surfaceSize();
     this.goManual();
-    this.setView(zoomAt(this.view, factor, w / 2, h / 2));
+    this.setView(zoomAt(this.view, factor, w / 2, h / 2, window.devicePixelRatio));
   }
 
   /** Any user zoom or pan leaves the fit modes behind. */
@@ -281,6 +294,7 @@ export class PreviewController {
               pinchZoomFactor(event.deltaY),
               (event.clientX - rect.left) * dpr,
               (event.clientY - rect.top) * dpr,
+              dpr,
             ),
           );
         } else {
@@ -322,6 +336,7 @@ export class PreviewController {
           (gestureBaseScale * scale) / this.view.scale,
           (cx - rect.left) * dpr,
           (cy - rect.top) * dpr,
+          dpr,
         ),
       );
     });

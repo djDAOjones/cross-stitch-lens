@@ -69,7 +69,6 @@ refer to `docs/requirements.md`.
      salience" (a real owner-reported UX defect, held back only because
      toast-versus-banner is a taste call) and the Rust lint/format gate
      line, which the rename will touch anyway. -->
-- Grid style DPR staleness: sendGridStyle premultiplies devicePixelRatio but only re-sends on colour-scheme change — moving the window to a different-DPR display keeps stale thickness/font until the next style edit (from: 2026-08-12 M11)
 - M10 fidelity residue: vector tile furniture (grid/numbering as PDF vectors instead of raster), per-page key policy, A3/custom page sizes — raster tiles at recorded effective DPI stand until print tests demand more (from: 2026-08-12 M10, D168)
 - M12 estimate residue: per-colour skein column in the PDF key and Colours-used rows, an inches/cm display-unit preference, controls for routing/waste/skein-length, and a stitcher's review of defaults and wording (from: 2026-08-12 M12, D169)
 - Stats race: `setOnResult` computes stats against the *current* `config.palette`, not the palette the frame was rendered with — one frame after any palette change under-reports (the import's first frame logged `colours: 2` against a 489-entry render); harmless today, wrong the moment a frame is held (from: 2026-08-22 COUNT-01)
@@ -80,8 +79,6 @@ refer to `docs/requirements.md`.
 - Must-use remove after a Remove-from-profile exclusion returns the colour to membership — the pin lifted the exclusion and the undo restores the profile's state, not the intermediate exclusion; acceptable, listed (from: 2026-08-23 MUST-01)
 - A `.pmproj` re-zipped by Finder/Explorer is deflate-compressed and refused; `DecompressionStream('deflate-raw')` in an adapter outside core would accept it (from: 2026-08-23 DUR-01)
 - Embed the inventory in the project file (a schema v11 candidate) — the other half of the portability question; DUR-01 chose warn-on-load (from: 2026-08-23 DUR-01)
-- Preview fit unit mismatch: `fitView` clamps in device px, the schema bounds CSS px, so a collapsed preview on a 2× display fits at 0.025 CSS px; the save path now clamps, the fit still produces it (from: 2026-08-23 DUR-01)
-- The Design title's helper text (Export group) should say it also names the saved file (from: 2026-08-23 SAVE-01)
 - History management beyond the picker: remove one design, clear the history, and "Keep more designs" reachable outside the near-quota window (from: 2026-08-23 DUR-01)
 - A restored capture returns as a still; a "start a new capture of the same window" offer on restore would close the loop (from: 2026-08-23 DUR-01)
 - The harness popup path `/bench-source.html` (`src/bench-browser.ts`) is root-relative, so it 404s under any build served from a base path that includes the harness; PUB-06 removed the public-facing symptom, but the latent bug remains for harness builds under a base path — fix with `import.meta.env.BASE_URL` (from: 2026-08-23 PUB-06)
@@ -92,7 +89,6 @@ refer to `docs/requirements.md`.
 - One-file report via the store-only package (D179): `project.json` + the log in a `.pmproj` the app loads directly — one download, no Chrome multiple-downloads prompt (from: 2026-08-23 DIAG-02)
 - `resolvePalette`'s log record names each conflict by kind only; the ids and the sentence are not logged — a one-line widening if a report ever needs them (from: 2026-08-23 DIAG-02)
 - `eslint .` lints untracked files in gitignored `bench-reports/` — a probe script dropped there turns the gate red; one `ignores` line (from: 2026-08-23 M16 pack)
-- The `#export-size` readout says "chart 2000 × 2000 px" while the file is 2037 px (label gutter + pad omitted) (from: 2026-08-23 M16 pack)
 - Print from a phone or share the PDF to one — D188 reads phones as still-image users; revisit once the print plan exists (from: 2026-08-23 PRINT scoping)
 - Embed an accessibility text face for the PDF key (Atkinson's, or IBM Plex Sans — both open-licensed) if the proof set shows 1/l/I or 6/9 confusion — needs `@pdf-lib/fontkit`, a new runtime dependency (from: 2026-08-23 PRINT-01 scoping)
 - Explicit symbol swap: take another thread's glyph and hand it yours in one act — needs a model verb (`swapSymbols`) beside `setOverride`; the picker lists the unused pool only (from: 2026-08-23 ICE-SYMBOL-UI-01, D191)

@@ -1315,6 +1315,25 @@ function build(app: HTMLElement): void {
     .addEventListener('change', sendGridStyle);
   sendGridStyle();
 
+  // The style premultiplies the device-pixel ratio, so a window moved
+  // to a display of another density — or browser zoom — kept stale
+  // thickness and font until the next edit (GRID-DPR-01). There is no
+  // DPR event: a media query for the current ratio fires once when it
+  // stops matching, and is re-armed for the new one.
+  function watchDevicePixelRatio(): void {
+    const query = window.matchMedia(`(resolution: ${String(window.devicePixelRatio)}dppx)`);
+    query.addEventListener(
+      'change',
+      () => {
+        sendGridStyle();
+        preview.displayChanged();
+        watchDevicePixelRatio();
+      },
+      { once: true },
+    );
+  }
+  watchDevicePixelRatio();
+
   // Control panel: Grid / Colour / Dither / Pipeline groups
   // (UI-STANDARDS layout model). Controls apply immediately — no
   // Apply buttons (§5.4).

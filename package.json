@@ -35,6 +35,7 @@
     "docs:fix": "markdownlint-cli2 --fix \"**/*.md\"",
     "lint:fix": "eslint . --fix",
     "transcript": "node scripts/save-transcript.mjs",
+    "verify:deploy": "node scripts/verify-deploy.mjs",
     "prepare": "git config core.hooksPath .githooks"
   },
   "devDependencies": {

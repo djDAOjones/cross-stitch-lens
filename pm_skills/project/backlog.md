@@ -62,6 +62,7 @@ brief's second success criterion is met. One owner-gated item remains.
   Intent: export defaults sized for print, not screen — enlarged PNG ~2k px on its longest side, grid and numbering on by default, across all four exporters (demoted at D149; waited on M9's symbol decision, now landed).
   Done when: the owner signs the defaults per exporter, what stays configurable, and how saved projects' export settings migrate.
   Absorbs, on one sitting (D170): M9's print inspection (every chart mode at typical cell sizes, grayscale/low-ink, key↔chart agreement) and M12's estimate defaults-and-wording review.
+  Sitting pack (2026-08-23) at `bench-reports/m16-sitting/`, machine-local: `00-README.md` is the reading order; `04-sign-off-form.md` holds the 14 proposed defaults, unsigned.
 
 ### Track C — Publication
 
@@ -75,9 +76,9 @@ item is the pressing one.
 - [ ] **PUB-02 Replace `graphic.jpg` and confirm the photo provenance** [maintainer] (2026-08-11)
   Intent: the flat-graphic demo slot is third-party fan art with a two-layer rights problem (the artist's copyright and the underlying mark); it gates public deploy (D150) and is already live. The owner replaces it — the plan (2026-08-12): a Blender cube lit by three RGB lights, giving a colour spread and a luminance ramp from primitives alone, so no rights problem remains; the `PHOTO_SLOTS` contract keeps the name, zero code changes.
   Done when: `graphic.jpg` at HEAD is rights-clean, and the five photographs are confirmed as the owner's own (`landscape-1.jpg` also seeded the M8 golden crop).
-- [ ] **DIAG-02 Diagnostics for testers on the live build** [maintainer] [detail] (2026-08-23, report shipped 2026-08-23)
-  Shipped (D175, D183): the Debug menu mounts behind `?diag=1`, every palette resolution is logged, and "Report a problem" saves the settings document and the redacted log in one click, then opens the compose window. Remaining, the owner's: a dedicated, retirable alias in `DEV_EMAIL` (`src/ui/diagnostics-button.ts`) — it ships in a public bundle, so never a personal address; empty composes with no recipient.
-  Done when: the alias is set and a tester's report reaches it.
+- [ ] **DIAG-03 Set `DEV_EMAIL` to the dedicated alias** [maintainer] (2026-08-23)
+  Intent: one line in `src/ui/diagnostics-button.ts` — a retirable alias, never a personal address (D187); until then "Report a problem" composes with no recipient. Each push deploys.
+  Done when: a tester's report reaches the alias.
 
 ### Icebox
 

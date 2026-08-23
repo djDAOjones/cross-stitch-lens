@@ -89,3 +89,7 @@ refer to `docs/requirements.md`.
 - Recipe-level "render X as Y" — a profile carrying swaps, additive once C1 (tone-only matching) exists (from: 2026-08-23 ICE-RECOLOUR-01 Q5)
 - Swap-to-fabric — erase a thread by swapping it to empty; layer B's territory (from: 2026-08-23 ICE-RECOLOUR-01 scope)
 - `check:docs` alone fails in a fresh worktree — `docs/acceptance-matrix.md:46` names `crates/stitch-engine/pkg`, which only exists after `check:wasm`; the full gate orders them correctly, a standalone docs run does not (from: 2026-08-23 recolour-design close)
+- One-file report via the store-only package (D179): `project.json` + the log in a `.pmproj` the app loads directly — one download, no Chrome multiple-downloads prompt (from: 2026-08-23 DIAG-02)
+- `resolvePalette`'s log record names each conflict by kind only; the ids and the sentence are not logged — a one-line widening if a report ever needs them (from: 2026-08-23 DIAG-02)
+- `eslint .` lints untracked files in gitignored `bench-reports/` — a probe script dropped there turns the gate red; one `ignores` line (from: 2026-08-23 M16 pack)
+- The `#export-size` readout says "chart 2000 × 2000 px" while the file is 2037 px (label gutter + pad omitted) (from: 2026-08-23 M16 pack)

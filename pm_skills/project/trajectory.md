@@ -50,7 +50,7 @@ names it.
   document and the redacted log, then opens a prefilled compose window
   that says to attach both; the project text is a host callback, so
   D179's format change cost one wiring line. `DEV_EMAIL` stays empty
-  until the owner's alias lands. See D183.
+  until the owner's alias lands. See D183, D187.
 - ICE-RECOLOUR-01 (2026-08-23) — sign-off: the five questions answered,
   layer A (the colour swap) scoped and its option picked — a design
   rule, a pure stage over the sidecar with a render palette; builds as
@@ -105,6 +105,11 @@ project file from schema v5 to v9. The brief's second success
 criterion (a stitchable chart printed from a captured design) is
 mechanically met; what remains of the track is M16's owner sitting.
 
+- M16 (2026-08-23) — sitting pack prepared, no product change: the
+  defaults table, the M9 inspection checklist, the M12 wording list, a
+  sign-off form with 14 proposed defaults, 13 export artefacts and
+  regenerated symbol evidence under `bench-reports/m16-sitting/`
+  (machine-local); the sitting decides.
 - M9 (2026-08-12) — symbols and black-and-white charting close on the
   owner's signature: 64 app-owned vector glyphs in four signed
   batches, identity-keyed assignment persisted as state (schema v6),

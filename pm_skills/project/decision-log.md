@@ -655,3 +655,46 @@ row and the ghost button (D177). `docs/ui-spec.md`: the J5 amendment,
 D183). `docs/ui-evidence.md`: the PUB-01 evidence section (D177).
 Applied 18, deferred 0; ticked lines stay until the next prune sweeps
 them.
+
+## D187 — DIAG-02's decision record arrives: five owner choices behind the one-click report; DIAG-03 holds the alias (2026-08-23)
+
+**Context.** D183 closed DIAG-02 from the branch's commit record
+because the secondary's handoff had not reached the integrator; it
+arrived after the round closed. This entry carries the why it held and
+applies its backlog instruction: DIAG-02 leaves the backlog as shipped
+(all three shapes), its ticket is deleted, and a `[maintainer]` stub,
+**DIAG-03**, holds the one remaining act.
+
+**The five choices** (the owner's, through the coordinator, or forced
+by the round). `DEV_EMAIL` is a **dedicated, retirable alias** — over
+"route kept with no recipient" and "downloads only" — because DIAG-02
+exists because the first reports arrived with nothing attached, and
+every step that asks a tester to find or type an address loses
+evidence; exposure is bounded (no secret; a string in the bundle built
+into a `mailto:` at click time, never a DOM href; retirable in one
+line; the public repository already carries an author address on the
+owner's domain). Rejected: a build-time variable (hides the address
+from the repo, not the bundle) and a GitHub-Issues link (needs an
+account, cannot attach, makes a tester's project public). **One route,
+not two** — a tester sent a `?diag=1` link sees exactly one button.
+**Two files, not one** — the project document must stay loadable as-is
+(D174's workflow); the cost is Chrome's multiple-downloads prompt, so
+the project goes first and the status line names both. **The document,
+never the package** — D179's `.pmproj` carries the picture, the
+tester's screen, which a one-click report must not send unknowingly;
+on load the app says the picture the document names was not inside.
+**A callback, not an import** — DUR-01 changed the model and the format
+underneath it mid-round and the merge needed one line. "Every conflict"
+in the Done-when is met by the palette record's per-conflict kind list;
+ids and sentences are not logged (wish-listed).
+
+**Verification (the stream's).** Gate green at 1,362 tests (+10); a
+production-shaped `vite build` + `vite preview` under `?diag=1`: one
+click produced the settings document (schema 10, the 8-thread snapshot,
+the source descriptor) and `pattern-mapper-log.txt` (12 records, the
+palette record complete), the status line named both, the JSON loaded
+back with the picture-missing sentence, leak probes clean. Human
+remainder: the mail client opening with the prefilled body, Chrome's
+prompt, the route on the live URL.
+
+**Link:** D183 (the reconstruction) stands; DIAG-03 is the alias.

@@ -10,101 +10,144 @@ now") "optional controls for making an image have a specific %
 distribution of palette colours … very useful in 1-bit / 2-state
 situations". Context: the first live-app feedback (MUST-01, COUNT-01)
 and D149 — a broader audience may have no upstream editor, so
-controlling the final picture inside the app is product scope (the
-ICE-ADJUST-01 argument, applied to colour).
+controlling the final picture inside the app is product scope.
 
-## What the user can do today
+The chain is realist end to end: membership → count-limited selection
+→ nearest colour in Lab (+ dither). Every lever is indirect, and a
+Must-use seat is a palette place, never stitches — D178 closed the
+seat half and handed presence here. Nothing lets a user say "*this*
+thread, *here*".
 
-The chain is realist end to end: profile membership → count-limited
-selection against the source's distribution → nearest colour in Lab
-(+ dither). Every creative lever is indirect — which colours *may* be
-used, how many, how far apart — and Must-use buys a seat in the
-palette, never a presence in the picture (MUST-01). Nothing lets a
-user say "*this* thread, *here*".
-
-## Three candidate layers
+## Three layers
 
 **A. Colour swap (thread → thread remap).** A pure stage after the
 colour stage that rewrites the palette-index sidecar: "everywhere the
-mapper chose X, stitch Y" — Y from the whole browse universe (any
-brand, a generated map, a custom colour), or another palette entry (a
-merge). Stitches, counts, estimates and the key follow the sidecar
-automatically; symbols are identity-keyed (M9), so a swap to a new
-thread takes a grant at first need and a merge releases one. Persists
-as a thread-keyed table in the project (schema bump, empty default;
-the round trip stays byte-identical). UI home: a "Swap…" action on the
-Colours-used row beside Highlight and Remove, opening the existing
-browse table. Cost O(cells) — invisible against the ≥ 4 updates/sec
-promise. Reduce keeps quantising against the *selected* colours: a
-swap changes what a chosen entry renders as, not what the mapper
-matches to, so the LUT fingerprint (D46) is untouched. A dangling swap
-(its source thread drops out of the palette) is kept and explained,
-like a Must-use seat.
+mapper chose X, stitch Y". Stitches, counts, estimates, the key and
+symbols follow the sidecar. Reduce keeps matching against the
+*selected* colours — a swap changes what a chosen entry renders as,
+not what the mapper matches to — so the LUT fingerprint (D46) is
+untouched. Cost O(cells). Signed, scoped and optioned below.
 
-**B. Pixel editor (cell overrides).** A sparse cell → thread map
-applied as the *last* stage (after resize under either preset — it is
-cell-addressed, so it must follow the stage that invalidates the
-sidecar). Paint one thread, fill a contiguous same-index region, erase
-to fabric, undo; exports carry it by construction because they re-run
-the pipeline. Persisted sparse (dense worst case 2 MB at 1024²),
-cleared on any grid change (cells re-address), held across live frames
-on purpose ("fix this stitch" on a frozen design). The real cost is the
-surface: hit-testing through the preview's view transform
-(`src/ui/viewport.ts`), a tool mode, keyboard painting for AAA
-operability, and the engaged-preview contract (M14-EXT-27). It should
-not precede DUR-01: hand-placed stitches are exactly the work the app
-currently loses on tab close.
+**B. Pixel editor (cell overrides).** A sparse cell → thread map as the
+*last* stage (cell-addressed, so after resize under either preset).
+Paint a thread, fill a contiguous same-index region, erase to fabric,
+undo; exports carry it because they re-run the pipeline. Persisted
+sparse (dense worst case 2 MB at 1024²), cleared on any grid change,
+held across frames. The cost is the surface: hit-testing through the
+preview's view transform (`src/ui/viewport.ts`), a tool mode, keyboard
+painting for AAA operability, the engaged-preview contract (EXT-27).
+Needs A's render palette: a painted thread may be outside the palette.
 
-**C. Controls inside the quantiser.** The "many cool controls" sphere,
-cheaper than either layer above because they are stage params:
+**C. Controls inside the quantiser** — stage params, cheaper than
+either layer. *C1 tone-only (or weighted) matching*: Lab channel
+weights in the metric (§6); at L-only a curated ladder such as Delft
+blue or Ukiyo-e becomes a two- or three-tone map with the hue supplied
+by the profile, whose order already carries the gradient (D46) — one
+metric variant, one LUT key; the WebGPU LUT routes to TS until it
+learns the weights. *C2 target % distribution* (the owner's idea):
+exact at two states (the source's lightness quantile at the requested
+share), iterative above (a per-entry bias on the distance until the
+histogram lands) — parked inside this item as deep thought.
+*Threshold levels* are ICE-ADJUST-01's slice and pair with both.
 
-- *Tone-only (or weighted) matching* — Lab channel weights in the
-  metric (§6 anticipated them). At L-only, a curated ladder such as
-  Delft blue or Ukiyo-e becomes a two- or three-tone map of the
-  picture's lightness with the hue supplied by the profile; profile
-  order already carries the gradient meaning (D46). One metric variant
-  and a LUT key; the WebGPU LUT path routes to TS until it learns the
-  weights (allowed — TS is ground truth).
-- *Target % distribution* (the owner's idea). At 2 states it is exact
-  and trivial: the threshold is the source's lightness quantile at the
-  requested share. Above two, a per-entry bias on the distance,
-  iterated until the histogram lands within tolerance — deterministic,
-  cheap at grid size, approximate under dithering. Sits beside the
-  Black & white profile and ICE-ADJUST-01's threshold presets.
-  Deep-thought item by the owner's framing; not for solving now.
-- *Threshold levels (§9's banding)* — ICE-ADJUST-01's slice, named here
-  because it pairs with both of the above.
+## Signed 2026-08-23
 
-## Recommendation
+The owner's answers, relayed through the run coordinator (the owner's
+veto stands until this ticket merges). Base: `main` at `f33a3cb` —
+DUR-01 merged (schema v10, D179), MUST-01 shipped as auto-pin (D178).
 
-Ship in order of leverage over cost: **A** (small, and it closes the
-presence half of MUST-01 — a swap *is* a guarantee), then **C1**
-tone-only matching (least code, widest stylistic reach: sixteen signed
-profiles become colouring tools), then **B** after DUR-01 with its
-interaction model signed first. C2 stays parked inside this item until
-the owner wants it thought through. All three are stages or stage
-params, never preview-only; engine purity, exports-re-run-the-pipeline
-and the round-trip invariant hold by construction.
+1. **A swap target comes from the whole universe** — every brand, the
+   generated maps, custom colours, any other palette entry (a merge).
+   A target never enters selection, so it cannot break what the
+   profile promises; D178 settled the principle one layer down. The
+   browse ignores "only threads I own" — the key lists it to buy.
+2. **"Swap…" lives on the Colours-used row** beside Highlight and
+   Remove, opening the shared browse table. After X → Y the table
+   shows Y's row labelled "swapped from X", and Swap… there
+   **re-targets** the same swap — swaps never chain. The swap *state*
+   has a second home: a Swaps chip list in the Colour section beside
+   Must-use, where a **dangling** swap (X no longer selected) is kept
+   and explained. Rows past the 30-row cap get no verb (accepted).
+3. **B paints stills only in v1** — import, sample, paused or grabbed
+   capture, restored design. Overrides are held across frames; the
+   brush is off while frames flow. "Live too" is not v1; revisit on
+   demand.
+4. **Order A → C1 → B.** B depends on A's render palette; A closes the
+   presence half of MUST-01; C1 is params only.
+5. **A swap is a design rule** in `palette.design` beside `count`,
+   `minDistance` and `mustUse` — never in the recipe for now. `from`
+   is the selected entry's id; `to` is a full thread record (snapshot
+   semantics, D55). A recipe-level "render X as Y" is an additive
+   later option once C1 exists.
 
-## Questions for the sign-off
+## Layer A — scope (approved 2026-08-23)
 
-1. Does a swap target come from the whole universe (recommended — the
-   profile governs selection, not the user's explicit will) or only the
-   profile?
-2. Is the Colours-used row the home for "Swap…"?
-3. For B: painting on a frozen or still design only, or under live
-   capture too?
-4. Order A → C1 → B as above, or B first because it is the ask?
-5. Is a swap a *design* rule (saved with the project, like Must-use),
-   or may a profile carry one too (a recipe-level "render X as Y")?
+- **Render palette**: the selected entries (indices unchanged) plus
+  render-only targets appended in swap order, derived by one pure
+  helper called in the worker and on the main thread. A merge target
+  maps to its existing index; the map is applied once.
+- **Persistence**: `palette.design.swaps: [{ from, to }]`, empty
+  default; v10 → v11 seeds `[]`; validated like `snapshot`, capped so
+  the render palette stays under `MAX_PALETTE_ENTRIES`; canonical
+  order after `mustUse`. The `projectJson` baseline hash re-pins
+  (intended, the D165 precedent); the engine hashes must not move.
+- **Inert cases**: the stage is omitted (the `adjustIsIdentity`
+  precedent) with no palette, no active swap or no sidecar — zero
+  cost when unused, never aliasing a retained frame. Dangling swaps
+  are inert. A loaded `reduce-first` file runs it after the colour
+  stage at source resolution, as that stage already does.
+- **Dithering**: error diffuses against X; Y renders — the effect.
+- **Consumers that switch to the render palette** (`src/main.ts`):
+  stats, key entries, highlight `indexFor`, `syncSymbolsToPalette`;
+  `highlightInvalidated` fires on any swap change.
+- **Out of scope**: recipe-level swaps and swap-to-fabric (both
+  wish-list); full-RGB mode (no sidecar — chips stay, inert); the
+  profile editor's preview rig applying design swaps; swap-set
+  import/export; an undo stack (Remove is the undo); layers B and C1.
+- **Files**: new `src/core/pipeline/swap.ts` (`ThreadSwap`,
+  `renderPalette()`, the stage); `src/core/pipeline/config.ts`
+  (`PipelineConfig.swaps`, `buildStages`, the full-RGB twin drops
+  them); `src/core/project.ts` (v11); `src/main.ts`;
+  `src/ui/info-panel.ts` (`onSwap` column, provenance label);
+  `src/ui/colour-section.ts` (chips, `removeSwap`, helper text);
+  `shell.css` only if a chip rule is needed. Tests: new
+  `tests/swap.test.ts` (remap, merge, no-chain, empty cells, dangling
+  inert, omitted when inert) plus additions to `pipeline-config`,
+  `worker-executor` (render-space sidecar), `project` (migration,
+  byte-identical round trip, refusals), `stats` / `export-artefacts`
+  (Y counted and keyed; a `map:` / `user:` target keeps its
+  provenance label), `symbols-assignment` (a target takes a grant at
+  export), `info-panel`; `tests/ui-baseline/hashes.json` (re-pin).
+- **Close-time flags**: runtime lifecycle n/a; swap set/removed logged
+  through the structured logger (ids only); gate unchanged; doc-delta
+  lines for the UI spec's census and `architecture.md`'s project-file
+  paragraph.
+
+## Layer A — option (picked 2026-08-23)
+
+**Option 1: a pure `swap` stage after the colour stage, over the
+sidecar, with the render palette.** `config.swaps` → `buildStages`
+derives `{ renderPalette, map }` and appends the stage when active; it
+rewrites each cell's index through the map and repaints the RGB from
+the render palette, alpha untouched. Rejected: folding the remap into
+reduce/dither (touches the protected colour stages, both backend
+adapters and the golden/parity signatures, for one fewer O(cells)
+pass), and resolving at the palette layer (the mapper would match
+against Y — a membership edit in disguise; the merge case is already
+Remove). **Picker**: a modal, "Swap X for…", hosting the shared browse
+table; a pick applies and closes; focus returns to the row's Swap…
+button. Unchanged: selection and resolution, the LUT cache and both
+backends, `stats.ts` / `key-entries.ts` / `assignment.ts`, the
+profile editor and its rig, the `.pmproj` container, the golden
+fixtures.
+
+**Build note**: ready to build; next free schema is **v11**; the only
+bump in its round. Full mode from the plan gate — stages 3–4 not run.
 
 ## References
 
-- Requirements: §5.1 (full RGB as the path to manual thread
-  selection), §6 (force-include, weighting controls), §9
-  (posterisation).
-- Decisions: D46 (order is identity), D114/D116 (profiles; the preview
-  rig's override rule), D135 (the promise that binds), D149 (in-app
-  control is product scope), D160/D165 (identity-keyed symbols), D171
-  (DUR-01), D173 (this item opens).
-- Related items: MUST-01, ICE-ADJUST-01, ICE-SYMBOL-UI-01, DUR-01.
+- Requirements: §5.1, §6, §9, §20.
+- Decisions: D46, D114/D116, D135, D149, D160/D165, D171/D179
+  (DUR-01), D173 (this item opens), D178 (MUST-01's seat half;
+  presence is here).
+- Related items: ICE-ADJUST-01, ICE-SYMBOL-UI-01.

@@ -240,12 +240,14 @@ export function createColourSection(
   mustUseLabel.textContent = 'Must-use colours';
   // Seat, not presence (MUST-01): the promise is a place in the
   // palette, and the stitches still go to their nearest colour — the
-  // half of "must use" the live-app reporter read the other way.
+  // half of "must use" the live-app reporter read the other way. The
+  // last sentence is the consequence of a pick outside the profile: it
+  // widens this design's copy, which the select then shows as edited.
   const mustUseHelper = doc.createElement('p');
   mustUseHelper.className = 'helper';
   mustUseHelper.id = 'must-use-helper';
   mustUseHelper.textContent =
-    'Guaranteed a place in the palette; stitches still go to their nearest colour, so a seat can go unused.';
+    'Guaranteed a place in the palette; stitches still go to their nearest colour, so a seat can go unused. A colour from outside the profile joins this design’s colours.';
   const chipList = doc.createElement('div');
   chipList.className = 'pin-chips';
   chipList.setAttribute('role', 'list');

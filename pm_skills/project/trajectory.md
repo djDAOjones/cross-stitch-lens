@@ -17,6 +17,23 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
+## Track B — Durability & identity (SHIPPED 2026-08-23)
+
+**Outcome:** the app no longer loses your work and can tell two designs
+apart — saved projects are `.pmproj` packages with the picture inside, a
+design history restores the latest design on reopen, and files carry
+the design's title.
+
+- DUR-01 (2026-08-23) — work survives closing the tab: `.pmproj`
+  project packages (schema v10, the picture embedded verbatim, legacy
+  `.json` still loads), a design history in its own IndexedDB database
+  that restores the latest design on boot with a Recent designs picker,
+  bounded storage with oldest-first eviction and a persist opt-in, and
+  a live capture that freezes to a still at save time. See D179.
+- SAVE-01 (2026-08-23) — a saved project has a name of its own: the
+  Design title names the file, the picture's name stands in, a
+  timestamp is the last resort. See D179.
+
 ## Live-app feedback (IN PROGRESS, from 2026-08-22)
 
 **Outcome:** the first reports from the public URL are becoming fixes
@@ -24,6 +41,15 @@ with the mechanism confirmed in the running app before anything is
 proposed — and the owner's saved project file is the evidence that
 names it.
 
+- MUST-01 (2026-08-23) — a Must-use picked outside the profile pins
+  into the design's recipe copy: the seat is honoured, "(edited)" tells
+  the truth, removing the chip undoes the pin, Revert drops it; drifted
+  seats stay kept and explained; My-inventory designs render from their
+  pins with the inventory warning. See D178.
+- ICE-RECOLOUR-01 (2026-08-23) — sign-off: the five questions answered,
+  layer A (the colour swap) scoped and its option picked — a design
+  rule, a pure stage over the sidecar with a render palette; builds as
+  schema v11 in a later round. See D182.
 - MYTHREADS-01 (2026-08-23) — the empty-inventory dead end gets an
   exit: "My inventory" (renamed from "My threads", id unchanged) is a
   disabled option with its reason while the inventory is empty, and a
@@ -43,9 +69,22 @@ names it.
 ## Track C — Publication (IN PROGRESS, owner-paced)
 
 **Outcome:** the app has a public URL. Licences and notices landed
-(D161), publication proceeds in this repository (D164), and the deploy
-pipeline ships the built bundle from a green gate.
+(D161) and are readable in the app (D177), publication proceeds in
+this repository (D164), and the deploy pipeline ships the built bundle
+from a green gate and then proves the live site serves it (D180).
 
+- PUB-06 (2026-08-23) — `PM_PUBLIC_BUNDLE=1` drops `bench.html` /
+  `bench-source.html` from the public Pages build; every other build
+  keeps the harness. See D181.
+- PUB-05 (2026-08-23) — `npm run verify:deploy` compares the live build
+  id's SHA with the pushed commit (`--wait` polls through the ~4-min
+  deploy), and CI runs it after the deploy job. See D180.
+- PUB-01 (2026-08-23) — the notices are reachable from the app: a ghost
+  "Licences" button in the header's utility row opens a Close-only
+  dialog carrying `LICENSE` and `THIRD-PARTY-NOTICES.md`, imported at
+  build time so the bundle carries the documents and nothing is
+  fetched. Human remainder: native activation, in-dialog scrolling, a
+  VoiceOver pass. See D177.
 - PUB-04 (2026-08-22) — GitHub Pages serves the built app, not the
   raw branch: a green `check` on `main` rebuilds with
   `--base /pattern-mapper/`, uploads `dist` and deploys it, Rust engine

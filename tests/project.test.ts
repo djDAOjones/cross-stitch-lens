@@ -13,6 +13,7 @@ import {
   MAX_GRID_SIDE,
   parseProject,
   projectFilename,
+  projectStamp,
   SCHEMA_VERSION,
   serializeProject,
   type ProjectFile,
@@ -26,6 +27,7 @@ import type { PixelBuffer } from '../src/core/types.ts';
 function sampleProject(): ProjectFile {
   return {
     schemaVersion: SCHEMA_VERSION,
+    source: { entry: 'source.jpg', type: 'image/jpeg', name: 'Fox sketch.jpg' },
     pipeline: {
       preset: 'resize-first',
       grid: { width: 200, height: 150 },
@@ -181,6 +183,7 @@ describe('serializeProject / parseProject round trip', () => {
       symbols: file.symbols,
       palette: file.palette,
       pipeline: file.pipeline,
+      source: file.source,
       schemaVersion: file.schemaVersion,
     });
     expect(serializeProject(parseProject(shuffled))).toBe(serializeProject(file));
@@ -487,9 +490,115 @@ describe('migration from schema v3 dither', () => {
   });
 });
 
+/**
+ * SAVE-01: a design's title names its file. The old name came from the
+ * grid alone, so every 200 × 200 design saved identically; now the
+ * title leads, the picture's name stands in, and a stamp is the last
+ * resort — two untitled, pictureless designs still never collide.
+ */
 describe('projectFilename', () => {
-  it('names the file after the grid size', () => {
-    expect(projectFilename(200, 150)).toBe('project-200x150.json');
+  const parts = { width: 200, height: 150, sourceName: null, stamp: '20260823-0152' };
+
+  it('names the file after the Design title, then the grid size', () => {
+    expect(projectFilename({ ...parts, title: 'Fox sketch' })).toBe('Fox-sketch-200x150.pmproj');
+  });
+
+  it('makes the title filename-safe without losing its words', () => {
+    expect(projectFilename({ ...parts, title: ' a/b:c*d?"<e>|f\tg.. ' })).toBe(
+      'a-b-c-d-e-f-g-200x150.pmproj',
+    );
+    // Letters of any script survive; a long title is capped.
+    expect(projectFilename({ ...parts, title: 'Renard rusé — été' })).toBe(
+      'Renard-rusé-été-200x150.pmproj',
+    );
+    const long = projectFilename({ ...parts, title: 'x'.repeat(100) });
+    expect(long).toBe(`${'x'.repeat(60)}-200x150.pmproj`);
+  });
+
+  it('falls back to the picture name, minus its extension, when untitled', () => {
+    expect(projectFilename({ ...parts, title: '', sourceName: 'landscape-1.jpg' })).toBe(
+      'landscape-1-200x150.pmproj',
+    );
+    expect(
+      projectFilename({ ...parts, title: '***', sourceName: 'Screen capture (the shared screen)' }),
+    ).toBe('Screen-capture-the-shared-screen-200x150.pmproj');
+  });
+
+  it('falls back to a stamp when there is no name at all — two defaults never collide', () => {
+    const a = projectFilename({ ...parts, title: '' });
+    const b = projectFilename({ ...parts, title: '', stamp: '20260823-0153' });
+    expect(a).toBe('design-20260823-0152-200x150.pmproj');
+    expect(a).not.toBe(b);
+    // Deterministic for the same inputs: the stamp is the only clock.
+    expect(projectFilename({ ...parts, title: '' })).toBe(a);
+  });
+
+  it('stamps local wall-clock minutes', () => {
+    expect(projectStamp(new Date(2026, 7, 23, 1, 52))).toBe('20260823-0152');
+    expect(projectStamp(new Date(2026, 11, 5, 23, 7))).toBe('20261205-2307');
+  });
+});
+
+/**
+ * v9 → v10 (DUR-01): the picture joins the saved file as a package
+ * entry the document names. Older files never carried one; `source:
+ * null` states exactly that, and they keep applying to the next import.
+ */
+describe('migration from schema v9 source', () => {
+  function v9Document(): string {
+    const doc = JSON.parse(serializeProject(sampleProject())) as Record<string, unknown>;
+    delete doc['source'];
+    doc['schemaVersion'] = 9;
+    return JSON.stringify(doc);
+  }
+
+  it('loads as a settings-only project', () => {
+    const loaded = parseProject(v9Document());
+    expect(loaded.migratedFrom).toBe(9);
+    expect(loaded.source).toBeNull();
+  });
+
+  it('re-saves the migrated file byte-stable at the current schema', () => {
+    const migrated = serializeProject(parseProject(v9Document()));
+    expect(serializeProject(parseProject(migrated))).toBe(migrated);
+    expect(migrated).toContain('"source": null');
+  });
+});
+
+describe('source block validation (schema v10)', () => {
+  function withSource(source: unknown): string {
+    const doc = JSON.parse(serializeProject(sampleProject())) as Record<string, unknown>;
+    doc['source'] = source;
+    return JSON.stringify(doc);
+  }
+
+  it('round-trips a picture entry and accepts null and absent as settings-only', () => {
+    expect(parseProject(serializeProject(sampleProject())).source).toEqual({
+      entry: 'source.jpg',
+      type: 'image/jpeg',
+      name: 'Fox sketch.jpg',
+    });
+    expect(parseProject(withSource(null)).source).toBeNull();
+    expect(parseProject(withSource(undefined)).source).toBeNull();
+  });
+
+  it('refuses an entry name that is a path, naming the field', () => {
+    // The entry name reaches the package reader by value; a separator
+    // in it is the one shape that must never get through.
+    for (const entry of ['../source.png', 'pics/source.png', '', '.hidden', 'x'.repeat(65)]) {
+      expect(() =>
+        parseProject(withSource({ entry, type: 'image/png', name: 'a' })),
+      ).toThrow('source.entry');
+    }
+  });
+
+  it('refuses a malformed type and an overlong name, naming the field', () => {
+    expect(() =>
+      parseProject(withSource({ entry: 'source.png', type: 'png', name: 'a' })),
+    ).toThrow('source.type');
+    expect(() =>
+      parseProject(withSource({ entry: 'source.png', type: 'image/png', name: 'n'.repeat(256) })),
+    ).toThrow('source.name');
   });
 });
 

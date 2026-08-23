@@ -44,9 +44,10 @@ line passes and `check` is green. Requirements references are to
 `docs/requirements.md`.
 
 **Ship order is no longer milestone-number order** (D149). Shipped:
-M0–M8, M13, M14, M15, and **Batch C0** (D149–D159, 2026-08-11).
-Remaining: **Track A** (M9 → M11 → M16 → M10 → M12), then **Track B**,
-with **Track C — Publication** owner-paced alongside. The numbers stay
+M0–M8, M13, M14, M15, **Batch C0** (D149–D159, 2026-08-11) and
+**Track B** (DUR-01 + SAVE-01, D179, 2026-08-23). Remaining: **Track A**
+(M9 → M11 → M16 → M10 → M12) with **Track C — Publication** owner-paced
+alongside. The numbers stay
 because they are greppable across the tickets and the decision log;
 they no longer imply sequence.
 
@@ -71,29 +72,14 @@ without steps or a bundle. Diagnosed in the running app before anything
 was proposed (D173); sequencing is the owner's call — placed here so
 the next pick sees them.
 
-- [ ] **MUST-01 A Must-use colour can be chosen that the design cannot honour** [sign-off] [detail] (2026-08-22, wording half shipped 2026-08-23)
-  Intent: the Must-use search offers every colour in the build, but a seat outside the profile's membership is kept as a Note and never filled — and a filled seat guarantees a palette entry, not stitches. The honesty half shipped (D175): the status line and a helper now say so. Open: the seat semantics — auto-pin the colour into the design's recipe copy (recommended) or scope the search — a reversal of M15-CORE-03's "kept and explained" rule, so it is the owner's.
-  Done when: a Must-use picked from any brand reaches the palette and the key, Revert drops an auto-pin, and the profile-world resolver's tests cover it. Presence itself is ICE-RECOLOUR-01's swap.
 - [ ] **DIAG-02 Diagnostics for testers on the live build** [detail] (2026-08-23, opt-in and palette logging shipped 2026-08-23)
   Shipped (D175): the Debug menu mounts on the live build behind `?diag=1`, and every palette resolution is logged (profile, rule, seats, membership, selected, conflicts, source). Remaining: a one-click "Report a problem" that saves the project JSON and the redacted log together and opens the email route — waits on the `DEV_EMAIL` placeholder, which ships in a public bundle.
   Done when: a tester on the live URL can produce, in one click, a bundle and a project file naming the build, profile, count rule, seats, resolved palette and every conflict.
 
-### Track B Durability & identity
-
-Opened 2026-08-11 (D149). One subject: the app loses your work and
-cannot tell two designs apart.
-
-- [ ] **DUR-01 Work survives closing the tab** [sign-off] [detail] (2026-08-11, scope signed 2026-08-12)
-  **Scope signed (D170)**: restore on reopen, a **history** of recent designs with the UI steering to explicit save, the source image restored **and embedded in saved files** (a live capture freezes to a still on save), bounded storage with an eviction warning and an opt-in to persist.
-  Done when: reopening returns the design in progress without an explicit save, explicit saves still mean what they mean (portable, shareable, survives a storage clear-out), and the round-trip invariant holds.
-  Open at the option gate: how images ride in a saved file — the format decision that follows from "picture files part of saves".
-- [ ] **SAVE-01 A saved project has no name of its own** (2026-08-09)
-  Intent: `projectFilename` names the file from the grid alone, so every 200 × 200 design saves identically. A `Design title` field already exists — does it drive the filename, and what does load do.
-  Done when: a project carries a name the owner chose, it survives save/load, and two designs never collide by default. Ships with DUR-01.
-
 ### Track C — Publication
 
-Opened 2026-08-11 (D160); audit clean, `LICENSE` landed (D161).
+Opened 2026-08-11 (D160); audit clean, `LICENSE` landed (D161), notices
+reachable in-app (PUB-01, D177).
 **Publication proceeds in this repository** (D164): continuity over a
 clean cut; protections rest on the stated posture and the items below.
 **Live since 2026-08-22** at <https://djdaojones.github.io/pattern-mapper/>:
@@ -101,15 +87,10 @@ a green `check` on `main` publishes the built bundle (PUB-04, D172).
 The owner's own branch deploy that day overtook the PUB-02 gate; the
 item stays open and is now the pressing one.
 
-- [ ] **PUB-01 Licences and notices for public distribution** (2026-08-11, decided 2026-08-11)
-  **Decision (a) executed (D161)**: proprietary — `LICENSE` (all rights reserved, source-visible) and `THIRD-PARTY-NOTICES.md` committed; both manifests declare `UNLICENSED`.
-  Remaining: the notices become **reachable from the app** (placement is a taste call), shipping with the next push now that deploying is real (PUB-04, D172).
 - [ ] **PUB-02 Replace `graphic.jpg` and confirm the photo provenance** [maintainer] (2026-08-11)
   Intent: the flat-graphic demo slot is third-party fan art with a two-layer rights problem (the artist's copyright, and the underlying mark). The owner replaces it; the `PHOTO_SLOTS` contract keeps the name `graphic.jpg`, zero code changes. The item **gates public deploy** (D150: fix HEAD, keep history). The 2026-08-22 branch deploy already published HEAD's copy; PUB-04 narrowed the public surface to `dist`, which still carries the slot.
   Done when: `graphic.jpg` at HEAD is rights-clean, and the five photographs are confirmed as the owner's own (`landscape-1.jpg` is load-bearing twice: it seeded the M8 golden crop).
   Owner's replacement plan (2026-08-12): render it — a cube in Blender lit by three RGB lights aimed at the visible corners, giving both a colour spread and a luminance ramp across flat faces, which is exactly what the slot tests. Wholly self-produced from primitives, so the two-layer rights problem dissolves rather than being swapped for another.
-- [ ] **PUB-05 Post-deploy verification as one command** (2026-08-23) — fetch the live index and compare its `buildId` with the commit just pushed; today a manual step (promoted from the wish-list; from 2026-08-22 PUB-04).
-- [ ] **PUB-06 The bench harness ships inside the Pages bundle — decide whether the public bundle should carry it** (2026-08-23) — `bench.html` and `bench-source.html` are rollup inputs, so they ride in the Pages bundle, and the popup path is root-relative; keep, exclude from the Pages build only, or exclude from all builds (promoted from the wish-list; from 2026-08-22 PUB-04).
 
 ### Icebox
 
@@ -150,9 +131,9 @@ upstream editor at all.
   Intent: A11Y-01 took the "has a name" half; this is whether the announcements are any *good*, plus the no-meaning-by-colour check.
   Done when: a VoiceOver pass over the main control surface is recorded pass/fail per control, and the colour-only check is answered.
 
-- [ ] **ICE-RECOLOUR-01 Creative recolouring: colour swap, pixel editor, and controls beyond nearest colour** [sign-off] [detail] (2026-08-22)
-  Intent: creative control past realism in the colour mapping — a thread-for-thread swap layer (presence, where Must-use is only a seat), a cell-level pixel editor, and quantiser controls such as tone-only matching and the owner's target % distribution of palette colours (strongest at 1-bit / 2-state; deep thought, not solving). Pure stages after the colour stage or reduce-stage params — never preview-only.
-  Done when: the owner signs which layers ship, in what order (the ticket recommends swap → tone-only matching → pixel editor after DUR-01), and where they live in the UI.
+- [ ] **ICE-RECOLOUR-01 Creative recolouring: colour swap, pixel editor, and controls beyond nearest colour** [detail] (2026-08-22, signed 2026-08-23)
+  Signed (D182): swap → tone-only matching → pixel editor; the swap is a design rule, a pure stage over the sidecar with a render palette, targets from the whole universe, Swap… on the Colours-used row plus a Swaps chip list. Layer A is ready to build as schema v11 (the only bump in its round); promote when scheduled.
+  Done when: layer A ships with the round trip intact and a swap target reaching Colours used, the key and the estimates.
 
 **Blocked on data or research.**
 

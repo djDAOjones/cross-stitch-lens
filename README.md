@@ -28,6 +28,10 @@ page planner, cover map, and ruler-true tiled pages), and M12 fabric
 and thread estimates (schema v9, every result disclosing its
 assumptions). What remains in the arc is human: the M9 signatures and
 M16's print-sized export defaults sitting.
+**Track B — durability — shipped 2026-08-23**: `.pmproj` project
+packages (schema v10) with the picture embedded, a design history that
+restores the latest design on reopen, and title-named files (DUR-01,
+SAVE-01).
 
 **M15 (colour & dithering profiles)** closed on both acceptance gates
 (D148): colour profiles as composition recipes with a kind-agnostic
@@ -44,8 +48,9 @@ Steinberg dithering, stats), still-image import, the preview UI —
 worker-rendered canvas with zoom/pan/fit, grid overlay with row/column
 numbering, source-vs-output split compare, a live stats panel, and
 Carbon-style control panels — the export suite (clean/enlarged PNGs, a
-styled PNG chart, a single-page PDF chart, project save/load as
-versioned JSON) — **live capture**: a `getDisplayMedia` session with a
+styled PNG chart, a single-page PDF chart, project save/load — since
+DUR-01 a `.pmproj` package: versioned JSON with the picture inside) —
+**live capture**: a `getDisplayMedia` session with a
 user-drawn crop rectangle over a live thumbnail, a latest-wins frame
 pump, dirty-frame skipping, pause/resume, and a draft-quality mode
 under load — the **performance backends** (Rust→WASM error diffusion,
@@ -86,6 +91,7 @@ npm run build      # production build to dist/
 npm run build:wasm # Rust→WASM crate build (crates/stitch-engine)
 npm test           # Vitest, including the golden suite
 npm run check      # quality gate: typecheck + lint + test + wasm + build
+npm run verify:deploy -- --wait 600  # after a push: the live site serves this commit
 ```
 
 `localhost` is a secure context, so screen capture and WebGPU work in
@@ -96,6 +102,10 @@ bundle to GitHub Pages at <https://djdaojones.github.io/pattern-mapper/>
 (the `deploy` job in `.github/workflows/lint.yml`, D172). To preview
 that bundle locally under the same base path:
 `npx vite build --base /pattern-mapper/ && npx vite preview --base /pattern-mapper/`.
+After a push, `npm run verify:deploy -- --wait 600` waits out the deploy
+and confirms the live site serves that commit (D180); CI runs the same
+check after the deploy job. The public bundle omits the bench harness
+(`PM_PUBLIC_BUNDLE=1`, D181).
 
 ## Key modules and entry points
 
@@ -137,3 +147,9 @@ The permanent rules live in [`AGENTS.md`](AGENTS.md),
 (brief, architecture, backlog, decisions) is in
 [`pm_skills/project/`](pm_skills/project/); this project is managed with
 the PM-Skills framework in `pm_skills/`.
+
+## Licence
+
+All rights reserved — see [`LICENSE`](LICENSE); third-party terms are in
+[`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md). Both are readable in
+the app via the header's **Licences** button (D177).

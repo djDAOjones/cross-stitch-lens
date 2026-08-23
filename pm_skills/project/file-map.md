@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 283 file(s) across 12 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 293 file(s) across 12 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 13 file(s)
 - `.claude` — 2 file(s)
 - `.githooks` — 1 file(s)
@@ -25,9 +25,9 @@
 - `crates` — 4 file(s)
 - `docs` — 16 file(s)
 - `public` — 7 file(s)
-- `scripts` — 20 file(s)
-- `src` — 101 file(s)
-- `tests` — 116 file(s)
+- `scripts` — 22 file(s)
+- `src` — 104 file(s)
+- `tests` — 121 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -42,9 +42,9 @@
 - `cspell.json` — spelling dictionary + ignore paths for the docs gate
 - `eslint.config.js` — flat config; core-isolation + no-console rules
 - `index.html` — Vite entry; dev-shell styles (AAA contrast, pixelated preview)
-- `package.json` — scripts (dev/build/test/check) + dev dependencies
+- `package.json` — scripts (dev/build/test/check/verify:deploy) + dev dependencies
 - `tsconfig.json` — strict TS config (ES2022, bundler resolution)
-- `vite.config.ts` — Vite + Vitest config; injects version/build identity
+- `vite.config.ts` — Vite + Vitest config; injects version/build identity; `bundleInputs()` drops the bench harness when `PM_PUBLIC_BUNDLE=1` (PUB-06)
 
 ## .claude
 
@@ -57,7 +57,7 @@
 
 ## .github
 
-- `.github/workflows/lint.yml` — CI: `npm run check` on Node 22 per push/PR; a green default-branch push then rebuilds with the Pages base and publishes `dist` to GitHub Pages (D172)
+- `.github/workflows/lint.yml` — CI: `npm run check` on Node 22 per push/PR; a green default-branch push then rebuilds with the Pages base and `PM_PUBLIC_BUNDLE=1` (no harness) and publishes `dist` to GitHub Pages (D172), then `verify-deploy` confirms the live build id (D180)
 
 ## .windsurf
 
@@ -124,6 +124,8 @@
 - `scripts/gen-golden-hello.mjs` — one-time generator of the M0 hello fixtures
 - `scripts/gen-symbol-evidence.mjs` — M9 print-evidence generator: renders the glyph catalogue as a vector PDF (batch pages + distinctness page) to bench-reports/ for owner signature (`symbols:evidence`)
 - `scripts/save-transcript.mjs` — saves a chat-session transcript into _transcripts/ (`npm run transcript`)
+- `scripts/verify-deploy.d.mts` — types for the verify-deploy helpers (plain-JS module, typed for the test suite — the bench-auto-lib.d.mts pattern)
+- `scripts/verify-deploy.mjs` — post-deploy verification CLI + pure helpers: fetch the live index, resolve the hashed entry asset, read its build id, compare the SHA with the pushed commit; `--wait` polls; exit 0/1/2 (PUB-05)
 - `scripts/write-acceptance-matrix.mjs` — regenerates the coverage table (the fixer; `check` only compares)
 
 ## src
@@ -151,7 +153,7 @@
 - `src/capture/pump.ts` — frame pump: rVFC subscription + pure latest-wins grab gate
 - `src/capture/session.ts` — getDisplayMedia session: start/grab/snapshot/stop + pure error/label helpers
 - `src/capture/surface.ts` — one reusable grab canvas: resize in place, never reallocate per frame (pure, injected factory)
-- `src/core/color-profile.ts` — colour-profile recipe + resolver to the effective ordered table, every narrowing explained; built-ins; policy→recipe bridge (M15)
+- `src/core/color-profile.ts` — colour-profile recipe + resolver to the effective ordered table, every narrowing explained; built-ins; policy→recipe bridge (M15); pin/unpin recipe helpers (MUST-01)
 - `src/core/color-sources.ts` — generated colour maps, map:/user: identity namespaces, CSS name table, provenance-honest labels (M15)
 - `src/core/color/candidates.ts` — per-bin candidate pruning for exact Lab matching: conservative Lab bounding box per 15-bit bin, witness-radius exclusion. An exclusion proof, not an approximation — returns the identical index to a full scan
 - `src/core/color/convert.ts` — sRGB↔linear↔Lab conversions (D65, CIE 1976)
@@ -178,7 +180,8 @@
 - `src/core/pipeline/reduce.ts` — reduce stage: LUT + exact paths, alpha passthrough
 - `src/core/pipeline/resize.ts` — resize stage: area-average, 4 modes, empty cells
 - `src/core/pipeline/threshold-tiles.ts` — Bayer + void-and-cluster blue-noise threshold tiles: fixed data, documented provenance, memoised
-- `src/core/project.ts` — project file v1 (§20): schema, migration, canonical (de)serialisation
+- `src/core/project-package.ts` — store-only zip project package (`.pmproj`): deterministic writer (fixed 1980 stamps), bounded reader with named refusals, format detection, readProjectBytes/writeProjectBytes (DUR-01)
+- `src/core/project.ts` — project file (§20): schema v10 with the `source` block, v1→v10 migrations, canonical (de)serialisation, title-driven `projectFilename` + stamp fallback, `PROJECT_EXTENSION` (DUR-01/SAVE-01)
 - `src/core/stats.ts` — design stats §11 subset: counts, %, thread refs
 - `src/core/symbols/assignment.ts` — symbol assignment as persisted state (D160-4): need-based grants, release-to-back queue, survivor-free reset, overrides, load reconcile
 - `src/core/symbols/glyphs.ts` — the app-owned 64-glyph catalogue in canonical append-only order; fill-only M/L/C/Z paths rendered identically by Path2D and drawSvgPath (D165)
@@ -193,7 +196,8 @@
 - `src/export/pdf.ts` — single-page PDF chart (§18 subset): pure
 - `src/export/png.ts` — clean PNG export (§13 subset): pure nearest-
 - `src/library/records.ts` — Pure library file formats: canonical inventory/palette JSON, validation, additive merge, id-collision rename
-- `src/library/store.ts` — Cross-project library storage behind one interface; IndexedDB impl + memory fallback that announces itself
+- `src/library/snapshots.ts` — the design history: its own IndexedDB database (meta + payload stores) with an announced memory fallback; pure quota model (tiers, oldest-first eviction, near-quota) and the Project line's copy (DUR-01)
+- `src/library/store.ts` — Cross-project library storage behind one interface; IndexedDB impl + memory fallback that announces itself; exports the request helper the design history shares
 - `src/main.ts` — app entry: M2 shell — import, control panel, preview, info panel
 - `src/ui/accordion.ts` — Carbon accordion section: h2-wrapped toggle, hidden panel, derived closed-state summary
 - `src/ui/browse-table.ts` — shared capped search table (the 60-row pattern extracted; D117 seam 3)
@@ -205,6 +209,7 @@
 - `src/ui/import.ts` — import routes → decode: filter (pure) + blob→PixelBuffer
 - `src/ui/info-panel.ts` — "Colours used" table content: pure row model + thin DOM half, hosted by a section (M14-EXT-41)
 - `src/ui/modal.ts` — Carbon modals (text prompt, choices, danger confirm, live-apply form): trap arithmetic pure, focus restore, Escape/backdrop cancel
+- `src/ui/notices.ts` — licences and notices: `?raw` imports of `LICENSE` + `THIRD-PARTY-NOTICES.md`, a pure document parser, the Close-only dialog and the ghost header button (PUB-01)
 - `src/ui/preferences.ts` — Shell preferences (per-disclosure open state) in localStorage; parse falls back to defaults for anything unreadable. Never project data.
 - `src/ui/preview.ts` — preview controller: toolbar, wheel/drag/keys → worker
 - `src/ui/profile-editor-colour.ts` — colour profile kind: libraries, pins, ranges, custom colours, fingerprinted readout; pure halves exported
@@ -271,11 +276,12 @@
 - `tests/capture-session.test.ts` — capture pure half: error messages, surface labels
 - `tests/capture-surface.test.ts` — grab-surface reuse: one canvas across N grabs, in-place resize, context failure
 - `tests/color-convert.test.ts` — golden: Lab reference values + round-trips
-- `tests/color-profile.test.ts` — profile resolver: every narrowing step + sentence, ordering contract, built-ins non-empty, policy→recipe bridge
+- `tests/color-profile.test.ts` — profile resolver: every narrowing step + sentence, ordering contract, built-ins non-empty, policy→recipe bridge; recipe pin helpers + pins-only inventory warning (MUST-01)
 - `tests/color-sources.test.ts` — map identity/count/ordering pins, exact-match naming incl. lime/green, namespace collision guard
 - `tests/controls.test.ts` — number-input clamping (pure half of controls)
 - `tests/debug-menu.test.ts` — Debug-menu pure halves: mailto redaction boundary, announced outcomes (M14-EXT-26)
 - `tests/debug-panel.test.ts` — timing-window aggregation, cap, stage-change reset, ms formatting
+- `tests/design-snapshots.test.ts` — design history store + quota model: tiers, oldest-first eviction, near-quota copy, memory fallback (DUR-01)
 - `tests/diagnostics-bundle.test.ts` — redaction (secret keys/values, fail-closed, caps), bundle shape, status text
 - `tests/diagnostics-log.test.ts` — diagnostics logger/ring-buffer contract, including fault retention (D152)
 - `tests/dither-algorithms.test.ts` — M8 method invariants: determinism, membership+sidecar, boundaries, distinctness, tile validity
@@ -305,6 +311,7 @@
 - `tests/grid.test.ts` — grid-line placement, tick numbering/thinning, auto-hide rule
 - `tests/helpers/golden.ts` — golden harness: fixture load + tolerance compare
 - `tests/helpers/lut-f32.ts` — f32 mirror of the WGSL LUT arithmetic (fround per op)
+- `tests/helpers/project-fixture.ts` — compact v10 project fixture for the container/history suites
 - `tests/helpers/threads.ts` — Thread fixtures — one place identity-carrying test palettes are built
 - `tests/helpers/wgsl-reserved.ts` — WGSL reserved-word list + identifier scan (GPU-free shader guard)
 - `tests/highlight.test.ts` — highlight-mask invariants: scrim membership, compare composition, index keying (M14-EXT-17)
@@ -313,16 +320,18 @@
 - `tests/lut-cache.test.ts` — cache identity by palette content, LRU bound, GPU-LUT sanity rejection
 - `tests/matrix/rows.ts` — the correctness matrix: row definitions with `proves` text, adversarial palettes, seeded sources
 - `tests/modal.test.ts` — pure halves: focus-trap decisions + aria-describedby list arithmetic
+- `tests/notices.test.ts` — parser invariants, byte-for-byte pin of the shipped texts to the repo files, no-fetch / no-root-URL guard (D172)
 - `tests/palette-policy.test.ts` — Policy resolution: brands/source/inventory/exclusions and every explained conflict
 - `tests/palette-presets.test.ts` — Preset semantics: real references, enabled-brand only, visible degradation, stated rules
-- `tests/palette-resolve.test.ts` — The profile-world resolver’s own pins (COUNT-01 / MUST-01): a seat outside membership stays a Note, the count sentence is grammatical, an empty My-threads inventory resolves empty and not ok
+- `tests/palette-resolve.test.ts` — the profile-world resolver's pins: COUNT-01 sentences, MUST-01 seat rule (pin fills, Revert shape, My-inventory pins, ownedOnly), empty-inventory case
 - `tests/palette-selection.test.ts` — Count limits and auto-fill, incl. the canonical "lock 5, request 15 → 10 filled"
 - `tests/palette.test.ts` — DMC load invariants (533, unique, hex↔rgb)
 - `tests/pipeline-config.test.ts` — preset order, full-RGB, dither-replaces-reduce
 - `tests/pipeline-hello.test.ts` — M0 acceptance: identity golden + purity invariants
 - `tests/profile-editor.test.ts` — editor pure halves: browse rows, hex parsing, readout fingerprints, grid divisors, absent-vs-broken slots
 - `tests/profile-store.test.ts` — kind-aware store contract, generic profiles file round-trip, builtin rejection, My colours, paletteToProfile
-- `tests/project.test.ts` — project file: byte-identical round trip, validation errors, version refusal
+- `tests/project-package.test.ts` — `.pmproj` container: byte-identical round trip, legacy JSON detection, refusals for compressed/encrypted/zip64/truncated packages (DUR-01)
+- `tests/project.test.ts` — project file: byte-identical round trip, validation errors, version refusal, v10 migration, title/fallback naming (SAVE-01)
 - `tests/reduce.test.ts` — reduce golden + invariants (membership, fixed point, LUT↔exact)
 - `tests/resize.test.ts` — resize golden + geometry/average/bounds invariants
 - `tests/save-transcript.test.ts` — transcript-save script behaviour (paths, redaction guard)
@@ -343,6 +352,7 @@
 - `tests/ui-baseline/source.ts` — Seeded fixture generator + minimal PNG encoder for the baseline
 - `tests/ui-import.test.ts` — image-file filtering (pure half of import)
 - `tests/ui-styles.test.ts` — stylesheet invariant greps: [hidden]!important, no CSS order, dev-shell absence, import order
+- `tests/verify-deploy.test.ts` — verify-deploy pure helpers with the network off: entry-script discovery, build-id parsing, SHA prefix match, verdict line, arg parsing (PUB-05)
 - `tests/viewport.test.ts` — viewport maths exact cases (fit/anchor/clamp)
 - `tests/wasm-dither.test.ts` — wasm↔TS bit-exact parity: golden fixture, metrics/scan modes, full DMC Lab
 - `tests/webgpu-lut.test.ts` — GPU tolerance suite: f32-mirror near-tie bound, static shader scans, skipIf real-GPU parity

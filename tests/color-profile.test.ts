@@ -11,9 +11,11 @@ import {
   builtInProfiles,
   emptyRecipe,
   matchesRanges,
+  pinIntoRecipe,
   policyToRecipe,
   resolveProfileMembership,
   rgbToHsb,
+  unpinFromRecipe,
   type ColorProfileRecipe,
   type ProfileInputs,
 } from '../src/core/color-profile.ts';
@@ -77,6 +79,21 @@ describe('library union (step 1)', () => {
     const result = resolveProfileMembership(recipe({ libraries: ['mine', 'map:bw'] }), inputs());
     expect(result.ok).toBe(true);
     expect(result.entries).toHaveLength(2);
+    const conflict = result.conflicts.find((c) => c.kind === 'owned-none');
+    expect(conflict?.severity).toBe('warning');
+    expect(conflict?.message).toContain('contributes nothing');
+  });
+
+  it('still names the empty inventory when the profile resolves through its pins alone (MUST-01)', () => {
+    // A Must-use design opened on another machine: its seats are pinned
+    // into the copy, so it renders — and this warning is the only thing
+    // left saying that the inventory half of the profile is empty here.
+    const result = resolveProfileMembership(
+      recipe({ libraries: ['mine'], include: ['anchor:403', 'ariadna:1781'] }),
+      inputs({ owned: new Set() }),
+    );
+    expect(result.ok).toBe(true);
+    expect(result.entries.map((e) => e.id)).toEqual(['anchor:403', 'ariadna:1781']);
     const conflict = result.conflicts.find((c) => c.kind === 'owned-none');
     expect(conflict?.severity).toBe('warning');
     expect(conflict?.message).toContain('contributes nothing');
@@ -245,6 +262,52 @@ describe('pins (steps 4 and 5)', () => {
     );
     expect(result.ok).toBe(false);
     expect(result.conflicts.find((c) => c.kind === 'profile-empty')?.severity).toBe('error');
+  });
+});
+
+describe('recipe pins (MUST-01 — a Must-use outside the profile widens the copy)', () => {
+  it('pins a colour once and lifts its exclusion', () => {
+    const before = recipe({ libraries: ['dmc'], exclude: ['anchor:403'] });
+    const pinned = pinIntoRecipe(before, 'anchor:403');
+    expect(pinned.include).toEqual(['anchor:403']);
+    expect(pinned.exclude).toEqual([]);
+    expect(pinIntoRecipe(pinned, 'anchor:403').include).toEqual(['anchor:403']);
+    // Pure: the input is untouched, and the rest of the recipe rides across.
+    expect(before.include).toEqual([]);
+    expect(before.exclude).toEqual(['anchor:403']);
+    expect(pinned.libraries).toEqual(['dmc']);
+  });
+
+  it('resolves the seat an exclusion would otherwise have kept out', () => {
+    const pinned = pinIntoRecipe(
+      recipe({ libraries: ['map:bw'], exclude: ['map:bw:black'] }),
+      'map:bw:black',
+    );
+    const result = resolveProfileMembership(pinned, inputs());
+    expect(result.entries.map((e) => e.id)).toEqual(['map:bw:black', 'map:bw:white']);
+    expect(result.conflicts.some((c) => c.kind === 'include-and-exclude')).toBe(false);
+  });
+
+  it('unpins against the base: the include goes unless the profile has it, a base exclusion returns', () => {
+    const base = recipe({ libraries: ['dmc'], include: ['dmc:310'], exclude: ['dmc:666'] });
+    // The design pinned two colours and, through one of them, lifted
+    // the profile's own exclusion.
+    const copy = pinIntoRecipe(pinIntoRecipe(base, 'anchor:403'), 'dmc:666');
+    expect(copy.include).toEqual(['dmc:310', 'anchor:403', 'dmc:666']);
+    expect(copy.exclude).toEqual([]);
+    const one = unpinFromRecipe(copy, 'anchor:403', base);
+    expect(one.include).toEqual(['dmc:310', 'dmc:666']);
+    const two = unpinFromRecipe(one, 'dmc:666', base);
+    expect(two).toEqual(base);
+    // A pin the profile itself carries is the profile's, not ours.
+    expect(unpinFromRecipe(two, 'dmc:310', base)).toEqual(base);
+    // Pure: the copy is untouched.
+    expect(copy.include).toEqual(['dmc:310', 'anchor:403', 'dmc:666']);
+  });
+
+  it('unpins nothing without a base — an unlinked design cannot prove a pin was its own', () => {
+    const copy = recipe({ include: ['anchor:403'] });
+    expect(unpinFromRecipe(copy, 'anchor:403', undefined)).toBe(copy);
   });
 });
 

@@ -37,6 +37,36 @@ const WASM_STUB = fileURLToPath(
   new URL('./src/backends/wasm/stub.ts', import.meta.url),
 );
 
+/**
+ * Rollup inputs. `bench.html` is the production-build measurement
+ * harness (src/bench-browser.ts) and `bench-source.html` the controlled
+ * interaction source it captures (M13-MEAS-02 — same-origin so its
+ * BroadcastChannel paint marks reach the harness). Both must be built
+ * the same way the app is — minified and optimised — because measuring
+ * TS against WebGPU on a dev-server build is exactly what made the D47
+ * figures unusable (M5-PERF-23's gate), so `npm run build` — the gate's
+ * compile proof, and what bench:auto serves at base `/` — always
+ * carries them.
+ *
+ * The public Pages bundle does not (PUB-06): `PM_PUBLIC_BUNDLE=1`, set
+ * by the CI Pages-build step, builds `main` alone, so a maintainer
+ * instrument with a root-relative popup (`/bench-source.html` — a 404
+ * under `/<repo>/`) and a ~2 GiB `?auto=mem` probe is not a public URL.
+ * Keyed on an explicit env rather than `--mode` because
+ * `import.meta.env.MODE` / `DEV` are recorded in bench reports and gate
+ * the debug panel; the env changes nothing but this list.
+ */
+function bundleInputs(publicBundle: boolean): Record<string, string> {
+  const entry = (file: string): string => fileURLToPath(new URL(`./${file}`, import.meta.url));
+  return publicBundle
+    ? { main: entry('index.html') }
+    : {
+        main: entry('index.html'),
+        bench: entry('bench.html'),
+        benchSource: entry('bench-source.html'),
+      };
+}
+
 export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(`v${pkg.version}`),
@@ -56,19 +86,7 @@ export default defineConfig({
     sourcemap: true,
     target: 'es2022',
     rollupOptions: {
-      // `bench.html` is the production-build measurement harness
-      // (src/bench-browser.ts). It must be built the same way the app
-      // is — minified and optimised — because measuring TS against
-      // WebGPU on a dev-server build is exactly what made the D47
-      // figures unusable (M5-PERF-23's gate).
-      input: {
-        main: fileURLToPath(new URL('./index.html', import.meta.url)),
-        bench: fileURLToPath(new URL('./bench.html', import.meta.url)),
-        // The controlled interaction source the harness captures
-        // (M13-MEAS-02) — same-origin so its BroadcastChannel paint
-        // marks reach the harness.
-        benchSource: fileURLToPath(new URL('./bench-source.html', import.meta.url)),
-      },
+      input: bundleInputs(process.env['PM_PUBLIC_BUNDLE'] === '1'),
     },
   },
   test: {

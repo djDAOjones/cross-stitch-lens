@@ -96,6 +96,9 @@ function defaultConfig(): PipelineConfig {
 function defaultProject(config: PipelineConfig): ProjectFile {
   return {
     schemaVersion: SCHEMA_VERSION,
+    // Schema v10 (DUR-01): no picture in the stated default — the
+    // projectJson pin moved for the bump; the engine hashes never move.
+    source: null,
     pipeline: {
       preset: config.preset,
       grid: { ...config.grid },

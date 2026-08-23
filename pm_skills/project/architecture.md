@@ -15,7 +15,7 @@
 | Native acceleration | Rust → WASM (`wasm-pack`, SIMD) for error diffusion; WebGPU compute (WGSL) for parallel stages |
 | Capture | `getDisplayMedia` + user-drawn crop rect; frames via `ImageCapture`/`requestVideoFrameCallback` |
 | PDF export | pdf-lib |
-| Persistence | Versioned JSON project files (explicit save only); IndexedDB for **library** data — thread inventory, saved palettes, profiles, user colours. **There is no autosave and no session restore**: closing the tab loses the design in progress (DUR-01, corrected at D149 — this row claimed autosave existed) |
+| Persistence | `.pmproj` project packages — a store-only zip holding canonical `project.json` beside the picture verbatim (schema v10; explicit save; legacy `.json` v1–v9 still loads); IndexedDB for **library** data — thread inventory, saved palettes, profiles, user colours — and, in its own database `pattern-mapper-designs`, the **design history** that restores the latest design on reopen and steers to explicit save (DUR-01, D179) |
 | Tests | Vitest + golden-output fixtures |
 | Future packaging | Tauri v2 (macOS ScreenCaptureKit plugin for arbitrary-region capture) — no code paths assume it |
 
@@ -34,12 +34,14 @@ src/
     color/         # sRGB↔linear↔Lab, distance metrics
     stats.ts       # stitch/colour counts
     project.ts     # (de)serialisation, schema versioning
+    project-package.ts # .pmproj container: deterministic writer, bounded reader
   backends/
     wasm/          # thin TS adapters over the Rust crate
     webgpu/        # WGSL shaders + dispatch adapters
   worker/          # pipeline executor, scheduling, dirty-frame detection
   capture/         # getDisplayMedia session, crop-rect model
   export/          # png.ts, chart.ts, pdf.ts
+  library/         # IndexedDB: inventory + palettes (store.ts), design history (snapshots.ts)
   ui/              # Carbon components, panels, preview host
 crates/
   stitch-engine/   # Rust: error diffusion (+ future hot stages)
@@ -234,16 +236,25 @@ measured reality at M5C/M5D (D47/D48).
 
 ## Project file (JSON, versioned)
 
-`{ schemaVersion, pipeline, palette, symbols, gridStyle, preview,
-export, estimates }` — see requirements §20 for the full field
+`{ schemaVersion, source, pipeline, palette, symbols, gridStyle,
+preview, export, estimates }` — see requirements §20 for the full field
 inventory. Loading an older `schemaVersion` must migrate, never fail
-(currently **v9** — `SCHEMA_VERSION` in `src/core/project.ts` — with
-forward steps from v1–v8; v5 added the colour and dither profile refs
+(currently **v10** — `SCHEMA_VERSION` in `src/core/project.ts` — with
+forward steps from v1–v9; v5 added the colour and dither profile refs
 at M15 under the D114 compatibility waiver, v6 the symbol-assignment
 block and chart mode at M9, v7 the grid-styling split at M11, v8 the
 PDF pagination fields at M10, v9 the fabric/estimation settings at
-M12). A file saved by a *newer* version is refused with a message
-naming both versions, never silently misread.
+M12, v10 the `source` block `{ entry, type, name }` naming the embedded
+picture at DUR-01). A file saved by a *newer* version is refused with a
+message naming both versions, never silently misread.
+
+Since DUR-01 (D179) the file on disk is a `.pmproj` **package**
+(`src/core/project-package.ts`): a store-only zip holding `project.json`
+and the picture's bytes verbatim, deterministic (fixed 1980 stamps,
+fixed layout) so the round trip stays byte-identical, and read as
+untrusted input — sizes checked before any copy, CRCs verified,
+compressed, encrypted, zip64 and truncated archives refused with a
+sentence. Legacy `.json` files are told apart by their first bytes.
 
 The `gridStyle` block (v7, M11) is `{ screen, print, preset }`: one
 style-values shape (`src/core/grid-style.ts`) persisted twice —

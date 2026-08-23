@@ -11,7 +11,9 @@ name: CI
 # GitHub Pages publish (D172): the bundle is rebuilt with the
 # project-site base path (`/<repo>/`) and `dist` is deployed. The
 # repository's Pages source must be "GitHub Actions" — a branch
-# source keeps its own build running and races this one.
+# source keeps its own build running and races this one. The public
+# bundle omits the measurement harness (PUB-06), and once deployed the
+# live build id is checked against the pushed commit (PUB-05).
 
 on:
   push:
@@ -80,6 +82,11 @@ jobs:
         run: npx vite build --base "$BASE_PATH"
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
+          # The public bundle carries the app alone: the measurement
+          # harness (bench.html, bench-source.html) stays in every other
+          # build — the gate's compile proof above, and bench:auto — but
+          # not at a public URL (PUB-06; see vite.config.ts).
+          PM_PUBLIC_BUNDLE: '1'
 
       - name: Upload the Pages artifact
         if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
@@ -105,3 +112,22 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v5
+
+      # Post-deploy verification (PUB-05): the site must now serve the
+      # commit this run deployed. These steps run AFTER deploy-pages, so
+      # a FAIL reddens the run without un-deploying — the previous
+      # bundle is already replaced; the red run is the signal to look,
+      # and `npm run verify:deploy` reproduces the check locally. The
+      # script has no dependencies, so there is no `npm ci` here.
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verify the live build id
+        run: node scripts/verify-deploy.mjs --url "$PAGE_URL" --wait 300 "$GITHUB_SHA"
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}

@@ -26,14 +26,16 @@ import {
   type DitherConfig,
   type PipelineConfig,
 } from './core/pipeline/config.ts';
-import {
-  DITHER_PRESETS,
-  matchBuiltInDither,
-  type DitherPreset,
-} from './core/pipeline/dither-presets.ts';
+import { DITHER_PRESETS, matchBuiltInDither } from './core/pipeline/dither-presets.ts';
 import { runPipeline } from './core/pipeline/index.ts';
 import { resizeStage } from './core/pipeline/resize.ts';
 import { loadCatalogue } from './core/thread-catalogue.ts';
+import {
+  ADJUST_PRESET_CANDIDATES,
+  applyAdjustProto,
+  adjustProtoIsIdentity,
+  type AdjustPresetCandidate,
+} from './core/tone/adjust-proto.ts';
 import type { Palette, PixelBuffer } from './core/types.ts';
 import { sampleBuffer, SAMPLE_NAME } from './ui/sample.ts';
 
@@ -52,6 +54,7 @@ const sourceSel = must<HTMLSelectElement>('source');
 const paletteSel = must<HTMLSelectElement>('palette');
 const gridSel = must<HTMLSelectElement>('grid');
 const openBtn = must<HTMLButtonElement>('open-sheet');
+const axisSel = must<HTMLSelectElement>('axis');
 const presentSel = must<HTMLSelectElement>('present');
 const perRowSel = must<HTMLSelectElement>('perrow');
 const frame400Input = must<HTMLInputElement>('frame400');
@@ -147,11 +150,15 @@ function selectionPalette(gridBuffer: PixelBuffer, limit: number): Palette {
 // State
 // ---------------------------------------------------------------------
 
+const NO_ADJUST = ADJUST_PRESET_CANDIDATES[0];
+if (NO_ADJUST === undefined) throw new Error('no adjustment candidates');
+
 interface State {
   sourceKey: string;
   limit: number;
   grid: number;
   dither: DitherConfig;
+  adjust: AdjustPresetCandidate;
 }
 
 const state: State = {
@@ -159,6 +166,7 @@ const state: State = {
   limit: 8,
   grid: 300,
   dither: { algorithm: 'floyd-steinberg', serpentine: true, strength: 1 },
+  adjust: NO_ADJUST,
 };
 
 let renderToken = 0;
@@ -179,19 +187,26 @@ async function refresh(): Promise<void> {
   try {
     const source = await loadSource(state.sourceKey);
     if (token !== renderToken) return;
-    const gridBuffer = resizeStage.backends.ts(source, {
+    // Adjust before resize (§7), and the selection reads the adjusted
+    // picture (the ticket's slice-2 engine note).
+    const adjusted = applyAdjustProto(source, state.adjust.params);
+    const gridBuffer = resizeStage.backends.ts(adjusted, {
       width: state.grid,
       height: state.grid,
       mode: 'contain',
     });
     const palette = selectionPalette(gridBuffer, state.limit);
-    const output = runPipeline(source, buildStages(configFor(palette, state.dither)));
+    const output = runPipeline(adjusted, buildStages(configFor(palette, state.dither)));
     paintBuffer(beforeCanvas, gridBuffer);
     paintBuffer(currentCanvas, output);
     const preset = matchBuiltInDither(state.dither);
     const label =
       DITHER_PRESETS.find((p) => `builtin:${p.id}` === preset)?.label ?? 'unnamed dither';
-    currentCaption.textContent = `current render — ${label}, ${String(palette.entries.length)} colours`;
+    const adjustNote = adjustProtoIsIdentity(state.adjust.params)
+      ? ''
+      : `, ${state.adjust.label}`;
+    currentCaption.textContent =
+      `current render — ${label}${adjustNote}, ${String(palette.entries.length)} colours`;
     statusEl.textContent = 'Ready.';
   } catch (error) {
     statusEl.textContent = error instanceof Error ? error.message : String(error);
@@ -202,11 +217,23 @@ async function refresh(): Promise<void> {
 // The sheet — one builder, two homes (modal / panel)
 // ---------------------------------------------------------------------
 
+/**
+ * Yield until the next frame — or 50 ms, whichever comes first. The
+ * timeout half is not cosmetic: an occluded window suspends
+ * requestAnimationFrame entirely, and a sheet that renders nothing
+ * while its window is covered is a broken instrument. (Found live:
+ * the render loop parked forever behind a hidden pane.)
+ */
 function nextFrame(): Promise<void> {
   return new Promise((resolve) => {
-    requestAnimationFrame(() => {
+    let done = false;
+    const finish = (): void => {
+      if (done) return;
+      done = true;
       resolve();
-    });
+    };
+    requestAnimationFrame(finish);
+    window.setTimeout(finish, 50);
   });
 }
 
@@ -240,21 +267,60 @@ async function openSheet(): Promise<void> {
   const token = ++renderToken;
   const source = await loadSource(state.sourceKey);
   if (token !== renderToken) return;
-  // The freeze: the still and its palette are fixed at open; nothing
-  // the live controls do after this changes what the sheet renders.
+  // The freeze: the still — and, on the dither axis, the current
+  // adjustment and its palette — are fixed at open; nothing the live
+  // controls do after this changes what the sheet renders.
   const still = source;
-  const gridBuffer = resizeStage.backends.ts(still, {
-    width: state.grid,
-    height: state.grid,
-    mode: 'contain',
-  });
-  const palette = selectionPalette(gridBuffer, state.limit);
+  const axis = axisSel.value === 'adjust' ? 'adjust' : 'dither';
+  const gridFor = (buffer: PixelBuffer): PixelBuffer =>
+    resizeStage.backends.ts(buffer, {
+      width: state.grid,
+      height: state.grid,
+      mode: 'contain',
+    });
+
+  interface SheetVariant {
+    label: string;
+    render: () => PixelBuffer;
+    adopt: () => void;
+  }
+
+  let variants: SheetVariant[];
+  let axisNote: string;
+  if (axis === 'dither') {
+    const adjusted = applyAdjustProto(still, state.adjust.params);
+    const palette = selectionPalette(gridFor(adjusted), state.limit);
+    axisNote = `dither, ${String(palette.entries.length)} colours frozen`;
+    variants = DITHER_PRESETS.map((preset) => ({
+      label: preset.label,
+      render: () => runPipeline(adjusted, buildStages(configFor(palette, preset.config))),
+      adopt: () => {
+        state.dither = { ...preset.config };
+      },
+    }));
+  } else {
+    // Each adjustment re-selects its palette: the selection source is
+    // the adjusted picture (the ticket's slice-2 engine note), and
+    // showing anything else would hide the presets' main effect.
+    axisNote = 'adjustments, palette re-selected per cell';
+    variants = ADJUST_PRESET_CANDIDATES.map((cand) => ({
+      label: cand.label,
+      render: () => {
+        const adjusted = applyAdjustProto(still, cand.params);
+        const palette = selectionPalette(gridFor(adjusted), state.limit);
+        return runPipeline(adjusted, buildStages(configFor(palette, state.dither)));
+      },
+      adopt: () => {
+        state.adjust = cand;
+      },
+    }));
+  }
 
   const home = sheetHome();
   const head = document.createElement('div');
   head.className = 'sheet-head';
   const title = document.createElement('strong');
-  title.textContent = `Contact sheet — dither, ${String(palette.entries.length)} colours frozen`;
+  title.textContent = `Contact sheet — ${axisNote}`;
   const totalEl = document.createElement('span');
   totalEl.className = 'cell-ms';
   totalEl.textContent = 'rendering…';
@@ -272,52 +338,52 @@ async function openSheet(): Promise<void> {
   sheetGrid.style.gridTemplateColumns = `repeat(${perRowSel.value}, 1fr)`;
   home.root.append(sheetGrid);
 
-  const cellFor = (preset: DitherPreset): { cell: HTMLButtonElement; canvas: HTMLCanvasElement; ms: HTMLElement } => {
+  const cellFor = (variant: SheetVariant): { cell: HTMLButtonElement; canvas: HTMLCanvasElement; ms: HTMLElement } => {
     const cell = document.createElement('button');
     cell.type = 'button';
     cell.className = 'sheet-cell';
-    cell.setAttribute('aria-label', `adopt ${preset.label}`);
+    cell.setAttribute('aria-label', `adopt ${variant.label}`);
     const canvas = document.createElement('canvas');
     const label = document.createElement('div');
     label.className = 'cell-label';
-    label.textContent = preset.label;
+    label.textContent = variant.label;
     const ms = document.createElement('div');
     ms.className = 'cell-ms';
     ms.textContent = '…';
     cell.append(canvas, label, ms);
     cell.addEventListener('click', () => {
-      state.dither = { ...preset.config };
+      variant.adopt();
       if (presentSel.value === 'modal') home.close();
       // After the re-render, or the refresh's "Ready." eats the
       // sentence — STATUS-01's mechanism in miniature.
       void refresh().then(() => {
-        statusEl.textContent = `Adopted: ${preset.label}.`;
+        statusEl.textContent = `Adopted: ${variant.label}.`;
       });
     });
     return { cell, canvas, ms };
   };
 
-  const cells = DITHER_PRESETS.map((preset) => {
-    const made = cellFor(preset);
+  const cells = variants.map((variant) => {
+    const made = cellFor(variant);
     sheetGrid.append(made.cell);
-    return { preset, ...made };
+    return { variant, ...made };
   });
 
   // Off the live path: one variant per frame, a rAF yield between.
   const sheetToken = renderToken;
   let total = 0;
-  for (const { preset, canvas, ms } of cells) {
+  for (const { variant, canvas, ms } of cells) {
     await nextFrame();
     if (sheetToken !== renderToken || !home.root.isConnected) return;
     if (presentSel.value === 'modal' && !sheetDialog.open) return;
     const t0 = performance.now();
-    const output = runPipeline(still, buildStages(configFor(palette, preset.config)));
+    const output = variant.render();
     const elapsed = performance.now() - t0;
     total += elapsed;
     paintBuffer(canvas, output);
     ms.textContent = `${elapsed.toFixed(0)} ms`;
   }
-  totalEl.textContent = `${DITHER_PRESETS.length.toString()} variants in ${total.toFixed(0)} ms`;
+  totalEl.textContent = `${variants.length.toString()} variants in ${total.toFixed(0)} ms`;
 }
 
 // ---------------------------------------------------------------------

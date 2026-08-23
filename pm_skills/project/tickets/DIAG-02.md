@@ -53,3 +53,12 @@ storage, no credentials. `resolvePalette` logs each resolution at
 `info` with profile, count rule, Must-use ids, membership, selected,
 locked, conflict kinds and whether a selection source was present, or
 "resolved to nothing". Remaining: shape 3, the one-click report.
+
+## Shipped 2026-08-23 (D183)
+
+Shape 3. `prepareReport` in `src/ui/diagnostics-button.ts`: the
+settings document alone (`.json`, Save's name — never the `.pmproj`
+package with its picture) then the redacted log, then the compose
+window; the project text is a host callback, so the D179 format change
+touched only the wiring block. Remaining — the owner's: a dedicated,
+retirable alias in `DEV_EMAIL`; empty composes with no recipient.

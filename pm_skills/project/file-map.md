@@ -204,7 +204,7 @@
 - `src/ui/colour-section.ts` — recut Colour section: profile select + (edited) verbs, count + minimum distance, Must-use chips, inventory reveal (M15-UI-01)
 - `src/ui/controls.ts` — Carbon-style field builders: toggle/number/colour/select + clampInt
 - `src/ui/debug-panel.ts` — dev-only profiling panel: rolling timing window (pure) + disclosure DOM
-- `src/ui/diagnostics-button.ts` — the "Copy diagnostics" control + announced status line
+- `src/ui/diagnostics-button.ts` — the Debug menu: Report a problem (project file + redacted log + prefilled mailto, DIAG-02), Copy diagnostics, Download the log; `DEV_EMAIL`; announced status line
 - `src/ui/dither-model.ts` — pure Dither-controls model: algorithm options, per-family strength, evidence-bearing presets, session memory
 - `src/ui/import.ts` — import routes → decode: filter (pure) + blob→PixelBuffer
 - `src/ui/info-panel.ts` — "Colours used" table content: pure row model + thin DOM half, hosted by a section (M14-EXT-41)
@@ -279,7 +279,7 @@
 - `tests/color-profile.test.ts` — profile resolver: every narrowing step + sentence, ordering contract, built-ins non-empty, policy→recipe bridge; recipe pin helpers + pins-only inventory warning (MUST-01)
 - `tests/color-sources.test.ts` — map identity/count/ordering pins, exact-match naming incl. lime/green, namespace collision guard
 - `tests/controls.test.ts` — number-input clamping (pure half of controls)
-- `tests/debug-menu.test.ts` — Debug-menu pure halves: mailto redaction boundary, announced outcomes (M14-EXT-26)
+- `tests/debug-menu.test.ts` — Debug-menu pure halves: the one-click report (route order, log-only, redaction boundary, failure paths), mailto redaction boundary, announced outcomes (M14-EXT-26, DIAG-02)
 - `tests/debug-panel.test.ts` — timing-window aggregation, cap, stage-change reset, ms formatting
 - `tests/design-snapshots.test.ts` — design history store + quota model: tiers, oldest-first eviction, near-quota copy, memory fallback (DUR-01)
 - `tests/diagnostics-bundle.test.ts` — redaction (secret keys/values, fail-closed, caps), bundle shape, status text

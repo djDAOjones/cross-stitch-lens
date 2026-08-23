@@ -1967,3 +1967,55 @@ product code. Ready to build as schema v11 — the only bump in its round
 
 **Link:** merged as `86a36e8`; presence closes MUST-01's other half
 when A ships; layers B and C1 scope at their own pick.
+
+## D183 — DIAG-02 ships its report: one click saves the settings document and the redacted log, then opens the email route (2026-08-23)
+
+**Context.** D174 opened DIAG-02 from the first live-app reports; D175
+shipped the `?diag=1` opt-in and the palette log. The remainder was the
+one-click report, waiting on the `DEV_EMAIL` placeholder. Built on the
+`diag-02` branch of the 2026-08-23 parallel run. This entry is the
+integrator's reconstruction from the branch's commit record and module
+documentation — no handoff block reached it.
+
+**Decision.** "Report a problem" leads the Debug menu: one click saves
+the project file — the palette half of any report, since its snapshot
+is the palette the pipeline actually ran with (D174) — then the
+redacted log, then opens a prefilled `mailto:` compose window whose
+subject carries the version and build identity and whose body says to
+attach both files; `mailto:` cannot attach, so the flow is
+download-then-email and the copy says so, and the app stays offline.
+The project text reaches the diagnostics module through a host
+callback, never an import, so the module never depends on the project
+model or its save format: when D179 changed the format underneath, the
+only adjustment was in the wiring block — the **settings document
+alone** (never the `.pmproj` package with its picture, which is the
+tester's screen and must not travel on a click made for a log), under
+Save's name (SAVE-01's parts) with a `.json` extension for the person
+reading the email. The status line names every file the tester has to
+attach — a browser that rations automatic downloads may hold the
+second one back, and a named file that did not arrive is noticed.
+Failures are stated: a project failure before anything is saved, a
+download failure without opening mail. `DEV_EMAIL` stays empty (a
+compose window with no recipient still works as a hand-off) until the
+owner's **dedicated, retirable alias** lands: the address ships in a
+public bundle, so it is never a personal address and never a secret —
+a harvested alias is switched off and one line changes.
+
+**Alternatives.** Reaching into the project model from the diagnostics
+module (the save format would have broken it mid-round); sending the
+package (the tester's picture on a log click); log content in the mail
+body (the redaction boundary — a test pins that neither project nor
+log content enters the URL).
+
+**Verification.** Gate green on the merged tree (1,362 tests); nine
+new tests cover the route order, the log-only case, the redaction
+boundary and both failure paths, plus a guard that `DEV_EMAIL` is empty
+or well-formed.
+
+**Scope.** `src/ui/diagnostics-button.ts`, `src/main.ts` (the wiring
+block), `tests/debug-menu.test.ts`; deltas ledgered for
+`DEV-INFRASTRUCTURE.md` and `docs/ui-spec.md`. Open: the alias, the
+owner's.
+
+**Link:** merged as `d014e48`; DIAG-02 stays open for the
+`[maintainer]` alias only.

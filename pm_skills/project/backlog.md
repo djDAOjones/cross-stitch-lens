@@ -72,9 +72,9 @@ without steps or a bundle. Diagnosed in the running app before anything
 was proposed (D173); sequencing is the owner's call — placed here so
 the next pick sees them.
 
-- [ ] **DIAG-02 Diagnostics for testers on the live build** [detail] (2026-08-23, opt-in and palette logging shipped 2026-08-23)
-  Shipped (D175): the Debug menu mounts on the live build behind `?diag=1`, and every palette resolution is logged (profile, rule, seats, membership, selected, conflicts, source). Remaining: a one-click "Report a problem" that saves the project JSON and the redacted log together and opens the email route — waits on the `DEV_EMAIL` placeholder, which ships in a public bundle.
-  Done when: a tester on the live URL can produce, in one click, a bundle and a project file naming the build, profile, count rule, seats, resolved palette and every conflict.
+- [ ] **DIAG-02 Diagnostics for testers on the live build** [maintainer] [detail] (2026-08-23, report shipped 2026-08-23)
+  Shipped (D175, D183): the Debug menu mounts on the live build behind `?diag=1`, every palette resolution is logged, and "Report a problem" saves the settings document and the redacted log in one click, then opens the compose window. Remaining, the owner's: a dedicated, retirable alias in `DEV_EMAIL` (`src/ui/diagnostics-button.ts`) — it ships in a public bundle, so never a personal address; empty composes with no recipient.
+  Done when: the alias is set and a tester's report reaches it.
 
 ### Track C — Publication
 

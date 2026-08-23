@@ -46,6 +46,11 @@ names it.
   the truth, removing the chip undoes the pin, Revert drops it; drifted
   seats stay kept and explained; My-inventory designs render from their
   pins with the inventory warning. See D178.
+- DIAG-02 (2026-08-23) — Report a problem: one click saves the settings
+  document and the redacted log, then opens a prefilled compose window
+  that says to attach both; the project text is a host callback, so
+  D179's format change cost one wiring line. `DEV_EMAIL` stays empty
+  until the owner's alias lands. See D183.
 - ICE-RECOLOUR-01 (2026-08-23) — sign-off: the five questions answered,
   layer A (the colour swap) scoped and its option picked — a design
   rule, a pure stage over the sidecar with a render palette; builds as

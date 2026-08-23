@@ -86,3 +86,6 @@ refer to `docs/requirements.md`.
 - A restored capture returns as a still; a "start a new capture of the same window" offer on restore would close the loop (from: 2026-08-23 DUR-01)
 - The harness popup path `/bench-source.html` (`src/bench-browser.ts`) is root-relative, so it 404s under any build served from a base path that includes the harness; PUB-06 removed the public-facing symptom, but the latent bug remains for harness builds under a base path — fix with `import.meta.env.BASE_URL` (from: 2026-08-23 PUB-06)
 - `verify:deploy` could take a `--fetch` flag to `git fetch` before resolving `origin/main`, so the default target is correct from any machine without a manual fetch or an explicit SHA (from: 2026-08-23 PUB-05)
+- Recipe-level "render X as Y" — a profile carrying swaps, additive once C1 (tone-only matching) exists (from: 2026-08-23 ICE-RECOLOUR-01 Q5)
+- Swap-to-fabric — erase a thread by swapping it to empty; layer B's territory (from: 2026-08-23 ICE-RECOLOUR-01 scope)
+- `check:docs` alone fails in a fresh worktree — `docs/acceptance-matrix.md:46` names `crates/stitch-engine/pkg`, which only exists after `check:wasm`; the full gate orders them correctly, a standalone docs run does not (from: 2026-08-23 recolour-design close)

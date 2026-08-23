@@ -131,9 +131,9 @@ upstream editor at all.
   Intent: A11Y-01 took the "has a name" half; this is whether the announcements are any *good*, plus the no-meaning-by-colour check.
   Done when: a VoiceOver pass over the main control surface is recorded pass/fail per control, and the colour-only check is answered.
 
-- [ ] **ICE-RECOLOUR-01 Creative recolouring: colour swap, pixel editor, and controls beyond nearest colour** [sign-off] [detail] (2026-08-22)
-  Intent: creative control past realism in the colour mapping — a thread-for-thread swap layer (presence, where Must-use is only a seat), a cell-level pixel editor, and quantiser controls such as tone-only matching and the owner's target % distribution of palette colours (strongest at 1-bit / 2-state; deep thought, not solving). Pure stages after the colour stage or reduce-stage params — never preview-only.
-  Done when: the owner signs which layers ship, in what order (the ticket recommends swap → tone-only matching → pixel editor after DUR-01), and where they live in the UI.
+- [ ] **ICE-RECOLOUR-01 Creative recolouring: colour swap, pixel editor, and controls beyond nearest colour** [detail] (2026-08-22, signed 2026-08-23)
+  Signed (D182): swap → tone-only matching → pixel editor; the swap is a design rule, a pure stage over the sidecar with a render palette, targets from the whole universe, Swap… on the Colours-used row plus a Swaps chip list. Layer A is ready to build as schema v11 (the only bump in its round); promote when scheduled.
+  Done when: layer A ships with the round trip intact and a swap target reaching Colours used, the key and the estimates.
 
 **Blocked on data or research.**
 

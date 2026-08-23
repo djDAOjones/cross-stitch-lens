@@ -1909,3 +1909,61 @@ wish-listed.
 **Link:** merged as `1a5efdb` with PUB-05 (D180); the first deploy
 after this merge is the first to exclude the harness —
 `/pattern-mapper/bench.html` starts 404-ing on Pages by design.
+
+## D182 — ICE-RECOLOUR-01 signs: a swap is presence, a design rule, and a pure stage over the sidecar (2026-08-23)
+
+**Context.** D173 opened the item with three layers and five questions.
+The sign-off ran on the `recolour-design` branch of the 2026-08-23
+parallel run against `f33a3cb`, after two things moved under the
+ticket: DUR-01 merged (D179, schema v10) and MUST-01 shipped as
+auto-pin (D178), which closed the seat half and handed presence here.
+Every answer was the owner's, relayed through the coordinator.
+
+**Signed.** (1) A swap target comes from the whole universe — every
+brand, the generated maps, custom colours, any other palette entry (a
+merge) — because a target never enters selection, so it cannot break
+what the profile promises, and D178 settled the principle one layer
+down; the browse ignores "only threads I own". (2) "Swap…" is the third
+verb on the Colours-used row beside Highlight and Remove, opening the
+shared browse table in a modal; after X → Y the table shows Y's row
+labelled "swapped from X" and Swap… there re-targets — swaps never
+chain; a Swaps chip list beside Must-use is the state's second home,
+where a dangling swap is kept and explained (D178's drift rule). (3)
+The pixel editor paints stills only in v1 — overrides held across
+frames, the brush off while frames flow — because cell edits need a
+stable picture and DUR-01 made "still" the durable state. (4) Order
+A → C1 → B: B depends on A's render palette, A closes MUST-01's
+presence half, C1 is stage params only. (5) A swap is a design rule in
+`palette.design` beside count, minimum distance and Must-use, never in
+the recipe for now — a profile is a composition recipe (D114) and a
+recipe-level swap would dangle in every design but the one it was made
+for; `from` is the selected entry's id, `to` a full thread record (D55
+snapshot semantics).
+
+**Layer A, scoped and picked.** `config.swaps` → `buildStages` derives
+a render palette (selected entries, indices unchanged, plus render-only
+targets appended in swap order) and an index map, and appends a pure
+swap stage after the colour stage only when a swap is active (the
+`adjustIsIdentity` precedent — zero cost unused). The stage rewrites
+each cell's index through the map and repaints its RGB;
+`config.palette` stays the selected palette, so the LUT fingerprint
+(D46) is untouched and error diffusion still runs against the matched
+colour. The sidecar thereafter indexes the render palette: stats, key
+entries, highlight and symbol sync switch to it through one helper.
+Persistence is `palette.design.swaps`, schema v11, empty default,
+byte-identical round trip; the projectJson baseline re-pins, the engine
+hashes must not move.
+
+**Alternatives.** Folding the remap into reduce/dither (touches the
+protected colour stages, both backend adapters and the golden/parity
+signatures for one fewer O(cells) pass); resolving at the palette layer
+(a membership edit in disguise); a reveal under the Colours-used table
+for the picker (rebuilt around every frame); B first (the largest
+surface, solving the render palette ad hoc).
+
+**Scope.** `tickets/ICE-RECOLOUR-01.md` only (commit `1f8dbe4`); no
+product code. Ready to build as schema v11 — the only bump in its round
+— in full mode from the plan gate.
+
+**Link:** merged as `86a36e8`; presence closes MUST-01's other half
+when A ships; layers B and C1 scope at their own pick.

@@ -46,6 +46,10 @@ names it.
   the truth, removing the chip undoes the pin, Revert drops it; drifted
   seats stay kept and explained; My-inventory designs render from their
   pins with the inventory warning. See D178.
+- ICE-RECOLOUR-01 (2026-08-23) — sign-off: the five questions answered,
+  layer A (the colour swap) scoped and its option picked — a design
+  rule, a pure stage over the sidecar with a render palette; builds as
+  schema v11 in a later round. See D182.
 - MYTHREADS-01 (2026-08-23) — the empty-inventory dead end gets an
   exit: "My inventory" (renamed from "My threads", id unchanged) is a
   disabled option with its reason while the inventory is empty, and a

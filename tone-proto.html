@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CREATIVE-01 tone-mode prototype</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        font: 14px/1.45 system-ui, sans-serif;
+        background: #161616;
+        color: #f4f4f4;
+        margin: 1.5rem;
+        max-width: 1100px;
+      }
+      h1 {
+        font-size: 1.15rem;
+        font-weight: 500;
+      }
+      p.note {
+        color: #b5b5b5;
+        max-width: 70ch;
+      }
+      fieldset {
+        border: 1px solid #444;
+        border-radius: 6px;
+        margin: 0 0 1rem;
+        padding: 0.6rem 0.9rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.9rem 1.4rem;
+        align-items: center;
+      }
+      legend {
+        color: #b5b5b5;
+        padding: 0 0.3rem;
+      }
+      label {
+        display: inline-flex;
+        gap: 0.4rem;
+        align-items: center;
+        white-space: nowrap;
+      }
+      select,
+      input[type='number'],
+      button {
+        background: #262626;
+        color: #f4f4f4;
+        border: 1px solid #555;
+        border-radius: 4px;
+        padding: 0.25rem 0.45rem;
+        font: inherit;
+      }
+      button:hover {
+        background: #333;
+      }
+      input[type='range'] {
+        width: 220px;
+      }
+      #tone-value {
+        font-variant-numeric: tabular-nums;
+        min-width: 4.5ch;
+        display: inline-block;
+      }
+      #ramp {
+        touch-action: none;
+        display: block;
+        background: #222;
+        border: 1px solid #444;
+        border-radius: 4px;
+      }
+      #curve {
+        touch-action: none;
+        background: #222;
+        border: 1px solid #444;
+        border-radius: 4px;
+      }
+      .panels {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.2rem;
+        align-items: flex-start;
+      }
+      .canvases {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 0.6rem;
+      }
+      .canvases figure {
+        margin: 0;
+      }
+      .canvases canvas {
+        image-rendering: pixelated;
+        width: 380px;
+        height: 380px;
+        background: #333;
+        border: 1px solid #444;
+      }
+      figcaption {
+        text-align: center;
+        color: #b5b5b5;
+        padding-top: 4px;
+        font-size: 12px;
+      }
+      #bands {
+        font-size: 12px;
+        font-variant-numeric: tabular-nums;
+        border-collapse: collapse;
+        margin-top: 0.4rem;
+      }
+      #bands td,
+      #bands th {
+        padding: 1px 10px 1px 0;
+        text-align: left;
+        font-weight: 400;
+      }
+      #cut-inputs label {
+        font-size: 12px;
+      }
+      #cut-inputs input {
+        width: 5.5ch;
+      }
+      .curve-row {
+        display: flex;
+        gap: 0.9rem;
+        align-items: flex-start;
+      }
+      #curve-inputs {
+        display: grid;
+        grid-template-columns: auto auto auto;
+        gap: 0.25rem 0.5rem;
+        font-size: 12px;
+        align-items: center;
+      }
+      #curve-inputs input {
+        width: 6ch;
+      }
+      #status {
+        color: #ffb3b3;
+        min-height: 1.2em;
+      }
+      #stats {
+        font-variant-numeric: tabular-nums;
+        color: #d6d6d6;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>CREATIVE-01 — tone-mode prototype</h1>
+    <p class="note">
+      Branch-only prototype (never production source). The slider walks the
+      weighted metric d² = ΔL² + w²Δa² + w²Δb², w = 1 − t; at the tone
+      end-stop the ramp's cut handles take over (ladder mode). The curve
+      remaps the picture's lightness only. Evidence twin:
+      <code>AUDIT=1 vitest run tests/audits/tone-mode.audit.test.ts</code>.
+    </p>
+    <div id="status" role="status"></div>
+
+    <fieldset>
+      <legend>Source & palette</legend>
+      <label>Source <select id="source"></select></label>
+      <label>Palette <select id="ladder"></select></label>
+      <label>Grid <select id="grid">
+        <option value="150">150</option>
+        <option value="300" selected>300</option>
+      </select></label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Matching</legend>
+      <label>Colour <input id="tone" type="range" min="0" max="1" step="0.01" value="1" /> Tone
+        <span id="tone-value">1.00</span></label>
+      <label>Dither <select id="dither">
+        <option value="weighted-error" selected>weighted-error (scaled space)</option>
+        <option value="srgb-error">srgb-error (production-shaped)</option>
+        <option value="none">none (hard)</option>
+      </select></label>
+      <label><input id="serpentine" type="checkbox" checked /> serpentine</label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Tone ramp — control &amp; provenance (active at the tone end-stop)</legend>
+      <div>
+        <canvas id="ramp" width="640" height="88"></canvas>
+        <div style="display: flex; gap: 0.6rem; margin-top: 0.5rem; flex-wrap: wrap; align-items: center">
+          <label>Shape <select id="ramp-shape">
+            <option value="strip" selected>gradient strip</option>
+            <option value="hist">histogram-backed</option>
+          </select></label>
+          <button id="natural" type="button">Natural cuts</button>
+          <button id="equalise" type="button">Equalise</button>
+          <span id="cut-inputs"></span>
+        </div>
+        <table id="bands"></table>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Tone curve — three points, both axes; arrows nudge in the fields</legend>
+      <div class="curve-row">
+        <canvas id="curve" width="220" height="220"></canvas>
+        <div>
+          <div id="curve-inputs"></div>
+          <button id="curve-reset" type="button" style="margin-top: 0.5rem">Reset</button>
+        </div>
+      </div>
+    </fieldset>
+
+    <div class="panels">
+      <div class="canvases">
+        <figure><canvas id="before"></canvas><figcaption>source (grid)</figcaption></figure>
+        <figure><canvas id="after"></canvas><figcaption id="after-caption">output</figcaption></figure>
+      </div>
+    </div>
+    <p id="stats"></p>
+
+    <script type="module" src="/src/tone-proto.ts"></script>
+  </body>
+</html>

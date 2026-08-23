@@ -70,13 +70,15 @@ import {
 } from './ui/profile-editor-colour.ts';
 import { createEditorPreview, fetchSlot } from './ui/profile-editor-preview.ts';
 import {
-  parseProject,
+  MAX_PREVIEW_CSS_PX,
+  MAX_SOURCE_NAME,
+  MIN_PREVIEW_CSS_PX,
   projectFilename,
   SCHEMA_VERSION,
-  serializeProject,
   type ChartMode,
   type ProjectFile,
 } from './core/project.ts';
+import { readProjectBytes, sourceEntryName, writeProjectBytes } from './core/project-package.ts';
 import {
   effectiveSymbols,
   grantNeeded,
@@ -284,10 +286,28 @@ function build(app: HTMLElement): void {
     return live;
   }
 
-  /** Point the master image at a still buffer that is never transferred. */
-  function setStillMaster(buffer: PixelBuffer): void {
+  /**
+   * The picture's own bytes (DUR-01): what the source arrived as — the
+   * imported file, or a package's stored entry — kept so a save embeds
+   * them **verbatim** and never re-encodes them (D171's byte-identity
+   * rule). Null for a source with no bytes of its own: the generated
+   * sample, and a live capture, whose frame becomes a still only at
+   * save time.
+   */
+  interface SourceOrigin {
+    blob: Blob;
+    name: string;
+  }
+  let sourceOrigin: SourceOrigin | null = null;
+
+  /**
+   * Point the master image at a still buffer that is never transferred,
+   * remembering the bytes it was decoded from when there are any.
+   */
+  function setStillMaster(buffer: PixelBuffer, origin: SourceOrigin | null = null): void {
     masterImage = buffer;
     masterRefill = null;
+    sourceOrigin = origin;
   }
 
   /**
@@ -2440,15 +2460,18 @@ function build(app: HTMLElement): void {
     }
   }
 
-  // Project group (§20): save the current settings as a versioned
-  // JSON file; load applies a saved file back onto the controls and
-  // reprocesses. The source image is not part of the file — loading
-  // into an empty session applies on the next import.
+  // Project group (§20): save the design as a package — the versioned
+  // settings document beside the picture's own bytes (DUR-01, D171) —
+  // and load applies a saved file back onto the controls and
+  // reprocesses. A legacy settings-only `.json` still loads; it applies
+  // to the next import.
   const projectGroup = document.createElement('fieldset');
   const saveButton = document.createElement('button');
   saveButton.type = 'button';
   saveButton.textContent = 'Save project';
-  saveButton.addEventListener('click', saveProject);
+  saveButton.addEventListener('click', () => {
+    void saveProject();
+  });
   // A real button over a hidden input (the Choose-an-image pattern,
   // M14-EXT-05) — the last raw file input leaves the panel.
   const loadButton = document.createElement('button');
@@ -2457,7 +2480,7 @@ function build(app: HTMLElement): void {
   const projectInput = document.createElement('input');
   projectInput.type = 'file';
   projectInput.id = 'project-file';
-  projectInput.accept = 'application/json,.json';
+  projectInput.accept = '.pmproj,.json,application/json';
   projectInput.hidden = true;
   loadButton.addEventListener('click', () => {
     projectInput.click();
@@ -2483,10 +2506,36 @@ function build(app: HTMLElement): void {
   // line. `version` is created with the header block above.
   projectGroup.append(keepNote, saveButton, loadButton, projectInput);
 
-  /** Snapshot the live UI state as a schema-v2 project file. */
+  /**
+   * The picture's entry in a saved package (schema v10): named from the
+   * origin bytes' MIME type so a human unzipping the file sees what the
+   * bytes are, with a neutral type when the browser reported none (the
+   * decoder sniffs content either way).
+   */
+  function sourceDescriptor(): ProjectFile['source'] {
+    if (sourceOrigin === null) return null;
+    const type = sourceOrigin.blob.type === '' ? 'application/octet-stream' : sourceOrigin.blob.type;
+    return {
+      entry: sourceEntryName(type),
+      type,
+      name: sourceOrigin.name.slice(0, MAX_SOURCE_NAME),
+    };
+  }
+
+  /** The live preview scale, bounded to what `parseProject` accepts. */
+  function clampedPreviewScale(): ProjectFile['preview'] {
+    const live = preview.scale();
+    const bounded = Number.isFinite(live.cssPxPerStitch)
+      ? Math.min(MAX_PREVIEW_CSS_PX, Math.max(MIN_PREVIEW_CSS_PX, live.cssPxPerStitch))
+      : 1;
+    return { mode: live.mode, cssPxPerStitch: bounded };
+  }
+
+  /** Snapshot the live UI state as a current-schema project file. */
   function currentProject(): ProjectFile {
     return {
       schemaVersion: SCHEMA_VERSION,
+      source: sourceDescriptor(),
       pipeline: {
         preset: config.preset,
         grid: { width: config.grid.width, height: config.grid.height },
@@ -2525,8 +2574,12 @@ function build(app: HTMLElement): void {
       },
       // Preview scale is project data from v2 (M6-VIEW-01): screen
       // size only, and asked of the controller so a live zoom is not
-      // saved one action out of date.
-      preview: preview.scale(),
+      // saved one action out of date. Clamped into the schema's own
+      // bounds: the viewport floors its fit in device px, so a fit
+      // against a collapsed (zero-width) preview on a 2× display comes
+      // back at half the CSS-px floor — and a file the parser refuses
+      // is lost work. The file must always reopen.
+      preview: clampedPreviewScale(),
       export: {
         scale: scales.export.cleanPxPerStitch,
         background: exportState.background === 'solid' ? 'solid' : 'transparent',
@@ -2549,15 +2602,36 @@ function build(app: HTMLElement): void {
     };
   }
 
-  function saveProject(): void {
-    const filename = projectFilename(config.grid.width, config.grid.height);
-    downloadBlob(
-      document,
-      new Blob([serializeProject(currentProject())], { type: 'application/json' }),
-      filename,
-    );
-    status.textContent = `Saved ${filename}.`;
-    log.info('project', 'saved', { filename });
+  /**
+   * Save the design as a package: the settings document beside the
+   * picture's bytes, verbatim. Async because the bytes are read from
+   * the origin blob; the button is held while that runs so a second
+   * click cannot race the first (UI-STANDARDS: every async action
+   * shows its status).
+   */
+  async function saveProject(): Promise<void> {
+    saveButton.disabled = true;
+    status.textContent = 'Saving…';
+    try {
+      const file = currentProject();
+      const source =
+        sourceOrigin === null ? null : new Uint8Array(await sourceOrigin.blob.arrayBuffer());
+      const bytes = writeProjectBytes(file, source);
+      const filename = projectFilename(config.grid.width, config.grid.height);
+      downloadBlob(document, new Blob([bytes], { type: 'application/zip' }), filename);
+      status.textContent = `Saved ${filename}.`;
+      log.info('project', 'saved', {
+        filename,
+        bytes: bytes.byteLength,
+        picture: source !== null,
+      });
+    } catch (error) {
+      const message = describeError(error);
+      status.textContent = `Could not save the project (${message}).`;
+      log.error('project', 'save failed', { message });
+    } finally {
+      saveButton.disabled = false;
+    }
   }
 
   // Push loaded state back into the control DOM. Values are set
@@ -2675,9 +2749,14 @@ function build(app: HTMLElement): void {
     ];
   }
 
-  async function loadProject(fileBlob: File): Promise<void> {
-    try {
-      const file = parseProject(await fileBlob.text());
+  /**
+   * Apply a parsed file's settings onto the live state in one
+   * reprocess. Shared by the file load below and, from DUR-01's later
+   * milestones, the boot restore and the history picker — one apply
+   * path, so a restored design cannot differ from a loaded one.
+   */
+  function applyProject(file: ProjectFile): void {
+    {
       config.preset = file.pipeline.preset;
       config.grid = { ...file.pipeline.grid };
       config.resizeMode = file.pipeline.resizeMode;
@@ -2738,9 +2817,47 @@ function build(app: HTMLElement): void {
       refreshSections();
       reprocess();
       // A loaded project's settings matter before any image, so this
-      // route exits cold too (M14-EXT-06) — quietly: the line below
-      // already says what happened and what to do next.
+      // route exits cold too (M14-EXT-06) — quietly: the caller's
+      // status line says what happened and what to do next.
       exitCold(false);
+    }
+  }
+
+  async function loadProject(fileBlob: File): Promise<void> {
+    try {
+      const { file, source } = readProjectBytes(new Uint8Array(await fileBlob.arrayBuffer()));
+      // The picture lands first (DUR-01): decoded before the settings
+      // apply, so the one reprocess renders the file's own source and
+      // the palette's selection source is fetched from it — not from
+      // whatever was on screen. A picture that is missing or will not
+      // decode is reported, and the settings still apply: user data is
+      // never refused whole.
+      let pictureTail = '';
+      let pictureLoaded = false;
+      if (file.source !== null) {
+        if (source === null) {
+          pictureTail = ` The picture it names (${file.source.entry}) was not inside the file — import an image to see the settings applied.`;
+        } else {
+          const blob = new Blob([source], { type: file.source.type });
+          try {
+            const buffer = await decodeImageBlob(blob);
+            setStillMaster(buffer, { blob, name: file.source.name });
+            sourceName = file.source.name;
+            invalidateSelectionSource();
+            pictureLoaded = true;
+          } catch (error) {
+            pictureTail = ` Its picture could not be shown (${describeError(error)}).`;
+          }
+        }
+      }
+      applyProject(file);
+      if (pictureLoaded) {
+        // The same steps an import takes once its master is set: the
+        // selection source refreshes against the new geometry and
+        // palette rules, and the shell learns a source exists.
+        ensureSelectionSource();
+        updateSourceEntry();
+      }
       // The retired order is named at the moment it starts rendering
       // (M14-EXT-44) — the standing line in Processing carries it
       // from here on.
@@ -2756,9 +2873,9 @@ function build(app: HTMLElement): void {
           : '';
       status.textContent =
         masterImage === null
-          ? `Loaded ${fileBlob.name} — import an image to see it applied.${orderTail}${migrateTail}`
-          : `Loaded ${fileBlob.name}.${orderTail}${migrateTail}`;
-      log.info('project', 'loaded', { filename: fileBlob.name });
+          ? `Loaded ${fileBlob.name} — import an image to see it applied.${orderTail}${migrateTail}${pictureTail}`
+          : `Loaded ${fileBlob.name}.${orderTail}${migrateTail}${pictureTail}`;
+      log.info('project', 'loaded', { filename: fileBlob.name, picture: pictureLoaded });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       status.textContent = `Could not load that project (${message}).`;
@@ -3455,7 +3572,9 @@ function build(app: HTMLElement): void {
         width: buffer.width,
         height: buffer.height,
       });
-      setStillMaster(buffer);
+      // The file's own bytes travel with the design (DUR-01): a save
+      // embeds them verbatim rather than re-encoding the pixels.
+      setStillMaster(buffer, { blob, name: name ?? source });
       sourceName = name ?? source;
       invalidateSelectionSource();
       ensureSelectionSource();
@@ -3815,6 +3934,9 @@ function build(app: HTMLElement): void {
     try {
       const session = await startCapture();
       capture = session;
+      // A capture has no bytes of its own (DUR-01): the previous still's
+      // must not ride into a save of the live frame.
+      sourceOrigin = null;
       lockButton.hidden = false;
       // Each session starts unlocked — the M14-EXT-20 default,
       // superseding D101's follow-by-default; session-only, never

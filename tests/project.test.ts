@@ -26,6 +26,7 @@ import type { PixelBuffer } from '../src/core/types.ts';
 function sampleProject(): ProjectFile {
   return {
     schemaVersion: SCHEMA_VERSION,
+    source: { entry: 'source.jpg', type: 'image/jpeg', name: 'Fox sketch.jpg' },
     pipeline: {
       preset: 'resize-first',
       grid: { width: 200, height: 150 },
@@ -181,6 +182,7 @@ describe('serializeProject / parseProject round trip', () => {
       symbols: file.symbols,
       palette: file.palette,
       pipeline: file.pipeline,
+      source: file.source,
       schemaVersion: file.schemaVersion,
     });
     expect(serializeProject(parseProject(shuffled))).toBe(serializeProject(file));
@@ -488,8 +490,71 @@ describe('migration from schema v3 dither', () => {
 });
 
 describe('projectFilename', () => {
-  it('names the file after the grid size', () => {
-    expect(projectFilename(200, 150)).toBe('project-200x150.json');
+  it('names the file after the grid size, with the package extension', () => {
+    expect(projectFilename(200, 150)).toBe('project-200x150.pmproj');
+  });
+});
+
+/**
+ * v9 → v10 (DUR-01): the picture joins the saved file as a package
+ * entry the document names. Older files never carried one; `source:
+ * null` states exactly that, and they keep applying to the next import.
+ */
+describe('migration from schema v9 source', () => {
+  function v9Document(): string {
+    const doc = JSON.parse(serializeProject(sampleProject())) as Record<string, unknown>;
+    delete doc['source'];
+    doc['schemaVersion'] = 9;
+    return JSON.stringify(doc);
+  }
+
+  it('loads as a settings-only project', () => {
+    const loaded = parseProject(v9Document());
+    expect(loaded.migratedFrom).toBe(9);
+    expect(loaded.source).toBeNull();
+  });
+
+  it('re-saves the migrated file byte-stable at the current schema', () => {
+    const migrated = serializeProject(parseProject(v9Document()));
+    expect(serializeProject(parseProject(migrated))).toBe(migrated);
+    expect(migrated).toContain('"source": null');
+  });
+});
+
+describe('source block validation (schema v10)', () => {
+  function withSource(source: unknown): string {
+    const doc = JSON.parse(serializeProject(sampleProject())) as Record<string, unknown>;
+    doc['source'] = source;
+    return JSON.stringify(doc);
+  }
+
+  it('round-trips a picture entry and accepts null and absent as settings-only', () => {
+    expect(parseProject(serializeProject(sampleProject())).source).toEqual({
+      entry: 'source.jpg',
+      type: 'image/jpeg',
+      name: 'Fox sketch.jpg',
+    });
+    expect(parseProject(withSource(null)).source).toBeNull();
+    expect(parseProject(withSource(undefined)).source).toBeNull();
+  });
+
+  it('refuses an entry name that is a path, naming the field', () => {
+    // The entry name reaches the package reader by value; a separator
+    // in it is the one shape that must never get through.
+    for (const entry of ['../source.png', 'pics/source.png', '', '.hidden', 'x'.repeat(65)]) {
+      expect(() =>
+        parseProject(withSource({ entry, type: 'image/png', name: 'a' })),
+      ).toThrow('source.entry');
+    }
+  });
+
+  it('refuses a malformed type and an overlong name, naming the field', () => {
+    expect(() =>
+      parseProject(withSource({ entry: 'source.png', type: 'png', name: 'a' })),
+    ).toThrow('source.type');
+    expect(() =>
+      parseProject(withSource({ entry: 'source.png', type: 'image/png', name: 'n'.repeat(256) })),
+    ).toThrow('source.name');
   });
 });
 

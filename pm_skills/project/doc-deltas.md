@@ -24,7 +24,6 @@
 
 ## Open
 
-- [ ] 2026-08-11 AGENTS.md § Persistence checklist / Core data model — no autosave or session restore exists; the checklist reads as though project state persists automatically. DUR-01 will change the answer, so sync after it ships, not before (source: D149/DUR-01)
 - [ ] 2026-08-12 AGENTS.md § Core data model — symbol assignment arrived as identity-keyed persisted state (schema v6 `symbols` block) and the glyph catalogue's canonical order is append-only once a batch signs (source: D165/M9)
 - [ ] 2026-08-12 DEV-INFRASTRUCTURE.md § Scripts / Quality gate — new `symbols:evidence` script writes the M9 print-evidence PDF to `bench-reports/`; `check:docs` now exempts `bench-reports/` citations (machine-local output, CI-parity) (source: D165/M9)
 - [ ] 2026-08-12 AGENTS.md § Core data model — ProjectFile's gridStyle is a screen/print pair with preset provenance since schema v7 (M11); the shape sketch still reads the flat block (source: D167/M11)
@@ -36,3 +35,5 @@
 - [ ] 2026-08-23 UI-STANDARDS.md § Layout model — the header utility row holds Source (product) and Licences (legal); the ghost button (`.button-ghost`: borderless, otherwise the base button — 44 px, hover fill, focus ring) marks an app-level utility that is not a product action; licences and notices open in a Close-only dialog whose texts are imported at build time, never fetched (source: D177/PUB-01)
 - [ ] 2026-08-23 docs/ui-spec.md § control inventory — new row `Licences | header utility row | ghost button → Close-only dialog | 1`; keyboard model unchanged (source: D177/PUB-01)
 - [ ] 2026-08-23 docs/ui-evidence.md — PUB-01's live checks (button 91 × 44 px named "Licences"; dialog "Licences and notices" is `aria-modal`, opens at the top with focus on its first `h3`, Tab trap holds, Escape closes and restores focus; dark scheme; no console errors) and two human-remainder items: native Enter/Space activation with in-dialog scrolling, and a VoiceOver pass (A11Y-VO-01 grows by one) (source: D177/PUB-01)
+- [ ] 2026-08-23 AGENTS.md § Persistence checklist / Core data model — "(and IndexedDB autosave)" is now true in a specific sense: the design history stores the serialised document, so a property that survives save/reload survives the history with no extra step; step 2's "toJSON" is `serializeProject` plus the `.pmproj` package; ProjectFile gains a `source` block at schema v10 (source: D179/DUR-01; supersedes the 2026-08-11 reservation)
+- [ ] 2026-08-23 docs/ui-spec.md § Project-section census (J5 unsaved-work honesty) — the sentence becomes the history standing line (`#history-line`), with "Recent designs…" and the near-quota "Keep more designs" beside Save/Load; J5's sentence survives only when storage is refused (source: D179/DUR-01)

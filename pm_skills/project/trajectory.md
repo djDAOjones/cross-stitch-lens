@@ -17,6 +17,23 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
+## Track B — Durability & identity (SHIPPED 2026-08-23)
+
+**Outcome:** the app no longer loses your work and can tell two designs
+apart — saved projects are `.pmproj` packages with the picture inside, a
+design history restores the latest design on reopen, and files carry
+the design's title.
+
+- DUR-01 (2026-08-23) — work survives closing the tab: `.pmproj`
+  project packages (schema v10, the picture embedded verbatim, legacy
+  `.json` still loads), a design history in its own IndexedDB database
+  that restores the latest design on boot with a Recent designs picker,
+  bounded storage with oldest-first eviction and a persist opt-in, and
+  a live capture that freezes to a still at save time. See D179.
+- SAVE-01 (2026-08-23) — a saved project has a name of its own: the
+  Design title names the file, the picture's name stands in, a
+  timestamp is the last resort. See D179.
+
 ## Live-app feedback (IN PROGRESS, from 2026-08-22)
 
 **Outcome:** the first reports from the public URL are becoming fixes

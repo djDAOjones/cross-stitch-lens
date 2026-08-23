@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 285 file(s) across 12 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 290 file(s) across 12 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 13 file(s)
 - `.claude` — 2 file(s)
 - `.githooks` — 1 file(s)
@@ -26,8 +26,8 @@
 - `docs` — 16 file(s)
 - `public` — 7 file(s)
 - `scripts` — 20 file(s)
-- `src` — 102 file(s)
-- `tests` — 117 file(s)
+- `src` — 104 file(s)
+- `tests` — 120 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -178,7 +178,8 @@
 - `src/core/pipeline/reduce.ts` — reduce stage: LUT + exact paths, alpha passthrough
 - `src/core/pipeline/resize.ts` — resize stage: area-average, 4 modes, empty cells
 - `src/core/pipeline/threshold-tiles.ts` — Bayer + void-and-cluster blue-noise threshold tiles: fixed data, documented provenance, memoised
-- `src/core/project.ts` — project file v1 (§20): schema, migration, canonical (de)serialisation
+- `src/core/project-package.ts` — store-only zip project package (`.pmproj`): deterministic writer (fixed 1980 stamps), bounded reader with named refusals, format detection, readProjectBytes/writeProjectBytes (DUR-01)
+- `src/core/project.ts` — project file (§20): schema v10 with the `source` block, v1→v10 migrations, canonical (de)serialisation, title-driven `projectFilename` + stamp fallback, `PROJECT_EXTENSION` (DUR-01/SAVE-01)
 - `src/core/stats.ts` — design stats §11 subset: counts, %, thread refs
 - `src/core/symbols/assignment.ts` — symbol assignment as persisted state (D160-4): need-based grants, release-to-back queue, survivor-free reset, overrides, load reconcile
 - `src/core/symbols/glyphs.ts` — the app-owned 64-glyph catalogue in canonical append-only order; fill-only M/L/C/Z paths rendered identically by Path2D and drawSvgPath (D165)
@@ -193,7 +194,8 @@
 - `src/export/pdf.ts` — single-page PDF chart (§18 subset): pure
 - `src/export/png.ts` — clean PNG export (§13 subset): pure nearest-
 - `src/library/records.ts` — Pure library file formats: canonical inventory/palette JSON, validation, additive merge, id-collision rename
-- `src/library/store.ts` — Cross-project library storage behind one interface; IndexedDB impl + memory fallback that announces itself
+- `src/library/snapshots.ts` — the design history: its own IndexedDB database (meta + payload stores) with an announced memory fallback; pure quota model (tiers, oldest-first eviction, near-quota) and the Project line's copy (DUR-01)
+- `src/library/store.ts` — Cross-project library storage behind one interface; IndexedDB impl + memory fallback that announces itself; exports the request helper the design history shares
 - `src/main.ts` — app entry: M2 shell — import, control panel, preview, info panel
 - `src/ui/accordion.ts` — Carbon accordion section: h2-wrapped toggle, hidden panel, derived closed-state summary
 - `src/ui/browse-table.ts` — shared capped search table (the 60-row pattern extracted; D117 seam 3)
@@ -277,6 +279,7 @@
 - `tests/controls.test.ts` — number-input clamping (pure half of controls)
 - `tests/debug-menu.test.ts` — Debug-menu pure halves: mailto redaction boundary, announced outcomes (M14-EXT-26)
 - `tests/debug-panel.test.ts` — timing-window aggregation, cap, stage-change reset, ms formatting
+- `tests/design-snapshots.test.ts` — design history store + quota model: tiers, oldest-first eviction, near-quota copy, memory fallback (DUR-01)
 - `tests/diagnostics-bundle.test.ts` — redaction (secret keys/values, fail-closed, caps), bundle shape, status text
 - `tests/diagnostics-log.test.ts` — diagnostics logger/ring-buffer contract, including fault retention (D152)
 - `tests/dither-algorithms.test.ts` — M8 method invariants: determinism, membership+sidecar, boundaries, distinctness, tile validity
@@ -306,6 +309,7 @@
 - `tests/grid.test.ts` — grid-line placement, tick numbering/thinning, auto-hide rule
 - `tests/helpers/golden.ts` — golden harness: fixture load + tolerance compare
 - `tests/helpers/lut-f32.ts` — f32 mirror of the WGSL LUT arithmetic (fround per op)
+- `tests/helpers/project-fixture.ts` — compact v10 project fixture for the container/history suites
 - `tests/helpers/threads.ts` — Thread fixtures — one place identity-carrying test palettes are built
 - `tests/helpers/wgsl-reserved.ts` — WGSL reserved-word list + identifier scan (GPU-free shader guard)
 - `tests/highlight.test.ts` — highlight-mask invariants: scrim membership, compare composition, index keying (M14-EXT-17)
@@ -324,7 +328,8 @@
 - `tests/pipeline-hello.test.ts` — M0 acceptance: identity golden + purity invariants
 - `tests/profile-editor.test.ts` — editor pure halves: browse rows, hex parsing, readout fingerprints, grid divisors, absent-vs-broken slots
 - `tests/profile-store.test.ts` — kind-aware store contract, generic profiles file round-trip, builtin rejection, My colours, paletteToProfile
-- `tests/project.test.ts` — project file: byte-identical round trip, validation errors, version refusal
+- `tests/project-package.test.ts` — `.pmproj` container: byte-identical round trip, legacy JSON detection, refusals for compressed/encrypted/zip64/truncated packages (DUR-01)
+- `tests/project.test.ts` — project file: byte-identical round trip, validation errors, version refusal, v10 migration, title/fallback naming (SAVE-01)
 - `tests/reduce.test.ts` — reduce golden + invariants (membership, fixed point, LUT↔exact)
 - `tests/resize.test.ts` — resize golden + geometry/average/bounds invariants
 - `tests/save-transcript.test.ts` — transcript-save script behaviour (paths, redaction guard)

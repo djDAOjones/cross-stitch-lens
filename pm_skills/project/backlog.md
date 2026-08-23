@@ -44,9 +44,10 @@ line passes and `check` is green. Requirements references are to
 `docs/requirements.md`.
 
 **Ship order is no longer milestone-number order** (D149). Shipped:
-M0–M8, M13, M14, M15, and **Batch C0** (D149–D159, 2026-08-11).
-Remaining: **Track A** (M9 → M11 → M16 → M10 → M12), then **Track B**,
-with **Track C — Publication** owner-paced alongside. The numbers stay
+M0–M8, M13, M14, M15, **Batch C0** (D149–D159, 2026-08-11) and
+**Track B** (DUR-01 + SAVE-01, D179, 2026-08-23). Remaining: **Track A**
+(M9 → M11 → M16 → M10 → M12) with **Track C — Publication** owner-paced
+alongside. The numbers stay
 because they are greppable across the tickets and the decision log;
 they no longer imply sequence.
 
@@ -74,19 +75,6 @@ the next pick sees them.
 - [ ] **DIAG-02 Diagnostics for testers on the live build** [detail] (2026-08-23, opt-in and palette logging shipped 2026-08-23)
   Shipped (D175): the Debug menu mounts on the live build behind `?diag=1`, and every palette resolution is logged (profile, rule, seats, membership, selected, conflicts, source). Remaining: a one-click "Report a problem" that saves the project JSON and the redacted log together and opens the email route — waits on the `DEV_EMAIL` placeholder, which ships in a public bundle.
   Done when: a tester on the live URL can produce, in one click, a bundle and a project file naming the build, profile, count rule, seats, resolved palette and every conflict.
-
-### Track B Durability & identity
-
-Opened 2026-08-11 (D149). One subject: the app loses your work and
-cannot tell two designs apart.
-
-- [ ] **DUR-01 Work survives closing the tab** [sign-off] [detail] (2026-08-11, scope signed 2026-08-12)
-  **Scope signed (D170)**: restore on reopen, a **history** of recent designs with the UI steering to explicit save, the source image restored **and embedded in saved files** (a live capture freezes to a still on save), bounded storage with an eviction warning and an opt-in to persist.
-  Done when: reopening returns the design in progress without an explicit save, explicit saves still mean what they mean (portable, shareable, survives a storage clear-out), and the round-trip invariant holds.
-  Open at the option gate: how images ride in a saved file — the format decision that follows from "picture files part of saves".
-- [ ] **SAVE-01 A saved project has no name of its own** (2026-08-09)
-  Intent: `projectFilename` names the file from the grid alone, so every 200 × 200 design saves identically. A `Design title` field already exists — does it drive the filename, and what does load do.
-  Done when: a project carries a name the owner chose, it survives save/load, and two designs never collide by default. Ships with DUR-01.
 
 ### Track C — Publication
 

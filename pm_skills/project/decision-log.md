@@ -1775,3 +1775,66 @@ doc-delta; the save format is unchanged.
 
 **Link:** merged as `1a2dc42`; presence itself stays ICE-RECOLOUR-01's
 swap; DIAG-02 is unaffected.
+
+## D179 — DUR-01 and SAVE-01 ship: `.pmproj` packages, a design history that restores on reopen, title-named files (2026-08-23)
+
+**Context.** DUR-01 as signed at D171, built on the `dur-01` branch of
+the 2026-08-23 parallel run; the store-only package was picked at the
+option gate and the plan decisions were the owner's, relayed through
+the coordinator. The branch owns schema v10.
+
+**The file.** A saved project is a `.pmproj`: a store-only zip holding
+canonical `project.json` beside the picture's bytes verbatim (a JPEG
+stays a JPEG; a capture frame becomes a PNG once). Fixed 1980 stamps
+and a fixed layout keep save → load → save byte-identical. v10 adds the
+`source` block `{ entry, type, name }`; v1–v9 `.json` files still load
+by magic-byte detection and migrate with `source: null`. The reader
+treats a package as untrusted input — sizes checked from the central
+directory before any copy, CRCs verified; compressed, encrypted, zip64,
+multi-disk and truncated packages refused with a sentence — which is
+why `project-package.ts` runs 402 lines against the ~250 trigger.
+
+**The history.** Designs live in their own IndexedDB database,
+`pattern-mapper-designs` (never the library's), payloads apart from
+metadata so a listing never loads a picture; the memory fallback
+announces itself. A 2 s tick observes the serialised state rather than
+hooking controls, so no path is missed and no other stream's region is
+touched. The latest design returns silently on boot, marked
+restored-but-unsaved; a Recent designs picker lists the rest. Bounds:
+10 designs / 150 MB, or 25 / 600 MB once `persist()` is granted ("Keep
+more designs", offered only near the quota), clamped to half the
+reported free space; eviction oldest-first, a never-saved design named
+before it goes, no modal — the moment arrives asynchronously. Explicit
+save stays the act that means something. Saving a live capture freezes
+the frame to PNG while the session stays live; a restored capture
+returns as a still and says so.
+
+**SAVE-01.** The Design title names the file
+(`Fox-sketch-200x150.pmproj`), the picture's name stands in, a local
+timestamp is the last resort.
+
+**Portability.** A loaded design drawing on My inventory gets a
+warning naming how many snapshot threads this browser lacks and renders
+from its saved colours; embedding the inventory is wish-listed. Found
+at the boundary: a fit against a collapsed preview on a 2× display
+saved `cssPxPerStitch: 0.025` and the parser refused the file;
+`currentProject()` now clamps into the schema's range.
+
+**Alternatives.** Base64-in-JSON and a sidecar pair; a store in the
+library database; a confirm modal before eviction; hooking every
+control.
+
+**Verification.** Gate green on the merged tree (1,341 tests); live:
+byte-identical package round trip, legacy v9 load, naming, the tick,
+silent restore after a reload, the picker, a capture saving a PNG entry
+while staying live. Human remainder: IndexedDB in Firefox/Safari, the
+persist prompt, private mode, eviction at 10+ designs, a `.pmproj` on
+another machine, VoiceOver on three new controls.
+
+**Scope.** Five new files (`project-package.ts`, `library/snapshots.ts`,
+two suites, a fixture), `project.ts`, `library/store.ts`, `main.ts`,
+`tests/project.test.ts`, the ui-baseline pin; the DUR-01 ticket deleted;
+`architecture.md` and README updated; deltas ledgered for `AGENTS.md`
+and `docs/ui-spec.md`.
+
+**Link:** merged as `fb1aabf`; Track B closes with it.

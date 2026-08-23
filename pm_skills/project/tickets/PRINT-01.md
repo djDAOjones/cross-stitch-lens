@@ -63,21 +63,30 @@ Balanced tiles (equal fresh spans, no slivers); page count derived from
 paper, orientation and cell; the 1024² case names its page count and
 steers to large format or Compact rather than printing 300 pages.
 
-## Typeface — an option for the design gate
+## Typeface — measured 2026-08-23
 
 The owner's pixel fonts in `_user-guff/demo images/fonts/`: Press Start
 2P (OFL 1.1), Pixel Operator (CC0), a bitmap family with permissive
 terms in its LICENSE file, and m5x7 (no licence file — confirm before
-use). Pixel faces have no
-hairlines, so a digit survives small sizes and draft ink where
-Helvetica's thin strokes vanish, and the chart is a pixel grid anyway.
-Options: (A) Helvetica at the preset sizes; (B) a pixel face for
-numbers and tile labels only, **baked to vector paths at build time**
-the way the M9 glyphs are drawn (a dev-only script, no runtime
-dependency, works under Node for the proof set; key prose stays
-Helvetica); (C) embed an accessibility text face (Atkinson's, or IBM Plex Sans) for the key — needs
-`@pdf-lib/fontkit`, a new runtime dependency, approval required. Decide
-at the design gate with proof prints of A and B.
+use). Read from the font files and compared with pdf-lib's Helvetica at
+one nominal size, then normalised to equal digit height: the pixel
+faces land within ±15 % of Helvetica regular's stroke weight, while
+**Helvetica-Bold is heavier than all of them** (1.4 pt strokes at
+10 pt — about five times the ~0.3 pt a cheap printer drops) and is
+already in pdf-lib, dependency-free, Node-safe. The 2.3 pt numbers
+were a size problem; no typeface fixes size.
+
+Baseline for print, therefore: **Helvetica-Bold for row/column numbers
+and tile labels at the preset sizes**, Helvetica for key prose. The
+pixel faces stay as a design option for the places they are made for —
+the chart PNG's 11 px numbering and the preview at small cells, where
+a face hinted to the pixel grid reads crisply and looks right in a
+pixel-grid app — and as a style choice, never as the print
+accessibility lever. If chosen there: bake the digits to vector paths
+at build time like the M9 glyphs (dev-only script, no runtime
+dependency). An accessibility text face for the key (option C) needs
+`@pdf-lib/fontkit`, a new runtime dependency; wish-listed pending proof
+evidence.
 
 ## The other design decision
 

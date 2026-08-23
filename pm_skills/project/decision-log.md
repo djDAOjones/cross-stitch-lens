@@ -1635,3 +1635,51 @@ files, one doc-delta (the diagnostics contract).
 
 **Link:** DIAG-02's remaining shape is the one-click report, on the
 `DEV_EMAIL` decision; MUST-01 waits on the seat sign-off.
+
+## D176 — MYTHREADS-01 ships: the empty-inventory dead end gets an exit, and "My threads" becomes "My inventory" (2026-08-23)
+
+**Context.** The reporter's second save (`project-120x60 (1).json`) was
+the same null-palette state as the first with the Must-use colours
+removed: D175 had made the state honest, not escapable. The owner
+signed the ticket's recommendation ("yes, patch it").
+
+**Decision.** Three changes, together:
+
+- **A disabled option with the reason.** While the inventory is empty,
+  the profile select lists "My inventory (built-in) — empty: mark
+  threads as owned first" as non-selectable; a design already linked to
+  it (a loaded file) keeps its option selectable, labelled "— empty in
+  this browser". One new fact in the section state (`inventoryEmpty`),
+  fingerprinted with the options.
+- **A banner beside the picture.** While Threadify is on and the
+  design's palette is null, the Preview section shows "No palette
+  applies — *the error sentence* The picture is shown as it is." with
+  **Use DMC** (adopts the DMC profile through the same `adoptProfile`
+  routine as the select — an explicit act, never a silent substitution)
+  and **Add threads** (opens the Colour section and the inventory
+  reveal, focusing its search; shown only when the recipe draws on the
+  inventory). One writer, synced from every palette-changing path:
+  `resolvePalette` and both branches of `applyLoadedPalette`.
+- **The rename.** The built-in is "My inventory" (id
+  `builtin:my-threads` unchanged — saved files reference ids), the
+  reveal is "My inventory", the editor's library row reads "My
+  inventory — threads you own", and the two D175 sentences follow.
+
+**Verification.** Types, lint, 1,262 tests; live on the reporter's
+file: the banner and its sentence appear on load and with a picture
+("3305 · no palette applied"), Add threads opens the reveal with the
+search focused, Use DMC gives "8 · limit 8" and hides the banner, and
+a fresh session shows the option disabled with its reason.
+
+**Alternatives.** Rendering nothing while the palette is null — kept in
+reserve if the banner proves insufficient in the field; a silent
+fallback to DMC on load (forbidden by D55: nothing is substituted by
+name without the user's act).
+
+**Scope.** `src/main.ts`, `src/ui/colour-section.ts`,
+`src/core/color-profile.ts`, `src/ui/profile-editor-colour.ts`,
+`src/ui/styles/shell.css`, memory; one doc-delta (`docs/ui-spec.md`,
+the Preview section's census).
+
+**Link:** both reporter files now open to a one-click way out; MUST-01's
+seat semantics and DIAG-02's report half remain open.

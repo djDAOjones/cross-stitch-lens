@@ -24,6 +24,12 @@ with the mechanism confirmed in the running app before anything is
 proposed — and the owner's saved project file is the evidence that
 names it.
 
+- MYTHREADS-01 (2026-08-23) — the empty-inventory dead end gets an
+  exit: "My inventory" (renamed from "My threads", id unchanged) is a
+  disabled option with its reason while the inventory is empty, and a
+  design already linked to it shows a banner beside the preview with
+  Use DMC / Add threads. Verified on the reporter's second file. See
+  D176.
 - COUNT-01 (2026-08-23) — a profile that resolves to nothing no longer
   masquerades as a render: the Stats line says "no palette applied"
   instead of "· limit N", the estimate refuses to price RGB, the Colour

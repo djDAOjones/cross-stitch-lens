@@ -35,6 +35,12 @@ export interface ColourSectionState {
   mustUse: string[];
   conflicts: PaletteConflict[];
   eligibleCount: number;
+  /**
+   * True while the inventory has no threads in this browser: the
+   * "My inventory" profile is then empty by construction, and the
+   * select says so instead of offering it (MYTHREADS-01).
+   */
+  inventoryEmpty: boolean;
 }
 
 /** Everything the section calls back into the host for. */
@@ -65,6 +71,9 @@ export interface ColourSectionActions {
 export interface ColourSection {
   element: HTMLElement;
   update(state: ColourSectionState): void;
+  /** Open the inventory reveal and focus its search — the preview
+   *  banner's "Add threads" route (MYTHREADS-01). */
+  openInventory(): void;
 }
 
 /** Sentinel select value for a design linked to no profile — the
@@ -72,6 +81,9 @@ export interface ColourSection {
  *  punch item 2): a migrated old file must not wear a built-in's
  *  name. */
 export const UNLINKED_DESIGN = 'custom:design';
+
+/** The built-in whose membership is the browser's inventory. */
+export const MY_INVENTORY_PROFILE = 'builtin:my-threads';
 
 /** Build the recut Colour section. */
 export function createColourSection(
@@ -253,11 +265,11 @@ export function createColourSection(
   conflictList.className = 'conflicts';
   conflictList.setAttribute('aria-live', 'polite');
 
-  // --- My threads (inventory) reveal -------------------------------
+  // --- My inventory reveal -----------------------------------------
   const inventoryDetails = doc.createElement('details');
   inventoryDetails.className = 'depth-reveal';
   const inventorySummary = doc.createElement('summary');
-  inventorySummary.textContent = 'My threads (inventory)';
+  inventorySummary.textContent = 'My inventory';
   const inventoryBody = doc.createElement('div');
   inventoryBody.className = 'depth-reveal-body';
   inventoryDetails.append(inventorySummary, inventoryBody);
@@ -334,6 +346,7 @@ export function createColourSection(
       next.profiles.map((p) => [p.id, p.name, p.builtin]),
       next.profileRef,
       next.edited,
+      next.inventoryEmpty,
     ]);
     if (optionsFp !== lastOptionsFp) {
       lastOptionsFp = optionsFp;
@@ -357,6 +370,19 @@ export function createColourSection(
               ? ' (built-in)'
               : '';
         option.textContent = `${profile.name}${suffix}`;
+        // An empty inventory makes "My inventory" a dead end
+        // (MYTHREADS-01): a fresh pick is refused with the reason in
+        // the label; a design already linked to it (a loaded file)
+        // keeps its option selectable, labelled, and the preview
+        // banner offers the way out.
+        if (profile.id === MY_INVENTORY_PROFILE && next.inventoryEmpty) {
+          if (profile.id === next.profileRef) {
+            option.textContent += ' — empty in this browser';
+          } else {
+            option.disabled = true;
+            option.textContent += ' — empty: mark threads as owned first';
+          }
+        }
         profileSelect.append(option);
       }
       profileSelect.value = next.profileRef ?? UNLINKED_DESIGN;
@@ -431,6 +457,11 @@ export function createColourSection(
     }
   }
 
+  function openInventory(): void {
+    inventoryDetails.open = true;
+    inventoryBody.querySelector<HTMLInputElement>('#inventory-search')?.focus();
+  }
+
   update(initial);
-  return { element, update };
+  return { element, update, openInventory };
 }

@@ -453,6 +453,7 @@ function build(app: HTMLElement): void {
       // symbol grants release or reset (M9, D160 decision 4).
       syncSymbolsToPalette();
     }
+    syncPaletteBanner();
   }
 
   /** Everything the resized full-RGB grid buffer depends on. */
@@ -796,6 +797,49 @@ function build(app: HTMLElement): void {
   host.tabIndex = 0;
   host.setAttribute('role', 'application');
   host.setAttribute('aria-label', 'Stitch preview');
+  // Palette banner (MYTHREADS-01): while Threadify is on but the
+  // design's profile resolved to nothing, the preview shows the source
+  // as it is — which reads as "my limit is ignored" (the first
+  // live-app reports, D174). A sentence in the Colour section proved
+  // not to be a way out, so the state is named beside the picture with
+  // two explicit exits: adopt DMC, or add threads to the inventory.
+  // Never a silent substitution on the user's behalf.
+  const paletteBanner = document.createElement('div');
+  paletteBanner.className = 'palette-banner';
+  paletteBanner.hidden = true;
+  const paletteBannerText = document.createElement('p');
+  paletteBannerText.setAttribute('aria-live', 'polite');
+  const paletteBannerActions = document.createElement('div');
+  paletteBannerActions.className = 'toolbar';
+  const useDmcButton = document.createElement('button');
+  useDmcButton.type = 'button';
+  useDmcButton.textContent = 'Use DMC';
+  useDmcButton.addEventListener('click', () => {
+    adoptProfile('builtin:dmc');
+  });
+  const addThreadsButton = document.createElement('button');
+  addThreadsButton.type = 'button';
+  addThreadsButton.textContent = 'Add threads';
+  addThreadsButton.addEventListener('click', () => {
+    colourAccordion.setOpen(true);
+    colourSection.openInventory();
+  });
+  paletteBannerActions.append(useDmcButton, addThreadsButton);
+  paletteBanner.append(paletteBannerText, paletteBannerActions);
+
+  /** One writer for the banner: Threadify on × no palette resolved. */
+  function syncPaletteBanner(): void {
+    const show = paletteMode && config.palette === null;
+    paletteBanner.hidden = !show;
+    if (!show) return;
+    const reason =
+      paletteConflicts.find((c) => c.severity === 'error')?.message ??
+      'This profile resolves to no colours.';
+    paletteBannerText.textContent = `No palette applies — ${reason} The picture is shown as it is.`;
+    // "Add threads" only helps when the inventory is what is empty.
+    addThreadsButton.hidden = !designRecipe.libraries.includes('mine');
+  }
+
   const hostHelp = document.createElement('p');
   hostHelp.id = 'preview-help';
   hostHelp.className = 'visually-hidden';
@@ -1509,6 +1553,7 @@ function build(app: HTMLElement): void {
       mustUse: designRules.mustUse,
       conflicts: paletteConflicts,
       eligibleCount,
+      inventoryEmpty: owned.size === 0,
     };
   }
 
@@ -1569,6 +1614,23 @@ function build(app: HTMLElement): void {
     }
   }
 
+  /**
+   * Adopt a profile: the design takes a fresh copy of its recipe. One
+   * routine for the select and for the preview banner's "Use DMC"
+   * (MYTHREADS-01) — an explicit act by the user, never a silent
+   * substitution on their behalf.
+   */
+  function adoptProfile(id: string): void {
+    const recipe = profileRecipes.get(id);
+    if (recipe === undefined) return;
+    const view = colourProfiles.find((p) => p.id === id);
+    designRecipe = structuredClone(recipe);
+    profileRef = { id, revision: view?.revision ?? 0 };
+    designEdited = false;
+    status.textContent = `Profile "${view?.name ?? id}" applied.`;
+    applyColour();
+  }
+
   /** A design-context edit landed on the copy (the D114 pattern). */
   function designRecipeEdited(): void {
     designEdited = profileRef !== null;
@@ -1585,21 +1647,13 @@ function build(app: HTMLElement): void {
     mustUse: designRules.mustUse,
     conflicts: paletteConflicts,
     eligibleCount,
+    inventoryEmpty: owned.size === 0,
   }, {
     setPaletteMode: (on) => {
       paletteMode = on;
       applyColour();
     },
-    selectProfile: (id) => {
-      const recipe = profileRecipes.get(id);
-      if (recipe === undefined) return;
-      const view = colourProfiles.find((p) => p.id === id);
-      designRecipe = structuredClone(recipe);
-      profileRef = { id, revision: view?.revision ?? 0 };
-      designEdited = false;
-      status.textContent = `Profile "${view?.name ?? id}" applied.`;
-      applyColour();
-    },
+    selectProfile: adoptProfile,
     updateProfile: () => {
       void (async () => {
         if (profileRef === null) return;
@@ -2563,6 +2617,7 @@ function build(app: HTMLElement): void {
       designEdited = false;
       config.palette = null;
       paletteConflicts = [];
+      syncPaletteBanner();
       return;
     }
     paletteMode = true;
@@ -2597,6 +2652,9 @@ function build(app: HTMLElement): void {
       // recipe is the only option, and exactly what it meant.
       resolvePalette();
     }
+    // The snapshot branch sets the palette without resolving, so the
+    // banner is synced here for both branches (MYTHREADS-01).
+    syncPaletteBanner();
   }
 
   /**
@@ -3146,7 +3204,7 @@ function build(app: HTMLElement): void {
   // of it lives in the accordion panel (M14-EXT-31), under the
   // section's own header; the grid geometry that rode between strip
   // and canvas moved into the Grid options modal (M14-EXT-35).
-  previewAccordion.panel.append(toolbar, host);
+  previewAccordion.panel.append(toolbar, paletteBanner, host);
 
   // Preview first in the DOM at every width (M6-NARROW-01). The
   // settings panel sits to its right when there is room, so the

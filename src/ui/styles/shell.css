@@ -776,3 +776,31 @@ main {
   border: 1px solid var(--csl-border-subtle);
   background: var(--csl-layer-01);
 }
+
+/* Palette banner (MYTHREADS-01): shown over the preview while
+  Threadify is on but the design's profile resolved to nothing — the
+  picture below it is the source as it is, and the two actions are the
+  way out. Text carries the meaning; the error edge marks the state
+  without being the only signal (the support-error on layer-01 pair is
+  a registered contrast pair). */
+.palette-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--csl-spacing-03);
+  margin: 0 0 var(--csl-spacing-03);
+  padding: var(--csl-spacing-03);
+  background: var(--csl-layer-01);
+  border: 1px solid var(--csl-border-strong);
+  border-left: 4px solid var(--csl-support-error);
+}
+
+.palette-banner p {
+  flex: 1 1 16rem;
+  margin: 0;
+  color: var(--csl-text-primary);
+}
+
+.palette-banner .toolbar {
+  margin: 0;
+}

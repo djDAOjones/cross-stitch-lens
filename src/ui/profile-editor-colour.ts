@@ -314,7 +314,7 @@ export function createColourKindAdapter(
           label: m.name,
           note: `${String(m.entries.length)} colours`,
         })),
-        { id: 'mine', label: 'My threads', note: 'your inventory' },
+        { id: 'mine', label: 'My inventory', note: 'threads you own' },
       ];
       const libraryBoxes = new Map<string, HTMLInputElement>();
       for (const def of libraryDefs) {

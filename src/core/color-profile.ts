@@ -211,7 +211,7 @@ export function resolveProfileMembership(
       }
     }
   }
-  // "My threads" is the inventory of the browser this runs in — not
+  // "My inventory" is the inventory of the browser this runs in — not
   // in the project file — so a shared design meets an empty inventory
   // first. Name it (COUNT-01): the generic empty-profile sentence sent
   // the owner's reporter after a library, a pin, or an exclusion, none
@@ -224,7 +224,7 @@ export function resolveProfileMembership(
       severity: 'warning',
       ids: [],
       message:
-        'My threads is enabled, but your inventory has no threads in this browser, so it contributes nothing to this profile.',
+        'My inventory is enabled, but your inventory has no threads in this browser, so it contributes nothing to this profile.',
     });
   }
   if (recipe.libraries.length === 0 && recipe.include.length === 0) {
@@ -314,7 +314,7 @@ export function resolveProfileMembership(
         severity: 'error',
         ids: [],
         message:
-          'This profile draws on My threads, but your inventory has no threads in this browser. Mark threads as owned under "My threads (inventory)", or choose another profile.',
+          'This profile draws on My inventory, and that inventory has no threads in this browser. Mark threads as owned under "My inventory", or choose another profile.',
       });
     } else if (recipe.ownedOnly && union.length > 0 && narrowed.length === 0) {
       conflicts.push({
@@ -415,7 +415,10 @@ export function builtInProfiles(catalogue: ThreadCatalogue): ColorProfile[] {
   return [
     profile('dmc', 'DMC', { libraries: ['dmc'] }),
     profile('all-threads', 'All threads', { libraries: allBrands }),
-    profile('my-threads', 'My threads', { libraries: ['mine'] }),
+    // "My inventory", not "My threads" (MYTHREADS-01): the old name read
+    // as "the threads I choose" and sent a new user into a profile that
+    // is empty by construction. The id stays — saved files reference it.
+    profile('my-threads', 'My inventory', { libraries: ['mine'] }),
     profile('bw', 'Black & white', { libraries: ['map:bw'] }),
     profile('retro16', 'Retro 16', { libraries: ['map:retro16'] }),
     profile('websafe', 'Web-safe', { libraries: ['map:websafe'] }),

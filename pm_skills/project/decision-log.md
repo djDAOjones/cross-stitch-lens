@@ -880,3 +880,38 @@ glyph, Threadify off hides the column and on brings the grants back.
 **Scope.** `src/ui/symbol-picker.ts` (new), `info-panel.ts`,
 `modal.ts` (exports `runModal`), `main.ts`, `shell.css`;
 `tests/symbol-picker.test.ts`. No schema change.
+
+## D192 — ICE-LIMIT-01 ships: the colour-limit slider is a log scale, 2–512 with 16 at the midpoint (2026-08-23)
+
+**Context.** The slider stopped at 64 with a "type here for more"
+helper, linear, while the number input reached 512 (EXT-13, D98). D188
+signed the scale in D149's words — floor 2, ceiling 512, log, midpoint
+near 16 — with the stored `n` unchanged so old projects load as they
+were. Gateless run; the choices below are assumptions.
+
+**Decision.** The range's value is a **position** (0–300) on two log
+segments meeting at 16 — 2→16 across the left half, 16→512 across the
+right — so the region most designs live in gets half the travel and
+the midpoint is exactly 16 (a single log scale 2→512 would put 32
+there). `sliderToCount` / `countToSlider` are pure exports of
+`colour-section.ts`; the number input stays the exact handle (its
+1–512 bounds untouched — "the number input already reaches 512"), the
+helper now says so, and `aria-valuetext` speaks the count, never the
+position. **300 steps**, not thousands: every whole count below ~40
+is one position apart and an arrow key still moves ≈ 1.4 % low /
+2.3 % high; a finer grid would make the keyboard crawl from 2 to 3
+through dozens of presses for a control whose exact handle sits
+beside it. A position that rounds to the count already set does not
+re-select — the wish-list's per-step refetch cost (COUNT-01) would
+otherwise be paid many times at the low end, where many positions
+share one count.
+
+**Verification.** +5 tests pin the anchors (0→2, 150→16, 300→512),
+the geometric quarter points (6, 91), monotonicity, an exact round
+trip for 2–40 and one-step tolerance above, and clamping (a loaded
+`n` of 1 shows at the floor). In the app: 8 sat at position 100, the
+midpoint produced 16, a typed 157 moved the handle to 249.
+
+**Scope.** `src/ui/colour-section.ts`; `tests/count-scale.test.ts`.
+`docs/ui-spec.md` and `docs/ui-evidence.md` still say 1–64 — a
+doc-deltas line.

@@ -85,6 +85,41 @@ export const UNLINKED_DESIGN = 'custom:design';
 /** The built-in whose membership is the browser's inventory. */
 export const MY_INVENTORY_PROFILE = 'builtin:my-threads';
 
+/**
+ * The colour-limit slider's scale (ICE-LIMIT-01, signed at D188):
+ * floor 2, ceiling 512, logarithmic, with the **midpoint at 16** —
+ * two log segments meeting there, so the half of the travel most
+ * designs live in (2–16) is as wide as the half that reaches the
+ * ceiling. The slider's own value is a position in `0..steps`; the
+ * stored count stays `n`, so old projects load unchanged. 300 steps
+ * keep every whole count below ~40 one position apart and an arrow
+ * key meaningful (≈ 1.4 % per step low, ≈ 2.3 % high); the number
+ * input beside the slider is the exact handle.
+ */
+export const COUNT_SCALE = { floor: 2, mid: 16, ceiling: 512, steps: 300 } as const;
+
+/** Slider position (0..steps) → colour count, rounded to a whole colour. */
+export function sliderToCount(position: number): number {
+  const { floor, mid, ceiling, steps } = COUNT_SCALE;
+  const p = Math.min(1, Math.max(0, position / steps));
+  const n =
+    p <= 0.5
+      ? floor * Math.pow(mid / floor, p / 0.5)
+      : mid * Math.pow(ceiling / mid, (p - 0.5) / 0.5);
+  return Math.min(ceiling, Math.max(floor, Math.round(n)));
+}
+
+/** Colour count → slider position (0..steps); counts outside the scale clamp. */
+export function countToSlider(n: number): number {
+  const { floor, mid, ceiling, steps } = COUNT_SCALE;
+  const c = Math.min(ceiling, Math.max(floor, n));
+  const p =
+    c <= mid
+      ? 0.5 * (Math.log(c / floor) / Math.log(mid / floor))
+      : 0.5 + 0.5 * (Math.log(c / mid) / Math.log(ceiling / mid));
+  return Math.round(p * steps);
+}
+
 /** Build the recut Colour section. */
 export function createColourSection(
   doc: Document,
@@ -176,11 +211,20 @@ export function createColourSection(
   const countRange = doc.createElement('input');
   countRange.type = 'range';
   countRange.id = 'count-range';
-  countRange.min = '1';
-  countRange.max = '64';
+  // A position on the log scale, not the count (ICE-LIMIT-01); the
+  // number input beside it is the count itself, so the pair reads as
+  // one control with a coarse and a fine handle. The range's own
+  // `aria-valuetext` speaks the count, never the position.
+  countRange.min = '0';
+  countRange.max = String(COUNT_SCALE.steps);
   countRange.step = '1';
   countRange.addEventListener('input', () => {
-    actions.setCount('max', Number(countRange.value));
+    const n = sliderToCount(Number(countRange.value));
+    countRange.setAttribute('aria-valuetext', `${String(n)} colours`);
+    // Many positions round to one count at the low end; a re-select
+    // and reprocess per position would be paid for nothing.
+    if (n === state.count.n && state.count.mode !== 'all') return;
+    actions.setCount('max', n);
   });
   countWrap.append(rangeLabel, countRange);
   const countNumWrap = doc.createElement('div');
@@ -203,7 +247,7 @@ export function createColourSection(
   const countHelper = doc.createElement('p');
   countHelper.className = 'helper';
   countHelper.id = 'count-n-helper';
-  countHelper.textContent = 'The slider reaches 64; type here for more.';
+  countHelper.textContent = 'The slider runs from 2 to 512, finest below 16; type an exact number here.';
   countInput.setAttribute('aria-describedby', countHelper.id);
   countCluster.append(countWrap, countNumWrap, countHelper);
 
@@ -406,7 +450,8 @@ export function createColourSection(
     if (limitState !== null) limitState.textContent = limited ? 'On' : 'Off';
     countCluster.hidden = !limited;
     if (doc.activeElement !== countRange) {
-      countRange.value = String(Math.min(64, next.count.n));
+      countRange.value = String(countToSlider(next.count.n));
+      countRange.setAttribute('aria-valuetext', `${String(next.count.n)} colours`);
     }
     if (doc.activeElement !== countInput) countInput.value = String(next.count.n);
     if (doc.activeElement !== distanceRange) {

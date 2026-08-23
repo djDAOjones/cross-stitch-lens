@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 295 file(s) across 12 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 296 file(s) across 12 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 13 file(s)
 - `.claude` — 2 file(s)
 - `.githooks` — 1 file(s)
@@ -27,7 +27,7 @@
 - `public` — 7 file(s)
 - `scripts` — 22 file(s)
 - `src` — 105 file(s)
-- `tests` — 122 file(s)
+- `tests` — 123 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -201,7 +201,7 @@
 - `src/main.ts` — app entry: M2 shell — import, control panel, preview, info panel
 - `src/ui/accordion.ts` — Carbon accordion section: h2-wrapped toggle, hidden panel, derived closed-state summary
 - `src/ui/browse-table.ts` — shared capped search table (the 60-row pattern extracted; D117 seam 3)
-- `src/ui/colour-section.ts` — recut Colour section: profile select + (edited) verbs, count + minimum distance, Must-use chips, inventory reveal (M15-UI-01)
+- `src/ui/colour-section.ts` — recut Colour section: profile select + (edited) verbs, count (log-scale slider, ICE-LIMIT-01) + minimum distance, Must-use chips, inventory reveal (M15-UI-01)
 - `src/ui/controls.ts` — Carbon-style field builders: toggle/number/colour/select + clampInt
 - `src/ui/debug-panel.ts` — dev-only profiling panel: rolling timing window (pure) + disclosure DOM
 - `src/ui/diagnostics-button.ts` — the Debug menu: Report a problem (project document + redacted log + mailto, DIAG-02), Copy diagnostics, Download log; announced status line; `DEV_EMAIL`
@@ -280,6 +280,7 @@
 - `tests/color-profile.test.ts` — profile resolver: every narrowing step + sentence, ordering contract, built-ins non-empty, policy→recipe bridge; recipe pin helpers + pins-only inventory warning (MUST-01)
 - `tests/color-sources.test.ts` — map identity/count/ordering pins, exact-match naming incl. lime/green, namespace collision guard
 - `tests/controls.test.ts` — number-input clamping (pure half of controls)
+- `tests/count-scale.test.ts` — the colour-limit slider's log scale: anchors 2/16/512, quarter points, monotone, round trip, clamping (ICE-LIMIT-01)
 - `tests/debug-menu.test.ts` — Debug-menu pure halves: the report sequence (order, log-only fallback, failure stops before mail), mailto redaction boundary, announced outcomes, `DEV_EMAIL` shape (M14-EXT-26, DIAG-02)
 - `tests/debug-panel.test.ts` — timing-window aggregation, cap, stage-change reset, ms formatting
 - `tests/design-snapshots.test.ts` — design history store + quota model: tiers, oldest-first eviction, near-quota copy, memory fallback (DUR-01)

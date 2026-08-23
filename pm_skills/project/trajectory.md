@@ -26,6 +26,10 @@ wish-list triage surfaced, run gateless in the owner's order (D189).
   symbol key: a Symbol column with a picker over the unused glyphs,
   live grants for palettes that fit the 64-glyph set, overrides
   persisting through the existing `symbols` block. See D191.
+- ICE-LIMIT-01 (2026-08-23) — the colour-limit slider is a log scale
+  from 2 to 512 with 16 at its midpoint (two log halves, 300
+  positions, `aria-valuetext` in colours); the number input stays the
+  exact handle. See D192.
 
 ## Track B — Durability & identity (SHIPPED 2026-08-23)
 

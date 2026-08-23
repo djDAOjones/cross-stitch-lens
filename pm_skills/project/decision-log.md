@@ -635,3 +635,23 @@ DUR-01 added to its list; the file-top paragraph names what remains
 (M16 and Track C). Active 1,678 → 1,497 words, 22
 items unchanged, no cuts, no merges, no promotions — the wish-list
 triage stays the owner's at Start B. No ticket files affected.
+
+## D186 — Doc-sync: the five reference docs catch up with the round (2026-08-23)
+
+**Decision.** The ledger held 18 open deltas, every one from this
+round or the Track A build; the owner signed all five batches, each
+edit derived fresh from its source entry. `AGENTS.md`: the
+`ProjectFile` shape at v10 inside a `.pmproj` package (the v6–v10
+blocks named) and the Persistence checklist stating the design history
+(D165, D167–D169, D179). `DEV-INFRASTRUCTURE.md`: `symbols:evidence`
+and `verify:deploy` in the scripts table and under Utility scripts,
+the Pages-base preview, the Debug menu with the `?diag=1` opt-in and
+the D175 redaction review, `check:docs`'s `bench-reports` exemption,
+the conditional rollup inputs, and Deployment rewritten from
+"post-MVP" to the live CI pipeline with post-deploy verification (D165,
+D172, D175, D180, D181, D183). `UI-STANDARDS.md`: the header utility
+row and the ghost button (D177). `docs/ui-spec.md`: the J5 amendment,
+"My inventory", and a Live-app amendments subsection (D176, D177, D179,
+D183). `docs/ui-evidence.md`: the PUB-01 evidence section (D177).
+Applied 18, deferred 0; ticked lines stay until the next prune sweeps
+them.

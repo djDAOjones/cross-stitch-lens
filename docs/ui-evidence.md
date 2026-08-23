@@ -723,3 +723,19 @@ own dev server, drop-fed synthetic sources, 1280 × 800 and 380/320
 | EXT-41 | flagged | Stats' "Colours in use" row vs the section "Colours used" — near-twin names for different concepts (a count vs the table); the owner's wording stands, named for ACCEPT-01 |
 | all | console | zero uncaught errors on a clean boot with the catcher armed across drop → sections → highlight → project round-trip (one mid-session error batch traced to stale HMR modules, gone on reload) |
 | all | postures | zero horizontal overflow at 380 and 320; dark scheme walked at 1280 (screenshot evidence in session) |
+
+## PUB-01 — Licences and notices (2026-08-23, D177)
+
+Automated: full `check` green at merge (1,276 tests; `tests/notices.test.ts`
+pins each shipped text byte-for-byte to its repo file and rejects
+`fetch(` or a `/LICENSE`-style path). Live (dev server and a Pages-base
+build from the `pub-01` worktree):
+
+| Check | Evidence |
+| --- | --- |
+| button | 91 × 44 px ghost button after Source in the shell bar, accessible name "Licences", visible on first landing |
+| dialog | labelled "Licences and notices", `aria-modal`; opens at `scrollTop` 0 with focus on the first `h3` (`tabindex=-1`) |
+| keyboard | Tab trap holds; Escape closes and returns focus to the button |
+| rendering | headings and wrapped paragraphs — no sideways scrolling at 320 px; dark scheme checked |
+| console | no errors |
+| human remainder | Enter/Space opening the dialog (native activation cannot be synthesised by the in-app browser); arrow/PageDown scrolling inside the dialog; a VoiceOver pass over the new control (A11Y-VO-01's list grows by one) |

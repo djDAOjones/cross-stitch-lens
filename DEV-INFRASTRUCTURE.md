@@ -43,11 +43,13 @@ Package manager: **npm** (Node LTS).
 | `audit` | `AUDIT=1 vitest run tests/audits` | M5B component decompositions + defect reproductions; JSON artefacts to `bench-reports` | Investigating where a cost or a defect lives |
 | `matrix` | `MATRIX_FULL=1 vitest run tests/acceptance-matrix.test.ts` | Full acceptance/parity matrix incl. the 1024² ceiling row | Verifying composed-pipeline correctness across axes |
 | `matrix:write` | `node scripts/write-acceptance-matrix.mjs` | Regenerate `docs/acceptance-matrix.md`, the matrix coverage table | After a matrix row change — `check` fails if the committed copy drifts (staleness gate) |
+| `symbols:evidence` | `node scripts/gen-symbol-evidence.mjs` | The M9 print-evidence PDF: every glyph as a vector at review and true print sizes, per batch with a signature line, to `bench-reports` (machine-local; the signature record is the decision log) | Signing a glyph batch on printed evidence (D160/D165) |
 | `bench:auto` | `node scripts/bench-auto.mjs` | Automated owner-session legs: flag-granted capture + forced-GC memory reports via a dedicated Chrome (M13-MEAS-03) | Refreshing the browser capture/memory evidence — awake desktop, hands off, never CI; `-- --when-quiet` arms it to fire in the next user-idle gap |
 | `bench:crosscheck` | `node scripts/bench-cross-check.mjs` | Part-A′ arithmetic: manual capture report vs the automated canonical one, side by side (same-build guarded) | Once, after the owner's manual Part-A′ run — the verdict stays human and is recorded in the decision log |
 | `bench:auto -- --crosscheck` | (mode of `bench:auto`) | The whole Part A′ in one command: flag-granted leg, then a picker-granted leg (real picker; scripted tile+Share click via System Events when Accessibility allows, else one human click), then the comparison table | The zero-or-one-click Part A′ — same build guaranteed by construction |
 | `bench:trace` | `node scripts/bench-auto.mjs --trace` | Part-C trace leg (M13-MEAS-04): the capture workloads re-run under raw-CDP tracing (Node built-in WebSocket, zero new deps) → validated GC-pause report per window, observer long tasks quoted alongside | Refreshing the GC-pause evidence — same quiet-desktop rules as `bench:auto`; its timing rows are cross-context (traced), never capture canon |
 | `check` | 8 non-mutating steps: types, lint, wasm, test, build, docs, contrast, secrets | **Quality gate** | Before calling a task done |
+| `verify:deploy` | `node scripts/verify-deploy.mjs` | Post-deploy check that the live site serves the pushed commit's build id (see "Utility scripts"); `-- --wait N` polls; exit 0 PASS / 1 FAIL / 2 ERROR | After every push to `main` (`-- --wait 600` rides out the ~4-min deploy); network-dependent, deliberately outside `check` (PUB-05, D180) |
 | `transcript` | `node scripts/save-transcript.mjs` | List this project's Claude Code sessions; with an id prefix, export one to `_transcripts/` as **redacted** markdown (DOCS-01) | Saving session evidence for prompt-tuning — output stays gitignored, read before sharing |
 | `lint:fix` | `eslint . --fix` | Auto-fix (separate from the gate) | Cleanup, never the CI pass/fail |
 
@@ -71,6 +73,11 @@ alternative ports or URLs.
   `launch.json` sets `autoPort`, so a second session's dev server
   coexists with a running one instead of colliding on 5173 (D27). The
   env var is the sanctioned override; hard-coding a port is still out.
+- **Pages-base preview:** the public bundle is served under the
+  project-site sub-path (`/<repo>/`); `npx vite build --base /pattern-mapper/ && npx
+  vite preview --base /pattern-mapper/` previews it locally. `--base`
+  is the sanctioned override for the sub-path, as `PORT` is for the
+  port (D172); the default `dev`/`build`/`preview` stay at base `/`.
 
 ---
 
@@ -120,16 +127,32 @@ native DevTools console.
   user-facing backend override: `setSelectedBackend` is reachable only
   from tests and audits (a `?backend=` URL param is a wish-list idea,
   not a shipped switch).
-- **Copy-diagnostics bundle:** dev-only affordance (control defined in
-  `UI-STANDARDS.md` → "Diagnostics affordance"). Copies app name,
-  `appVersion` + `buildId` (+ commit), timestamp + timezone, route/view,
-  UA + viewport, dev flags + active backends, the last N **redacted**
-  log entries, uncaught errors, and a redaction notice.
+- **The Debug menu** (control defined in `UI-STANDARDS.md` →
+  "Diagnostics affordance"): three routes over one **redacted** bundle
+  — app name, `appVersion` + `buildId` (+ commit), timestamp +
+  timezone, route/view, UA + viewport, dev flags + active backends, the
+  last N log entries, uncaught errors, and a redaction notice.
+  **Report a problem** leads (DIAG-02, D183): one click saves the
+  settings document (`.json`, Save's name — never the `.pmproj` package
+  with its picture) and the redacted log, then opens a prefilled
+  `mailto:` whose body says to attach both (`mailto:` cannot attach;
+  the app stays offline). **Copy diagnostics** copies the bundle;
+  **Download the log** saves it. `DEV_EMAIL` is an empty placeholder
+  for a dedicated, retirable alias — it ships in a public bundle, so
+  never a personal address and never a secret.
 - **Redaction:** default-on, fail-closed. Never tokens, cookies, raw
   bodies, full storage, or PII (this app has no secrets or PII at
-  runtime, but the rule stands).
-- **Gating:** affordance + verbose levels are dev-only; production needs
-  an explicit opt-in flag (`DIAG=1`) and a redaction review.
+  runtime, but the rule stands). The production review is recorded in
+  D175: sizes, timings, backend names, export options, user-chosen
+  filenames, the capture's display label, crop coordinates and browser
+  error messages are logged; nothing from storage, no credentials.
+- **Gating:** dev builds mount the menu always; a production bundle
+  mounts it behind the `?diag=1` URL opt-in — a per-visit parameter,
+  not a `DIAG=1` build flag — so a tester on the live URL can produce
+  a report without a special build (DIAG-02, D175). The profiling panel
+  stays dev-only. The log carries every palette resolution at `info`
+  (profile, count rule, Must-use ids, membership, selected, conflict
+  kinds, selection source, or "resolved to nothing").
 - **Forward-to-server (optional):** Vite `server.forwardConsole` can
   forward browser runtime events to the dev server for the coding agent.
 
@@ -150,7 +173,9 @@ native DevTools console.
   wasm-parity suite has a fresh pkg), Vitest (incl. the golden and
   wasm-parity suites), and a production `vite build`. Plus the
   Markdown lint + link-check baseline on project memory
-  (`check:docs`) and the report-only secret scan (`check:secrets`).
+  (`check:docs` — citations of `bench-reports`, machine-local evidence
+  output, are exempt, D165) and the report-only secret scan
+  (`check:secrets`).
 - **Non-mutating:** `check` only reports; fixes live in `lint:fix` and
   format-on-save. Formatting is never a gate failure.
 - **CI parity:** the CI workflow runs `npm run check`, so local green =
@@ -212,6 +237,13 @@ no backend** — the surface is small. The baseline is therefore Tier 0:
   registration a logged no-op, so dev/build/test succeed without the
   Rust toolchain and the pipeline stays on the TS backend.
 - **Static files:** assets under `public` and `src` are handled by Vite.
+- **Rollup inputs:** `index.html` plus the measurement harness pages
+  (`bench.html`, `bench-source.html`) by default — the gate's compile
+  proof and what `bench:auto` / `bench:browser` serve. `PM_PUBLIC_BUNDLE=1`
+  builds `main` alone: the public Pages bundle omits the harness
+  (PUB-06, D181). An explicit env rather than `--mode`, because
+  `import.meta.env.MODE`/`DEV` are written into bench reports and gate
+  the debug panel; the env changes nothing but the input list.
 
 The output directory `dist` is **read-only** — never hand-edit it; it
 is overwritten on every build.
@@ -238,14 +270,24 @@ is overwritten on every build.
 
 ## Deployment
 
-- **Target:** static hosting (GitHub Pages / Netlify) — the app is a
-  static bundle. **Post-MVP**; nothing ships until the MVP milestones
-  land.
+- **Target:** GitHub Pages — live at
+  <https://djdaojones.github.io/pattern-mapper/> since 2026-08-22
+  (PUB-04, D172). A project site is served under `/<repo>/`.
 - **Requirement:** HTTPS (secure context) for `getDisplayMedia` and
-  WebGPU.
-- **Pipeline:** `npm run build` → `dist`, published by the host.
-- **Post-deploy:** verify the live URL serves the `buildId` just built
-  (compare the diagnostics bundle).
+  WebGPU — Pages provides it.
+- **Pipeline:** CI (`.github/workflows/lint.yml`). On a push to the
+  default branch a green `npm run check` is followed by a second
+  `vite build --base /<repo>/` with `PM_PUBLIC_BUNDLE=1` (the harness
+  stays out of the public bundle, D181); `dist` is uploaded as the
+  Pages artifact and the `deploy` job publishes it. The repository's
+  Pages source must be **GitHub Actions**, never a branch (a branch
+  source keeps its own build running and races the workflow). Every
+  push to `main` deploys.
+- **Post-deploy:** the deploy job runs `scripts/verify-deploy.mjs`
+  against the published URL and the run's commit (`--wait 300`); a
+  mismatch reddens the run without un-deploying. Locally,
+  `npm run verify:deploy -- --wait 600` after a push is the same check
+  (PUB-05, D180).
 - Tauri packaging is a **separate future pipeline** — nothing in the
   build may assume it.
 
@@ -337,6 +379,22 @@ is overwritten on every build.
   the merged report follows the stamped/canonical rule; a trace-leg
   timing row is cross-context evidence (recorded under tracing) and
   never replaces the untraced capture canon.
+- **`symbols:evidence`** — renders the M9 glyph batches as vectors
+  through the same pdf-lib path the chart key uses, at review size and
+  true print sizes (3.5 mm and 2.5 mm cells) with a signature line per
+  batch and a final all-64 page, to `bench-reports` — machine-local
+  evidence output; the signature record is the decision log (D160,
+  D165).
+- **`verify:deploy`** — post-deploy verification as one command
+  (PUB-05, D180). Fetches the live index cache-busted (Pages serves it
+  `max-age=600` behind a CDN), resolves its `<script type="module">`
+  entry, fetches that content-hashed asset and reads the build id from
+  it — the index carries none, since `__BUILD_ID__` is a Vite define.
+  Compares the SHA by prefix with `origin/main` resolved locally (pass
+  a SHA, or `--url` for a local base-path preview); `--wait N` polls
+  every 15 s. One stdout line; exit 0 PASS, 1 FAIL, 2 ERROR. Zero
+  dependencies; the pure helpers are unit-tested with the network off.
+  Needs the network, so it stays outside `check`.
 
 ---
 

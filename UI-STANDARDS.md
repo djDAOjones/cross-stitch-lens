@@ -91,6 +91,15 @@ the Carbon/WCAG/Nielsen defaults above do not.
   narrow window beside Photoshop: no page-level horizontal scrolling at
   320 CSS px, wide tables scrolling inside their own container, and the
   preview keeping the majority of the width.
+- **The header utility row** (the shell bar) holds the product action —
+  Source — and, after it, **Licences** (PUB-01, D177): a **ghost
+  button** (`.button-ghost`: borderless, otherwise the base button —
+  44 px target, hover fill, focus ring) marks an app-level utility that
+  is not a product action, visually subordinate to the action beside it
+  and costing the header no height. Licences and notices open in a
+  Close-only dialog whose texts (`LICENSE`, `THIRD-PARTY-NOTICES.md`)
+  are imported at build time — never fetched, so nothing is
+  root-relative and the app stays offline.
 
 ### Shell presentation state
 

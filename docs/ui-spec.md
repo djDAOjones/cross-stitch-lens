@@ -236,6 +236,12 @@ where honoured — a hint beside D105's exclusions, degrading silently.
 answer to the no-autosave dead end; the autosave feature itself stays
 out of the milestone (D75).
 
+*(Amended DUR-01, D179: the sentence became the history standing line
+(`#history-line`) — the design history restores the latest design on
+reopen and the line steers to explicit save, with "Recent designs…" and,
+near the storage quota, "Keep more designs" beside Save / Load. J5's
+original sentence survives only when storage is refused.)*
+
 ### §3 amendment — cold surface as a shell state (M14-EXT-06, D93)
 
 Before any source or project, the entry state is the page's only
@@ -516,7 +522,7 @@ no colour-only state.
   profile select (+ Edit profiles…) · the (edited) verbs Update
   profile / Save as new / Revert · Constrain + count cluster ·
   Minimum distance · Must-use chips with search-to-add · the
-  conflicts list · the My-threads inventory reveal (ownership stayed
+  conflicts list · the My-inventory reveal (My threads until D176; ownership stayed
   its own concern). The Threads-to-choose-from select, brand
   checkboxes, per-thread rule selects, preset mode, saved-palette
   editor and library buttons all retired with `palette-panel.ts`.
@@ -535,6 +541,26 @@ no colour-only state.
   draft-labelled (design still, photo slots with honest offline
   states, test card, ÷1/÷4/÷16 grid). Ids are kind-prefixed — both
   kinds' editors stay mounted once opened.
+
+### Live-app amendments (D176–D183 — MYTHREADS-01, PUB-01, DUR-01, DIAG-02)
+
+- **Preview section** (MYTHREADS-01, D176): while Threadify is on and
+  the design's palette is null, a banner beside the picture says no
+  palette applies and why, with **Use DMC** (adopts the DMC profile —
+  an explicit act, never a silent substitution) and **Add threads**
+  (opens the Colour section's inventory reveal, search focused). The
+  built-in profile and the reveal are named **My inventory**; while
+  the inventory is empty the profile option is disabled with its reason.
+- **Control table rows** (PUB-01, D177; DIAG-02, D183):
+  `Licences | C | header utility row | ghost button → Close-only dialog | 1`;
+  `Report a problem | dev (+ ?diag=1) | Debug menu, first route | button → saves the settings document + the redacted log, opens the compose window | 1`.
+  Keyboard model unchanged.
+- **Project section census** (DUR-01/SAVE-01, D179): Save / Load (a
+  `.pmproj` package; legacy `.json` still loads) · the history standing
+  line (`#history-line`) · **Recent designs…** (newest first, with age,
+  size and saved state) · **Keep more designs** (near the quota only;
+  the `persist()` opt-in) · the version/build line. Save takes the
+  Design title as the filename.
 
 ## 6. Keyboard model
 

@@ -371,9 +371,17 @@ The canonical entities (full definitions in `architecture.md`):
   mandatory and is the reference.
 - **`Pipeline`** — an ordered list of stage instances + params. Order is
   **data, not code**: stored in the project file, reorderable in the UI.
-- **`ProjectFile`** — versioned JSON
-  (`{ schemaVersion, grid, source, palette, pipeline[], preview, chart,
-  export }`).
+- **`ProjectFile`** — the versioned document (`project.json`, schema
+  v10) inside a `.pmproj` package that also carries the picture
+  verbatim (DUR-01): `{ schemaVersion, source, pipeline, palette,
+  symbols, gridStyle, preview, export, estimates }`. `source` names
+  the embedded picture or is `null` (v10); `symbols` is identity-keyed
+  symbol state — grants, queue, overrides — whose glyph catalogue order
+  is append-only once a batch signs (v6, M9); `gridStyle` is a
+  screen/print pair with preset provenance (v7, M11); `export.pdf`
+  carries the pagination fields (v8, M10); `estimates` the fabric and
+  thread-estimation settings (v9, M12). Legacy `.json` files load by
+  content detection and migrate forward.
 
 Do **not** represent pixel data as arrays of objects, mutate a stage's
 input buffer, or encode pipeline order as hard-coded call sequences.
@@ -576,16 +584,23 @@ See `DEV-INFRASTRUCTURE.md` for the concrete list of protected paths.
 
 ## Persistence checklist
 
-Project state persists as versioned JSON (and IndexedDB autosave). When
-adding any property that should survive save/reload:
+Project state persists as a `.pmproj` package — canonical
+`project.json` beside the picture — on explicit save, and between
+saves in the design history (IndexedDB, its own `pattern-mapper-designs`
+database), which stores the same serialised document: a property that
+survives save/reload survives the history with no extra step (DUR-01,
+D179). When adding any property that should survive save/reload:
 
 1. Add a default in the relevant model/params type (`<Stage>Params` or
    `ProjectFile`).
-2. Include it in serialisation (`project.ts` `toJSON`/equivalent).
+2. Include it in serialisation — `serializeProject` in
+   `src/core/project.ts`; the package writer
+   (`src/core/project-package.ts`) carries the document verbatim.
 3. Handle it in deserialisation with a fallback default, and bump
    `schemaVersion` + add a forward migration if the shape changed.
 4. Confirm the round-trip invariant still holds: save → load → save is
-   byte-identical (golden/round-trip test).
+   byte-identical (golden/round-trip test) — for the package as well as
+   the document.
 
 ---
 

@@ -171,6 +171,7 @@ import { createInfoPanel } from './ui/info-panel.ts';
 import { createSection, type AccordionSection } from './ui/accordion.ts';
 import { choicesModal, formModal, textPromptModal } from './ui/modal.ts';
 import { createNoticesButton } from './ui/notices.ts';
+import { createInlineNotification } from './ui/notification.ts';
 import { SAMPLE_NAME, sampleBuffer } from './ui/sample.ts';
 import { displayGlyph, symbolPickerModal, symbolPickerModel } from './ui/symbol-picker.ts';
 import { loadPreferences, savePreferences, type ShellPreferences } from './ui/preferences.ts';
@@ -968,6 +969,17 @@ function build(app: HTMLElement): void {
   });
   paletteBannerActions.append(useDmcButton, addThreadsButton);
   paletteBanner.append(paletteBannerText, paletteBannerActions);
+
+  // End-of-capture notice (CAPTURE-END-01): when the share is ended
+  // from outside the app — the browser's own stop control, the window
+  // closing — the header's status line proved easy to miss (the
+  // owner's sitting, D134). The same sentence lands above the preview
+  // as an inline notification until dismissed or the next source
+  // arrives. The user's own Stop needs no notice.
+  const captureEndedNote = createInlineNotification(document, {
+    kind: 'info',
+    focusAfterDismiss: () => host,
+  });
 
   /** One writer for the banner: Threadify on × no palette resolved. */
   function syncPaletteBanner(): void {
@@ -2814,6 +2826,7 @@ function build(app: HTMLElement): void {
 
   /** A new design began (picture, file, capture): its standing resets. */
   function onDesignStarted(): void {
+    captureEndedNote.hide();
     designHasContent = true;
     designStanding = 'none';
     designSavedAt = null;
@@ -4003,7 +4016,7 @@ function build(app: HTMLElement): void {
   // of it lives in the accordion panel (M14-EXT-31), under the
   // section's own header; the grid geometry that rode between strip
   // and canvas moved into the Grid options modal (M14-EXT-35).
-  previewAccordion.panel.append(toolbar, paletteBanner, host);
+  previewAccordion.panel.append(toolbar, captureEndedNote.element, paletteBanner, host);
 
   // Preview first in the DOM at every width (M6-NARROW-01). The
   // settings panel sits to its right when there is room, so the
@@ -4697,6 +4710,9 @@ function build(app: HTMLElement): void {
       session.onEnded(() => {
         if (capture !== session) return;
         endCaptureUi('Screen capture ended (sharing was stopped).');
+        captureEndedNote.show(
+          'Screen capture ended — sharing was stopped. The last frame is kept as a still; choose Source to capture again.',
+        );
         log.info('capture', 'session ended externally');
       });
       log.info('capture', 'session started', { label: session.label });

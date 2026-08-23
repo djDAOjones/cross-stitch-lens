@@ -17,10 +17,11 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
-## Small UI batch (IN PROGRESS, from 2026-08-23)
+## Small UI batch (SHIPPED 2026-08-23)
 
-**Outcome:** the five Icebox promotions of D188 plus the UI defects the
-wish-list triage surfaced, run gateless in the owner's order (D189).
+**Outcome:** the five Icebox promotions of D188 plus three UI defects
+the wish-list triage surfaced, run gateless in one sitting in the
+owner's order (D189) — eight items, D191–D196.
 
 - ICE-SYMBOL-UI-01 (2026-08-23) — the Colours-used table is the live
   symbol key: a Symbol column with a picker over the unused glyphs,
@@ -47,6 +48,9 @@ wish-list triage surfaced, run gateless in the owner's order (D189).
   and a zoom reaches the ceiling on a 2× display. See D195.
 - GRID-DPR-01 (2026-08-23) — a device-pixel-ratio change re-sends the
   grid style and re-derives the preview surface. See D195.
+- CAPTURE-END-01 (2026-08-23) — a share ended from outside the app is
+  named above the preview in a dismissible inline notification, beside
+  the status line. See D196.
 
 ## Track B — Durability & identity (SHIPPED 2026-08-23)
 

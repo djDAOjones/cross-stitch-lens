@@ -56,13 +56,11 @@ they no longer imply sequence.
 
 ## Active
 
-### Current — Small UI batch
+### Current — Small UI batch (SHIPPED 2026-08-23)
 
-Promoted from the Icebox at the 2026-08-23 triage (D188) — the five
-shipped (D191–D194) — and, from the wish-list triage the same day, the
-UI defects the owner ran in the same gateless batch; this order.
-
-- [ ] **CAPTURE-END-01 End-of-capture salience** — the external-stop line ("Screen capture ended (sharing was stopped).") is truthful but easy to miss (owner sitting, D134). Done when the end of a capture is announced with a Carbon inline notification the user cannot miss, dismissible, in addition to the status line.
+Promoted from the Icebox at the 2026-08-23 triage (D188) and run
+gateless in one sitting with the UI defects the wish-list triage
+surfaced: eight items, D191–D196. The slot is empty; Next is Track D.
 
 ### Next — Track D Creative control of the image
 

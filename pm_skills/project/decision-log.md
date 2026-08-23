@@ -1025,3 +1025,37 @@ different density and watch the grid's line weight hold.
 
 **Scope.** `src/ui/viewport.ts`, `src/ui/preview.ts`, `src/main.ts`;
 `tests/viewport.test.ts`.
+
+## D196 — CAPTURE-END-01 ships: an externally ended capture is named above the preview, not only in the status line (2026-08-23)
+
+**Context.** The owner's sitting (D134) found "Screen capture ended
+(sharing was stopped)." truthful but easy to miss — a one-line status
+in the header while the eye is on the preview, which keeps showing
+the last frame as if nothing happened. The wish-list carried it as a
+toast-versus-banner taste call; the gateless batch took it.
+
+**Decision.** A project-coded **Carbon inline notification**
+(`src/ui/notification.ts`): one sentence, an informational left edge
+in the interactive blue (a non-text pair on layer-01, now registered
+in the contrast contract), a text **Dismiss** button, `role="status"`
+so showing it announces once without stealing focus. It mounts above
+the preview beside the palette banner — the region the user is
+looking at — and shows only when the share ends **from outside the
+app** (the browser's stop control, the shared window closing): "Screen
+capture ended — sharing was stopped. The last frame is kept as a
+still; choose Source to capture again." The user's own Stop needs no
+notice. It hides on Dismiss (focus to the preview host, never to
+body) and when the next design begins. A toast was rejected: it moves
+and times out, which is the failure mode being fixed; an inline
+notification stays until acknowledged and costs the header nothing.
+
+**Verification.** Gate green; in the app the element mounts hidden in
+the right place, and the component shows, announces, dismisses and
+returns focus as designed, driven through the dev server's module
+graph. The trigger itself — a share ended from the browser's own
+control — is a human check.
+
+**Scope.** `src/ui/notification.ts` (new), `src/main.ts`,
+`src/ui/styles/shell.css`, `src/ui/styles/tokens.css` (one `@pair`).
+`docs/ui-spec.md` / `ui-evidence.md` describe the status line alone —
+a doc-deltas line.

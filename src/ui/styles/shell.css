@@ -911,3 +911,28 @@ main {
 .palette-banner .toolbar {
   margin: 0;
 }
+
+/* Inline notification (CAPTURE-END-01): the palette banner's shape —
+  one sentence plus its action on a layer-01 surface above the
+  preview — with the informational edge in the interactive blue (a
+  registered non-text pair on layer-01); the text carries the meaning. */
+.inline-notification {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--csl-spacing-03);
+  margin: 0 0 var(--csl-spacing-03);
+  padding: var(--csl-spacing-03);
+  background: var(--csl-layer-01);
+  border: 1px solid var(--csl-border-strong);
+}
+
+.inline-notification-info {
+  border-left: 4px solid var(--csl-interactive);
+}
+
+.inline-notification p {
+  flex: 1 1 16rem;
+  margin: 0;
+  color: var(--csl-text-primary);
+}

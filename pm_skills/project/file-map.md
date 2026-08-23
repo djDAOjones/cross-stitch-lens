@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 296 file(s) across 12 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 297 file(s) across 12 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 13 file(s)
 - `.claude` — 2 file(s)
 - `.githooks` — 1 file(s)
@@ -26,7 +26,7 @@
 - `docs` — 16 file(s)
 - `public` — 7 file(s)
 - `scripts` — 22 file(s)
-- `src` — 105 file(s)
+- `src` — 106 file(s)
 - `tests` — 123 file(s)
 <!-- /file-map-index -->
 
@@ -210,6 +210,7 @@
 - `src/ui/info-panel.ts` — "Colours used" table content: pure row model + thin DOM half, hosted by a section (M14-EXT-41); the live symbol key column (ICE-SYMBOL-UI-01); focus kept across rebuilds
 - `src/ui/modal.ts` — Carbon modals (text prompt, choices, danger confirm, live-apply form): trap arithmetic pure, focus restore, Escape/backdrop cancel
 - `src/ui/notices.ts` — licences and notices: `?raw` imports of `LICENSE` + `THIRD-PARTY-NOTICES.md`, a pure document parser, the Close-only dialog and the ghost header button (PUB-01)
+- `src/ui/notification.ts` — Carbon inline notification (CAPTURE-END-01): one sentence, kind edge, text Dismiss with deliberate focus return; role=status
 - `src/ui/preferences.ts` — Shell preferences (per-disclosure open state) in localStorage; parse falls back to defaults for anything unreadable. Never project data.
 - `src/ui/preview.ts` — preview controller: toolbar, wheel/drag/keys → worker
 - `src/ui/profile-editor-colour.ts` — colour profile kind: libraries, pins, ranges, custom colours, fingerprinted readout; pure halves exported

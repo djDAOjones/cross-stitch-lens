@@ -3,12 +3,19 @@
  * no direct tests until COUNT-01 / MUST-01: palette-selection.test.ts
  * covers the selector both worlds share through the retired
  * policy-world entry point, not the sentences and seat rules this one
- * owns. Three pins from the first live-app reports.
+ * owns. The first live-app reports' pins, then MUST-01's seat rule: a
+ * seat fills wherever the design's recipe copy holds the colour — the
+ * pick pins it there (option b); a seat that drifts out of the
+ * profile is kept and explained, as before.
  */
 
 import { describe, expect, it } from 'vitest';
 
-import { emptyRecipe, type ColorProfileRecipe } from '../src/core/color-profile.ts';
+import {
+  builtInProfiles,
+  emptyRecipe,
+  type ColorProfileRecipe,
+} from '../src/core/color-profile.ts';
 import { resolveProfilePalette } from '../src/core/palette-resolve.ts';
 import { loadCatalogue } from '../src/core/thread-catalogue.ts';
 import type { PixelBuffer } from '../src/core/types.ts';
@@ -56,6 +63,61 @@ describe('resolveProfilePalette (the profile world)', () => {
     expect(note?.severity).toBe('warning');
     expect(note?.ids).toEqual(['anchor:403']);
     expect(resolved.lockedCount).toBe(0);
+  });
+
+  it('fills a Must-use seat from another brand once the design pins it, and drops it again without the pin (MUST-01)', () => {
+    const pinned = resolve({ libraries: ['dmc'], include: ['anchor:403'] }, ['anchor:403']);
+    expect(pinned.ok).toBe(true);
+    expect(pinned.eligibleCount).toBe(490);
+    expect(pinned.palette.entries).toHaveLength(8);
+    expect(pinned.palette.entries.some((t) => t.id === 'anchor:403')).toBe(true);
+    expect(pinned.lockedCount).toBe(1);
+    expect(pinned.conflicts.some((c) => c.kind === 'locked-not-permitted')).toBe(false);
+    // The Revert shape: the same seat without its pin is a Note again —
+    // the pick widened the copy; a drifted seat is still kept and explained.
+    const reverted = resolve({ libraries: ['dmc'] }, ['anchor:403']);
+    expect(reverted.lockedCount).toBe(0);
+    expect(reverted.conflicts.find((c) => c.kind === 'locked-not-permitted')?.ids).toEqual([
+      'anchor:403',
+    ]);
+  });
+
+  it('fills a pinned seat on a range profile the colour fails — Pastels and DMC 666 (MUST-01)', () => {
+    const pastels =
+      builtInProfiles(catalogue).find((p) => p.id === 'builtin:pastels')?.recipe ?? emptyRecipe();
+    const drifted = resolve(pastels, ['dmc:666']);
+    expect(drifted.conflicts.find((c) => c.kind === 'locked-not-permitted')?.ids).toEqual(['dmc:666']);
+    const pinned = resolve({ ...pastels, include: ['dmc:666'] }, ['dmc:666']);
+    expect(pinned.palette.entries).toHaveLength(8);
+    expect(pinned.palette.entries.some((t) => t.id === 'dmc:666')).toBe(true);
+    expect(pinned.lockedCount).toBe(1);
+    expect(pinned.conflicts.some((c) => c.kind === 'locked-not-permitted')).toBe(false);
+  });
+
+  it('renders a My-inventory design from its pinned seats on an empty inventory, still naming the inventory (MUST-01)', () => {
+    // The owner's file once its seats are pinned: the design shows its
+    // colours on a machine that owns none of them, and the warning is
+    // what says the profile's inventory half is empty here.
+    const seats = ['anchor:403', 'ariadna:1781'];
+    const resolved = resolve({ libraries: ['mine'], include: seats }, seats, new Set());
+    expect(resolved.ok).toBe(true);
+    expect(resolved.palette.entries.map((t) => t.id)).toEqual(seats);
+    expect(resolved.lockedCount).toBe(2);
+    const note = resolved.conflicts.find((c) => c.kind === 'owned-none');
+    expect(note?.severity).toBe('warning');
+    expect(note?.message).toContain('contributes nothing');
+  });
+
+  it('honours a pinned seat the user does not own under "only colours I own" (MUST-01)', () => {
+    // Must use means "I intend to buy it": by the order contract pins
+    // resolve after the owned narrowing, so the seat fills unowned.
+    const resolved = resolve(
+      { libraries: ['dmc'], ownedOnly: true, include: ['anchor:403'] },
+      ['anchor:403'],
+      new Set(['dmc:310']),
+    );
+    expect(resolved.palette.entries.map((t) => t.id)).toEqual(['dmc:310', 'anchor:403']);
+    expect(resolved.lockedCount).toBe(1);
   });
 
   it('reads grammatically when the profile resolves fewer colours than asked (COUNT-01)', () => {

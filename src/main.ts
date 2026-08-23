@@ -51,6 +51,9 @@ import {
   builtInProfiles,
   emptyRecipe,
   paletteToProfile,
+  pinIntoRecipe,
+  resolveProfileMembership,
+  unpinFromRecipe,
   type ColorProfileRecipe,
 } from './core/color-profile.ts';
 import { generateColorMap, userColor } from './core/color-sources.ts';
@@ -1637,6 +1640,21 @@ function build(app: HTMLElement): void {
     applyColour();
   }
 
+  /**
+   * Re-derive the edited flag from the copy itself (MUST-01): after an
+   * edit is undone — a Must-use removed, its pin with it — the copy may
+   * equal the linked profile again, and the flag must say so. The same
+   * comparison `refreshProfilesCache` makes, so the two cannot disagree.
+   */
+  function recomputeEdited(): void {
+    if (profileRef === null) {
+      designEdited = false;
+      return;
+    }
+    const base = profileRecipes.get(profileRef.id);
+    designEdited = base === undefined || JSON.stringify(base) !== JSON.stringify(designRecipe);
+  }
+
   const colourSection = createColourSection(document, {
     paletteMode,
     profiles: colourProfiles,
@@ -1722,21 +1740,46 @@ function build(app: HTMLElement): void {
     },
     addMustUse: (id) => {
       if (!designRules.mustUse.includes(id)) designRules.mustUse.push(id);
-      applyColour();
-      // The promise holds only inside the profile's membership
-      // (MUST-01): outside it the seat is kept and explained, and the
-      // status line must not say the opposite a line above the Note.
-      const unseated = paletteConflicts.some(
-        (c) => c.kind === 'locked-not-permitted' && c.ids.includes(id),
+      // A seat the profile cannot hold is honoured by widening the
+      // design's own copy (MUST-01, option b — the D114 pattern): the
+      // colour joins the copy as an include pin, so the promise the
+      // status line makes is kept rather than retracted a line lower by
+      // a Note. Membership is asked of the resolver the pipeline uses,
+      // before resolving — never read back from `paletteConflicts`,
+      // which the FLICKER-01 gate can leave stale. A seat that later
+      // drifts out (a profile edit, a loaded file whose profile moved,
+      // Revert) is still kept and explained, as before.
+      const held = resolveProfileMembership(designRecipe, profileInputs()).entries.some(
+        (t) => t.id === id,
       );
-      status.textContent = unseated
-        ? `${labelForId(id)} is set to Must use but is not in this profile's colours — see the note in the Colour section.`
-        : `${labelForId(id)} will always be in the palette.`;
+      // Resolve first, then speak: the reprocess writes "Processing…"
+      // to the status line, so a sentence set before it never shows.
+      if (held) {
+        applyColour();
+        status.textContent = `${labelForId(id)} will always be in the palette.`;
+        return;
+      }
+      designRecipe = pinIntoRecipe(designRecipe, id);
+      designRecipeEdited();
+      status.textContent =
+        profileRef === null
+          ? `${labelForId(id)} will always be in the palette — added to this design's colours.`
+          : `${labelForId(id)} will always be in the palette — added to this design's colours, so the profile shows as edited.`;
     },
     removeMustUse: (id) => {
       designRules.mustUse = designRules.mustUse.filter((m) => m !== id);
-      status.textContent = `${labelForId(id)} is no longer guaranteed.`;
+      // The pick and its undo are one gesture seen from both ends: the
+      // colour's pins return to the linked profile's own state, so a
+      // design whose only edit was the seat stops reading "(edited)".
+      const base = profileRef === null ? undefined : profileRecipes.get(profileRef.id);
+      const unpinned = unpinFromRecipe(designRecipe, id, base);
+      const left = JSON.stringify(unpinned) !== JSON.stringify(designRecipe);
+      designRecipe = unpinned;
+      recomputeEdited();
       applyColour();
+      status.textContent = left
+        ? `${labelForId(id)} is no longer guaranteed and leaves this design's colours.`
+        : `${labelForId(id)} is no longer guaranteed.`;
     },
     openEditor: () => {
       void openProfileEditor('colour', profileRef?.id);

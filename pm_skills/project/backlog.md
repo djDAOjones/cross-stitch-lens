@@ -41,50 +41,22 @@
 
 Milestones ship in order. A milestone is done when its acceptance
 line passes and `check` is green. Requirements references are to
-Milestones ship in order. A milestone is done when its acceptance
-line passes and `check` is green. Requirements references are to
 `docs/requirements.md`.
 
 **Ship order is no longer milestone-number order** (D149). Shipped:
 M0–M8, M13, M14, M15, **Batch C0** (D149–D159, 2026-08-11) and
-**Track B** (DUR-01 + SAVE-01, D179, 2026-08-23). Remaining, in the
-order set on 2026-08-23 (the print scoping and the icebox triage,
-D188): M16's sitting signs the print standard first; then the **small
-UI batch** and **Track D — Creative control**; the **Print** programme
-(PRINT-01 → PRINT-02, PRINT-TEST-01) builds at the end of the cycle;
-**Track C — Publication** owner-paced alongside. The numbers stay
+**Track B** (DUR-01 + SAVE-01, D179, 2026-08-23); **Track A** is
+build-complete (D165–D170), its close parked with the print programme.
+The order set on 2026-08-23 (D189): the **small UI batch** first, then
+**Track D — Creative control**, then **Track C — Publication**; the
+**Print** programme (M16's sitting, PRINT-01 → PRINT-02, PRINT-TEST-01)
+waits in the Icebox until the owner schedules it. The numbers stay
 because they are greppable across the tickets and the decision log;
 they no longer imply sequence.
 
 ## Active
 
-### Current — Track A The printable pattern
-
-Build-complete — M9, M11, M10 and M12 shipped (D165–D170), so the
-brief's second success criterion is met. One owner-gated item remains.
-
-- [ ] **M16 The print standard: sign the floors and presets on paper** [sign-off] (2026-08-09, re-aimed 2026-08-23)
-  Intent: the owner's sitting with a printer signs the Readable / Large print / Compact values (text pt, number pt, mm per stitch), the default assembly mode and key placement, and records M9's print inspection and M12's estimate review (D170) — the evidence PRINT-01 builds to. The pack at `bench-reports/m16-sitting/` is the material; its form's items 2–9 and 13 are superseded by PRINT-01's model.
-  Done when: the preset table and the defaults are signed in the decision log, M9's inspection and M12's review are recorded pass/fail, and Track A's close is decided — on the signed standard, or on PRINT-01 shipping.
-
-### Print — the paper output (scoped 2026-08-23; builds at the end of the cycle)
-
-The owner's calls at scoping: the preset sizes stand as starting values;
-every print size derives from one type scale so a later "+2 pt" is one
-edit; no backward compatibility for print settings (files still load);
-M16's sitting signs the standard first. Scope in PRINT-01's ticket.
-
-- [ ] **PRINT-01 The print plan: size presets with floors, a planner that fits the paper** [detail] (2026-08-23)
-  Intent: replace "fit the raster to the page" with a print standard — Readable / Large print / Compact presets carrying text and cell floors, furniture as ratios of the cell, balanced tiles, paper and orientation alternatives with a page stepper, A3 and a true-size large-format page, key with the chart or separate; a pixel face for the numbers is a design option.
-  Done when: a 200² design prints at ≥ 3.5 mm per stitch with ≥ 10 pt numbers by default, the Export section shows the alternatives and picks the best, the print-plan model replaces `export.pdf` (old files load under the migrated note, round trip intact), and PRINT-TEST-01 is green at every preset.
-- [ ] **PRINT-02 Assembly and sequence: join, work page by page, a key per page** [detail] (2026-08-23)
-  Intent: the two ways a tiled chart is used — taped into one sheet (lettered tiles, glue tabs, registration marks, an assembly page) or stitched page by page (shaded overlap, "continues on page N" labels, stitching-order pages, a per-page key of only that page's colours); key placement with the chart, separate, or per page.
-  Done when: both modes print from the plan, the cover explains assembly, a per-page key lists exactly the page's colours, and the pages tape together by their marks.
-- [ ] **PRINT-TEST-01 The proof set: one command prints every case with a checklist** [detail] (2026-08-23)
-  Intent: `npm run print:proof` renders every chart style × preset × paper × mode with a proof strip on each sheet (id, settings, expected mm per stitch, build id, a 50 mm scale bar) and writes the matching tick-box checklist, so a print change is verified at the printer in one sitting.
-  Done when: the set renders from one command, every sheet identifies itself, the checklist covers the accessibility floors, and a ruler on the scale bar proves 100 %.
-
-### Next — Small UI batch
+### Current — Small UI batch
 
 Promoted from the Icebox at the 2026-08-23 triage (D188): small,
 mechanism known, gateless-able; one run, in this order.
@@ -95,7 +67,7 @@ mechanism known, gateless-able; one run, in this order.
 - [ ] **ICE-WIDTH-02 The width readout goes behind `?diag=1`** — the header's two-line "works down to 320 px" sentence (`src/main.ts`) was a maintainer aid: the public header drops it; the readout renders only under the `diagnosticsRequested` rule (D175). Done when the public header is two lines shorter and `?diag=1` still shows it.
 - [ ] **DATA-05 Stop implying the catalogue is measured** — the Colours-used tooltip says "colour mapped, not measured" for generated colours (`src/ui/info-panel.ts`), implying the catalogue rows are (D161: compiled, uncalibrated). Reword ahead of DATA-03's relabel.
 
-### Track D — Creative control of the image
+### Next — Track D Creative control of the image
 
 Opened 2026-08-23 at the icebox triage (D188). One subject: the user
 controls the final picture *inside* the app, beyond nearest-colour
@@ -116,14 +88,14 @@ prototypes and sign-off sittings of their own.
   Intent: pick from the source picture or the rendered design — and, where the browser has the EyeDropper API, from anything on screen — and resolve it to the nearest threads with their distance, feeding Must-use (pins, D178), swap targets (D182) and the inventory. The editor's pick-up tool is PAINT-01's.
   Done when: scoped in CREATIVE-01 and PAINT-01, then built as a Track D item.
 
-### Track C — Publication
+### Then — Track C Publication
 
 Live since 2026-08-22 at <https://djdaojones.github.io/pattern-mapper/>:
 a green `check` on `main` publishes the built bundle and then verifies
 it (PUB-04/PUB-05, D172/D180). Publication proceeds in this repository
 (D164); `LICENSE` and the notices ship and are readable in-app (D161,
-D177). The 2026-08-22 branch deploy overtook the PUB-02 gate, so that
-item is the pressing one.
+D177). Both items are the owner's; the 2026-08-22 branch deploy
+overtook the PUB-02 gate, so that one is pressing.
 
 - [ ] **PUB-02 Replace `graphic.jpg` and confirm the photo provenance** [maintainer] (2026-08-11)
   Intent: the flat-graphic demo slot is third-party fan art with a two-layer rights problem (the artist's copyright and the underlying mark); it gates public deploy (D150) and is already live. The owner replaces it — the plan (2026-08-12): a Blender cube lit by three RGB lights, giving a colour spread and a luminance ramp from primitives alone, so no rights problem remains; the `PHOTO_SLOTS` contract keeps the name, zero code changes.
@@ -136,6 +108,22 @@ item is the pressing one.
 
 <!-- Deferred but worth keeping (post-triage). Needs a decision to
      reactivate. Promote into a milestone when committed. -->
+
+**Print — parked 2026-08-23 on the owner's word (D189).** Scoped and
+build-ready (`838f3e7`): the owner's calls — the preset sizes stand as
+starting values, every print size derives from one type scale, no
+backward compatibility for print settings (files still load), M16's
+sitting signs the standard first — are in PRINT-01's ticket. Returns to
+Active when the owner schedules it; Track A's close waits with it.
+
+- [ ] **M16 The print standard: sign the floors and presets on paper** [sign-off] (2026-08-09, re-aimed 2026-08-23)
+  The owner's sitting with a printer signs the Readable / Large print / Compact values, the default assembly mode and key placement, and records M9's print inspection and M12's estimate review (D170) — the evidence PRINT-01 builds to. Pack at `bench-reports/m16-sitting/`; its form's items 2–9 and 13 are superseded by PRINT-01's model. Done when the preset table and defaults are signed in the decision log, M9's inspection and M12's review are recorded pass/fail, and Track A's close is decided.
+- [ ] **PRINT-01 The print plan: size presets with floors, a planner that fits the paper** [detail] (2026-08-23)
+  Readable / Large print / Compact presets with text and cell floors, furniture as ratios of the cell, balanced tiles, paper and orientation alternatives with a page stepper, A3 and a true-size page, key with the chart or separate; the print-plan model replaces `export.pdf`. Done when a 200² design prints at ≥ 3.5 mm per stitch with ≥ 10 pt numbers by default and PRINT-TEST-01 is green at every preset.
+- [ ] **PRINT-02 Assembly and sequence: join, work page by page, a key per page** [detail] (2026-08-23)
+  The two ways a tiled chart is used — taped into one sheet (lettered tiles, glue tabs, registration marks, an assembly page) or stitched page by page (shaded overlap, continuation labels, stitching-order pages, a per-page key). Done when both modes print from the plan and the pages tape together by their marks.
+- [ ] **PRINT-TEST-01 The proof set: one command prints every case with a checklist** [detail] (2026-08-23)
+  `npm run print:proof` renders every chart style × preset × paper × mode with a proof strip per sheet and writes the tick-box checklist. Done when the set renders from one command and a ruler on the scale bar proves 100 %.
 
 **Owner-paced — yes at the 2026-08-23 triage (D188)**, scheduled by the
 owner; the catalogue is one cascade (DATA-01 → DATA-04 → DATA-03, D164).

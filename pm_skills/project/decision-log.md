@@ -777,3 +777,61 @@ untouched at 52 lines, over its cap — the owner's Start B.
 
 **Link:** Track D's first build is ICE-RECOLOUR-01 layer A; CREATIVE-01
 and PAINT-01 close on signatures, not ships.
+
+## D189 — The queue re-orders on the owner's word: the small UI batch, then Track D, then Track C; the print programme parks (2026-08-23)
+
+**Context.** The owner set the order directly, the day D188's triage
+landed: the small UI batch first, creative control of the image
+second, publication third, and printing into the Icebox. D188's order
+had M16's sitting signing the print standard first and the Print
+programme building at the end of the cycle.
+
+**Decision.** `backlog.md` Active now reads Current — the small UI
+batch (ICE-SYMBOL-UI-01, ICE-LIMIT-01, ICE-WIDTH-01, ICE-WIDTH-02,
+DATA-05, unchanged) · Next — Track D (ICE-RECOLOUR-01 layer A,
+CREATIVE-01, PAINT-01, PICK-01, unchanged) · Then — Track C (PUB-02,
+DIAG-03, both the owner's). The **Print programme parks in the
+Icebox** as its own group: PRINT-01, PRINT-02, PRINT-TEST-01 **and
+M16** — the sitting is the print standard's signature, its form's
+items 2–9 and 13 are already superseded by PRINT-01's model, and the
+programme "builds to" the sitting's evidence, so the four move
+together. No wake trigger is invented: the group returns to Active
+when the owner schedules it. **Track A stays build-complete with its
+close deferred** — D170's "on the signed standard, or on PRINT-01
+shipping" now waits with the group. The owner's scoping calls (preset
+sizes stand, one type scale, no backward compatibility for print
+settings, the sitting signs first) live in PRINT-01's ticket; the
+backlog lines compress to the Icebox idiom. The duplicated
+"Milestones ship in order" header lines are folded to one.
+
+**Alternatives.** Keeping M16 in Current as an owner-gated standing
+item (rejected: it would sit above the batch the owner put first, and
+a sitting that signs print presets is print work). Track C
+"alongside" rather than third (the owner numbered it; its two items
+remain owner-owned either way).
+
+**Scope.** `backlog.md`; `doc-deltas.md` gains one line for
+`AGENTS.md` § Scope guards, whose "committed fence" sentence predates
+both Batch C0's and Track B's ships. No product code.
+
+**Link:** the order stands until the owner moves it; ICE-SYMBOL-UI-01's
+"before M16's sitting" is now satisfied by construction.
+
+## D190 — Pruned project memory: the ledger's nineteen ticked lines swept; nothing archived (2026-08-23)
+
+**Decision.** Full sweep against `memory-policy.md`, six entries after
+D184. Green: the live log at 17 entries (oldest D172, today), the
+trajectory at 1,341 words, `file-map.md` at 4,293 against 293 × 35 =
+10,255, every reference doc under its soft guideline bar
+`DEV-INFRASTRUCTURE.md` at 3,637 (not a prune target). Over:
+**backlog Active** at 2,017 words (23 items) — the D189 refactor took
+it to 1,863 by compressing the four parked print lines to their
+tickets; the rest is D182/D188-signed wording left verbatim, and the
+five small-batch ships will clear it; **`doc-deltas.md`** carried 19
+ticked lines from the D186 doc-sync — swept, the 3 open lines kept
+verbatim and one added (D189); the **wish-list** at 53 against 25 —
+a triage, the owner's Start B, not a prune; **D188** at 659 words
+against the ~600 per-entry guard, the newest entry so it cannot archive — noted;
+the seven `[detail]` tickets over their soft ~600 words shrink only by
+lifecycle eviction. No archive file created; `archive/INDEX.md`
+unchanged.

@@ -1214,3 +1214,70 @@ once.
 `tests/swap.test.ts`; `hashes.json`. Deltas ledgered for `AGENTS.md`,
 `architecture.md` and `docs/ui-spec.md`; README updated. The ticket
 is deleted with the item.
+
+## D200 — CREATIVE-01 signed: the creative programme is five slices, tone mode first (2026-08-23)
+
+**Context.** The scoping ran five discussion rounds (2026-08-23),
+then two prototypes on the worktree branch `creative-01-proto`
+(`7897ff2` → `9041fae`, pushed to origin): tone mode, and the
+contact sheet grown to a second axis carrying the nine slice-2a
+adjustment-preset candidates. The owner signed the programme on that
+evidence the same night; findings live in the ticket's two
+"Prototype findings" sections, artefacts in the worktree's
+`bench-reports/`.
+
+**Signed.** The programme exactly as consolidated in the ticket's
+"Scoping state after discussion rounds 1–5": slice 1 **tone mode**
+(schema v12; folds C1, C2's two-state case, the provenance strip,
+re-pick-from-frame and the colour-use floor); slices 2a/2b
+**adjustments** as the third profile kind (v13); slice 3 the
+**eyedropper** (PICK-01, no bump); slice 4 the **contact sheet** (no
+bump); slice 5 the **match-error compare** (no bump). Parked with
+triggers: mid-slider shares, the L/C/H split, posterise,
+recipe-level swaps, finished-stitch preview, the N-D distribution;
+PROFILES-02 wakes when slice 1 ships. Cut: brightness, contrast,
+gamma, threshold, global hue shift — the curve, the mixer and tone
+mode cover all five.
+
+**The prototypes' calls stand as decisions.**
+
+- Tone-mode dither diffuses error in the weighted space (curved L,
+  w·a, w·b). Measured: reusing the sRGB error path leaks hue into
+  lightness at 6.88 L\* column spread vs 2.28 weighted (σ 2.42 vs
+  0.32) on the constant-L hue sweep; L\* bias 7.31 vs 0.03 on
+  landscape-1.
+- Quantile shares are exact undithered up to flat-region ties (2–3 %
+  on the sample card); dithered they drift 12–32 % — so the ramp
+  readout shows **achieved** shares whenever dither is on, never a
+  restated target.
+- The count-limit selection carries the same weight as matching: the
+  prototype's greedy copy at t = 0 equals production selection
+  exactly, and at t = 1 it discovers a lightness ladder (L\* 9–92)
+  from the whole catalogue.
+- The contact sheet is a mechanism: the second axis cost one
+  variant-list branch; each adjustment cell re-selects its palette
+  from the adjusted picture, and every candidate changes 3–8 of the
+  8 picks (Mono prep re-picks all eight as near-greys). Budget:
+  30–60 ms per cell at 300², selection included.
+- Two constraints for the shipped sheet: an occluded window suspends
+  `requestAnimationFrame`, so the render loop must not yield on
+  frames alone; and a backgrounded renderer QoS-throttles ~30×
+  (D136's effect seen live) — together the case for the worker
+  route.
+
+**Open, owned by the building slice** (none reopen the signature):
+tone mode's user-facing name and the ladder naming (survey
+neighbours: gradient map, duotone, colour ramp, ombré set); the
+floor's unit and final label; the confetti-note wording; the ramp
+control shape (the histogram-backed strip read better on
+photographs); modal vs panel for the sheet (modal fits the 400 px
+shell); ADJUST-02's saturation-range remap flavour; the adjustment
+starter set's final membership and names (the nine candidates are
+evidence, not signatures).
+
+**Bookkeeping.** CREATIVE-01 closes on the signature, as its
+done-when says. TONE-01, ADJUST-01, ADJUST-02, SHEET-01 and
+COMPARE-ERR-01 join Track D in slice order; PICK-01's line becomes
+slice 3. The ticket file stays as the five items' shared spec (the
+D149 shared-file exception) and is deleted with the last slice.
+PAINT-01 still scopes separately.

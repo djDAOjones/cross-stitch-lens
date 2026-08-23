@@ -22,6 +22,14 @@
 **Outcome:** opened 2026-08-23 (D188/D189); the gate was made safe for
 the worktree round its scoping tickets open before any of them ran.
 
+- CREATIVE-01 (2026-08-23) — the creative programme signed on two
+  prototypes' evidence (branch `creative-01-proto`, pushed): five
+  slices — tone mode (v12), adjustments 2a/2b (v13), the eyedropper,
+  the contact sheet, the match-error compare — with the weighted
+  dither space confirmed by measurement and the nine adjustment
+  candidates judged on before/afters. The slices are Track D items
+  TONE-01, ADJUST-01/02, PICK-01, SHEET-01, COMPARE-ERR-01; PAINT-01
+  scopes separately. See D200.
 - ICE-RECOLOUR-01 (2026-08-23) — the colour swap, layer A: a pure
   `swap` stage after the colour stage remaps the sidecar through a
   render palette (selected entries + render-only targets); a design

@@ -1,5 +1,14 @@
 # CREATIVE-01 — Scope the creative and diagnostic image features
 
+> **SIGNED 2026-08-23 (D200).** The scoping is closed on the owner's
+> signature. This file stays as the shared spec for the five slice
+> items — TONE-01, ADJUST-01, ADJUST-02, PICK-01, SHEET-01,
+> COMPARE-ERR-01 (the D149 shared-file exception) — and is deleted
+> when the last slice ships. Where a candidate bullet contradicts the
+> "Scoping state after discussion rounds 1–5" section, that section
+> wins; the naming and flavour items D200 lists stay open, each owned
+> by its building slice.
+
 ## Outcome
 
 One signed programme for controlling the picture inside the app past

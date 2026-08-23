@@ -61,19 +61,33 @@ they no longer imply sequence.
 
 Opened 2026-08-23 at the icebox triage (D188). One subject: the user
 controls the final picture *inside* the app, beyond nearest-colour
-realism (D149; the first live-app ask, D173). The swap shipped (D199);
-everything else runs through two scoping tickets with sessions,
-prototypes and sign-off sittings of their own.
+realism (D149; the first live-app ask, D173). The swap shipped
+(D199); the creative programme is signed (D200) — five slices in
+order, their spec shared in `tickets/CREATIVE-01.md` (the D149
+shared-file exception; it dies with the last slice). PAINT-01 still
+scopes separately.
 
-- [~] **CREATIVE-01 Scope the creative and diagnostic image features** [sign-off] [detail] (2026-08-23)
-  Intent: one signed programme — what ships, in what order, where each lives (stage, stage parameter, profile kind or view), the first slice — for the candidates the triage kept: tone-only matching (RECOLOUR C1), adjustments as a third profile kind (ICE-ADJUST-01), the contact sheet as a mechanism (ICE-VARIANTS-01), the tonal provenance view (ICE-PROVENANCE-01, the diagnostic half), PICK-01's in-app half, the target % distribution (RECOLOUR C2) and the ICE-PROFILES-02 hook. The IDs stay greppable here; the intent lives in the ticket.
-  Done when: the owner signs the list, order, placements, persistence and UI homes; each signed feature becomes its own Track D item.
+- [ ] **TONE-01 Tone mode: the weighted metric, the ramp and the curve** [detail] (2026-08-23)
+  Intent: slice 1 (D200), schema v12 — the colour↔tone slider in the metric with the count-limit selection carrying the same weight, ladder mode with cut handles on the ramp (control and provenance in one), natural cuts + Equalise, target shares at source-lightness quantiles, the three-point curve, the colour-use floor, re-pick from the current frame. Dither diffuses in the weighted space (the prototype's confirmed call); the LUT key carries the weight (D46).
+  Done when: a ladder profile maps a photograph as tone at the end-stop, the ramp readout shows achieved shares under dither, and the in-slice naming items (mode name, floor label/unit, confetti wording, ramp shape) are settled with the owner.
+- [ ] **ADJUST-01 Adjustments 2a: black/white point, curve and saturation as the third profile kind** [detail] (2026-08-23)
+  Intent: slice 2a (D200), schema v13 — the adjust stage wakes (the identity hook exists), one three-point curve carrying the black/white points at its endpoints plus global saturation; read-only built-ins seeded from the nine prototype candidates plus editable copies; the selection source is the adjusted picture.
+  Done when: the owner-signed starter set ships as built-ins, live capture holds ≥ 4 updates/s at ≤ 300² (D135), and the LUT fingerprint is untouched by adjustments.
+- [ ] **ADJUST-02 Adjustments 2b: the six-band H/S/L mixer and the saturation range slider** [detail] (2026-08-23)
+  Intent: slice 2b (D200) — both collapsed by default; the range slider's remap flavour (nominal with a low-S roll-off, lean, vs observed-range) is the design-options fork left open.
+  Done when: both controls ship collapsed and the remap flavour is decided with the owner.
+- [ ] **PICK-01 Eyedropper: grab a colour from the picture, the design or the screen** (2026-08-23)
+  Intent: slice 3 (D200), no bump — pick from the source picture or the rendered design — and, where the browser has the EyeDropper API, from anything on screen — and resolve it to the nearest threads with their distance, feeding Must-use (pins, D178), swap targets (D182) and the inventory. The preview tool-mode pilot PAINT-01 inherits; the editor's pick-up tool is PAINT-01's.
+  Done when: a picked colour lands in Must-use, a swap target or the inventory with its ΔE shown.
+- [ ] **SHEET-01 The contact sheet as a mechanism** [detail] (2026-08-23)
+  Intent: slice 4 (D200), no bump — frozen still → labelled variants → a pick adopts, through the worker route; axis 1 the dither presets, axis 2 the adjustment presets, profiles later. The render loop must not yield on frames alone (an occluded window suspends rAF — the prototype's constraint).
+  Done when: both axes ship through the worker, a pick adopts into the design, and the adoption sentence survives the reprocess (STATUS-01 or its equivalent).
+- [ ] **COMPARE-ERR-01 Match-error compare: the ΔE heat map** (2026-08-23)
+  Intent: slice 5 (D200), no bump — a Compare-class decoration (D92) showing where the palette serves the picture worst, which is where a Must-use, a swap or a painted cell earns its place.
+  Done when: the heat map ships as a compare mode with an honest label.
 - [ ] **PAINT-01 Scope the pixel editor** [sign-off] [detail] (2026-08-23)
   Intent: an editor a stitcher can work in, not a demo brush — tools, the interaction model by pointer, keyboard and touch, persistence and clearing, undo, its composition with the swap's render palette (shipped, D199), and the v1 slice. Stills only in v1 (D182-3/4).
   Done when: the owner signs the v1 tool set, interaction model, persistence and build slices; each slice becomes its own Track D item.
-- [ ] **PICK-01 Eyedropper: grab a colour from the picture, the design or the screen** (2026-08-23)
-  Intent: pick from the source picture or the rendered design — and, where the browser has the EyeDropper API, from anything on screen — and resolve it to the nearest threads with their distance, feeding Must-use (pins, D178), swap targets (D182) and the inventory. The editor's pick-up tool is PAINT-01's.
-  Done when: scoped in CREATIVE-01 and PAINT-01, then built as a Track D item.
 
 ### Next — Track C Publication
 

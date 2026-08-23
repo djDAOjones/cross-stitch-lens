@@ -139,6 +139,7 @@ import { decodeImageBlob, imageFiles } from './ui/import.ts';
 import { createInfoPanel } from './ui/info-panel.ts';
 import { createSection, type AccordionSection } from './ui/accordion.ts';
 import { choicesModal, formModal, textPromptModal } from './ui/modal.ts';
+import { createNoticesButton } from './ui/notices.ts';
 import { SAMPLE_NAME, sampleBuffer } from './ui/sample.ts';
 import { loadPreferences, savePreferences, type ShellPreferences } from './ui/preferences.ts';
 import { PreviewController } from './ui/preview.ts';
@@ -3408,6 +3409,11 @@ function build(app: HTMLElement): void {
   const headerId = document.createElement('div');
   headerId.className = 'header-id';
   headerId.append(version, status);
+  // Licences (PUB-01): the notices sit in the utility row after
+  // Source — the header's own utility surface, so the legal link
+  // costs no header height (M14-EXT-39) and the ghost treatment keeps
+  // it subordinate to the product action beside it.
+  shellBar.append(createNoticesButton(document));
   header.append(heading, headerId, shellBar);
   if (diagnostics !== null) header.append(diagnostics.element);
   app.replaceChildren(header, layout, editorHost);

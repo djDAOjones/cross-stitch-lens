@@ -365,3 +365,32 @@ because exports re-run the pipeline.
   ships.
 - The preset `basis` lines (the D61 evidence sentences) ride along
   unused — a natural "Why:" hover for the shipped sheet.
+
+### Axis 2 — the adjustment-preset candidates (2026-08-23, `9041fae`)
+
+The sheet proved itself as a mechanism: a second axis cost one
+variant-list branch. Its cells are the nine slice-2a candidates the
+sitting owes (~8 plus None), each defined as one three-point curve —
+the black/white points ARE the curve's endpoints, per the decision of
+record — plus a saturation factor
+(`src/core/tone/adjust-proto.ts` on the branch: None, Contrast
+stretch, Punch, Faded, High key, Low key, Muted, Vivid, Mono prep,
+each with a one-line basis). Adjust runs before resize (§7) and
+**each cell re-selects its palette from the adjusted picture** — the
+slice-2 engine note made visible, and the evidence is decisive: on
+the sample card at DMC limit 8, every non-None candidate changes 3–8
+of the 8 picks (Mono prep drops mean chroma by 49.6 and re-picks all
+eight as near-greys — the natural feed for tone mode). Adopting an
+adjustment composes with the dither axis: the dither sheet then
+freezes over the adopted adjustment. Evidence artefacts:
+`bench-reports/creative-01-proto-adjust-<sha>.json` + gallery, from
+`AUDIT=1` on `tests/audits/adjust-presets.audit.test.ts`; per-cell
+cost ≈ 30–60 ms at 300² including the re-selection.
+
+One shipping constraint found live: an occluded window suspends
+`requestAnimationFrame`, so a sheet whose render loop yields on
+frames alone parks forever behind another window — the prototype now
+races the frame against a 50 ms timeout, and the shipped sheet (or
+worker route) must not depend on the compositor either. A backgrounded
+renderer is also QoS-throttled hard (the D136 effect, seen here as
+30× cell times), which is one more argument for the worker route.

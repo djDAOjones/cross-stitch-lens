@@ -96,6 +96,51 @@ export function emptyRecipe(): ColorProfileRecipe {
   return { libraries: [], ownedOnly: false, include: [], exclude: [], ranges: [] };
 }
 
+/**
+ * Pin a colour into a recipe so its membership is certain to hold it:
+ * the id joins `include` (once) and leaves `exclude`, because exclusion
+ * wins over everything and a pinned-and-excluded colour resolves to a
+ * Note, not a seat. Pure — the input is untouched.
+ *
+ * This is the design-side half of a Must-use pick outside the profile
+ * (MUST-01): the seat's promise is kept by widening the design's
+ * own copy of the recipe — the D114 (edited)-copy pattern — never the
+ * shared profile.
+ */
+export function pinIntoRecipe(recipe: ColorProfileRecipe, id: string): ColorProfileRecipe {
+  return {
+    ...recipe,
+    include: recipe.include.includes(id) ? [...recipe.include] : [...recipe.include, id],
+    exclude: recipe.exclude.filter((pinned) => pinned !== id),
+  };
+}
+
+/**
+ * Undo {@link pinIntoRecipe} for one colour, measured against the
+ * linked profile's own recipe: the include goes unless the base has
+ * it, and a base exclusion comes back. Narrow on purpose — it restores
+ * only what a pin could have changed and never adds a base include the
+ * copy lacks — so removing a Must-use returns the copy to the
+ * profile's state for that colour and nothing else, with no record of
+ * who pinned what. Without a base (an unlinked design) nothing can be
+ * proven to have been ours, so the recipe comes back unchanged.
+ */
+export function unpinFromRecipe(
+  recipe: ColorProfileRecipe,
+  id: string,
+  base: ColorProfileRecipe | undefined,
+): ColorProfileRecipe {
+  if (base === undefined) return recipe;
+  const include = base.include.includes(id)
+    ? [...recipe.include]
+    : recipe.include.filter((pinned) => pinned !== id);
+  const exclude =
+    base.exclude.includes(id) && !recipe.exclude.includes(id)
+      ? [...recipe.exclude, id]
+      : [...recipe.exclude];
+  return { ...recipe, include, exclude };
+}
+
 /** Join ids into a readable clause, truncating a long list. */
 function listIds(ids: readonly string[], max = 3): string {
   if (ids.length <= max) return ids.join(', ');
@@ -215,18 +260,11 @@ export function resolveProfileMembership(
   // in the project file — so a shared design meets an empty inventory
   // first. Name it (COUNT-01): the generic empty-profile sentence sent
   // the owner's reporter after a library, a pin, or an exclusion, none
-  // of which was the remedy.
+  // of which was the remedy. The warning itself waits until the table
+  // is known (MUST-01): it is due whether the profile still resolves
+  // through other libraries or through its pins alone.
   const mineEmpty =
     recipe.libraries.includes('mine') && (inputs.owned === undefined || inputs.owned.size === 0);
-  if (mineEmpty && union.length > 0) {
-    conflicts.push({
-      kind: 'owned-none',
-      severity: 'warning',
-      ids: [],
-      message:
-        'My inventory is enabled, but your inventory has no threads in this browser, so it contributes nothing to this profile.',
-    });
-  }
   if (recipe.libraries.length === 0 && recipe.include.length === 0) {
     conflicts.push({
       kind: 'no-libraries-enabled',
@@ -342,6 +380,21 @@ export function resolveProfileMembership(
       });
     }
     return { entries: [], conflicts, ok: false };
+  }
+
+  // An empty inventory contributes nothing whether the profile still
+  // resolves through other libraries or through its pins alone — the
+  // pins-only case is a Must-use design opened on another machine
+  // (MUST-01): it renders its seats, and this is what still says where
+  // the rest of the profile went.
+  if (mineEmpty) {
+    conflicts.push({
+      kind: 'owned-none',
+      severity: 'warning',
+      ids: [],
+      message:
+        'My inventory is enabled, but your inventory has no threads in this browser, so it contributes nothing to this profile.',
+    });
   }
 
   return { entries, conflicts, ok: true };

@@ -13,6 +13,7 @@ import {
   MAX_GRID_SIDE,
   parseProject,
   projectFilename,
+  projectStamp,
   SCHEMA_VERSION,
   serializeProject,
   type ProjectFile,
@@ -489,9 +490,52 @@ describe('migration from schema v3 dither', () => {
   });
 });
 
+/**
+ * SAVE-01: a design's title names its file. The old name came from the
+ * grid alone, so every 200 × 200 design saved identically; now the
+ * title leads, the picture's name stands in, and a stamp is the last
+ * resort — two untitled, pictureless designs still never collide.
+ */
 describe('projectFilename', () => {
-  it('names the file after the grid size, with the package extension', () => {
-    expect(projectFilename(200, 150)).toBe('project-200x150.pmproj');
+  const parts = { width: 200, height: 150, sourceName: null, stamp: '20260823-0152' };
+
+  it('names the file after the Design title, then the grid size', () => {
+    expect(projectFilename({ ...parts, title: 'Fox sketch' })).toBe('Fox-sketch-200x150.pmproj');
+  });
+
+  it('makes the title filename-safe without losing its words', () => {
+    expect(projectFilename({ ...parts, title: ' a/b:c*d?"<e>|f\tg.. ' })).toBe(
+      'a-b-c-d-e-f-g-200x150.pmproj',
+    );
+    // Letters of any script survive; a long title is capped.
+    expect(projectFilename({ ...parts, title: 'Renard rusé — été' })).toBe(
+      'Renard-rusé-été-200x150.pmproj',
+    );
+    const long = projectFilename({ ...parts, title: 'x'.repeat(100) });
+    expect(long).toBe(`${'x'.repeat(60)}-200x150.pmproj`);
+  });
+
+  it('falls back to the picture name, minus its extension, when untitled', () => {
+    expect(projectFilename({ ...parts, title: '', sourceName: 'landscape-1.jpg' })).toBe(
+      'landscape-1-200x150.pmproj',
+    );
+    expect(
+      projectFilename({ ...parts, title: '***', sourceName: 'Screen capture (the shared screen)' }),
+    ).toBe('Screen-capture-the-shared-screen-200x150.pmproj');
+  });
+
+  it('falls back to a stamp when there is no name at all — two defaults never collide', () => {
+    const a = projectFilename({ ...parts, title: '' });
+    const b = projectFilename({ ...parts, title: '', stamp: '20260823-0153' });
+    expect(a).toBe('design-20260823-0152-200x150.pmproj');
+    expect(a).not.toBe(b);
+    // Deterministic for the same inputs: the stamp is the only clock.
+    expect(projectFilename({ ...parts, title: '' })).toBe(a);
+  });
+
+  it('stamps local wall-clock minutes', () => {
+    expect(projectStamp(new Date(2026, 7, 23, 1, 52))).toBe('20260823-0152');
+    expect(projectStamp(new Date(2026, 11, 5, 23, 7))).toBe('20261205-2307');
   });
 });
 

@@ -256,9 +256,59 @@ export interface ProjectFile {
 /** The v2 preview block a migrated v1 file gets: fit to the space. */
 export const DEFAULT_PREVIEW: ProjectPreview = { mode: 'space', cssPxPerStitch: 1 };
 
-/** Download name from the grid size, e.g. `project-200x200.pmproj`. */
-export function projectFilename(width: number, height: number): string {
-  return `project-${width}x${height}${PROJECT_EXTENSION}`;
+/** What names a saved file (SAVE-01), in order of preference. */
+export interface ProjectNameParts {
+  /** The Design title field — the owner's own name for the design; may be empty. */
+  title: string;
+  width: number;
+  height: number;
+  /** The picture's name (a filename or a capture label), or null without one. */
+  sourceName: string | null;
+  /** A {@link projectStamp} value, used only when neither name exists. */
+  stamp: string;
+}
+
+/** Longest name stem a download keeps readable; the size suffix follows it. */
+const MAX_NAME_STEM = 60;
+
+/**
+ * A filename-safe stem from free text: the characters every filesystem
+ * refuses (`/ \ : * ? " < > |` and controls) and runs of whitespace
+ * become single dashes, letters and digits of any script survive, and
+ * trailing dots or dashes go (Windows drops a trailing dot silently).
+ * Empty when nothing survives — the caller falls through to its next
+ * name, never to a bare dash.
+ */
+function nameStem(text: string): string {
+  return text
+    .normalize('NFC')
+    .replace(/[^\p{L}\p{N}_-]+/gu, '-')
+    .replace(/-{2,}/g, '-')
+    .replace(/^[-.]+|[-.]+$/g, '')
+    .slice(0, MAX_NAME_STEM)
+    .replace(/[-.]+$/g, '');
+}
+
+/** `YYYYMMDD-HHMM` in local time — the stamp a nameless design saves under. */
+export function projectStamp(date: Date): string {
+  const two = (n: number): string => String(n).padStart(2, '0');
+  return `${String(date.getFullYear())}${two(date.getMonth() + 1)}${two(date.getDate())}-${two(date.getHours())}${two(date.getMinutes())}`;
+}
+
+/**
+ * Download name for a saved project (SAVE-01): the Design title names
+ * the file; without one the picture's name does (minus its extension);
+ * without either the stamp does — so two untitled 200 × 200 designs
+ * saved minutes apart never collide, which the old grid-only name
+ * guaranteed they would. The grid size always follows, e.g.
+ * `Fox-sketch-200x150.pmproj`.
+ */
+export function projectFilename(parts: ProjectNameParts): string {
+  const fromTitle = nameStem(parts.title);
+  const fromSource =
+    parts.sourceName === null ? '' : nameStem(parts.sourceName.replace(/\.[A-Za-z0-9]{1,5}$/, ''));
+  const stem = fromTitle !== '' ? fromTitle : fromSource !== '' ? fromSource : `design-${parts.stamp}`;
+  return `${stem}-${String(parts.width)}x${String(parts.height)}${PROJECT_EXTENSION}`;
 }
 
 /**

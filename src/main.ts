@@ -74,6 +74,7 @@ import {
   MAX_SOURCE_NAME,
   MIN_PREVIEW_CSS_PX,
   projectFilename,
+  projectStamp,
   SCHEMA_VERSION,
   type ChartMode,
   type ProjectFile,
@@ -2617,7 +2618,15 @@ function build(app: HTMLElement): void {
       const source =
         sourceOrigin === null ? null : new Uint8Array(await sourceOrigin.blob.arrayBuffer());
       const bytes = writeProjectBytes(file, source);
-      const filename = projectFilename(config.grid.width, config.grid.height);
+      // The Design title names the file (SAVE-01); the picture's name,
+      // then a timestamp, stand in when it is empty.
+      const filename = projectFilename({
+        title: pdfOptions.title,
+        width: config.grid.width,
+        height: config.grid.height,
+        sourceName,
+        stamp: projectStamp(new Date()),
+      });
       downloadBlob(document, new Blob([bytes], { type: 'application/zip' }), filename);
       status.textContent = `Saved ${filename}.`;
       log.info('project', 'saved', {

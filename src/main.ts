@@ -1075,14 +1075,32 @@ function build(app: HTMLElement): void {
           }
           await navigator.clipboard.writeText(text);
         },
-        // "Download the log" (M14-EXT-01): the same redacted bundle as
-        // the copy path, saved as a file through the app's one
-        // download route.
-        download: (text, filename) => {
-          downloadBlob(document, new Blob([text], { type: 'text/plain' }), filename);
+        // "Download the log" (M14-EXT-01) and the report's project
+        // file (DIAG-02): both saved through the app's one download
+        // route; the MIME type is the caller's to name.
+        download: (text, filename, type = 'text/plain') => {
+          downloadBlob(document, new Blob([text], { type }), filename);
         },
-        // "Email the dev" (M14-EXT-26): identity is non-secret by the
-        // versioning rule; the mailto hand-off stays offline.
+        // "Report a problem" (DIAG-02): the settings document, handed
+        // over as a callback so the diagnostics module never depends
+        // on the project model or its save format. The document alone
+        // — never the package with its picture (D179), which is the
+        // tester's screen and must not travel on a click they made
+        // for a log. It takes Save's name (SAVE-01) with the
+        // document's extension; the loader tells the formats apart by
+        // content, so the extension is for the person reading the
+        // email. Identity is non-secret by the versioning rule; the
+        // mailto hand-off stays offline.
+        project: () => ({
+          text: serializeProject(currentProject()),
+          filename: projectFilename({
+            title: pdfOptions.title,
+            width: config.grid.width,
+            height: config.grid.height,
+            sourceName,
+            stamp: projectStamp(new Date()),
+          }).replace(/\.pmproj$/, '.json'),
+        }),
         identity: { appVersion: __APP_VERSION__, buildId: __BUILD_ID__ },
         openMail: (url) => {
           window.location.href = url;

@@ -231,6 +231,52 @@ which is the point, but this is exactly the kind of change A11Y-VO-01
 exists to check. Add the grouped select to that item's list rather
 than claiming the pass here.
 
+## The ceiling — what grouping does not solve
+
+Raised by the owner at scope-time 2026-08-24: *"we are likely to need
+many colour profiles, so need a way to filter / reduce — maybe some
+highlighted ones come top and the rest are searchable by name and/or
+tags, tags selectable."*
+
+That is right, and it is **a different control, not a bigger version
+of this one.** A search field and tag filters cannot live inside a
+native `<select>`; wanting them means leaving `<select>` for a
+combobox or a takeover picker. So it is scoped separately as
+ICE-PICKER-01 rather than folded in here, for three reasons:
+
+- **UI-STANDARDS says prefer native.** Line 212: *"Prefer native HTML
+  form controls before custom ARIA widgets"*; line 317: *"Semantic
+  HTML before ARIA. No ARIA is better than bad ARIA."* Leaving
+  `<select>` costs the mobile picker, keyboard type-ahead and screen
+  reader support that come free today, and must be *earned* by a
+  profile count that grouping genuinely cannot carry. 33 is not that
+  count; grouping handles it comfortably.
+- **This ticket is buildable now.** Grouping is no-schema, no-migration
+  and helps at 25. Folding a custom picker in would turn a
+  single-session change into a multi-session one with a full keyboard
+  and ARIA obligation.
+- **The picker is cheaper than it looks, later.** `ui/browse-table.ts`
+  — the shared capped search table (M15-UI-03) — already does search,
+  a row cap and the honest count line (*"Showing 40 of 3338 — search
+  to narrow"*) for the 3,338-thread colour browse. A profile picker
+  would reuse it rather than start from scratch.
+
+**What this ticket must not do is close the door.** Two rules for the
+build:
+
+- **`group` and `tags` are orthogonal; ship only `group`.** An
+  `<option>` can live in exactly one `<optgroup>`, so grouping needs
+  exactly one group per profile and cannot be derived from a tag list
+  without an arbitrary tiebreak. Model the grouping axis as a single
+  `group`, and leave tags to ICE-PICKER-01 as a separate additive
+  field. Do **not** pre-build a `tags: string[]` here and pick the
+  first one — that reads as a tag system while behaving like a group,
+  which is the worst of both.
+- **"Featured" is a third axis, not a group.** The owner's "some
+  highlighted ones come top" is neither the group nor a tag. Do not
+  approximate it by ordering a group first; leave it unbuilt so
+  ICE-PICKER-01 can model it honestly.
+
 ## Done when
 
 Both selects group the colour profiles, all four special cases still

@@ -29,13 +29,40 @@ Three things keep it separate and unscheduled:
   adds `tags` and `featured` alongside it. They are orthogonal fields,
   so nothing has to be undone.
 
+## The owner's hunch, recorded 2026-08-24
+
+Stated at MENU-01's scope-time, and it is the most important line in
+this file:
+
+> *"I think we need tags and groups, and the ability to collapse and
+> search for groups and profiles within the menu. I think we'll have
+> well over 100 profiles as things progress."*
+
+So the shape wanted is **tags *and* groups, both**, with **collapse**
+and **search** over both — not tags instead of groups. And the
+expected scale is **100+**, which is a statement of intent rather than
+a threshold to wait for.
+
+That changes this ticket's standing. The trigger below was written as
+wait-and-see; if the owner expects 100+, the question is no longer
+*whether* but *when*, and the honest reading is that MENU-01 buys time
+rather than solving the problem. The trigger stands as the signal to
+*schedule* it, not as evidence it might never be needed.
+
+**Collapse is new** and was not in the original scope. It is
+cheap — see below — but it adds a state question: are groups collapsed
+by default, and does that state persist per user? A picker that opens
+fully collapsed shows a dozen headings, which is arguably the best
+possible answer to a 100-profile list, but it is a real design call.
+
 ## The trigger
 
 Wakes on whichever comes first:
 
-- one optgroup passing ~25 profiles on its own (today's Styles group
-  is 19, and 27 after batch three — so a *second* signed gallery batch
-  is roughly the moment); or
+- the owner scheduling it, which their hunch above makes likely to be
+  the real route; or
+- one group passing ~25 profiles on its own (MENU-01's largest is 8
+  today, drifting to ~16 after ICE-PROFILES-02's batch three); or
 - a user asking to find a profile by anything other than scrolling; or
 - user-created profiles becoming numerous enough that "Your profiles"
   is itself a scrolling problem.
@@ -54,8 +81,25 @@ Wakes on whichever comes first:
 
 It drives the colour browse over the 3,338-thread catalogue, so it is
 already proven at a scale far past anything the profile list will
-reach. A profile picker should **reuse it, not reimplement it** — the
-work is a row model plus the tag filters, not a search control.
+reach — 100+ profiles is not a large list by this codebase's
+standards. A profile picker should **reuse it, not reimplement it** —
+the work is a row model plus the tag filters, not a search control.
+
+`src/ui/accordion.ts` is the other half. It is the project-coded
+Carbon accordion (M14-IMPL-03, D83) already used across the shell,
+`preferences.ts` and `info-panel.ts`: a real heading wrapping the
+toggle, `aria-expanded`/`aria-controls`, and a panel that leaves both
+layout and the tab order when closed. **Collapsible groups are a
+solved pattern here, not new work.**
+
+So both halves the owner asked for — search and collapse — exist as
+proven, accessible modules. That materially changes the cost estimate:
+this is closer to assembling two existing components against a new row
+model than to building a custom widget from scratch. The remaining
+risk is concentrated in what neither module covers: the *combined*
+keyboard model (moving between a search field, tag filters and a
+grouped list), and whether the thing replaces the native `<select>` or
+sits behind a button.
 
 ## The three axes, which are genuinely different
 
@@ -89,7 +133,20 @@ MENU-01 is instructed not to pre-build tags for exactly this reason.
 - **Does it replace the `<select>` or sit beside it?** A takeover
   picker behind a "Browse profiles…" button keeps the native select
   for the common case and is the smaller change; a combobox replaces
-  it outright and is the better end state.
+  it outright and is the better end state. **This is the question that
+  decides how much of MENU-01 survives**, and it is worth answering
+  before MENU-01 is built rather than after: if the picker replaces the
+  select, MENU-01's optgroup rendering, its option-renderer extraction
+  and its DOM tests are all thrown away, while its `group` field, its
+  audit-table grouping and its UI-STANDARDS line are kept either way.
+  If the picker sits beside the select, all of MENU-01 keeps its value.
+  MENU-01 is one session, so the exposure is bounded — but it is a free
+  decision to make early and an avoidable waste to make late.
+- **Are groups collapsed by default, and does that state persist?**
+  New with the owner's hunch. Opening fully collapsed shows a dozen
+  headings, which may be the best answer to a 100-profile list; opening
+  expanded is friendlier at 30. Persisting the state per user means
+  storing it somewhere, which is a small but real decision.
 - **What is "featured"?** Owner-chosen per release, usage-derived, or
   a fixed starter set? Usage-derived means telemetry the app does not
   have and should not grow for this.

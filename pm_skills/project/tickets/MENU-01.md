@@ -110,28 +110,44 @@ must preserve all of them:
 
 ### 1. The taxonomy — the one worth the owner's eye
 
+**Owner's call, 2026-08-24: go with the recommendation below.**
+
 The 25 built-ins are not all the same kind of thing, and that is the
-grouping the menu is missing. Recommended, four groups:
+grouping the menu is missing. Five groups:
 
 | Group | Holds | Today |
 | --- | --- | --- |
 | **Your threads** | DMC, All threads, My inventory | 3 |
-| **Simple sets** | Black & white, Retro 16, Web-safe | 3 |
-| **Styles** | Sepia, Pastels, Classic cross stitch, and the sixteen gallery profiles | 19 |
+| **Basics** | Black & white, Retro 16, Web-safe, Sepia, Pastels, Classic cross stitch | 6 |
+| **Nature and place** | Autumn leaves, Golden hour, Winter frost, Deep sea, Rainforest, Spring meadow, Moorland, Gemstones | 8 |
+| **Style and era** | Neon noir, De Stijl primaries, Delft blue, Ukiyo-e woodblock, Art deco, Mid-century modern, Fair Isle, Fluoro spot print | 8 |
 | **Your profiles** | everything from the store | 0+ |
 
-This splits on the question a user is actually asking — *where do
-colours come from* versus *what should it look like* — and it needs no
-per-profile taste call, because membership follows from the recipe
-shape.
+**No group exceeds eight**, which is the whole point of the exercise.
 
-**The weakness, stated:** Styles holds 19 today and 27 after batch
-three, so the biggest group is barely smaller than the flat list is
-now. The alternative is to split Styles by territory (art, nature,
-industry, early computing…), which is the axis ICE-PROFILES-02's pool
-already uses — but at 19 profiles that over-fragments into groups of
-two and three. Recommendation: ship the four groups now, and split
-Styles only when it passes ~25 on its own.
+**How this was arrived at, because the first answer was wrong.** The
+original scope proposed a single **Styles** group holding all 19
+non-library built-ins, on the reasoning that splitting further would
+over-fragment. That was asserted, not checked. Checked, the sixteen
+gallery profiles fall 8/8 into nature and culture — the same axis
+ICE-PROFILES-02's pool A already uses for its own forty — and the
+three plain utility profiles (Sepia, Pastels, Classic cross stitch)
+sit more honestly with the simple sets than among styles with a story.
+A single 19-name group would have tidied the edges of the menu and
+left the scrolling problem untouched.
+
+**What it costs:** one judgement call per future profile — which half
+is it? That is a real cost the first taxonomy avoided, and it is worth
+paying, because the alternative does not solve the problem. Where a
+profile genuinely straddles (a landscape *painting* style, say), prefer
+**Style and era**: the nature group should stay literal.
+
+**Known drift, not a defect.** ICE-PROFILES-02's proposed batch three
+is mostly style-and-era, so the split would go to roughly 8 / 16. No
+static grouping survives growth — that is what ICE-PICKER-01 is for,
+and the owner expects to pass 100 profiles eventually (see that
+ticket). Re-balance when Style and era passes ~12, or accept it and
+let the picker take over.
 
 ### 2. Where the unlinked option goes
 

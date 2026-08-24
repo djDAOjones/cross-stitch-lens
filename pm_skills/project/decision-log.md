@@ -1444,3 +1444,98 @@ CREATIVE-01's ticket stays — it is the five slices' shared spec and
 dies with the last of them (D149 exception), and ADJUST-02, PICK-01,
 SHEET-01 and COMPARE-ERR-01 are still to come. TONE-01 stays open on
 its four naming items and the ramp-handle keyboard pass.
+
+---
+
+## D204 — ICE-PROFILES-02 gains a second pool of sixty, and lightness ladders are admissible as palettes (2026-08-24)
+
+**Decision:** the iceboxed candidate queue grows from forty names to
+**one hundred**, in two pools: pool A is the original forty (D146),
+pool B is sixty drafted here. The item stays iceboxed and every
+candidate stays **unsigned** — no rule, no membership, no evidence.
+The batch process (D115/D139) is untouched.
+
+**The owner's call: ladders are fine as palettes.** Pool B was first
+drafted with single-hue lightness ladders held back, reading
+CREATIVE-01's "the ramp control and a 'ramp' profile shape must not
+collide" as excluding them. The owner overruled that on the pick, and
+the reading was too broad: CREATIVE-01's warning is about the
+**control shape and the naming**, not about the membership. Eight
+ladders join pool B, and the consequence runs the other way from a
+collision — a ladder profile feeding tone mode is the pairing the two
+features were built for. A narrow ordered ramp as the eligible
+universe, matched by the tone metric, *is* gradient-map behaviour,
+reached through two controls that already exist and with no new code.
+Two drafting rules follow: a ladder is where order-is-identity (D46)
+bites hardest, so it ships written light-to-dark; and its evidence
+must be read at a colour limit below the default eight, because a
+five-rung ladder selected down to eight is the whole profile. Pool A's
+**Sashiko indigo** is a ladder and no longer needs re-filing.
+
+**Pool B was picked against gaps, not down a list of names** — the
+D144 method. After sixteen built-ins the gallery has no red (Autumn
+leaves begins at hue 10 and is orange in practice), no violet, no
+achromatic ladder, no all-hue dark (Deep sea is cool, Rainforest is
+green), one two-pole shape, and nothing at all from industry. A
+proposed batch three of eight is recorded against those holes at the
+batch-2 split of four rule to four curated: Grisaille, Chiaroscuro,
+Vermilion and madder, Teal and orange, Anodised aluminium, Heraldic
+tinctures, High-visibility safety, Transit map lines.
+
+**The pool leans curated and that is the territory, not laziness.**
+Fourteen rule-shaped and eight ladders against thirty-eight curated,
+next to a shipped gallery that is nine to seven. Industry, systems and
+early-computing palettes were *specified by somebody* — a colour-space
+band would misdescribe them — so batches drawn from here have to reach
+for the rule-shaped candidates deliberately or the gallery drifts all
+list, no rule.
+
+**Early computing was added at the owner's request, and three of its
+obvious entries are already shipped.** Teletext's eight is exactly
+**1-bit RGB**; EGA/VGA sixteen is exactly **Retro 16**; the dithered
+web set is **Web-safe**. Recording those as already-covered is the
+useful half of the category. The seven that survive are named by
+mechanism — Handheld green LCD, Green phosphor, Amber phosphor,
+Four-colour adapter, Composite artefact colour, Home micro brights,
+Home console — because every machine that defined a palette also
+defined a trademark.
+
+**The naming guard was extended, and the reason is that it cannot be
+left alone.** `Technicolor` sits in pool A and passed this test for
+two batches: a fixed list only catches the marks somebody already
+thought of. Added: `technicolor`, `technicolour`, `kodachrome`,
+`polaroid`, `formica`, `perspex`, `tarmac`, `astroturf`, `day-glo`,
+`letraset`, `atari`, `amiga`, `sega`, `game boy`. Deliberately **not**
+added, and now asserted as passing: `spectrum` and `commodore` — both
+are ordinary words before they are machines, and D139's lesson is that
+a guard rejecting a legitimate name is worse than no guard, because
+the fix looks like renaming the profile. Pool A's *Technicolor* and
+*Pop art (Warhol)* must be renamed before they are ever drafted;
+*Talavera tile* carries a denomination of origin and wants a call.
+
+**Nine investigations are recorded rather than run.** Each is settled
+by resolving a candidate against the live catalogue in the audit run
+and comparing entry sets — cheap once a rule exists, wasted before
+then. Four are redundancy questions that may kill a candidate outright
+(Bleach bypass vs Grisaille/Moorland; Undyed fleece vs Fair Isle's
+undyed opening; Brutalist concrete vs Moorland; Home micro brights vs
+1-bit RGB). Recording them stops a drafting session rediscovering
+them.
+
+**Also noted, not acted on:** three generated colour maps — **Greys**,
+**1-bit RGB**, **2-bit RGB** — are already selectable as libraries in
+the profile editor but have no built-in profile of their own. Each is
+a one-line addition to `builtInProfiles()`. Not done here: it is a
+gallery change, and gallery changes are owner-signed.
+
+**Scope:** `pm_skills/project/tickets/ICE-PROFILES-02.md` rewritten,
+the naming-guard list and its assertions in
+`tests/color-profile.test.ts`, and a new
+`docs/palette-candidates.csv` carrying all 128 rows (28 in-app, 40
+pool A, 60 pool B) for review outside the repo. No source change, no
+UI change, no schema change, no protected file touched.
+
+**Link:** backlog → ICE-PROFILES-02 stays iceboxed at one hundred
+candidates; a live triage page in the app and per-profile category
+tags were both raised at the pick and are **unscoped** — neither is
+decided here.

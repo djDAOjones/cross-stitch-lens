@@ -438,6 +438,16 @@ describe('built-in profiles', () => {
         'tiffany', 'hermes', 'hermès', 'barbie', 'coca[- ]?cola', 'ferrari',
         'lego', 'disney', 'pokemon', 'pokémon', 'minecraft', 'stardew', 'nintendo',
         'crayola', 'sharpie', 'instagram', 'starbucks', 'ikea',
+        // Film, print and material marks (ICE-PROFILES-02 second pool).
+        // 'technicolor' is the one that proves the guard cannot be
+        // left alone: it sits in the ticket's own candidate list and
+        // passed this test for two batches, because a fixed list can
+        // only catch the marks somebody already thought of.
+        'technicolor', 'technicolour', 'kodachrome', 'polaroid',
+        'formica', 'perspex', 'tarmac', 'astroturf', 'day[- ]?glo', 'letraset',
+        // Early-computing marks. The category is new, and every
+        // machine that defined a palette also defined a trademark.
+        'atari', 'amiga', 'sega', 'game[- ]?boy',
       ].join('|')})\\b`,
       'i',
     );
@@ -452,6 +462,24 @@ describe('built-in profiles', () => {
     // 'riso' must not eat "Risotto" or a hue named for it; whole-word
     // anchoring is the only thing standing between the two.
     expect(forbidden.test('Risotto cream')).toBe(false);
+    // The additions bite, including the one that sat in the candidate
+    // list unnoticed while the guard passed.
+    expect(forbidden.test('Technicolor')).toBe(true);
+    expect(forbidden.test('Game Boy green')).toBe(true);
+    expect(forbidden.test('Day-Glo poster')).toBe(true);
+    // And the words deliberately kept OUT, each for the D139 reason —
+    // a guard that rejects a legitimate name is worse than no guard,
+    // because the fix looks like renaming the profile.
+    //
+    // 'spectrum' names a home micro, but it is first an ordinary
+    // colour word: guarding it would condemn "Spectral bands".
+    expect(forbidden.test('Spectral bands')).toBe(false);
+    // 'commodore' names a machine and a naval rank; a maritime
+    // palette has every right to it.
+    expect(forbidden.test('Commodore blue')).toBe(false);
+    // 'tarmac' is whole-word anchored like the rest, so the road
+    // surface it was named for still passes.
+    expect(forbidden.test('Tarmacadam yard')).toBe(false);
     for (const profile of builtInProfiles(catalogue)) {
       expect(forbidden.test(profile.name), `${profile.name} reads as a trademark`).toBe(false);
     }

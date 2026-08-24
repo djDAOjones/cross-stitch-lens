@@ -1,0 +1,1193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Batch Three and Beyond</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+  :root {
+    --ground: #edf0ec;
+    --surface: #f7f9f6;
+    --surface-sunk: #e3e7e1;
+    --ink: #141917;
+    --ink-mid: #454d49;
+    --ink-mute: #6b736e;
+    --rule: #cbd1c9;
+    --rule-soft: #dde1da;
+
+    --cat-art: #9a6410;
+    --cat-design: #b3352a;
+    --cat-industry: #6f7c0c;
+    --cat-photo: #0f6d77;
+    --cat-textile: #2f4470;
+    --cat-science: #8c2764;
+    --cat-place: #41633a;
+    --cat-compute: #4a4396;
+
+    --step-0: 0.78rem;
+    --step-1: 0.9rem;
+    --step-2: 1.02rem;
+    --step-3: 1.35rem;
+    --step-4: 1.9rem;
+    --step-5: 3rem;
+
+    --measure: 68ch;
+    --pad: clamp(1.25rem, 4vw, 3.5rem);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #121614;
+      --surface: #1a1f1c;
+      --surface-sunk: #0d100e;
+      --ink: #e5e9e4;
+      --ink-mid: #b3bab4;
+      --ink-mute: #8a938c;
+      --rule: #2f3733;
+      --rule-soft: #232a26;
+
+      --cat-art: #d3a049;
+      --cat-design: #e5776a;
+      --cat-industry: #b3c33a;
+      --cat-photo: #4fb3bd;
+      --cat-textile: #8ba3d8;
+      --cat-science: #d67aae;
+      --cat-place: #8bb37f;
+      --cat-compute: #a5a0e8;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #121614;
+    --surface: #1a1f1c;
+    --surface-sunk: #0d100e;
+    --ink: #e5e9e4;
+    --ink-mid: #b3bab4;
+    --ink-mute: #8a938c;
+    --rule: #2f3733;
+    --rule-soft: #232a26;
+
+    --cat-art: #d3a049;
+    --cat-design: #e5776a;
+    --cat-industry: #b3c33a;
+    --cat-photo: #4fb3bd;
+    --cat-textile: #8ba3d8;
+    --cat-science: #d67aae;
+    --cat-place: #8bb37f;
+    --cat-compute: #a5a0e8;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
+    font-size: var(--step-2);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 62rem;
+    margin: 0 auto;
+    padding: var(--pad);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(2.5rem, 6vw, 4.5rem);
+  }
+
+  /* ---------- masthead ---------- */
+
+  .masthead {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+    padding-bottom: 2rem;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .eyebrow {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: var(--step-0);
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    margin: 0;
+  }
+
+  .masthead h1 {
+    font-family: Archivo, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 700;
+    font-size: var(--step-5);
+    line-height: 1.02;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  .standfirst {
+    margin: 0;
+    max-width: var(--measure);
+    font-size: var(--step-3);
+    line-height: 1.42;
+    color: var(--ink-mid);
+    text-wrap: pretty;
+  }
+
+  .tally {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 2.25rem;
+    margin: 0.4rem 0 0;
+    padding: 0;
+    list-style: none;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: var(--step-0);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+  }
+
+  .tally b {
+    color: var(--ink);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- generic blocks ---------- */
+
+  .block {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .block > h2 {
+    font-family: Archivo, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 600;
+    font-size: var(--step-4);
+    letter-spacing: -0.018em;
+    line-height: 1.12;
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  .block p {
+    margin: 0;
+    max-width: var(--measure);
+    text-wrap: pretty;
+  }
+
+  .block p + p { margin-top: 0.6rem; }
+
+  .note {
+    color: var(--ink-mid);
+  }
+
+  /* ---------- the brief ---------- */
+
+  .brief {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: 1.5rem 2.5rem;
+    margin: 0;
+    padding: 1.6rem 0 0;
+    border-top: 1px solid var(--rule);
+  }
+
+  .brief div { display: flex; flex-direction: column; gap: 0.35rem; }
+
+  .brief dt {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: var(--step-0);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+  }
+
+  .brief dd {
+    margin: 0;
+    font-size: var(--step-1);
+    line-height: 1.5;
+    color: var(--ink-mid);
+  }
+
+  /* ---------- recommended batch ---------- */
+
+  .batch {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    padding: clamp(1.4rem, 3.5vw, 2.4rem);
+    display: flex;
+    flex-direction: column;
+    gap: 1.4rem;
+  }
+
+  .batch-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.6rem 1.5rem;
+    padding-bottom: 1.1rem;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .batch-head h2 {
+    font-family: Archivo, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 600;
+    font-size: var(--step-3);
+    letter-spacing: -0.012em;
+    margin: 0;
+  }
+
+  .batch-head span {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: var(--step-0);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+  }
+
+  .batch-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 1.35rem 2.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .batch-grid li {
+    display: flex;
+    flex-direction: column;
+    gap: 0.28rem;
+    padding-left: 0.85rem;
+    border-left: 2px solid var(--rule);
+  }
+
+  .batch-grid strong {
+    font-family: Archivo, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 600;
+    font-size: var(--step-2);
+    letter-spacing: -0.005em;
+  }
+
+  .batch-grid em {
+    font-style: normal;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+  }
+
+  .batch-grid span {
+    font-size: var(--step-1);
+    line-height: 1.45;
+    color: var(--ink-mid);
+  }
+
+  /* ---------- category sections ---------- */
+
+  .cat {
+    --hue: var(--ink);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .cat-head {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    border-top: 3px solid var(--hue);
+    padding-top: 0.9rem;
+  }
+
+  .cat-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.75rem;
+  }
+
+  .cat-title h2 {
+    font-family: Archivo, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 600;
+    font-size: var(--step-3);
+    letter-spacing: -0.012em;
+    color: var(--hue);
+    margin: 0;
+  }
+
+  .cat-count {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: var(--step-0);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-mute);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .cat-lede {
+    margin: 0;
+    max-width: var(--measure);
+    font-size: var(--step-1);
+    line-height: 1.5;
+    color: var(--ink-mid);
+    text-wrap: pretty;
+  }
+
+  .scroller {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 46rem;
+    font-size: var(--step-1);
+  }
+
+  thead th {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-weight: 500;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-align: left;
+    color: var(--ink-mute);
+    padding: 0 0.9rem 0.5rem 0;
+    border-bottom: 1px solid var(--rule);
+    white-space: nowrap;
+  }
+
+  tbody td {
+    vertical-align: top;
+    padding: 0.7rem 0.9rem 0.7rem 0;
+    border-bottom: 1px solid var(--rule-soft);
+    line-height: 1.45;
+  }
+
+  tbody tr:last-child td { border-bottom: 1px solid var(--rule); }
+
+  .c-name {
+    font-family: Archivo, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 600;
+    font-size: var(--step-2);
+    letter-spacing: -0.005em;
+    white-space: nowrap;
+    padding-right: 1.4rem;
+  }
+
+  .c-lean { white-space: nowrap; padding-right: 1.4rem; }
+
+  .lean {
+    display: inline-block;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.16rem 0.45rem;
+    border: 1px solid var(--rule);
+    color: var(--ink-mid);
+  }
+
+  .lean-rule { border-color: var(--hue); color: var(--hue); }
+  .lean-ladder { border-color: var(--hue); color: var(--hue); border-style: dashed; }
+
+  .board-link {
+    margin: 0.6rem 0 0;
+    max-width: var(--measure);
+    font-size: var(--step-1);
+    line-height: 1.5;
+    color: var(--ink-mid);
+    padding: 0.85rem 1rem;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+  }
+
+  .board-link a { color: var(--ink); text-underline-offset: 3px; }
+
+  .c-what { color: var(--ink); min-width: 20rem; }
+
+  .c-gap {
+    color: var(--ink-mute);
+    font-size: var(--step-0);
+    line-height: 1.5;
+    min-width: 13rem;
+  }
+
+  .c-gap b {
+    color: var(--ink-mid);
+    font-weight: 600;
+  }
+
+  /* ---------- plain lists ---------- */
+
+  .stack {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-width: var(--measure);
+  }
+
+  .stack li {
+    padding-left: 0.9rem;
+    border-left: 2px solid var(--rule);
+    line-height: 1.5;
+  }
+
+  .stack strong {
+    font-family: Archivo, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 600;
+  }
+
+  .stack span { color: var(--ink-mid); }
+
+  .pairs {
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+    gap: 0.8rem 2.5rem;
+  }
+
+  .pairs div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding-bottom: 0.7rem;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+
+  .pairs dt {
+    font-family: Archivo, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 600;
+    font-size: var(--step-1);
+  }
+
+  .pairs dd {
+    margin: 0;
+    font-size: var(--step-0);
+    line-height: 1.5;
+    color: var(--ink-mute);
+  }
+
+  code {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 0.85em;
+    background: var(--surface-sunk);
+    padding: 0.1em 0.35em;
+  }
+
+  .colophon {
+    border-top: 1px solid var(--rule);
+    padding-top: 1.5rem;
+    font-size: var(--step-0);
+    line-height: 1.6;
+    color: var(--ink-mute);
+    max-width: var(--measure);
+  }
+
+  .colophon p { margin: 0 0 0.5rem; }
+  .colophon p:last-child { margin-bottom: 0; }
+
+  :focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Pattern Mapper &middot; built-in profile gallery</p>
+    <h1>Batch Three and Beyond</h1>
+    <p class="standfirst">Sixty new colour-profile candidates spanning art, design, industry, early computing, photography, textile, systems and the everyday &mdash; picked against the gaps the shipped sixteen leave, not down a list of nice names.</p>
+    <ul class="tally">
+      <li><b>60</b> candidates</li>
+      <li><b>9</b> categories</li>
+      <li><b>8</b> proposed for batch three</li>
+      <li><b>14</b> rule-shaped</li>
+      <li><b>8</b> ladders</li>
+      <li><b>38</b> curated</li>
+    </ul>
+    <p class="board-link">This page is the reasoning behind the queue. The full list &mdash; all 128 rows including the shipped built-ins and the original forty, as a spreadsheet &mdash; is <a href="https://github.com/djDAOjones/pattern-mapper/blob/main/docs/palette-candidates.csv">palette-candidates.csv</a> in the repository, alongside the ticket that governs how any of them would ship.</p>
+  </header>
+
+  <section class="block">
+    <h2>What this list is, and what it is not</h2>
+    <p>These are unsigned ideas, exactly as <code>ICE-PROFILES-02</code> describes its own forty. None has a rule, a membership, or test-image evidence behind it. Nothing here reaches the profile select without going through the same batch process the shipped sixteen did: agent drafts with evidence, owner curates names and membership, only signed batches ship.</p>
+    <p class="note">Everything below was checked against the twenty-five shipped built-ins and the forty already queued. Where a candidate sits close to something that exists, the overlap is named rather than hidden &mdash; the acceptance record judged the gallery on &ldquo;none named redundant&rdquo;, and that is the bar a new batch has to clear too.</p>
+
+    <dl class="brief">
+      <div>
+        <dt>Picked against gaps</dt>
+        <dd>Batch two was chosen against what batch one left uncovered. Same method here: the gallery still has no red, no violet, no achromatic ladder, no all-hue dark, one two-pole shape, and nothing at all from industry.</dd>
+      </div>
+      <div>
+        <dt>Eligible universe, not palette</dt>
+        <dd>A rule-shaped profile narrows the catalogue; the design&rsquo;s colour limit then selects from what survives. Hundreds of entries is the healthy shape. Curated means a rule would misdescribe the style.</dd>
+      </div>
+      <div>
+        <dt>Names are style, never trademark</dt>
+        <dd>Every name below is a technique, material, place or system. None trips the existing guard &mdash; but the guard is a fixed list, so it cannot catch a new mark on its own. See the naming section.</dd>
+      </div>
+      <div>
+        <dt>Ladders admitted (D204)</dt>
+        <dd>These were first held back as tone-mode ramps. The owner ruled otherwise, and the reading was too broad: CREATIVE-01&rsquo;s warning is about the control shape and the naming, not the membership. Eight ladders are in, and a ladder profile feeding tone mode is the pairing the two features were built for.</dd>
+      </div>
+      <div>
+        <dt>The pool leans curated &mdash; deliberately mix</dt>
+        <dd>Only 14 of the 48 are rule-shaped, against a shipped gallery that is 9 rule to 7 curated. That is the untouched territory being what it is: industry, systems and textile palettes were <em>specified by somebody</em>, so a colour-space band would misdescribe them. Batches drawn from this pool have to reach for the rule-shaped candidates on purpose, which is why the eight below are four and four.</dd>
+      </div>
+    </dl>
+  </section>
+
+  <section class="batch">
+    <div class="batch-head">
+      <h2>Proposed batch three</h2>
+      <span>4 rule &middot; 4 curated &middot; six gaps closed</span>
+    </div>
+    <p class="note" style="margin:0;max-width:var(--measure);">The same four-and-four split batch two used. Every one of these closes a named hole in the gallery rather than adding to a region already served, and two of them open territory the gallery has never had.</p>
+    <ul class="batch-grid">
+      <li>
+        <em>rule</em>
+        <strong>Grisaille</strong>
+        <span>Near-zero chroma across the full lightness range. The gallery has no thread-based neutral ladder at all &mdash; Black &amp; white is two entries and Greys is four generated levels.</span>
+      </li>
+      <li>
+        <em>rule &middot; 2 bands</em>
+        <strong>Chiaroscuro</strong>
+        <span>Any hue at very low brightness, plus a narrow high-key band. Every dark profile shipped is hue-restricted: Deep sea is cool, Rainforest is green.</span>
+      </li>
+      <li>
+        <em>rule</em>
+        <strong>Vermilion and madder</strong>
+        <span>The red arc alone, at real chroma. Nothing in the gallery owns red &mdash; Autumn leaves begins at hue 10 and is already orange by the time it has any width.</span>
+      </li>
+      <li>
+        <em>rule &middot; 2 bands</em>
+        <strong>Teal and orange</strong>
+        <span>A warm arc against a cool one. Neon noir is the only two-pole shape shipped, and its poles are magenta and cyan.</span>
+      </li>
+      <li>
+        <em>curated</em>
+        <strong>Anodised aluminium</strong>
+        <span>Dyed metal: the violet-blue, acid green, gold, red and raw silver. The violet corner is the gallery&rsquo;s largest unclaimed region.</span>
+      </li>
+      <li>
+        <em>curated</em>
+        <strong>Heraldic tinctures</strong>
+        <span>Gules, azure, vert, sable, or, argent, purpure. Seven colours defined by a real historical system &mdash; and the second thing on this list that hands you purple.</span>
+      </li>
+      <li>
+        <em>curated</em>
+        <strong>High-visibility safety</strong>
+        <span>Fluoro yellow-green and orange against black and silver. The acid corner is empty; Fluoro spot print is print inks, which is a different animal.</span>
+      </li>
+      <li>
+        <em>curated</em>
+        <strong>Transit map lines</strong>
+        <span>One entry per hue sextant at maximum separation &mdash; colours chosen so they are never confused. Directly useful in a chart app, where legibility is the product.</span>
+      </li>
+    </ul>
+  </section>
+
+  <section class="cat" style="--hue: var(--cat-art);">
+    <div class="cat-head">
+      <div class="cat-title">
+        <h2>Art and pigment</h2>
+        <span class="cat-count">10 candidates</span>
+      </div>
+      <p class="cat-lede">The queued forty covers movements. This covers <em>materials</em> &mdash; what a given medium physically permits &mdash; which is the half that turns into a rule more honestly than a movement does.</p>
+    </div>
+    <div class="scroller">
+      <table>
+        <thead>
+          <tr><th>Candidate</th><th>Lean</th><th>What it is</th><th>Fills / check against</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="c-name">Grisaille</td>
+            <td class="c-lean"><span class="lean lean-rule">rule</span></td>
+            <td class="c-what">The paint-in-greys underpainting: chroma at or near zero, but the whole lightness range, so it reads as a ladder rather than a pair.</td>
+            <td class="c-gap"><b>Fills</b> the achromatic gap. No thread-based neutral set exists.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Chiaroscuro</td>
+            <td class="c-lean"><span class="lean lean-rule">rule &middot; 2 bands</span></td>
+            <td class="c-what">Any hue at very low brightness, plus a narrow high-key highlight band. The gap between the two bands is the style.</td>
+            <td class="c-gap"><b>Fills</b> all-hue dark. Deep sea and Rainforest are both hue-locked.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Vermilion and madder</td>
+            <td class="c-lean"><span class="lean lean-rule">rule</span></td>
+            <td class="c-what">The red arc alone, from scarlet through crimson to rose, held at real chroma so it never drifts into brick.</td>
+            <td class="c-gap"><b>Fills</b> red. Autumn leaves starts at hue 10 and is orange in practice.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Fresco lime plaster</td>
+            <td class="c-lean"><span class="lean lean-rule">rule</span></td>
+            <td class="c-what">What survives being painted into wet lime: earth hues capped at middling chroma and held bright. Chalky by construction, not by taste.</td>
+            <td class="c-gap">Check against <b>Sepia</b>, which is broader and reaches much darker.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Verdigris and bronze</td>
+            <td class="c-lean"><span class="lean lean-rule">rule</span></td>
+            <td class="c-what">Patinated metal: the blue-green copper oxides set against warm unweathered bronze. A narrow arc nothing else touches.</td>
+            <td class="c-gap"><b>Fills</b> the blue-green seam between Rainforest and Deep sea.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Sumi ink wash</td>
+            <td class="c-lean"><span class="lean lean-ladder">ladder</span></td>
+            <td class="c-what">A warm-black dilution ladder &mdash; the same idea as Grisaille one temperature over, and the older of the two by centuries.</td>
+            <td class="c-gap">The warm counterpart to Grisaille&rsquo;s cool. Ship the pair or pick one.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Cave ochre and charcoal</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Red ochre, yellow ochre, charcoal black, chalk white. Four or five entries: the oldest palette there is, and honestly tiny.</td>
+            <td class="c-gap">The smallest curated set proposed. Tests the low end of the count floor.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Egg tempera and gold ground</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Vermilion, lapis, ochre, verdigris, gold, ivory &mdash; the icon painter&rsquo;s shelf, where every pigment was chosen for permanence first.</td>
+            <td class="c-gap">Opens the medieval and devotional territory the gallery lacks.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Expressionist woodcut</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Black, raw paper white, and one or two unmixed colours cut straight into the block. Crude on purpose.</td>
+            <td class="c-gap">Deliberate counterweight to <b>Ukiyo-e woodblock</b>&rsquo;s refinement.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Botanical plate</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Hand-coloured engraving on cream: soft leaf greens, madder pinks, ochre, and a sepia line holding it together.</td>
+            <td class="c-gap">Check against <b>Spring meadow</b> &mdash; softer and hue-wider than a green rule.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="cat" style="--hue: var(--cat-design);">
+    <div class="cat-head">
+      <div class="cat-title">
+        <h2>Design and print</h2>
+        <span class="cat-count">8 candidates</span>
+      </div>
+      <p class="cat-lede">Where the colour set was specified by somebody, for a reason. These read as curated because they genuinely are &mdash; a designer wrote the list down, and a colour-space rule would drag in every neighbour they rejected.</p>
+    </div>
+    <div class="scroller">
+      <table>
+        <thead>
+          <tr><th>Candidate</th><th>Lean</th><th>What it is</th><th>Fills / check against</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="c-name">Terrazzo</td>
+            <td class="c-lean"><span class="lean lean-rule">rule &middot; 2 bands</span></td>
+            <td class="c-what">A pale ground band carrying most of the area, plus all-hue mid-chroma chips scattered through it. The two-band split <em>is</em> the material.</td>
+            <td class="c-gap">A ground-plus-confetti shape the gallery has never had.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Brutalist concrete</td>
+            <td class="c-lean"><span class="lean lean-rule">rule</span></td>
+            <td class="c-what">Board-marked concrete: near-neutral mids with a distinctly cool cast, plus rust and moss staining where the water runs.</td>
+            <td class="c-gap"><b>Close to Moorland.</b> Only ships if the cool cast is a real separation.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Transit map lines</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">One entry per hue sextant at maximum mutual separation &mdash; a set built so no two lines are ever confused at a glance.</td>
+            <td class="c-gap"><b>Fills</b> distinguishability. Nothing shipped optimises for telling colours apart.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Anodised aluminium</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">The dyed-metal set: that unmistakable violet-blue, acid green, gold, red, and raw silver left undyed.</td>
+            <td class="c-gap"><b>Fills</b> violet &mdash; the gallery&rsquo;s biggest unclaimed region.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Vitreous enamel signage</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Deep blue, white, red, black: the street-sign and shopfront set, glossy, few, and built to survive weather.</td>
+            <td class="c-gap">Check against <b>De Stijl primaries</b> &mdash; darker blue, no yellow.</td>
+          </tr>
+          <tr>
+            <td class="c-name">International typographic</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Red, black, white, one grey. The Swiss poster grid, where colour is structure and nothing more.</td>
+            <td class="c-gap">Check against <b>De Stijl primaries</b>; shares red, black, white.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Constructivist</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Red, black, cream, ochre &mdash; the warmer, dirtier cousin of the above, printed on stock that was never white.</td>
+            <td class="c-gap">Overlaps the previous row. <b>Ship at most one of the two.</b></td>
+          </tr>
+          <tr>
+            <td class="c-name">Ceramic glaze</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Celadon, tenmoku, oxblood, ash, iron. Kiln colours: muted, deep, and unlike anything a dye produces.</td>
+            <td class="c-gap">Adds a muted-but-deep register between Moorland and Deep sea.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="cat" style="--hue: var(--cat-industry);">
+    <div class="cat-head">
+      <div class="cat-title">
+        <h2>Industry and infrastructure</h2>
+        <span class="cat-count">8 candidates</span>
+      </div>
+      <p class="cat-lede">Entirely new territory. Neither the shipped sixteen nor the queued forty contains a single industrial entry, and it is the richest untouched seam: these palettes were specified for function, so their membership is documented fact rather than taste.</p>
+    </div>
+    <div class="scroller">
+      <table>
+        <thead>
+          <tr><th>Candidate</th><th>Lean</th><th>What it is</th><th>Fills / check against</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="c-name">High-visibility safety</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Fluoro yellow-green and orange against black and retroreflective silver. Colours chosen to be seen, not liked.</td>
+            <td class="c-gap"><b>Fills</b> acid. Fluoro spot print is print ink, a different set.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Hazard and warning</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">The three signage pairs &mdash; yellow on black, white on red, white on blue &mdash; and nothing else.</td>
+            <td class="c-gap">Overlaps the row above at yellow. <b>Ship at most one.</b></td>
+          </tr>
+          <tr>
+            <td class="c-name">Machinery and plant</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Plant green-grey, dust yellow, oxide primer red, and black. The colours of things built to be repainted.</td>
+            <td class="c-gap">Muted-but-warm; sits between Moorland and Sepia without being either.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Maritime signal flags</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Red, yellow, blue, black, white. Five colours, fixed by a real system, chosen for legibility across open water.</td>
+            <td class="c-gap">Tiny and provenanced &mdash; the cleanest curated case on the list.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Railway livery</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Bottle green, maroon, cream and black, with fine lining. The lining is a single-stitch line, which suits the medium exactly.</td>
+            <td class="c-gap">Deep saturated darks; nothing shipped occupies this corner.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Cockpit instrument</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Dark panel grey-green, amber, white, and warning red. A palette designed to be read in the dark.</td>
+            <td class="c-gap">A dark ground with two hot accents &mdash; structurally like Neon noir, tonally nothing like it.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Circuit board</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Solder-mask green, gold pad, black component, tinned silver, and the red and blue of jumper wire.</td>
+            <td class="c-gap">An unusual green &mdash; dark, and far more yellow than Rainforest.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Shipping container</td>
+            <td class="c-lean"><span class="lean lean-rule">rule</span></td>
+            <td class="c-what">Everything faded by a year at sea: mid chroma across all hues, nothing bright, nothing black. Salt does the narrowing.</td>
+            <td class="c-gap">Check against <b>Moorland</b>; this is brighter and hue-unrestricted.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="cat" style="--hue: var(--cat-compute);">
+    <div class="cat-head">
+      <div class="cat-title">
+        <h2>Early computing</h2>
+        <span class="cat-count">7 candidates</span>
+      </div>
+      <p class="cat-lede">Added on request, and the category needs care in two directions at once. <strong>Three of its most obvious entries are already shipped</strong> &mdash; recording those is the useful half. And every machine that defined a palette also defined a trademark, so all seven are named by mechanism rather than by maker.</p>
+    </div>
+    <div class="scroller">
+      <table>
+        <thead>
+          <tr><th>Candidate</th><th>Lean</th><th>What it is</th><th>Fills / check against</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="c-name">Handheld green LCD</td>
+            <td class="c-lean"><span class="lean lean-ladder">ladder</span></td>
+            <td class="c-what">Four greens and no more &mdash; the whole machine&rsquo;s output, and probably the most recognisable four colours on this page.</td>
+            <td class="c-gap">The clearest ladder in the pool. Judge below limit 8.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Green phosphor</td>
+            <td class="c-lean"><span class="lean lean-ladder">ladder</span></td>
+            <td class="c-what">Black to a single green, by brightness alone. A terminal had no second hue to offer.</td>
+            <td class="c-gap">Pairs with Amber phosphor &mdash; ship both or neither.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Amber phosphor</td>
+            <td class="c-lean"><span class="lean lean-ladder">ladder</span></td>
+            <td class="c-what">The same shape one hue over, and the one people chose when they had to look at it all day.</td>
+            <td class="c-gap">Pairs with Green phosphor.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Four-colour adapter</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Black, cyan, magenta, white; the alternate mode swaps in red, green and a dark yellow nobody liked. The <em>restriction</em> is the style.</td>
+            <td class="c-gap">Not Retro 16 &mdash; the point is what is missing, not what is present.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Composite artefact colour</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">The purple, green, blue and orange fringes that appeared where no colour was ever sent &mdash; colour as a side effect of the signal.</td>
+            <td class="c-gap">Nothing in the gallery resembles it.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Home micro brights</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Eight hues at two brightness levels. The dim/bright pairing is the whole character &mdash; without it this is just the corners.</td>
+            <td class="c-gap"><b>Investigate</b> &mdash; may collapse into 1-bit RGB.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Home console</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">The washed, low-contrast console palette with no true saturation at either extreme &mdash; a television&rsquo;s idea of colour.</td>
+            <td class="c-gap"><b>Investigate</b> against pool A&rsquo;s 8-bit arcade.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="cat">
+    <div class="cat-head">
+      <div class="cat-title">
+        <h2>Heat, light and sky</h2>
+        <span class="cat-count">3 candidates</span>
+      </div>
+      <p class="cat-lede">The one group here defined by <em>shape</em> rather than territory, which is why it carries no colour of its own: three ladders that describe graduated light. All three were on the excluded list until the ladder call.</p>
+    </div>
+    <div class="scroller">
+      <table>
+        <thead>
+          <tr><th>Candidate</th><th>Lean</th><th>What it is</th><th>Fills / check against</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="c-name">Foundry heat</td>
+            <td class="c-lean"><span class="lean lean-ladder">ladder</span></td>
+            <td class="c-what">Black through cherry red, orange and yellow to white &mdash; the blackbody curve, which is a ladder that occurs in nature rather than one somebody drew.</td>
+            <td class="c-gap">The most legible ramp in the pool.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Stellar temperature</td>
+            <td class="c-lean"><span class="lean lean-ladder">ladder</span></td>
+            <td class="c-what">Red through white to blue. A ladder that crosses hue rather than staying on one, and runs the opposite way to every instinct about warm and cool.</td>
+            <td class="c-gap">Tests whether a ladder must be single-hue to read as one.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Cyanotype</td>
+            <td class="c-lean"><span class="lean lean-ladder">ladder</span></td>
+            <td class="c-what">Paper white to Prussian blue, with nothing in between but dilution.</td>
+            <td class="c-gap">Check the blue arc against Delft blue, which is also a ladder.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="cat" style="--hue: var(--cat-photo);">
+    <div class="cat-head">
+      <div class="cat-title">
+        <h2>Photography and film</h2>
+        <span class="cat-count">6 candidates</span>
+      </div>
+      <p class="cat-lede">The strongest rule-shaped seam on the list. A film stock or a grade <em>is</em> a transformation of colour space, so the honest expression really is a band or a pair of bands &mdash; and users already recognise these looks without being told the name.</p>
+    </div>
+    <div class="scroller">
+      <table>
+        <thead>
+          <tr><th>Candidate</th><th>Lean</th><th>What it is</th><th>Fills / check against</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="c-name">Teal and orange</td>
+            <td class="c-lean"><span class="lean lean-rule">rule &middot; 2 bands</span></td>
+            <td class="c-what">A warm skin arc against a cool shadow arc, with the greens and magentas between them left out entirely.</td>
+            <td class="c-gap"><b>Fills</b> the warm/cool pole shape. Neon noir is magenta/cyan.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Cross-processed</td>
+            <td class="c-lean"><span class="lean lean-rule">rule &middot; 2 bands</span></td>
+            <td class="c-what">Highlights pushed yellow-green, shadows pushed cyan-blue. The two bands are the whole effect &mdash; take one away and it is just a cast.</td>
+            <td class="c-gap">A hue split by brightness, which no shipped profile does.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Instant film</td>
+            <td class="c-lean"><span class="lean lean-rule">rule</span></td>
+            <td class="c-what">Milky and warm: low chroma held at mid-to-high brightness, with the hue range skewed off neutral rather than centred on it.</td>
+            <td class="c-gap">Check against <b>Pastels</b>, which is lighter and carries no hue skew.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Sun-bleached print</td>
+            <td class="c-lean"><span class="lean lean-rule">rule</span></td>
+            <td class="c-what">Cyan dye fades first, so an old print drifts magenta-yellow. A warm arc at low chroma &mdash; the physics of a photograph left in a window.</td>
+            <td class="c-gap">Check against <b>Sepia</b>; this keeps pink, which Sepia has none of.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Bleach bypass</td>
+            <td class="c-lean"><span class="lean lean-rule">rule</span></td>
+            <td class="c-what">Chroma stripped almost out, but the blacks kept full. Silver retained on the print, in one sentence.</td>
+            <td class="c-gap"><b>Close to Grisaille and Moorland.</b> Likely redundant &mdash; verify before drafting.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Screen-plate colour</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">The earliest colour photography: soft orange-red, green and blue-violet dyed grains, laid over a warm haze that never quite clears.</td>
+            <td class="c-gap">Named by process, not by the maker&rsquo;s mark. See naming.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="cat" style="--hue: var(--cat-textile);">
+    <div class="cat-head">
+      <div class="cat-title">
+        <h2>Textile and dye</h2>
+        <span class="cat-count">7 candidates</span>
+      </div>
+      <p class="cat-lede">Closest to the product&rsquo;s own world, and therefore the easiest to over-fill. The queued forty already holds Batik, Kilim and Sashiko indigo; these six are the ones that do not duplicate those, and a single batch should still take at most two.</p>
+    </div>
+    <div class="scroller">
+      <table>
+        <thead>
+          <tr><th>Candidate</th><th>Lean</th><th>What it is</th><th>Fills / check against</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="c-name">Natural dye garden</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Weld yellow, madder red, woad blue, walnut brown, onion gold. What a dye plot actually yields, before anything synthetic existed.</td>
+            <td class="c-gap">Provenanced and genuinely small. Strong candidate.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Indigo dip</td>
+            <td class="c-lean"><span class="lean lean-ladder">ladder</span></td>
+            <td class="c-what">Each dip in the vat darkens the last, so the cloth carries its own history as a ramp.</td>
+            <td class="c-gap"><b>Investigate</b> against pool A&rsquo;s Sashiko indigo &mdash; the same shape.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Tartan sett</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Bottle green, navy, deep red and black, with white and yellow overchecks carried a single thread wide.</td>
+            <td class="c-gap">Check against <b>Fair Isle</b> &mdash; darker, dyed rather than undyed.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Undyed fleece</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">White, oatmeal, moorit brown, grey, black &mdash; the colours sheep come in, with no dye pot involved at all.</td>
+            <td class="c-gap"><b>Overlaps Fair Isle</b>, which opens on undyed wool. Verify first.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Kente</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Gold, maroon, forest green, black and blue, in a strip-woven cloth where each colour carries meaning.</td>
+            <td class="c-gap">Cultural naming &mdash; owner&rsquo;s explicit call. See naming.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Suzani</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Madder, indigo, saffron and cream: Central Asian embroidery, worked in silk on a plain ground.</td>
+            <td class="c-gap">Check against queued <b>Kilim</b> &mdash; same dye tradition, different cloth.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Sari and zari</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Saturated silk grounds shot through with metallic gold thread &mdash; the metallic is the point, and threads for it exist.</td>
+            <td class="c-gap">Check against <b>Gemstones</b>, which is chroma alone with no metal.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="cat" style="--hue: var(--cat-science);">
+    <div class="cat-head">
+      <div class="cat-title">
+        <h2>Systems, maps and the laboratory</h2>
+        <span class="cat-count">5 candidates</span>
+      </div>
+      <p class="cat-lede">Palettes somebody standardised and wrote down. Their membership is a matter of record rather than judgement, which makes them the least contestable curated candidates on the list &mdash; and two of them hand you the violet the gallery is missing.</p>
+    </div>
+    <div class="scroller">
+      <table>
+        <thead>
+          <tr><th>Candidate</th><th>Lean</th><th>What it is</th><th>Fills / check against</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="c-name">Heraldic tinctures</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Gules, azure, vert, sable, or, argent and purpure &mdash; seven colours, fixed for eight centuries, with rules about which may touch which.</td>
+            <td class="c-gap"><b>Fills</b> violet. A defined system, so membership is not a taste call.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Laboratory stain</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Haematoxylin blue-purple against eosin pink, on white. Two dyes, one of the most-looked-at colour pairs in science.</td>
+            <td class="c-gap"><b>Fills</b> the violet-to-pink corner, which nothing shipped enters.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Geological map</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">The stratigraphic period colours: pale yet oddly saturated, and standardised internationally so every map agrees.</td>
+            <td class="c-gap">A light-and-chromatic register that exists nowhere else in the gallery.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Topographic map</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Buff contours, blue water, woodland green, road orange and a grey grid on white. Describe by convention; never name a national mapping agency.</td>
+            <td class="c-gap">Legibility-driven, like Transit map lines. <b>Ship at most one per batch.</b></td>
+          </tr>
+          <tr>
+            <td class="c-name">Nautical chart</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Buff land, depth-banded blues, magenta symbols and black soundings. The magenta is what stops it being a blue ladder.</td>
+            <td class="c-gap">Check the depth bands do not read as a ramp. See the ramp note.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="cat" style="--hue: var(--cat-place);">
+    <div class="cat-head">
+      <div class="cat-title">
+        <h2>Vernacular and place</h2>
+        <span class="cat-count">6 candidates</span>
+      </div>
+      <p class="cat-lede">Nobody designed these; they accumulated. That makes them the hardest to defend as rules and the most likely to charm &mdash; which is exactly the sort of judgement the batch signature exists to make.</p>
+    </div>
+    <div class="scroller">
+      <table>
+        <thead>
+          <tr><th>Candidate</th><th>Lean</th><th>What it is</th><th>Fills / check against</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="c-name">Institution green</td>
+            <td class="c-lean"><span class="lean lean-rule">rule</span></td>
+            <td class="c-what">The pale green-grey of hospitals, schools and swimming baths: a narrow, cool, low-chroma band held high in brightness.</td>
+            <td class="c-gap"><b>Fills</b> light-and-muted-with-hue. Pastels is hue-free.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Allotment and shed</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Creosote brown, sage paint, terracotta pot, galvanised grey. Half of it is whatever paint was left over.</td>
+            <td class="c-gap">Check against <b>Moorland</b>; warmer and lighter throughout.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Fairground and carousel</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Red, gold, cream, deep green and mirror silver &mdash; gilded and lined, and quite unlike the flat brights of a rave flyer.</td>
+            <td class="c-gap">Check against queued <b>Rave flyer</b>; ornate rather than flat.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Enamelware kitchen</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Cream body, deep green or navy trim, one red handle. Three colours, and the trim is one stitch wide.</td>
+            <td class="c-gap">Overlaps <b>Vitreous enamel signage</b> in material, not in use.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Sports pitch and playground</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Primary-coloured plastics on pitch green and asphalt grey, with white line-marking cutting through everything.</td>
+            <td class="c-gap">Bright primaries on a dull ground &mdash; a contrast structure nothing shipped has.</td>
+          </tr>
+          <tr>
+            <td class="c-name">Harbour town</td>
+            <td class="c-lean"><span class="lean">curated</span></td>
+            <td class="c-what">Painted terraces: chalky pinks, blues and ochres against white, all weathered by the same salt air.</td>
+            <td class="c-gap"><b>Close to queued Summer coast.</b> Compare before drafting.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>The ladder question, and what really is not a profile</h2>
+    <p>Eight of these candidates are single-hue lightness ladders. They were first held back, on the reading that CREATIVE-01&rsquo;s &ldquo;the ramp control and a &lsquo;ramp&rsquo; profile shape must not collide&rdquo; ruled them out. That reading was too broad and the owner overruled it: the warning is about the <em>control shape and the naming</em>, not about the membership being forbidden.</p>
+    <p class="note">The consequence runs the opposite way from a collision. A ladder profile feeding tone mode is the pairing the two features were built for &mdash; a narrow ordered ramp as the eligible universe, matched by the tone metric, is gradient-map behaviour reached through two controls that already exist, with no new code. Two things follow for drafting: a ladder is where <strong>order is identity</strong> bites hardest, so it ships written light-to-dark; and its evidence has to be read at a colour limit below the default eight, because a five-rung ladder selected down to eight <em>is</em> the whole profile. One bonus &mdash; queued <em>Sashiko indigo</em> is a ladder and no longer needs re-filing.</p>
+
+    <h3 style="font-family:Archivo,sans-serif;font-weight:600;font-size:var(--step-2);margin:1.5rem 0 0;">Mixing behaviours still belong to dither</h3>
+    <p class="note">Pointillism, ikat&rsquo;s blurred edges, halftone and moir&eacute; weave are all descriptions of how colours <em>combine</em>, not of which colours are eligible. The project has already learned this the hard way &mdash; batch one&rsquo;s evidence could not be reproduced until dithering was included, because the app&rsquo;s Floyd&ndash;Steinberg is what turns an edge into a mix. These are dither ideas wearing palette names, and they are the one group that genuinely does not belong here.</p>
+  </section>
+
+  <section class="block">
+    <h2>Already covered &mdash; not proposed</h2>
+    <p>Fifteen obvious names were considered and dropped because something shipped or queued already owns the territory. They are recorded so the same suggestion does not arrive again in six months. The first four are the useful half of the early-computing category: the machines whose palettes everybody remembers are the ones the app already generates.</p>
+    <dl class="pairs">
+      <div><dt>Teletext eight</dt><dd><b>1-bit RGB</b> &mdash; the same eight saturated corners, exactly</dd></div>
+      <div><dt>EGA / VGA sixteen</dt><dd><b>Retro 16</b> &mdash; the HTML4/VGA set in VGA index order</dd></div>
+      <div><dt>Dithered web palette</dt><dd><b>Web-safe</b> &mdash; the 216</dd></div>
+      <div><dt>Workstation greyscale</dt><dd><b>Greys</b>, plus Grisaille above</dd></div>
+      <div><dt>Harris tweed / Heather</dt><dd>Moorland, almost exactly</dd></div>
+      <div><dt>Stained glass</dt><dd>Gemstones plus a dark floor &mdash; and it collides with a demo-image name</dd></div>
+      <div><dt>Slide film</dt><dd>Gemstones</dd></div>
+      <div><dt>Autumn woodland</dt><dd>Autumn leaves</dd></div>
+      <div><dt>Ocean depths</dt><dd>Deep sea</dd></div>
+      <div><dt>Seaside pastels</dt><dd>Queued Summer coast, plus Pastels</dd></div>
+      <div><dt>Camouflage</dt><dd>Moorland</dd></div>
+      <div><dt>Psychedelic poster</dt><dd>Queued Rave flyer</dd></div>
+      <div><dt>Adire / Shibori</dt><dd>Queued Sashiko indigo</dd></div>
+      <div><dt>Persian carpet</dt><dd>Queued Kilim</dd></div>
+      <div><dt>Watercolour wash</dt><dd>Pastels</dd></div>
+    </dl>
+  </section>
+
+  <section class="block">
+    <h2>Naming</h2>
+    <p>No name on this list trips the guard in <code>tests/color-profile.test.ts</code> &mdash; which has itself been extended as part of this pass. Four notes.</p>
+    <ul class="stack">
+      <li><strong>Two names were pre-emptively changed.</strong> <span>&ldquo;Screen-plate colour&rdquo; avoids the maker&rsquo;s mark on the early colour process, and &ldquo;Sports pitch&rdquo; avoids a trademarked road-surface name &mdash; the same good-faith failure that turned Risograph print into Fluoro spot print.</span></li>
+      <li><strong>The guard was extended, because a fixed list cannot catch a new mark.</strong> <span>Technicolor sat in the queued forty and passed the guard for two batches. Now added and asserted: <code>technicolor</code>, <code>technicolour</code>, <code>kodachrome</code>, <code>polaroid</code>, <code>formica</code>, <code>perspex</code>, <code>tarmac</code>, <code>astroturf</code>, <code>day-glo</code>, <code>letraset</code>, plus <code>atari</code>, <code>amiga</code>, <code>sega</code> and <code>game boy</code> for the new category.</span></li>
+      <li><strong>Two words were deliberately left out, and are asserted as passing.</strong> <span><code>spectrum</code> names a home micro but is first an ordinary colour word &mdash; guarding it would condemn &ldquo;Spectral bands&rdquo;. <code>commodore</code> names a machine and a naval rank, and a maritime palette has every right to it. That is the same lesson that once made the guard match <code>ral</code> inside &ldquo;Coral reef&rdquo;: a guard that rejects a legitimate name is worse than none, because the fix looks like renaming the profile.</span></li>
+      <li><strong>Cultural names need the owner&rsquo;s explicit call.</strong> <span>Kente, Suzani and Sari name living traditions. Fair Isle and Ukiyo-e set the precedent that place and tradition names are acceptable, but these carry more weight; where the cloth and the people have different names, prefer the cloth. The queued forty has the same question hanging over Talavera tile and Pop art (Warhol).</span></li>
+    </ul>
+  </section>
+
+  <footer class="colophon">
+    <p><strong>Status:</strong> unsigned ideas. No rule, no membership, no evidence &mdash; identical standing to the forty in ICE-PROFILES-02, and subject to the same batch process: draft with evidence from <code>tests/audits/profile-gallery.audit.test.ts</code>, owner curates names and membership, only signed batches ship.</p>
+    <p>Checked against the 25 shipped built-ins in <code>src/core/color-profile.ts</code> and the 40 queued candidates. Gap analysis derives from the rule bands as written in source, not from re-derived numbers.</p>
+  </footer>
+
+</div>
+</body>
+</html>

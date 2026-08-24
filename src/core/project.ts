@@ -20,13 +20,15 @@
  */
 
 import type { ColorMetric } from './color/metrics.ts';
-import { defaultTone, type CurvePoint, type ToneConfig } from './color/tone.ts';
+import type { CurvePoint, LightnessCurve } from './color/curve.ts';
+import { defaultTone, type ToneConfig } from './color/tone.ts';
 import type { ColorProfileRecipe, HsbRangeRule } from './color-profile.ts';
 import { DEFAULT_ESTIMATES, type EstimateSettings } from './estimates.ts';
 import { matchGridPreset } from './grid-presets.ts';
 import type { GridStyleValues } from './grid-style.ts';
 import type { CountMode } from './palette-policy.ts';
 import type { FloorRule } from './palette-selection.ts';
+import { defaultAdjust, MAX_SATURATION, type AdjustParams } from './pipeline/adjust.ts';
 import type { DitherConfig, OrderPreset } from './pipeline/config.ts';
 import type { ResizeMode } from './pipeline/resize.ts';
 import type { ThreadSwap } from './pipeline/swap.ts';
@@ -34,7 +36,7 @@ import type { SymbolPair } from './symbols/assignment.ts';
 import type { Provenance, Thread, ThreadStatus } from './types.ts';
 
 /** Current project-file schema version. Bump with a forward migration. */
-export const SCHEMA_VERSION = 12;
+export const SCHEMA_VERSION = 13;
 
 /**
  * The colour-use floor a migrated (or fresh) design starts with: off,
@@ -106,6 +108,22 @@ export interface ProjectPipeline {
    * exactly.
    */
   tone: ToneConfig;
+  /**
+   * Image adjustments (ADJUST-01, schema v13): the source remap that
+   * runs before the resize — one three-point lightness curve carrying
+   * the black and white points at its ends, plus global saturation.
+   * Older files never adjusted, which the identity default states
+   * exactly.
+   */
+  adjust: AdjustParams;
+  /**
+   * The design's link to a named adjustment profile, the third kind
+   * (D116). Same contract as `ditherProfileRef`: `adjust` above stays
+   * the authoritative snapshot half (D55), null = the honest unnamed
+   * state, and an older file attaches a built-in at load only when its
+   * params structurally match one.
+   */
+  adjustProfileRef: { id: string; revision: number } | null;
 }
 
 /**
@@ -410,6 +428,19 @@ function canonicalTone(tone: ToneConfig): ToneConfig {
   };
 }
 
+/** Canonical field order for the adjust block (schema v13). */
+function canonicalAdjust(adjust: AdjustParams): AdjustParams {
+  const points = adjust.curve.map((p): CurvePoint => ({ in: p.in, out: p.out }));
+  return {
+    curve: [
+      points[0] ?? { in: 0, out: 0 },
+      points[1] ?? { in: 50, out: 50 },
+      points[2] ?? { in: 100, out: 100 },
+    ],
+    saturation: adjust.saturation,
+  };
+}
+
 /** Canonical field order for one thread → symbol pair. */
 function canonicalPairs(pairs: SymbolPair[]): SymbolPair[] {
   return pairs.map((p) => ({ threadId: p.threadId, symbolId: p.symbolId }));
@@ -477,6 +508,14 @@ export function serializeProject(file: ProjectFile): string {
               revision: file.pipeline.ditherProfileRef.revision,
             },
       tone: canonicalTone(file.pipeline.tone),
+      adjust: canonicalAdjust(file.pipeline.adjust),
+      adjustProfileRef:
+        file.pipeline.adjustProfileRef === null
+          ? null
+          : {
+              id: file.pipeline.adjustProfileRef.id,
+              revision: file.pipeline.adjustProfileRef.revision,
+            },
     },
     palette: file.palette === null ? null : canonicalPalette(file.palette),
     symbols: canonicalSymbols(file.symbols),
@@ -899,17 +938,49 @@ function parseSource(value: unknown): ProjectSource | null {
 }
 
 /** Validate the optional dither profile reference (absent = null). */
-function parseDitherRef(value: unknown): { id: string; revision: number } | null {
+function parseProfileRef(
+  value: unknown,
+  path: string,
+): { id: string; revision: number } | null {
   if (value === null || value === undefined) return null;
-  const raw = asRecord(value, 'pipeline.ditherProfileRef');
+  const raw = asRecord(value, path);
   return {
-    id: asString(raw['id'], 'pipeline.ditherProfileRef.id'),
-    revision: asInt(
-      raw['revision'],
-      'pipeline.ditherProfileRef.revision',
-      0,
-      Number.MAX_SAFE_INTEGER,
-    ),
+    id: asString(raw['id'], `${path}.id`),
+    revision: asInt(raw['revision'], `${path}.revision`, 0, Number.MAX_SAFE_INTEGER),
+  };
+}
+
+/**
+ * Validate the v13 adjust block. The curve is exactly three points
+ * with non-decreasing inputs — the same shape as the tone curve and
+ * the same refusal for a hand-edited file that breaks it, but a
+ * different curve: this one remaps the picture before the resize,
+ * `pipeline.tone.curve` remaps lightness inside the matching metric.
+ */
+function parseAdjust(value: unknown): AdjustParams {
+  const raw = asRecord(value, 'pipeline.adjust');
+  const curveRaw = raw['curve'];
+  if (!Array.isArray(curveRaw) || curveRaw.length !== 3) {
+    fail('pipeline.adjust.curve', 'exactly three curve points');
+  }
+  const points = curveRaw.map((entry, i) => {
+    const point = asRecord(entry, `pipeline.adjust.curve[${String(i)}]`);
+    return {
+      in: asNumber(point['in'], `pipeline.adjust.curve[${String(i)}].in`, 0, 100),
+      out: asNumber(point['out'], `pipeline.adjust.curve[${String(i)}].out`, 0, 100),
+    };
+  });
+  const [lo, mid, hi] = points;
+  if (lo === undefined || mid === undefined || hi === undefined) {
+    fail('pipeline.adjust.curve', 'exactly three curve points');
+  }
+  if (lo.in > mid.in || mid.in > hi.in) {
+    fail('pipeline.adjust.curve', 'points with non-decreasing input positions');
+  }
+  const curve: LightnessCurve = [lo, mid, hi];
+  return {
+    curve,
+    saturation: asNumber(raw['saturation'], 'pipeline.adjust.saturation', 0, MAX_SATURATION),
   };
 }
 
@@ -1010,9 +1081,26 @@ function migrateProject(raw: Record<string, unknown>, version: number): Record<s
     // state exactly — weight 0 with the identity curve is matching as
     // it always was, and the floor is off.
     if (at === 12) doc = migrateV11Tone(doc);
+    // v12 → v13: image adjustments arrive (ADJUST-01). Older files
+    // never adjusted the picture, which the identity curve at
+    // saturation 1 states exactly — the stage stays out of the built
+    // order, so a migrated file renders byte-for-byte as it did.
+    if (at === 13) doc = migrateV12Adjust(doc);
     doc = { ...doc, schemaVersion: at };
   }
   return doc;
+}
+
+/** Seed `pipeline.adjust` and its profile ref where absent. */
+function migrateV12Adjust(doc: Record<string, unknown>): Record<string, unknown> {
+  const pipeline = doc['pipeline'];
+  if (pipeline === null || typeof pipeline !== 'object') return doc;
+  const raw = pipeline as Record<string, unknown>;
+  if (raw['adjust'] !== undefined) return doc;
+  return {
+    ...doc,
+    pipeline: { ...raw, adjust: defaultAdjust(), adjustProfileRef: null },
+  };
 }
 
 /** Seed `pipeline.tone` and `palette.design.floor` where absent. */
@@ -1237,8 +1325,10 @@ export function parseProject(json: string): ProjectFile {
       ]),
       metric: asOneOf(pipeline['metric'], 'pipeline.metric', ['rgb', 'lab']),
       dither: parseDither(pipeline['dither']),
-      ditherProfileRef: parseDitherRef(pipeline['ditherProfileRef']),
+      ditherProfileRef: parseProfileRef(pipeline['ditherProfileRef'], 'pipeline.ditherProfileRef'),
       tone: parseTone(pipeline['tone']),
+      adjust: parseAdjust(pipeline['adjust']),
+      adjustProfileRef: parseProfileRef(pipeline['adjustProfileRef'], 'pipeline.adjustProfileRef'),
     },
     palette: parsePalette(doc['palette']),
     symbols: parseSymbols(doc['symbols']),

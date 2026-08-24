@@ -372,7 +372,7 @@ The canonical entities (full definitions in `architecture.md`):
 - **`Pipeline`** — an ordered list of stage instances + params. Order is
   **data, not code**: stored in the project file, reorderable in the UI.
 - **`ProjectFile`** — the versioned document (`project.json`, schema
-  v12) inside a `.pmproj` package that also carries the picture
+  v13) inside a `.pmproj` package that also carries the picture
   verbatim (DUR-01): `{ schemaVersion, source, pipeline, palette,
   symbols, gridStyle, preview, export, estimates }`. `source` names
   the embedded picture or is `null` (v10); `symbols` is identity-keyed
@@ -381,9 +381,11 @@ The canonical entities (full definitions in `architecture.md`):
   screen/print pair with preset provenance (v7, M11); `export.pdf`
   carries the pagination fields (v8, M10); `estimates` the fabric and
   thread-estimation settings (v9, M12); `palette.design` carries the
-  colour swaps (v11, ICE-RECOLOUR-01) and the colour-use floor, and
-  `pipeline.tone` the tone block (v12, TONE-01). Legacy `.json` files
-  load by content detection and migrate forward.
+  colour swaps (v11, ICE-RECOLOUR-01) and the colour-use floor,
+  `pipeline.tone` the tone block (v12, TONE-01), and the image
+  adjustments live in `pipeline.adjust` beside their profile ref
+  (v13, ADJUST-01). Legacy `.json` files load by content detection
+  and migrate forward.
 
 Do **not** represent pixel data as arrays of objects, mutate a stage's
 input buffer, or encode pipeline order as hard-coded call sequences.
@@ -446,10 +448,14 @@ executed in `src/worker`). Its full contract — stage purity, the
 frame coalescing, and the performance budgets — lives in
 `architecture.md`. The invariants that must never be violated are in
 "Engine purity", "Backend discipline", and "Performance" above. Note:
-the identity `adjust` stage is currently omitted from built pipelines
-until §9 adjustment params exist — the canonical
-`adjust → resize → reduce(+dither)` order is unchanged; only the
-stage's presence in a run is conditional (D48).
+the `adjust` stage is omitted from built pipelines while its params are
+the identity — the canonical `adjust → resize → reduce(+dither)` order
+is unchanged; only the stage's presence in a run is conditional (D48).
+Since ADJUST-01 (D202) it is a real stage when engaged, and it is the
+one place per-pixel colour maths runs at **source** resolution, so its
+cost scales with the capture and not the grid; an adjustment never
+touches the LUT fingerprint (D46), and the full-RGB twin keeps it so
+the selection source is the adjusted picture.
 
 ---
 

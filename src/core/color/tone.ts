@@ -36,18 +36,25 @@
  */
 
 import { srgbToLab } from './convert.ts';
+import {
+  applyCurve,
+  curveFingerprint,
+  identityCurve,
+  isIdentityCurve,
+  type CurvePoint,
+  type LightnessCurve,
+} from './curve.ts';
 import type { ColorMetric } from './metrics.ts';
 import { paletteLab } from '../palette.ts';
 import { EMPTY_INDEX, type Palette, type PixelBuffer } from '../types.ts';
 
-/** One curve point: input → output lightness, both L* 0–100. */
-export interface CurvePoint {
-  in: number;
-  out: number;
-}
+// The curve maths is shared with the adjust stage's own (different)
+// curve — see `curve.ts`. Re-exported under tone's established names
+// so every existing caller keeps its import.
+export { applyCurve, identityCurve, isIdentityCurve, type CurvePoint };
 
 /** Bottom, mid, top; `in` values non-decreasing (the UI enforces it). */
-export type ToneCurve = readonly [CurvePoint, CurvePoint, CurvePoint];
+export type ToneCurve = LightnessCurve;
 
 /**
  * Tone mode as configured — the UI + project-file shape (schema v12).
@@ -64,42 +71,9 @@ export interface ToneConfig {
   cuts: number[] | null;
 }
 
-/** The no-op curve: y = x with the mid point on the diagonal. */
-export function identityCurve(): [CurvePoint, CurvePoint, CurvePoint] {
-  return [
-    { in: 0, out: 0 },
-    { in: 50, out: 50 },
-    { in: 100, out: 100 },
-  ];
-}
-
-/** True when applying the curve changes nothing. */
-export function isIdentityCurve(curve: ToneCurve): boolean {
-  const [lo, mid, hi] = curve;
-  return (
-    lo.in === 0 && lo.out === 0 && hi.in === 100 && hi.out === 100 && mid.in === mid.out
-  );
-}
-
 /** A fresh disengaged tone config — the schema-v12 default. */
 export function defaultTone(): ToneConfig {
   return { weight: 0, curve: identityCurve(), cuts: null };
-}
-
-/**
- * Curved lightness for `l` (L* 0–100): piecewise linear through the
- * three points, clamped to the end outputs outside [bottom.in, top.in].
- * A zero-width segment returns its right point's output.
- */
-export function applyCurve(curve: ToneCurve, l: number): number {
-  const [lo, mid, hi] = curve;
-  if (l <= lo.in) return lo.out;
-  if (l >= hi.in) return hi.out;
-  const a = l <= mid.in ? lo : mid;
-  const b = l <= mid.in ? mid : hi;
-  const span = b.in - a.in;
-  if (span <= 0) return b.out;
-  return a.out + ((l - a.in) / span) * (b.out - a.out);
 }
 
 /** a/b axis scale for tone weight `t` (clamped to [0, 1]). */
@@ -132,11 +106,8 @@ export function toneEngaged(
  */
 export function toneFingerprint(tone: ToneConfig | undefined): string {
   if (tone === undefined) return 'off';
-  const curve = tone.curve
-    .map((p) => `${String(p.in)},${String(p.out)}`)
-    .join(';');
   const cuts = tone.cuts === null ? 'nat' : tone.cuts.map(String).join(',');
-  return `w${String(tone.weight)}|c${curve}|k${cuts}`;
+  return `w${String(tone.weight)}|c${curveFingerprint(tone.curve)}|k${cuts}`;
 }
 
 // ---------------------------------------------------------------------

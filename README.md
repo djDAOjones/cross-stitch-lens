@@ -40,7 +40,14 @@ weighted metric runs through matching, selection and dither alike, a
 lightness ramp with cut handles and Equalise at the tone end-stop, a
 three-point lightness curve, a colour-use floor, and re-pick from the
 current frame — its user-facing names are still working labels
-pending the owner sitting.
+pending the owner sitting. **Image adjustments** (ADJUST-01, schema
+v13) followed the same day: the picture is controlled inside the app
+before it becomes stitches — one lightness curve carrying the black
+and white points at its ends, plus saturation — as a third kind of
+profile, with nine built-in starting points and editable copies. The
+palette is re-selected from the adjusted picture, so an adjustment
+changes which threads the design buys; the starter set's names and
+membership await the same sitting.
 
 **M15 (colour & dithering profiles)** closed on both acceptance gates
 (D148): colour profiles as composition recipes with a kind-agnostic

@@ -30,6 +30,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { defaultTone } from '../../src/core/color/tone.ts';
+import { defaultAdjust } from '../../src/core/pipeline/adjust.ts';
 import { DEFAULT_GRID_VALUES } from '../../src/core/grid-style.ts';
 import { DEFAULT_DITHER, type PipelineConfig } from '../../src/core/pipeline/config.ts';
 import { type PalettePolicy } from '../../src/core/palette-policy.ts';
@@ -115,6 +116,8 @@ function defaultProject(config: PipelineConfig): ProjectFile {
       // the projectJson pin moved for the bump; the engine hashes never
       // move.
       tone: defaultTone(),
+      adjust: defaultAdjust(),
+      adjustProfileRef: null,
     },
     palette: {
       profileRef: { id: 'builtin:dmc', revision: 0 },

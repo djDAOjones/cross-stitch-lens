@@ -15,7 +15,7 @@
 | Native acceleration | Rust → WASM (`wasm-pack`, SIMD) for error diffusion; WebGPU compute (WGSL) for parallel stages |
 | Capture | `getDisplayMedia` + user-drawn crop rect; frames via `ImageCapture`/`requestVideoFrameCallback` |
 | PDF export | pdf-lib |
-| Persistence | `.pmproj` project packages — a store-only zip holding canonical `project.json` beside the picture verbatim (schema v12; explicit save; legacy `.json` v1–v9 still loads); IndexedDB for **library** data — thread inventory, saved palettes, profiles, user colours — and, in its own database `pattern-mapper-designs`, the **design history** that restores the latest design on reopen and steers to explicit save (DUR-01, D179) |
+| Persistence | `.pmproj` project packages — a store-only zip holding canonical `project.json` beside the picture verbatim (schema v13; explicit save; legacy `.json` v1–v9 still loads); IndexedDB for **library** data — thread inventory, saved palettes, profiles, user colours — and, in its own database `pattern-mapper-designs`, the **design history** that restores the latest design on reopen and steers to explicit save (DUR-01, D179) |
 | Tests | Vitest + golden-output fixtures |
 | Future packaging | Tauri v2 (macOS ScreenCaptureKit plugin for arbitrary-region capture) — no code paths assume it |
 
@@ -121,11 +121,19 @@ interface Stage<P> {
 Ordered list of stage instances + params, executed in the worker.
 Order is data, not code — it is stored in the project file and the
 UI can reorder it (requirements §7). Default order:
-`adjust → resize → reduce(+dither)`. The `adjust` stage is a pure
-identity until §9 image-adjustment params exist, so it is currently
-**omitted from the built stage list** rather than run as a no-op; the
-canonical order is unchanged and the slot returns when adjustments
-land (D48).
+`adjust → resize → reduce(+dither)`. The `adjust` stage is still
+**omitted from the built stage list while its params are the
+identity** — including it would buy a full-frame clone and nothing
+else (D48/M5-PERF-25) — but since ADJUST-01 (D202) those params are
+real: one three-point lightness curve carrying the black and white
+points at its ends, plus global saturation, applied in Lab. It is the
+only stage doing per-pixel colour maths at *source* resolution, so its
+hot loop tables the two transcendental steps (≈ 189 → 70 ms/MP in
+node) against a documented tolerance of ≤ 1 sRGB level per channel.
+Adjustments change what the quantiser sees, never which threads it may
+choose, so the LUT fingerprint (D46) is untouched by them — but the
+full-RGB twin **keeps** them, because the count-limit selection source
+and the compare half are both "the picture as the design renders it".
 
 ### Thread identity and the palette policy (M7)
 
@@ -244,15 +252,16 @@ measured reality at M5C/M5D (D47/D48).
 `{ schemaVersion, source, pipeline, palette, symbols, gridStyle,
 preview, export, estimates }` — see requirements §20 for the full field
 inventory. Loading an older `schemaVersion` must migrate, never fail
-(currently **v12** — `SCHEMA_VERSION` in `src/core/project.ts` — with
-forward steps from v1–v11; v5 added the colour and dither profile refs
+(currently **v13** — `SCHEMA_VERSION` in `src/core/project.ts` — with
+forward steps from v1–v12; v5 added the colour and dither profile refs
 at M15 under the D114 compatibility waiver, v6 the symbol-assignment
 block and chart mode at M9, v7 the grid-styling split at M11, v8 the
 PDF pagination fields at M10, v9 the fabric/estimation settings at
 M12, v10 the `source` block `{ entry, type, name }` naming the embedded
 picture at DUR-01, v11 the colour swaps in `palette.design`
 (ICE-RECOLOUR-01), v12 the tone block `pipeline.tone` and the
-colour-use floor `palette.design.floor` (TONE-01)). A file saved by a
+colour-use floor `palette.design.floor` (TONE-01), v13 the image
+adjustments `pipeline.adjust` + `adjustProfileRef` (ADJUST-01)). A file saved by a
 *newer* version is refused with a message naming both versions, never
 silently misread.
 

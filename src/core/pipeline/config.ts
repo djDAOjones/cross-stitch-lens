@@ -75,6 +75,17 @@ export interface PipelineConfig {
    * only under the 'lab' metric (§6). Meaningless without a palette.
    */
   tone?: ToneConfig;
+  /**
+   * Image adjustments (ADJUST-01, schema v13): the source remap that
+   * runs before the resize — one lightness curve carrying the black
+   * and white points, plus global saturation. Optional so every
+   * pre-ADJUST-01 config stays valid; absent — or the identity —
+   * leaves the stage out of the built list exactly as it was.
+   *
+   * Unlike `tone`, this is meaningful **without** a palette: it
+   * changes the picture, so full-RGB output changes with it.
+   */
+  adjust?: AdjustParams;
 }
 
 /**
@@ -83,6 +94,13 @@ export interface PipelineConfig {
  * split compare (§10) runs — the resized source at grid size, so it
  * aligns cell-for-cell with the reduced output and the difference
  * shown is exactly the colour reduction.
+ *
+ * The adjustment **rides along** (ADJUST-01, the CREATIVE-01 slice-2
+ * engine note): this same twin is what the colour-count selection
+ * reads, and selecting threads for the unadjusted picture would pick
+ * a palette for an image the design never renders. It keeps compare
+ * honest too — the difference on screen stays exactly the colour
+ * reduction, not the reduction plus the adjustment.
  */
 export function fullRgbVariant(config: PipelineConfig): PipelineConfig {
   return { ...config, palette: null, dither: { algorithm: 'none' }, swaps: [] };
@@ -125,16 +143,18 @@ export function buildStages(
   config: PipelineConfig,
   providers: StageProviders = {},
 ): StageInstance[] {
-  // The adjust hook is left out while it is the identity: including it
-  // buys a full-frame clone and nothing else (M5-PERF-25). It returns
-  // to the order automatically once §9 populates its params — see
+  // The adjust stage is left out while it is the identity: including
+  // it buys a full-frame clone and nothing else (M5-PERF-25). Since
+  // ADJUST-01 its params are real, so it rejoins the order by itself
+  // the moment a curve or a saturation departs from default — see
   // `adjustIsIdentity`. Ownership note (M5B): dropping it is only safe
   // because every remaining stage allocates its own output, so a
   // response buffer can never alias the worker's retained `lastFrame`.
-  const adjustParams: AdjustParams = {};
-  const stages: StageInstance[] = adjustIsIdentity(adjustParams)
-    ? []
-    : [stageInstance(adjustStage, adjustParams)];
+  const adjustParams = config.adjust;
+  const stages: StageInstance[] =
+    adjustParams === undefined || adjustIsIdentity(adjustParams)
+      ? []
+      : [stageInstance(adjustStage, adjustParams)];
 
   const resize = stageInstance(resizeStage, {
     width: config.grid.width,

@@ -5,7 +5,11 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { adjustIsIdentity, type AdjustParams } from '../src/core/pipeline/adjust.ts';
+import {
+  adjustIsIdentity,
+  defaultAdjust,
+  type AdjustParams,
+} from '../src/core/pipeline/adjust.ts';
 import {
   buildStages,
   DEFAULT_DITHER,
@@ -44,10 +48,10 @@ function names(c: PipelineConfig): string[] {
 }
 
 describe('pipeline config builder', () => {
-  // The adjust hook is omitted while it is the identity (M5-PERF-25):
+  // The adjust stage is omitted while it is the identity (M5-PERF-25):
   // it is a named slot in the order, not a stage that must run to
-  // produce a clone. It returns automatically once §9 populates its
-  // params — `adjust-identity` below pins that contract.
+  // produce a clone. Since ADJUST-01 its params are real, and it
+  // returns by itself — `adjust stage placement` below pins that.
   it('resize-first preset: resize → reduce', () => {
     expect(names(config())).toEqual(['resize', 'reduce']);
   });
@@ -96,6 +100,7 @@ describe('pipeline config builder', () => {
       config({ dither: FS }),
       config({ palette: null }),
       config({ preset: 'reduce-first' }),
+      config({ adjust: { curve: [{ in: 10, out: 0 }, { in: 50, out: 50 }, { in: 90, out: 100 }], saturation: 0 } }),
     ]) {
       const stages = buildStages(c);
       expect(stages.length).toBeGreaterThan(0);
@@ -180,20 +185,53 @@ describe('swap stage placement (ICE-RECOLOUR-01)', () => {
   });
 });
 
-describe('adjust identity hook (M5-PERF-25)', () => {
-  it('reports identity for empty params and non-identity once populated', () => {
-    expect(adjustIsIdentity({})).toBe(true);
-    // The §9 future: any populated param must put the stage back in the
-    // order. Cast because AdjustParams is deliberately empty today —
-    // the point of the test is the behaviour when it is not.
-    expect(adjustIsIdentity({ brightness: 0.2 } as unknown as AdjustParams)).toBe(false);
+describe('adjust stage placement (M5-PERF-25, ADJUST-01)', () => {
+  const PUNCH: AdjustParams = {
+    curve: [
+      { in: 8, out: 0 },
+      { in: 50, out: 48 },
+      { in: 92, out: 100 },
+    ],
+    saturation: 1.2,
+  };
+
+  it('reports identity for absent and default params, not for real ones', () => {
+    expect(adjustIsIdentity(undefined)).toBe(true);
+    expect(adjustIsIdentity(defaultAdjust())).toBe(true);
+    // Either half alone is enough to wake the stage.
+    expect(adjustIsIdentity({ ...defaultAdjust(), saturation: 0.6 })).toBe(false);
+    expect(adjustIsIdentity(PUNCH)).toBe(false);
   });
 
-  it('emits the adjust stage again as soon as it is not the identity', () => {
+  it('is omitted while it could change nothing, and leads the order once it can', () => {
     // Guards the wiring, not just the predicate: if buildStages ever
     // hard-codes the omission, this catches it.
-    const stages = buildStages(config());
-    expect(stages.map((s) => s.stage.name)).not.toContain('adjust');
-    expect(adjustIsIdentity({})).toBe(true);
+    expect(names(config())).toEqual(['resize', 'reduce']);
+    expect(names(config({ adjust: defaultAdjust() }))).toEqual(['resize', 'reduce']);
+    // §7: adjust runs before the resize, in both order presets.
+    expect(names(config({ adjust: PUNCH }))).toEqual(['adjust', 'resize', 'reduce']);
+    expect(names(config({ adjust: PUNCH, preset: 'reduce-first' }))).toEqual([
+      'adjust',
+      'reduce',
+      'resize',
+    ]);
+  });
+
+  it('carries its params through to the stage instance', () => {
+    const stage = buildStages(config({ adjust: PUNCH })).find((s) => s.stage.name === 'adjust');
+    expect(stage?.params).toEqual(PUNCH);
+  });
+
+  it('rides the full-RGB variant — the selection source is the adjusted picture', () => {
+    // The CREATIVE-01 slice-2 engine note: this twin is what the
+    // colour-count selection reads, so dropping the adjustment here
+    // would select threads for a picture the design never renders.
+    const variant = fullRgbVariant(config({ adjust: PUNCH, dither: FS }));
+    expect(variant.adjust).toEqual(PUNCH);
+    expect(names(variant)).toEqual(['adjust', 'resize']);
+  });
+
+  it('applies without a palette — adjustments change the picture, not the threads', () => {
+    expect(names(config({ adjust: PUNCH, palette: null }))).toEqual(['adjust', 'resize']);
   });
 });

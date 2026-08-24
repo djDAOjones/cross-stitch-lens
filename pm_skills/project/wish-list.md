@@ -25,3 +25,5 @@ refer to `docs/requirements.md`.
      alone. Append new ideas below this comment. -->
 - Tone-aware candidate pruning: tone mode skips the Lab candidate table (full scan per pixel under dither); extend the exclusion proof to the scaled/curved space if a large-palette tone design ever feels slow.
 - Ramp track click-to-move: tapping the ramp between handles could move the nearest cut there; today only the handles drag.
+- Adjustments under a large capture region: the adjust stage is source-resolution work at ~86 ms/MP in the worker, ~5× the resize, so an adjusted 4 MP surface misses ≥ 4 updates/s while a w1280 one holds ~7–8; if it is felt, the answers are draft-quality participation or CAPTURE-OMT-01's off-main-thread grab, not a second pass at the maths (from: ADJUST-01, D202).
+- Index-guard cost in the hot loops: dropping the `?? 0` reads in the adjust loop measured ~12 % under `noUncheckedIndexedAccess`; if the engine ever needs it, decide the idiom once across dither/tone/adjust rather than one loop at a time (from: ADJUST-01, D202).

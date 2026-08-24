@@ -15,6 +15,7 @@
  */
 
 import { absNow } from '../bench/clock.ts';
+import { adjustFingerprint } from '../core/pipeline/adjust.ts';
 import { fullRgbVariant, type PipelineConfig } from '../core/pipeline/config.ts';
 import { log } from '../diagnostics/log.ts';
 import { executeRequest, type StageObserver } from './execute.ts';
@@ -108,6 +109,11 @@ export function createRouter(deps: RouterDeps): (request: WorkerRequest) => void
       config.grid.width,
       config.grid.height,
       config.resizeMode,
+      // Not geometry, but the twin's content: the compare half runs
+      // the adjustment too (ADJUST-01), so the difference on screen
+      // stays exactly the colour reduction. A new adjustment therefore
+      // makes the held half stale.
+      adjustFingerprint(config.adjust),
     ].join(':');
   }
 

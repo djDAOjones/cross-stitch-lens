@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 304 file(s) across 12 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 311 file(s) across 12 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 13 file(s)
 - `.claude` — 2 file(s)
 - `.githooks` — 1 file(s)
@@ -26,8 +26,8 @@
 - `docs` — 16 file(s)
 - `public` — 7 file(s)
 - `scripts` — 22 file(s)
-- `src` — 109 file(s)
-- `tests` — 127 file(s)
+- `src` — 113 file(s)
+- `tests` — 130 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -157,9 +157,10 @@
 - `src/core/color-sources.ts` — generated colour maps, map:/user: identity namespaces, CSS name table, provenance-honest labels (M15)
 - `src/core/color/candidates.ts` — per-bin candidate pruning for exact Lab matching: conservative Lab bounding box per 15-bit bin, witness-radius exclusion. An exclusion proof, not an approximation — returns the identical index to a full scan
 - `src/core/color/convert.ts` — sRGB↔linear↔Lab conversions (D65, CIE 1976)
+- `src/core/color/curve.ts` — the three-point lightness curve primitive shared by tone matching and the adjust stage (two curves, one maths)
 - `src/core/color/lut.ts` — 15-bit RGB→palette-index LUT builder + exact nearest
 - `src/core/color/metrics.ts` — squared colour distances: Euclidean RGB, ΔE76
-- `src/core/color/tone.ts` — tone mode (TONE-01): weighted metric, three-point curve, ladder cuts/quantiles, histogram, suitability hints
+- `src/core/color/tone.ts` — tone mode (TONE-01): weighted metric, ladder cuts/quantiles, histogram, suitability hints; the curve maths comes from `color/curve.ts`
 - `src/core/estimates.ts` — pure fabric sizing + thread/skein estimator (M12): named factors only, per-colour skein round-up, and the disclosure sentence
 - `src/core/grid-presets.ts` — six built-in grid styling presets (paired screen/print halves) + exact-match provenance detector; in core so the v6→v7 migration can label files
 - `src/core/grid-style.ts` — the persisted grid style-values shape + appearance-preserving defaults; single source for the worker style, both project-file halves, and the presets
@@ -172,8 +173,9 @@
 - `src/core/palettes/dmc-anchor-map.csv` — superseded DMC/Anchor map, kept as owner data (protected)
 - `src/core/palettes/thread-list.csv` — owner-supplied 8-brand thread list (protected)
 - `src/core/palettes/thread-map-proposed.csv` — proposed cross-reference schema, no data yet (protected)
-- `src/core/pipeline/adjust.ts` — adjust hook stage: identity until §9 ops land
-- `src/core/pipeline/config.ts` — PipelineConfig → stage list; §7 presets; full-RGB twin; the swap stage joins the colour group when active (`swaps?`)
+- `src/core/pipeline/adjust-presets.ts` — the nine built-in adjustment presets with their basis lines + structural matching (ADJUST-01; working names until the sitting signs)
+- `src/core/pipeline/adjust.ts` — adjust stage (ADJUST-01): one lightness curve + saturation in Lab, tabled hot loop with a documented ≤ 1-level tolerance; out of the order while identity
+- `src/core/pipeline/config.ts` — PipelineConfig → stage list; §7 presets; full-RGB twin (which keeps `adjust?`); the swap stage joins the colour group when active (`swaps?`)
 - `src/core/pipeline/dither-presets.ts` — canonical dither presets + structural equality + built-in matching (M15-DITH-01; moved from ui)
 - `src/core/pipeline/dither.ts` — the five dither methods: exact errors, serpentine; tone-space diffusion/threshold when tone engages (TONE-01)
 - `src/core/pipeline/identity.ts` — identity stage: hello-world purity demo
@@ -183,7 +185,7 @@
 - `src/core/pipeline/swap.ts` — swap stage (ICE-RECOLOUR-01): `renderPalette()` (selected entries + render-only targets, index map, no-chain) and the pure sidecar remap + repaint
 - `src/core/pipeline/threshold-tiles.ts` — Bayer + void-and-cluster blue-noise threshold tiles: fixed data, documented provenance, memoised
 - `src/core/project-package.ts` — store-only zip project package (`.pmproj`): deterministic writer (fixed 1980 stamps), bounded reader with named refusals, format detection, readProjectBytes/writeProjectBytes (DUR-01)
-- `src/core/project.ts` — project file (§20): schema v12 with `pipeline.tone` + `design.floor` (TONE-01) over v11's `source`/`design.swaps`, v1→v12 migrations, canonical (de)serialisation, title-driven `projectFilename` + stamp fallback, `PROJECT_EXTENSION` (DUR-01/SAVE-01)
+- `src/core/project.ts` — project file (§20): schema v13 with `pipeline.adjust` + `adjustProfileRef` (ADJUST-01) over v12's tone/floor, v1→v13 migrations, canonical (de)serialisation, title-driven `projectFilename` + stamp fallback, `PROJECT_EXTENSION` (DUR-01/SAVE-01)
 - `src/core/stats.ts` — design stats §11 subset: counts, %, thread refs
 - `src/core/symbols/assignment.ts` — symbol assignment as persisted state (D160-4): need-based grants, release-to-back queue, survivor-free reset, overrides, load reconcile
 - `src/core/symbols/glyphs.ts` — the app-owned 64-glyph catalogue in canonical append-only order; fill-only M/L/C/Z paths rendered identically by Path2D and drawSvgPath (D165)
@@ -205,6 +207,7 @@
 - `src/ui/browse-table.ts` — shared capped search table (the 60-row pattern extracted; D117 seam 3)
 - `src/ui/colour-section.ts` — recut Colour section: profile select + (edited) verbs, count (log-scale slider, ICE-LIMIT-01) + minimum distance, tone-matching slot (TONE-01), Must-use chips, Swaps chips (ICE-RECOLOUR-01), inventory reveal (M15-UI-01)
 - `src/ui/controls.ts` — Carbon-style field builders: toggle/number/colour/select + clampInt
+- `src/ui/curve-control.ts` — the three-point curve reveal: SVG plot, 44 px slider points (pointer + arrows), native number inputs, id-prefixed per instance
 - `src/ui/debug-panel.ts` — dev-only profiling panel: rolling timing window (pure) + disclosure DOM
 - `src/ui/diagnostics-button.ts` — the Debug menu: Report a problem (project document + redacted log + mailto, DIAG-02), Copy diagnostics, Download log; announced status line; `DEV_EMAIL`
 - `src/ui/dither-model.ts` — pure Dither-controls model: algorithm options, per-family strength, evidence-bearing presets, session memory
@@ -215,6 +218,7 @@
 - `src/ui/notification.ts` — Carbon inline notification (CAPTURE-END-01): one sentence, kind edge, text Dismiss with deliberate focus return; role=status
 - `src/ui/preferences.ts` — Shell preferences (per-disclosure open state) in localStorage; parse falls back to defaults for anything unreadable. Never project data.
 - `src/ui/preview.ts` — preview controller: toolbar, wheel/drag/keys → worker
+- `src/ui/profile-editor-adjust.ts` — adjustment profile kind: curve + saturation form, basis lines, stored-payload guard; mounts the shared shell unchanged (ADJUST-01)
 - `src/ui/profile-editor-colour.ts` — colour profile kind: libraries, pins, ranges, custom colours, fingerprinted readout; pure halves exported
 - `src/ui/profile-editor-dither.ts` — dither profile kind: three-field form, basis lines, palette-context line; mounts the shared shell unchanged (M15-DITH-02)
 - `src/ui/profile-editor-preview.ts` — kind-generic judgement preview: slots, offline states, test card, ÷1/÷4/÷16 grid, debounced real-pipeline renders
@@ -226,7 +230,7 @@
 - `src/ui/styles/shell.css` — shell chrome: header, columns, preview host, focus-mode chain, capture surfaces, panel containers
 - `src/ui/styles/tokens.css` — design tokens: project + Carbon-convention systems, both schemes, @pair contrast contract (D80)
 - `src/ui/symbol-picker.ts` — symbol override picker (ICE-SYMBOL-UI-01): pure model (unused pool in catalogue order, the row's glyph), inline-SVG glyph element, the Carbon picker dialog over `runModal`
-- `src/ui/tone-controls.ts` — tone-matching group: slider, ramp strip (canvas + 44px cut handles + DOM band mirror), curve reveal, floor, re-pick; pure halves exported
+- `src/ui/tone-controls.ts` — tone-matching group: slider, ramp strip (canvas + 44px cut handles + DOM band mirror), the shared curve reveal, floor, re-pick; pure halves exported
 - `src/ui/viewport.ts` — pure viewport maths: fit, anchored zoom, pan clamp
 - `src/vite-env.d.ts` — ambient types for injected version/build globals
 - `src/worker/backend-select.ts` — per-workload dither routing (metric-categorical, M5-PERF-27) + recorded per-stage override map
@@ -244,6 +248,9 @@
 
 - `tests/a11y-names.test.ts` — accessible-name tripwire over the control surface (D156)
 - `tests/acceptance-matrix.test.ts` — M5-ACCEPT-01 driver: per-row invariants through the worker entry, tie-break oracles, coverage-table staleness gate
+- `tests/adjust-controls.test.ts` — the adjust kind's pure halves: payload guard, saturation percentage, the curve primitive's one-implementation identity
+- `tests/adjust.test.ts` — the adjust stage: identity, curve/saturation behaviour, alpha, purity, the ≤ 1 sRGB-level tolerance, presets, LUT fingerprint untouched
+- `tests/audits/adjust-01.audit.test.ts` — ADJUST-01 evidence: the cost table behind the tabled hot loop, the accuracy bound, per-preset re-selection, and the before/after gallery
 - `tests/audits/audit.ts` — audit harness: AUDIT=1 gate, timed/counted rows, JSON artefacts
 - `tests/audits/candidates/dither-candidates.ts` — dither prototypes: exact pruning table, hoisted scan, rounded conversion
 - `tests/audits/candidates/m8-dither-candidates.ts` — M8-SPIKE-01 prototypes: kernel-as-data diffusion, threshold tiles, candidate registry — never imported by src/

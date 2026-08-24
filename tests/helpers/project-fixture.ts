@@ -7,6 +7,7 @@
  */
 
 import { defaultTone } from '../../src/core/color/tone.ts';
+import { defaultAdjust } from '../../src/core/pipeline/adjust.ts';
 import { DEFAULT_ESTIMATES } from '../../src/core/estimates.ts';
 import { DEFAULT_GRID_VALUES } from '../../src/core/grid-style.ts';
 import { loadDmcPalette } from '../../src/core/palette.ts';
@@ -25,6 +26,8 @@ export function sampleProject(): ProjectFile {
       dither: { algorithm: 'floyd-steinberg', serpentine: true, strength: 1 },
       ditherProfileRef: null,
       tone: defaultTone(),
+      adjust: defaultAdjust(),
+      adjustProfileRef: null,
     },
     palette: {
       profileRef: { id: 'builtin:dmc', revision: 0 },

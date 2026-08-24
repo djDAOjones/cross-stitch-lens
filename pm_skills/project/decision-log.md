@@ -1344,3 +1344,75 @@ to a ladder, Equalise, the floor drop with its sentence, curve
 inversion, and a `.pmproj` round trip restoring weight, curve, cuts
 and floor. Human checks left: keyboard activation of handles/points
 and the four naming items.
+
+## D202 — ADJUST-01 builds: the adjust stage wakes as one curve plus one saturation, the third profile kind, at schema v13 (2026-08-24)
+
+**Context.** Slice 2a of the signed programme (D200); its scope and
+design were signed in CREATIVE-01, so the build ran gateless against
+them. The item stays open (`[~]`) on its owner half — D200 leaves the
+starter set's membership and names to the sitting, so the nine
+built-ins ship as working labels.
+
+**Built.** The identity hook becomes a real stage. The whole 2a
+parameter set is **one three-point lightness curve plus one saturation
+factor** — the black and white points ARE the curve's ends, and the
+curve replaces gamma and contrast — applied in Lab, alpha-0 cells
+copied through untouched (D9/D49). It stays out of the built order
+while it is the identity, so a v12 file renders byte-for-byte as it
+did: the engine baseline hashes are unmoved, only the `projectJson`
+pin (the v10/v11/v12 precedent). `fullRgbVariant`
+**keeps** the adjustment — the selection source is the adjusted picture
+(the slice-2 engine note), and the compare half runs it too so the
+difference on screen stays exactly the colour reduction. Both
+content-keyed caches carry an adjustment fingerprint; the **LUT key
+does not**, because adjustments change what the quantiser sees and
+never which threads it may choose (D46), asserted at the injected-
+provider seam. Schema v13: `pipeline.adjust` + `adjustProfileRef`, v12
+files seeded at the identity with no profile attached.
+
+**The hot loop is hand-rolled, on a recorded profile.** This is the
+only stage doing per-pixel colour maths at *source* resolution (§7),
+so D3's lever does not apply to it. The exact round trip through
+`srgbToLab`/`labToSrgb` costs **189 ms/MP** (node) — most of the
+≥ 4 updates/s budget (D135) on one stage. Tabling the two
+transcendental steps gives **70 ms/MP** (node) / **86 ms/MP** (real
+worker) for a measured worst case of **1 sRGB level** per channel over
+4M+ colours × seven settings, and exactly 0 for the identity — the
+conventions.md documented-tolerance shape, pinned by test. Rejected
+with numbers: a 15-bit nearest-bin LUT (4.3 ms/MP but 37 levels of
+banding), 32³/64³ trilinear grids (48–57 ms/MP *and* 9–14 levels —
+slower *and* worse), a previous-pixel memo (neutral to worse).
+
+**Honest where the promise does not bind.** At the source size the
+capture rows use (w1280) the adjusted frame is ~110–130 ms — 7–8
+updates/s; at a 4.2 MP still it is 446 ms, so a large capture region
+plus an adjustment can miss 4/s. That is CAPTURE-OMT-01's
+source-resolution scaling, parked again rather than pre-optimised, and
+the bound `bench:auto` rows stay unadjusted — the promise is evidenced
+by headroom, not re-asserted in code.
+
+**One primitive, two curves.** ADJUST-01's curve and TONE-01's are
+deliberately not folded — one remaps the picture before the resize,
+the other remaps lightness inside the metric — but they may not drift
+apart in their maths. The three-point curve moves to
+`color/curve.ts` (tone re-exports it under its established names, no
+caller changed) and the control to `ui/curve-control.ts`, so both have
+one interaction model for the sitting; `.tone-curve*` becomes
+`.curve*`.
+
+**UI.** An "Adjustment profile" select plus *Edit profiles…* leads the
+Processing section, because the stage leads the pipeline; unlike
+dithering it stays live in full-RGB. The takeover editor's two-kind
+branch generalises to a kind map, so the third kind mounted without a
+third copy.
+
+**Verification.** `check` green (1,481 tests; 31 new). The audit
+(`audit-adjust-01-*.json` + gallery) reproduces the prototype's
+decisive number on the shipped paths: Mono prep drops mean chroma by
+**49.6** and re-picks all eight threads. Live on `landscape-1.jpg`
+that re-pick lands as eight greys — the selection source is
+demonstrably the adjusted picture; the editor opens read-only with its
+"Why:" line, Duplicate-edit-Save yields a profile the design adopts,
+and a `.pmproj` round trip restores curve, saturation and ref at v13.
+Human checks left: keyboard activation of the curve points, and the
+owner's sitting.

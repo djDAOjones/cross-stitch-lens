@@ -41,6 +41,17 @@ import {
   startCapture,
   type CaptureSession,
 } from './capture/session.ts';
+import type { CurvePoint } from './core/color/curve.ts';
+import {
+  adjustFingerprint,
+  defaultAdjust,
+  type AdjustParams,
+} from './core/pipeline/adjust.ts';
+import {
+  ADJUST_PRESETS,
+  matchBuiltInAdjust,
+  sameAdjust,
+} from './core/pipeline/adjust-presets.ts';
 import {
   DEFAULT_DITHER,
   fullRgbVariant,
@@ -192,6 +203,7 @@ import {
   sameDither,
 } from './core/pipeline/dither-presets.ts';
 import { asDitherConfig, createDitherKindAdapter } from './ui/profile-editor-dither.ts';
+import { asAdjustParams, createAdjustKindAdapter } from './ui/profile-editor-adjust.ts';
 import { decodeImageBlob, imageFiles } from './ui/import.ts';
 import { createInfoPanel } from './ui/info-panel.ts';
 import { createSection, type AccordionSection } from './ui/accordion.ts';
@@ -314,6 +326,9 @@ function build(app: HTMLElement): void {
     // Tone mode (TONE-01): disengaged by default — matching exactly as
     // it always was until the slider or the curve moves.
     tone: defaultTone(),
+    // Image adjustments (ADJUST-01): the identity by default, so the
+    // stage stays out of the built order until a profile is chosen.
+    adjust: defaultAdjust(),
   };
   let masterImage: PixelBuffer | null = null;
   /**
@@ -670,7 +685,17 @@ function build(app: HTMLElement): void {
 
   /** Everything the resized full-RGB grid buffer depends on. */
   function selectionGeometryKey(): string {
-    return [config.preset, config.grid.width, config.grid.height, config.resizeMode].join(':');
+    return [
+      config.preset,
+      config.grid.width,
+      config.grid.height,
+      config.resizeMode,
+      // Not geometry, but the buffer's content: the selection source
+      // is the *adjusted* picture (ADJUST-01), so a new adjustment
+      // must refetch it or the palette would be selected for a
+      // picture the design no longer renders.
+      adjustFingerprint(config.adjust),
+    ].join(':');
   }
 
   /** Drop the cached selection source (new artwork, new geometry). */
@@ -1964,6 +1989,123 @@ function build(app: HTMLElement): void {
     syncDitherSection();
     refreshSections();
     reprocess();
+  });
+
+  // The Processing section's adjustments surface (ADJUST-01, D116):
+  // an "Adjustment profile" select plus Edit profiles… — the third
+  // profile kind, mounted exactly like the dither one. It leads the
+  // section because the stage leads the pipeline (§7: adjust runs
+  // before the resize). Unlike dithering it stays live in full-RGB
+  // mode: an adjustment changes the picture, not the threads.
+  let adjustRef: { id: string; revision: number } | null = matchBuiltInAdjust(
+    config.adjust ?? defaultAdjust(),
+  ) === null
+    ? null
+    : { id: matchBuiltInAdjust(config.adjust ?? defaultAdjust()) ?? '', revision: 0 };
+  let adjustProfiles: { id: string; name: string; builtin: boolean; revision: number }[] = [];
+  const adjustParamsById = new Map<string, AdjustParams>();
+
+  async function refreshAdjustProfiles(): Promise<void> {
+    adjustParamsById.clear();
+    for (const preset of ADJUST_PRESETS) {
+      adjustParamsById.set(`builtin:${preset.id}`, preset.params);
+    }
+    let stored: ProfileRecord[] = [];
+    try {
+      stored = await library.listProfiles('adjust');
+    } catch (error) {
+      log.error('library', 'could not list adjustment profiles', {
+        message: describeError(error),
+      });
+    }
+    for (const r of stored) adjustParamsById.set(r.id, asAdjustParams(r.payload));
+    adjustProfiles = [
+      ...ADJUST_PRESETS.map((p) => ({
+        id: `builtin:${p.id}`,
+        name: p.label,
+        builtin: true,
+        revision: 0,
+      })),
+      ...stored.map((r) => ({ id: r.id, name: r.name, builtin: false, revision: r.revision })),
+    ];
+  }
+
+  const adjustGroup = document.createElement('fieldset');
+  const adjustField = document.createElement('div');
+  adjustField.className = 'field';
+  const adjustLabel = document.createElement('label');
+  adjustLabel.htmlFor = 'adjust-profile';
+  adjustLabel.textContent = 'Adjustment profile';
+  const adjustSelect = document.createElement('select');
+  adjustSelect.id = 'adjust-profile';
+  adjustField.append(adjustLabel, adjustSelect);
+  const adjustEditButton = document.createElement('button');
+  adjustEditButton.type = 'button';
+  adjustEditButton.textContent = 'Edit profiles\u2026';
+  adjustEditButton.addEventListener('click', () => {
+    void openProfileEditor('adjust', adjustRef?.id);
+  });
+  const adjustRow = document.createElement('div');
+  adjustRow.className = 'toolbar profile-row';
+  adjustRow.append(adjustField, adjustEditButton);
+  const adjustNote = document.createElement('p');
+  adjustNote.className = 'helper';
+  adjustNote.id = 'adjust-profile-helper';
+  adjustSelect.setAttribute('aria-describedby', adjustNote.id);
+  adjustNote.textContent = 'Applied to the picture before it becomes stitches.';
+  adjustGroup.append(adjustRow, adjustNote);
+
+  /** The never-lying Custom sentinel: params match no profile. */
+  const ADJUST_CUSTOM = 'custom:design';
+
+  function currentAdjust(): AdjustParams {
+    return config.adjust ?? defaultAdjust();
+  }
+
+  function syncAdjustSection(): void {
+    const options: [string, string][] = adjustProfiles.map((p) => [
+      p.id,
+      p.builtin ? `${p.name} (built-in)` : p.name,
+    ]);
+    const matched =
+      adjustRef !== null && adjustParamsById.has(adjustRef.id)
+        ? sameAdjust(adjustParamsById.get(adjustRef.id) ?? defaultAdjust(), currentAdjust())
+        : false;
+    if (!matched) options.unshift([ADJUST_CUSTOM, 'Custom (this design)']);
+    adjustSelect.replaceChildren();
+    for (const [value, label] of options) {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = label;
+      adjustSelect.append(option);
+    }
+    adjustSelect.value = matched && adjustRef !== null ? adjustRef.id : ADJUST_CUSTOM;
+  }
+
+  /**
+   * Adopt a set of adjustment params as the design's own.
+   *
+   * The selection source is the *adjusted* picture (the CREATIVE-01
+   * slice-2 engine note), so a change here invalidates it exactly as a
+   * geometry change does — `selectionGeometryKey` carries the
+   * adjustment fingerprint, and `applyColour` re-resolves once the
+   * fresh buffer lands.
+   */
+  function applyAdjustParams(next: AdjustParams): void {
+    config.adjust = structuredClone(next);
+    syncAdjustSection();
+    applyColour();
+  }
+
+  adjustSelect.addEventListener('change', () => {
+    const id = adjustSelect.value;
+    if (id === ADJUST_CUSTOM) return;
+    const chosen = adjustParamsById.get(id);
+    if (chosen === undefined) return;
+    const view = adjustProfiles.find((p) => p.id === id);
+    adjustRef = { id, revision: view?.revision ?? 0 };
+    applyAdjustParams(chosen);
+    status.textContent = `Adjustment profile "${view?.name ?? id}" applied.`;
   });
 
   /** The old ditherControls surface, kept as a shim for call sites:
@@ -3515,6 +3657,8 @@ function build(app: HTMLElement): void {
         dither: config.dither,
         ditherProfileRef: ditherRef,
         tone: config.tone ?? defaultTone(),
+        adjust: currentAdjust(),
+        adjustProfileRef: adjustRef,
       },
       // The design's recipe copy *and* the exact threads that
       // rendered it (schema v5, M15-PERSIST-01): reopening must
@@ -3644,6 +3788,7 @@ function build(app: HTMLElement): void {
     // The Threadify switch mirrors paletteMode inside
     // colourSection.update below — no field write needed here.
     ditherControls.update();
+    syncAdjustSection();
     colourSection.update(sectionState());
     gridToggle.setAttribute('aria-pressed', String(gridStyle.show));
     // The Grid options fields need no sync here: the modal is
@@ -3813,6 +3958,20 @@ function build(app: HTMLElement): void {
         (matchBuiltInDither(config.dither) === null
           ? null
           : { id: matchBuiltInDither(config.dither) ?? '', revision: 0 });
+      // A fresh copy for the same reason tone takes one: the file
+      // object must stay exactly what was loaded.
+      config.adjust = {
+        curve: file.pipeline.adjust.curve.map((point) => ({
+          in: point.in,
+          out: point.out,
+        })) as [CurvePoint, CurvePoint, CurvePoint],
+        saturation: file.pipeline.adjust.saturation,
+      };
+      adjustRef =
+        file.pipeline.adjustProfileRef ??
+        (matchBuiltInAdjust(config.adjust) === null
+          ? null
+          : { id: matchBuiltInAdjust(config.adjust) ?? '', revision: 0 });
       Object.assign(gridStyle, file.gridStyle.screen);
       Object.assign(gridPrint, file.gridStyle.print);
       gridPreset = file.gridStyle.preset;
@@ -4152,6 +4311,7 @@ function build(app: HTMLElement): void {
     'Processing',
     disclosureOpen('section-appearance', false),
     orderNote,
+    adjustGroup,
     ditherGroup,
   );
   section('section-export', 'Export', false, exportGroup);
@@ -4202,6 +4362,8 @@ function build(app: HTMLElement): void {
     await refreshProfilesCache();
     await refreshDitherProfiles();
     syncDitherSection();
+    await refreshAdjustProfiles();
+    syncAdjustSection();
     log.info('library', 'opened', {
       persistent: library.persistent,
       owned: owned.size,
@@ -4413,17 +4575,23 @@ function build(app: HTMLElement): void {
   const editorHost = document.createElement('div');
   editorHost.className = 'editor-host';
   editorHost.hidden = true;
-  let profileEditor: import('./ui/profile-editor.ts').ProfileEditor | null = null;
-  let ditherEditor: import('./ui/profile-editor.ts').ProfileEditor | null = null;
-  let openEditorKind: 'colour' | 'dither' = 'colour';
+  /** The profile kinds the takeover editor hosts (D116). */
+  type EditorKind = 'colour' | 'dither' | 'adjust';
+  /** Each kind's invoker in the design — focus returns there on close. */
+  const EDITOR_INVOKER: Record<EditorKind, string> = {
+    colour: 'colour-profile',
+    dither: 'dither-profile',
+    adjust: 'adjust-profile',
+  };
+  /** Built lazily on first open, then kept mounted and hidden. */
+  const editors = new Map<EditorKind, import('./ui/profile-editor.ts').ProfileEditor>();
+  let openEditorKind: EditorKind = 'colour';
 
   function closeProfileEditor(): void {
     editorHost.hidden = true;
     layout.hidden = false;
     // Focus returns to the section's own entry (the invoker).
-    document
-      .getElementById(openEditorKind === 'colour' ? 'colour-profile' : 'dither-profile')
-      ?.focus();
+    document.getElementById(EDITOR_INVOKER[openEditorKind])?.focus();
     status.textContent = 'Back to the design.';
     // Library edits made inside the editor surface immediately.
     void refreshProfilesCache().then(() => {
@@ -4432,135 +4600,71 @@ function build(app: HTMLElement): void {
     void refreshDitherProfiles().then(() => {
       syncDitherSection();
     });
+    void refreshAdjustProfiles().then(() => {
+      syncAdjustSection();
+    });
   }
 
-  async function openProfileEditor(
-    kind: 'colour' | 'dither' = 'colour',
-    profileId?: string,
-  ): Promise<void> {
-    openEditorKind = kind;
+  /** One render through the real pipeline, for a kind's preview rig. */
+  function editorRender(buffer: PixelBuffer, previewConfig: PipelineConfig): Promise<PixelBuffer> {
+    return client.exportFrame(
+      {
+        width: buffer.width,
+        height: buffer.height,
+        data: new Uint8ClampedArray(buffer.data),
+      },
+      previewConfig,
+    );
+  }
+
+  /** Build one kind's editor. Called once per kind, on first open. */
+  function buildProfileEditor(kind: EditorKind): import('./ui/profile-editor.ts').ProfileEditor {
     if (kind === 'dither') {
-      if (ditherEditor === null) {
-        const ditherKind = createDitherKindAdapter(document, {
-          store: () => library,
-          paletteContextLine: () =>
-            config.palette === null
-              ? 'Demonstration palette — Retro 16 (the design is full-RGB)'
-              : `the design's palette (${config.palette.name})`,
-        });
-        ditherEditor = createProfileEditor(document, {
-          adapter: {
-            ...ditherKind,
-            mountPreview: (container) => {
-              const rig = createEditorPreview(document, {
-                idPrefix: 'dither',
-                render: (buffer, previewConfig) =>
-                  client.exportFrame(
-                    {
-                      width: buffer.width,
-                      height: buffer.height,
-                      data: new Uint8ClampedArray(buffer.data),
-                    },
-                    previewConfig,
-                  ),
-                designStill,
-                baseConfig: () => ({ ...config }),
-                // The kind contract (D116): the pipeline with a
-                // draft-overridden dither stage; a resolved palette is
-                // required, so full-RGB borrows the named demo palette.
-                overrideConfig: (draft, base) => ({
-                  ...base,
-                  palette:
-                    base.palette ??
-                    paletteOf(
-                      'Demonstration palette — Retro 16',
-                      generateColorMap('retro16').entries,
-                    ),
-                  dither: ditherKind.resolveDraftConfig(draft),
-                }),
-                loadSlot: (file) => fetchSlot(file, decodeImageBlob),
-              });
-              container.append(rig.element);
-              return rig;
-            },
-          },
-          design: {
-            activeProfileId: () => ditherRef?.id ?? null,
-            onActiveProfileSaved: (id, draft) => {
-              config.dither = asDitherConfig(draft);
-              void refreshDitherProfiles().then(() => {
-                const view = ditherProfiles.find((p) => p.id === id);
-                if (view !== undefined) ditherRef = { id, revision: view.revision };
-                syncDitherSection();
-                refreshSections();
-                reprocess();
-              });
-            },
-          },
-          announce: (text) => {
-            status.textContent = text;
-          },
-          onClose: closeProfileEditor,
-        });
-        editorHost.append(ditherEditor.element);
-      }
-      layout.hidden = true;
-      editorHost.hidden = false;
-      profileEditor?.element.setAttribute('hidden', '');
-      ditherEditor.element.removeAttribute('hidden');
-      await ditherEditor.open(profileId);
-      return;
-    }
-    if (profileEditor === null) {
-      const colourKind = createColourKindAdapter(document, {
-        catalogue: CATALOGUE,
+      const ditherKind = createDitherKindAdapter(document, {
         store: () => library,
-        owned: () => owned,
+        paletteContextLine: () =>
+          config.palette === null
+            ? 'Demonstration palette — Retro 16 (the design is full-RGB)'
+            : `the design's palette (${config.palette.name})`,
       });
-      profileEditor = createProfileEditor(document, {
+      return createProfileEditor(document, {
         adapter: {
-          ...colourKind,
+          ...ditherKind,
           mountPreview: (container) => {
             const rig = createEditorPreview(document, {
-              idPrefix: 'colour',
-              render: (buffer, previewConfig) =>
-                client.exportFrame(
-                  {
-                    width: buffer.width,
-                    height: buffer.height,
-                    data: new Uint8ClampedArray(buffer.data),
-                  },
-                  previewConfig,
-                ),
+              idPrefix: 'dither',
+              render: editorRender,
               designStill,
               baseConfig: () => ({ ...config }),
-              overrideConfig: (draft, base) => {
-                const entries = colourKind.resolveDraft(draft);
-                return {
-                  ...base,
-                  palette: entries.length === 0 ? null : paletteOf('Draft profile', entries),
-                };
-              },
+              // The kind contract (D116): the pipeline with a
+              // draft-overridden dither stage; a resolved palette is
+              // required, so full-RGB borrows the named demo palette.
+              overrideConfig: (draft, base) => ({
+                ...base,
+                palette:
+                  base.palette ??
+                  paletteOf(
+                    'Demonstration palette — Retro 16',
+                    generateColorMap('retro16').entries,
+                  ),
+                dither: ditherKind.resolveDraftConfig(draft),
+              }),
               loadSlot: (file) => fetchSlot(file, decodeImageBlob),
             });
             container.append(rig.element);
             return rig;
           },
         },
-        // The D117 editor-Save contract: Save on the design's active
-        // profile updates the design's copy in the same act; saving
-        // any other profile never touches the design.
         design: {
-          activeProfileId: () => profileRef?.id ?? null,
+          activeProfileId: () => ditherRef?.id ?? null,
           onActiveProfileSaved: (id, draft) => {
-            designRecipe = structuredClone(draft) as ColorProfileRecipe;
-            designEdited = false;
-            void refreshProfilesCache().then(() => {
-              const view = colourProfiles.find((p) => p.id === id);
-              if (profileRef !== null && view !== undefined) {
-                profileRef = { id, revision: view.revision };
-              }
-              applyColour();
+            config.dither = asDitherConfig(draft);
+            void refreshDitherProfiles().then(() => {
+              const view = ditherProfiles.find((p) => p.id === id);
+              if (view !== undefined) ditherRef = { id, revision: view.revision };
+              syncDitherSection();
+              refreshSections();
+              reprocess();
             });
           },
         },
@@ -4569,13 +4673,117 @@ function build(app: HTMLElement): void {
         },
         onClose: closeProfileEditor,
       });
-      editorHost.append(profileEditor.element);
+    }
+    if (kind === 'adjust') {
+      const adjustKind = createAdjustKindAdapter(document, { store: () => library });
+      return createProfileEditor(document, {
+        adapter: {
+          ...adjustKind,
+          mountPreview: (container) => {
+            const rig = createEditorPreview(document, {
+              idPrefix: 'adjust',
+              render: editorRender,
+              designStill,
+              baseConfig: () => ({ ...config }),
+              // No palette is borrowed here: an adjustment changes the
+              // picture, so it is judged against whatever the design
+              // renders — including full-RGB.
+              overrideConfig: (draft, base) => ({
+                ...base,
+                adjust: adjustKind.resolveDraftParams(draft),
+              }),
+              loadSlot: (file) => fetchSlot(file, decodeImageBlob),
+            });
+            container.append(rig.element);
+            return rig;
+          },
+        },
+        design: {
+          activeProfileId: () => adjustRef?.id ?? null,
+          onActiveProfileSaved: (id, draft) => {
+            void refreshAdjustProfiles().then(() => {
+              const view = adjustProfiles.find((p) => p.id === id);
+              if (view !== undefined) adjustRef = { id, revision: view.revision };
+              applyAdjustParams(asAdjustParams(draft));
+            });
+          },
+        },
+        announce: (text) => {
+          status.textContent = text;
+        },
+        onClose: closeProfileEditor,
+      });
+    }
+    const colourKind = createColourKindAdapter(document, {
+      catalogue: CATALOGUE,
+      store: () => library,
+      owned: () => owned,
+    });
+    return createProfileEditor(document, {
+      adapter: {
+        ...colourKind,
+        mountPreview: (container) => {
+          const rig = createEditorPreview(document, {
+            idPrefix: 'colour',
+            render: editorRender,
+            designStill,
+            baseConfig: () => ({ ...config }),
+            overrideConfig: (draft, base) => {
+              const entries = colourKind.resolveDraft(draft);
+              return {
+                ...base,
+                palette: entries.length === 0 ? null : paletteOf('Draft profile', entries),
+              };
+            },
+            loadSlot: (file) => fetchSlot(file, decodeImageBlob),
+          });
+          container.append(rig.element);
+          return rig;
+        },
+      },
+      // The D117 editor-Save contract: Save on the design's active
+      // profile updates the design's copy in the same act; saving
+      // any other profile never touches the design.
+      design: {
+        activeProfileId: () => profileRef?.id ?? null,
+        onActiveProfileSaved: (id, draft) => {
+          designRecipe = structuredClone(draft) as ColorProfileRecipe;
+          designEdited = false;
+          void refreshProfilesCache().then(() => {
+            const view = colourProfiles.find((p) => p.id === id);
+            if (profileRef !== null && view !== undefined) {
+              profileRef = { id, revision: view.revision };
+            }
+            applyColour();
+          });
+        },
+      },
+      announce: (text) => {
+        status.textContent = text;
+      },
+      onClose: closeProfileEditor,
+    });
+  }
+
+  async function openProfileEditor(
+    kind: EditorKind = 'colour',
+    profileId?: string,
+  ): Promise<void> {
+    openEditorKind = kind;
+    let editor = editors.get(kind);
+    if (editor === undefined) {
+      editor = buildProfileEditor(kind);
+      editors.set(kind, editor);
+      editorHost.append(editor.element);
     }
     layout.hidden = true;
     editorHost.hidden = false;
-    ditherEditor?.element.setAttribute('hidden', '');
-    profileEditor.element.removeAttribute('hidden');
-    await profileEditor.open(profileId);
+    // Every kind stays mounted once opened, so exactly one is shown.
+    for (const [mounted, view] of editors) {
+      if (mounted === kind) view.element.removeAttribute('hidden');
+      else view.element.setAttribute('hidden', '');
+    }
+    await editor.open(profileId);
   }
   const header = document.createElement('header');
   header.className = 'app-header';

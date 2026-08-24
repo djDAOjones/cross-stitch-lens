@@ -19,16 +19,15 @@
  * restated targets (the D200 build must).
  */
 
-import {
-  isIdentityCurve,
-  type CurvePoint,
-  type LightnessHistogram,
-  type ToneConfig,
-  type ToneCurve,
+import type {
+  LightnessHistogram,
+  ToneConfig,
+  ToneCurve,
 } from '../core/color/tone.ts';
 import type { FloorRule } from '../core/palette-selection.ts';
 import type { ThreadSwap } from '../core/pipeline/swap.ts';
 import { toggleField } from './controls.ts';
+import { createCurveControl, nudgeCurvePoint } from './curve-control.ts';
 
 /** One rung as the ramp shows it: ladder order (darkest first). */
 export interface ToneRung {
@@ -135,27 +134,9 @@ export function clampCut(cuts: readonly number[], k: number, l: number): number 
   return Math.round(bounded * 10) / 10;
 }
 
-/**
- * Move one curve point by (dIn, dOut), keeping inputs non-decreasing
- * and everything in 0–100. The end points' inputs stay put on the
- * vertical-only arrows unless deliberately dragged — but both axes
- * remain legal on every point (the D200 decision of record).
- */
-export function nudgeCurvePoint(
-  curve: ToneCurve,
-  index: 0 | 1 | 2,
-  dIn: number,
-  dOut: number,
-): ToneCurve {
-  const points = curve.map((p): CurvePoint => ({ in: p.in, out: p.out }));
-  const point = points[index];
-  if (point === undefined) return curve;
-  const lo = index > 0 ? (points[index - 1]?.in ?? 0) : 0;
-  const hi = index < 2 ? (points[index + 1]?.in ?? 100) : 100;
-  point.in = Math.min(hi, Math.max(lo, Math.round((point.in + dIn) * 10) / 10));
-  point.out = Math.min(100, Math.max(0, Math.round((point.out + dOut) * 10) / 10));
-  return [points[0] ?? { in: 0, out: 0 }, points[1] ?? { in: 50, out: 50 }, points[2] ?? { in: 100, out: 100 }];
-}
+// The curve nudge lives with the control that owns the interaction;
+// re-exported here because it is part of this module's tested surface.
+export { nudgeCurvePoint };
 
 /** Share as a whole-percent label; sub-1 % values keep one decimal. */
 export function shareLabel(share: number): string {
@@ -288,140 +269,20 @@ export function createToneControls(
   rampBlock.append(rampLabel, rampHelper, track, rampEmpty, bandList, rampButtons, cutsHelper);
 
   // --- the three-point curve, behind a reveal ----------------------
-  const curveDetails = doc.createElement('details');
-  curveDetails.className = 'depth-reveal';
-  const curveSummary = doc.createElement('summary');
-  curveSummary.textContent = 'Lightness curve';
-  const curveBody = doc.createElement('div');
-  curveBody.className = 'depth-reveal-body';
-  const curveHelper = doc.createElement('p');
-  curveHelper.className = 'helper';
-  curveHelper.id = 'tone-curve-helper';
-  curveHelper.textContent =
-    'Remaps the picture’s lightness before matching — three points, each movable on both axes; swap the ends to invert. Tab to a point, arrows nudge, Shift for bigger steps.';
-  const svgNs = 'http://www.w3.org/2000/svg';
-  const curveSvg = doc.createElementNS(svgNs, 'svg');
-  curveSvg.setAttribute('class', 'tone-curve');
-  curveSvg.setAttribute('viewBox', '0 0 100 100');
-  curveSvg.setAttribute('aria-hidden', 'true');
-  const curveGrid = doc.createElementNS(svgNs, 'path');
-  curveGrid.setAttribute('class', 'tone-curve-grid');
-  curveGrid.setAttribute('d', 'M0 50 H100 M50 0 V100 M0 100 L100 0');
-  const curvePath = doc.createElementNS(svgNs, 'path');
-  curvePath.setAttribute('class', 'tone-curve-path');
-  curveSvg.append(curveGrid, curvePath);
-  const curvePointsLayer = doc.createElement('div');
-  curvePointsLayer.className = 'tone-curve-points';
-  const curvePlot = doc.createElement('div');
-  curvePlot.className = 'tone-curve-plot';
-  curvePlot.append(curveSvg, curvePointsLayer);
-
-  const POINT_NAMES = ['Bottom point', 'Mid point', 'Top point'] as const;
-  const pointButtons = POINT_NAMES.map((name, index) => {
-    const button = doc.createElement('button');
-    button.type = 'button';
-    button.className = 'tone-curve-point';
-    button.setAttribute('role', 'slider');
-    button.setAttribute('aria-label', name);
-    button.setAttribute('aria-describedby', curveHelper.id);
-    button.setAttribute('aria-valuemin', '0');
-    button.setAttribute('aria-valuemax', '100');
-    button.addEventListener('keydown', (event) => {
-      const step = event.shiftKey ? 5 : 1;
-      let dIn = 0;
-      let dOut = 0;
-      if (event.key === 'ArrowUp') dOut = step;
-      else if (event.key === 'ArrowDown') dOut = -step;
-      else if (event.key === 'ArrowRight') dIn = step;
-      else if (event.key === 'ArrowLeft') dIn = -step;
-      else return;
-      event.preventDefault();
-      actions.setCurve(nudgeCurvePoint(state.tone.curve, index as 0 | 1 | 2, dIn, dOut));
-    });
-    button.addEventListener('pointerdown', (event) => {
-      event.preventDefault();
-      button.setPointerCapture(event.pointerId);
-      const move = (ev: PointerEvent): void => {
-        const rect = curvePlot.getBoundingClientRect();
-        if (rect.width <= 0 || rect.height <= 0) return;
-        const inL = ((ev.clientX - rect.left) / rect.width) * 100;
-        const outL = (1 - (ev.clientY - rect.top) / rect.height) * 100;
-        const current = state.tone.curve[index as 0 | 1 | 2];
-        actions.setCurve(
-          nudgeCurvePoint(
-            state.tone.curve,
-            index as 0 | 1 | 2,
-            inL - current.in,
-            outL - current.out,
-          ),
-        );
-      };
-      const up = (): void => {
-        button.removeEventListener('pointermove', move);
-        button.removeEventListener('pointerup', up);
-      };
-      button.addEventListener('pointermove', move);
-      button.addEventListener('pointerup', up);
-    });
-    return button;
-  });
-  curvePointsLayer.append(...pointButtons);
-
-  // Numbers beside the plot: native inputs are the robust route for
-  // AT (UI-STANDARDS: prefer native controls before custom ARIA).
-  const curveNumbers = doc.createElement('div');
-  curveNumbers.className = 'tone-curve-numbers';
-  const numberInputs: { inField: HTMLInputElement; outField: HTMLInputElement }[] = [];
-  POINT_NAMES.forEach((name, index) => {
-    const row = doc.createElement('div');
-    row.className = 'tone-curve-number-row';
-    const rowLabel = doc.createElement('span');
-    rowLabel.className = 'meta';
-    rowLabel.textContent = name;
-    const makeInput = (axis: 'in' | 'out'): HTMLInputElement => {
-      const wrap = doc.createElement('label');
-      wrap.className = 'tone-curve-number';
-      wrap.textContent = axis === 'in' ? 'In' : 'Out';
-      const input = doc.createElement('input');
-      input.type = 'number';
-      input.min = '0';
-      input.max = '100';
-      input.step = '1';
-      input.setAttribute('aria-label', `${name} ${axis === 'in' ? 'input' : 'output'} lightness`);
-      input.addEventListener('change', () => {
-        const value = Math.min(100, Math.max(0, Number(input.value) || 0));
-        const current = state.tone.curve[index as 0 | 1 | 2];
-        actions.setCurve(
-          nudgeCurvePoint(
-            state.tone.curve,
-            index as 0 | 1 | 2,
-            axis === 'in' ? value - current.in : 0,
-            axis === 'out' ? value - current.out : 0,
-          ),
-        );
-      });
-      wrap.append(input);
-      row.append(wrap);
-      return input;
-    };
-    row.prepend(rowLabel);
-    const inField = makeInput('in');
-    const outField = makeInput('out');
-    numberInputs.push({ inField, outField });
-    curveNumbers.append(row);
-  });
-  const resetCurveButton = doc.createElement('button');
-  resetCurveButton.type = 'button';
-  resetCurveButton.textContent = 'Reset curve';
-  resetCurveButton.addEventListener('click', () => {
-    actions.setCurve([
-      { in: 0, out: 0 },
-      { in: 50, out: 50 },
-      { in: 100, out: 100 },
-    ]);
-  });
-  curveBody.append(curveHelper, curvePlot, curveNumbers, resetCurveButton);
-  curveDetails.append(curveSummary, curveBody);
+  // The control itself is shared with the adjustment editor's own
+  // (different) curve — see `curve-control.ts`.
+  const curveControl = createCurveControl(
+    doc,
+    {
+      idPrefix: 'tone',
+      summary: 'Lightness curve',
+      helper:
+        'Remaps the picture\u2019s lightness before matching \u2014 three points, each movable on both axes; swap the ends to invert. Tab to a point, arrows nudge, Shift for bigger steps.',
+    },
+    (curve) => {
+      actions.setCurve(curve);
+    },
+  );
 
   // --- re-pick from the current frame ------------------------------
   const rePickRow = doc.createElement('div');
@@ -478,7 +339,7 @@ export function createToneControls(
     sliderField,
     hintRow,
     rampBlock,
-    curveDetails,
+    curveControl.element,
     rePickRow,
     floorToggle.element,
     floorField,
@@ -699,31 +560,7 @@ export function createToneControls(
     floorField.hidden = !next.floor.on;
     if (doc.activeElement !== floorInput) floorInput.value = String(next.floor.minStitches);
 
-    // Curve: path, point positions, numbers.
-    const [lo, mid, hi] = next.tone.curve;
-    curvePath.setAttribute(
-      'd',
-      `M0 ${String(100 - lo.out)} L${String(lo.in)} ${String(100 - lo.out)} L${String(mid.in)} ${String(100 - mid.out)} L${String(hi.in)} ${String(100 - hi.out)} L100 ${String(100 - hi.out)}`,
-    );
-    curveSummary.textContent = isIdentityCurve(next.tone.curve)
-      ? 'Lightness curve'
-      : 'Lightness curve (adjusted)';
-    next.tone.curve.forEach((point, i) => {
-      const button = pointButtons[i];
-      if (button === undefined) return;
-      button.style.left = `${String(point.in)}%`;
-      button.style.top = `${String(100 - point.out)}%`;
-      button.setAttribute('aria-valuenow', String(point.out));
-      button.setAttribute(
-        'aria-valuetext',
-        `input ${String(point.in)}, output ${String(point.out)}`,
-      );
-      const fields = numberInputs[i];
-      if (fields !== undefined) {
-        if (doc.activeElement !== fields.inField) fields.inField.value = String(point.in);
-        if (doc.activeElement !== fields.outField) fields.outField.value = String(point.out);
-      }
-    });
+    curveControl.update(next.tone.curve);
 
     // Ramp redraw, fingerprinted so a same-shares frame costs nothing.
     const fp = JSON.stringify([

@@ -19,6 +19,26 @@
 > rides the config like `swaps`; the wasm clamp and GPU-LUT skip gate
 > on `toneEngaged`. ADJUST-01's curve is a *different* curve (source
 > remap in the adjust stage); do not fold them.
+>
+> **ADJUST-01 build landed 2026-08-24 (D202, schema v13).** The stage
+> is `src/core/pipeline/adjust.ts` (one lightness curve + saturation,
+> in Lab, with a tabled hot loop and a documented ≤ 1 sRGB-level
+> tolerance — it is the only stage doing per-pixel colour maths at
+> source resolution); the built-ins are
+> `src/core/pipeline/adjust-presets.ts`; the profile kind is
+> `src/ui/profile-editor-adjust.ts`, mounted in the Processing section
+> ahead of dithering. Evidence regenerates via `npm run audit`
+> (`audit-adjust-01-*.json`, `adjust-01-gallery-*.html`). Open on the
+> item: the owner's starter-set signature and a human keyboard pass.
+> For the later slices: the three-point curve maths now lives in
+> `src/core/color/curve.ts` and its control in
+> `src/ui/curve-control.ts` (tone re-exports the maths, so no caller
+> changed); the takeover editor is a kind map, so a fourth kind costs
+> one branch; `fullRgbVariant` keeps `adjust`, and both content-keyed
+> caches (`selectionGeometryKey`, the router's `geometryKey`) carry an
+> adjustment fingerprint while the LUT key deliberately does not.
+> SHEET-01's axis 2 is these presets — the prototype's per-cell
+> re-selection is now production behaviour.
 
 ## Outcome
 

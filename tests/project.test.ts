@@ -8,6 +8,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { defaultTone } from '../src/core/color/tone.ts';
+import { defaultAdjust, MAX_SATURATION } from '../src/core/pipeline/adjust.ts';
 import { DEFAULT_GRID_VALUES } from '../src/core/grid-style.ts';
 import {
   DEFAULT_FLOOR,
@@ -49,6 +50,17 @@ function sampleProject(): ProjectFile {
         ],
         cuts: [30.5, 62],
       },
+      // Non-default adjust (v13): a bent curve and a saturation push,
+      // so the round trip proves both halves survive.
+      adjust: {
+        curve: [
+          { in: 8, out: 0 },
+          { in: 50, out: 48 },
+          { in: 92, out: 100 },
+        ],
+        saturation: 1.2,
+      },
+      adjustProfileRef: { id: 'builtin:punch', revision: 0 },
     },
     palette: {
       profileRef: { id: 'builtin:dmc', revision: 0 },
@@ -726,6 +738,7 @@ describe('a saved project reopens with identical output', () => {
       metric: file.pipeline.metric,
       dither: file.pipeline.dither,
       tone: file.pipeline.tone,
+      adjust: file.pipeline.adjust,
     };
   }
 
@@ -779,6 +792,8 @@ describe('a saved project reopens with identical output', () => {
         dither: { algorithm: 'floyd-steinberg', serpentine: true, strength: 1 },
         ditherProfileRef: null,
         tone: defaultTone(),
+        adjust: defaultAdjust(),
+        adjustProfileRef: null,
       },
       palette: DMC_SNAPSHOT,
     },
@@ -792,6 +807,8 @@ describe('a saved project reopens with identical output', () => {
         dither: { algorithm: 'none' },
         ditherProfileRef: null,
         tone: defaultTone(),
+        adjust: defaultAdjust(),
+        adjustProfileRef: null,
       },
       palette: DMC_SNAPSHOT,
     },
@@ -805,6 +822,8 @@ describe('a saved project reopens with identical output', () => {
         dither: { algorithm: 'none' },
         ditherProfileRef: null,
         tone: defaultTone(),
+        adjust: defaultAdjust(),
+        adjustProfileRef: null,
       },
       palette: DMC_SNAPSHOT,
     },
@@ -818,6 +837,8 @@ describe('a saved project reopens with identical output', () => {
         dither: { algorithm: 'none' },
         ditherProfileRef: null,
         tone: defaultTone(),
+        adjust: defaultAdjust(),
+        adjustProfileRef: null,
       },
       palette: null,
     },
@@ -831,6 +852,8 @@ describe('a saved project reopens with identical output', () => {
         dither: { algorithm: 'floyd-steinberg', serpentine: true, strength: 1 },
         ditherProfileRef: null,
         tone: defaultTone(),
+        adjust: defaultAdjust(),
+        adjustProfileRef: null,
       },
       // The snapshot is what makes a reopen reproducible: this project
       // renders three threads whatever the catalogue or the library
@@ -864,6 +887,8 @@ describe('a saved project reopens with identical output', () => {
         dither: { algorithm: 'atkinson', serpentine: false, strength: 0.5 },
         ditherProfileRef: null,
         tone: defaultTone(),
+        adjust: defaultAdjust(),
+        adjustProfileRef: null,
       },
       palette: DMC_SNAPSHOT,
     },
@@ -877,6 +902,8 @@ describe('a saved project reopens with identical output', () => {
         dither: { algorithm: 'blue-noise', strength: 1 },
         ditherProfileRef: null,
         tone: defaultTone(),
+        adjust: defaultAdjust(),
+        adjustProfileRef: null,
       },
       palette: DMC_SNAPSHOT,
     },
@@ -1157,5 +1184,78 @@ describe('symbols block validation (schema v6)', () => {
         ),
       ),
     ).toThrow('symbols.queue');
+  });
+});
+
+describe('image adjustments (schema v13, ADJUST-01)', () => {
+  function adjustDoc(mutate: (adjust: Record<string, unknown>) => unknown): string {
+    const doc = JSON.parse(serializeProject(sampleProject())) as Record<string, unknown>;
+    const pipeline = doc['pipeline'] as Record<string, unknown>;
+    pipeline['adjust'] = mutate(pipeline['adjust'] as Record<string, unknown>);
+    return JSON.stringify(doc);
+  }
+
+  it('round-trips the curve, the saturation and the profile ref byte-identically', () => {
+    const json = serializeProject(sampleProject());
+    const loaded = parseProject(json);
+    expect(serializeProject(loaded)).toBe(json);
+    expect(loaded.pipeline.adjust).toEqual(sampleProject().pipeline.adjust);
+    expect(loaded.pipeline.adjustProfileRef).toEqual({ id: 'builtin:punch', revision: 0 });
+    expect(json).toContain('"saturation": 1.2');
+  });
+
+  it('a v12 file migrates to the identity with no profile attached', () => {
+    const doc = JSON.parse(serializeProject(sampleProject())) as Record<string, unknown>;
+    const pipeline = doc['pipeline'] as Record<string, unknown>;
+    delete pipeline['adjust'];
+    delete pipeline['adjustProfileRef'];
+    doc['schemaVersion'] = 12;
+    const loaded = parseProject(JSON.stringify(doc));
+    expect(loaded.migratedFrom).toBe(12);
+    // The identity is what "this file never adjusted" states exactly:
+    // the stage stays out of the built order, so it renders as it did.
+    expect(loaded.pipeline.adjust).toEqual(defaultAdjust());
+    expect(loaded.pipeline.adjustProfileRef).toBeNull();
+    const migrated = serializeProject(loaded);
+    expect(serializeProject(parseProject(migrated))).toBe(migrated);
+  });
+
+  it('refuses a malformed curve, a crossed one and an out-of-range saturation, naming the path (error)', () => {
+    expect(() => parseProject(adjustDoc(() => ({ saturation: 1 })))).toThrow(
+      'pipeline.adjust.curve',
+    );
+    expect(() =>
+      parseProject(
+        adjustDoc(() => ({
+          curve: [
+            { in: 60, out: 0 },
+            { in: 20, out: 50 },
+            { in: 100, out: 100 },
+          ],
+          saturation: 1,
+        })),
+      ),
+    ).toThrow('non-decreasing');
+    expect(() =>
+      parseProject(adjustDoc((adjust) => ({ ...adjust, saturation: 9 }))),
+    ).toThrow('pipeline.adjust.saturation');
+    expect(() =>
+      parseProject(adjustDoc((adjust) => ({ ...adjust, saturation: -1 }))),
+    ).toThrow('pipeline.adjust.saturation');
+  });
+
+  it('accepts the boundary values (boundary)', () => {
+    const loaded = parseProject(
+      adjustDoc(() => ({
+        curve: [
+          { in: 0, out: 100 },
+          { in: 0, out: 0 },
+          { in: 100, out: 0 },
+        ],
+        saturation: MAX_SATURATION,
+      })),
+    );
+    expect(loaded.pipeline.adjust.saturation).toBe(MAX_SATURATION);
+    expect(loaded.pipeline.adjust.curve[1]).toEqual({ in: 0, out: 0 });
   });
 });

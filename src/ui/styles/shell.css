@@ -1039,7 +1039,8 @@ main {
   border: 1px solid var(--csl-border-subtle);
 }
 
-.tone-curve-plot {
+/* The three-point curve control (TONE-01, shared by ADJUST-01) */
+.curve-plot {
   position: relative;
   width: min(16rem, 100%);
   aspect-ratio: 1;
@@ -1047,31 +1048,31 @@ main {
   background: var(--csl-layer-01);
 }
 
-.tone-curve {
+.curve-plot-svg {
   display: block;
   width: 100%;
   height: 100%;
 }
 
-.tone-curve-grid {
+.curve-grid {
   fill: none;
   stroke: var(--csl-border-subtle);
   stroke-width: 0.5;
 }
 
-.tone-curve-path {
+.curve-path {
   fill: none;
   stroke: var(--csl-text-primary);
   stroke-width: 1.5;
   vector-effect: non-scaling-stroke;
 }
 
-.tone-curve-points {
+.curve-points {
   position: absolute;
   inset: 0;
 }
 
-.tone-curve-point {
+.curve-point {
   position: absolute;
   width: var(--csl-target-min);
   height: var(--csl-target-min);
@@ -1084,7 +1085,7 @@ main {
   cursor: grab;
 }
 
-.tone-curve-point::after {
+.curve-point::after {
   content: '';
   position: absolute;
   left: 50%;
@@ -1097,28 +1098,28 @@ main {
   border: 2px solid var(--csl-text-primary);
 }
 
-.tone-curve-numbers {
+.curve-numbers {
   display: grid;
   gap: var(--csl-spacing-02);
 }
 
-.tone-curve-number-row {
+.curve-number-row {
   display: flex;
   align-items: center;
   gap: var(--csl-spacing-03);
 }
 
-.tone-curve-number-row > .meta {
+.curve-number-row > .meta {
   flex: 1 1 6rem;
 }
 
-.tone-curve-number {
+.curve-number {
   display: inline-flex;
   align-items: center;
   gap: var(--csl-spacing-02);
   font-size: 0.8125rem;
 }
 
-.tone-curve-number input {
+.curve-number input {
   width: 4.5rem;
 }

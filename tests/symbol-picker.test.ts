@@ -8,6 +8,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { defaultTone } from '../src/core/color/tone.ts';
+import { defaultAdjust } from '../src/core/pipeline/adjust.ts';
 
 import {
   effectiveSymbols,
@@ -119,6 +120,8 @@ function projectWith(symbols: SymbolAssignmentState): ProjectFile {
       dither: { algorithm: 'none' },
       ditherProfileRef: null,
       tone: defaultTone(),
+      adjust: defaultAdjust(),
+      adjustProfileRef: null,
     },
     palette: null,
     symbols: {

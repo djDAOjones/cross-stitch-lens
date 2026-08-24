@@ -13,7 +13,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { adjustStage } from '../../src/core/pipeline/adjust.ts';
+import { adjustStage, defaultAdjust } from '../../src/core/pipeline/adjust.ts';
 import { buildStages } from '../../src/core/pipeline/config.ts';
 import { ditherStage } from '../../src/core/pipeline/dither.ts';
 import { loadDmcPalette, paletteLab, paletteRgb } from '../../src/core/palette.ts';
@@ -210,11 +210,12 @@ describe.skipIf(!AUDIT)('M5-PERF-10 orchestration audit (AUDIT=1)', () => {
     };
     const before = Uint8ClampedArray.from(input.data);
 
-    // 1. adjust is the identity but must not alias: the executor
-    //    transfers the request buffer in, and the worker retains it as
-    //    `lastFrame` for split compare. An aliasing identity stage would
-    //    let a later stage write through into the retained source.
-    const adjusted = adjustStage.backends.ts(input, {});
+    // 1. adjust at its default is the identity but must not alias: the
+    //    executor transfers the request buffer in, and the worker
+    //    retains it as `lastFrame` for split compare. An aliasing
+    //    identity stage would let a later stage write through into the
+    //    retained source.
+    const adjusted = adjustStage.backends.ts(input, defaultAdjust());
     expect(adjusted.data).not.toBe(input.data);
     expect(Array.from(adjusted.data)).toEqual(Array.from(before));
 

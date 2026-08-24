@@ -583,11 +583,17 @@ describe('menu groups (MENU-01)', () => {
     for (const [group, n] of sizes) {
       expect(n, `group ${group} holds ${String(n)}`).toBeLessThanOrEqual(12);
     }
-    expect(Math.max(...sizes.values())).toBe(8);
+    // Tripwire, not a rule: the rule is the bound above. This pins the
+    // current largest so a batch that reshapes the menu has to say so.
+    // Manufacturers is the biggest at 9 — eight brands plus All threads.
+    expect(Math.max(...sizes.values())).toBe(9);
   });
 
   it('labels user profiles as their own group, built-ins by their own', () => {
-    expect(profileGroupLabel('builtin:dmc', true)).toBe('Your threads');
+    expect(profileGroupLabel('builtin:dmc', true)).toBe('Manufacturers');
+    expect(profileGroupLabel('builtin:anchor', true)).toBe('Manufacturers');
+    // Not a manufacturer and not a style — it is yours.
+    expect(profileGroupLabel('builtin:my-threads', true)).toBe('Your profiles');
     expect(profileGroupLabel('builtin:autumn-leaves', true)).toBe('Nature and place');
     expect(profileGroupLabel('builtin:art-deco', true)).toBe('Design and era');
     expect(profileGroupLabel('builtin:ukiyo-e', true)).toBe('Art and craft');
@@ -607,10 +613,25 @@ describe('menu groups (MENU-01)', () => {
     expect(labels).toEqual(PROFILE_GROUPS.map((g) => g.label));
   });
 
-  it('puts user profiles after every built-in group', () => {
-    expect(profileGroupIndex('p-mine', false)).toBe(PROFILE_GROUPS.length);
+  it('puts user profiles last, alongside My inventory', () => {
+    const yours = PROFILE_GROUPS.findIndex((g) => g.id === 'yours');
+    expect(profileGroupIndex('p-mine', false)).toBe(yours);
+    // My inventory shares that group; everything else comes before it,
+    // so a saved profile can never be buried among the built-ins.
+    expect(profileGroupIndex('builtin:my-threads', true)).toBe(yours);
     for (const p of builtInProfiles(catalogue)) {
-      expect(profileGroupIndex(p.id, true)).toBeLessThan(PROFILE_GROUPS.length);
+      if (p.id === 'builtin:my-threads') continue;
+      expect(profileGroupIndex(p.id, true)).toBeLessThan(yours);
+    }
+  });
+
+  it('gives every manufacturer its own profile, none privileged', () => {
+    // DMC was once the only brand with a built-in, which gave the
+    // largest range billing it had not earned.
+    const ids = builtInProfiles(catalogue).map((p) => p.id);
+    for (const brand of catalogue.brands) {
+      expect(ids, `${brand.name} has no profile`).toContain(`builtin:${brand.id}`);
+      expect(profileGroupLabel(`builtin:${brand.id}`, true)).toBe('Manufacturers');
     }
   });
 

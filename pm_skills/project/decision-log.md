@@ -1667,3 +1667,65 @@ signature itself. `check` green.
 
 **Link:** backlog → ICE-PROFILES-02 stays iceboxed at 92 candidates;
 MENU-01 shipped at D205's split and needs no further work.
+
+---
+
+## D207 — every manufacturer gets its own profile; the menu group becomes Manufacturers (2026-08-24)
+
+**Decision:** the eight thread brands each get a built-in profile —
+Anchor, Ariadna, Cosmo, CXC, DMC, Finca, Madeira, Sullivans — generated
+from the catalogue in its alphabetical order, beside **All threads**.
+The menu group they sit in is renamed **"Manufacturers"**. The gallery
+is **40** built-ins in **7** groups.
+
+**Two naming failures are fixed, one of them a day old.** The group was
+called "Your threads" (MENU-01, D205) and held DMC, All threads and My
+inventory — **two of the three being whole manufacturer catalogues with
+nothing to do with the user**. The owner read the name, assumed they
+had listed their threads at some point, and asked what it was. That is
+the same failure MYTHREADS-01 already fixed one level down, where "My
+threads" was renamed "My inventory" because it "read as *the threads I
+choose* and sent a new user into a profile that is empty by
+construction" — reintroduced at the group and caught by exactly the
+confusion it causes.
+
+**And DMC had billing it had not earned.** It was the only brand with a
+built-in, for no reason beyond being the largest range. The owner's
+framing is the correction and is worth keeping: *"we buy one colour at
+a time, DMC is just the largest set — it's fine for palettes not to
+have DMC, for example Anchor has the nicest colours."* Brands were
+always selectable in the profile editor's Libraries checklist, so the
+DMC built-in was only ever a shortcut; making it eight shortcuts costs
+one generated line and removes the favouritism.
+
+**My inventory moves to "Your profiles".** It is not a manufacturer and
+not a style; it belongs with the profiles you save. That group is now
+never empty, which also makes the inventory discoverable rather than
+hidden behind an empty heading.
+
+**The bound behaved again.** Manufacturers holds 9 (eight brands plus
+All threads), so the ≤ 12 rule stands and the exact-max tripwire moved
+from 8 to 9 — deliberately, with the change stated in the test. A new
+test asserts every catalogue brand has a profile and that none is
+privileged, so a ninth brand cannot arrive unfiled.
+
+**Also raised, and iceboxed as SNAP-01:** map any profile to the nearest
+colours in a chosen manufacturer's range. The important finding is that
+`core/thread-equivalents.ts` **already does the matching** — nearest in
+CIELAB per brand, curated-over-computed, tested — and is wired to
+nothing. So the cost is the profile-level application, the UI and the
+honesty, not the algorithm. It would also let D206's multi-brand hi-vis
+exception retire, because membership could be authored in whatever range
+carries a style and *resolve* into the user's. It stays iceboxed because
+the curated layer is empty (`thread-map-proposed.csv` is a header), so
+every snap today is a suggestion, and the collision rule — two colours
+snapping to one thread — is an unanswered design question, not a detail.
+
+**Scope:** `src/core/color-profile.ts` (the generated brand profiles,
+the group rename, My inventory re-homed), `tests/color-profile.test.ts`
+(+1 test, 3 updated), the new `tickets/SNAP-01.md` and its backlog
+line. No schema change: `builtin:dmc` keeps its id, so no saved design
+moved. `check` green (1499 tests).
+
+**Link:** backlog → SNAP-01 iceboxed; MENU-01 shipped and now carries
+seven groups; ICE-PROFILES-02 unaffected at 92 candidates.

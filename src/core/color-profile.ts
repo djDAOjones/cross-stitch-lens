@@ -419,16 +419,24 @@ export function resolveProfileMembership(
  * A profile that genuinely straddles goes to `style`: `nature` stays
  * literal, or it stops meaning anything.
  */
-export type ProfileGroup = 'threads' | 'basics' | 'nature' | 'art' | 'design' | 'signal';
+export type ProfileGroup =
+  | 'manufacturer'
+  | 'basics'
+  | 'nature'
+  | 'art'
+  | 'design'
+  | 'signal'
+  | 'yours';
 
 /** Group labels in menu order. Order here is the menu's order. */
 export const PROFILE_GROUPS: readonly { id: ProfileGroup; label: string }[] = [
-  { id: 'threads', label: 'Your threads' },
+  { id: 'manufacturer', label: 'Manufacturers' },
   { id: 'basics', label: 'Basics' },
   { id: 'nature', label: 'Nature and place' },
   { id: 'art', label: 'Art and craft' },
   { id: 'design', label: 'Design and era' },
   { id: 'signal', label: 'Screen and signal' },
+  { id: 'yours', label: 'Your profiles' },
 ];
 
 /**
@@ -444,9 +452,21 @@ export const PROFILE_GROUPS: readonly { id: ProfileGroup; label: string }[] = [
  * test asserts the two lists match exactly.
  */
 export const BUILTIN_PROFILE_GROUPS: Readonly<Record<string, ProfileGroup>> = {
-  'builtin:dmc': 'threads',
-  'builtin:all-threads': 'threads',
-  'builtin:my-threads': 'threads',
+  // One entry per manufacturer, alphabetical — no brand gets billing.
+  // Listed explicitly rather than derived from the catalogue so a ninth
+  // brand fails the coverage test loudly instead of appearing unfiled.
+  'builtin:anchor': 'manufacturer',
+  'builtin:ariadna': 'manufacturer',
+  'builtin:cosmo': 'manufacturer',
+  'builtin:cxc': 'manufacturer',
+  'builtin:dmc': 'manufacturer',
+  'builtin:finca': 'manufacturer',
+  'builtin:madeira': 'manufacturer',
+  'builtin:sullivans': 'manufacturer',
+  'builtin:all-threads': 'manufacturer',
+  // Not a manufacturer, and not a style: it is yours, so it sits with
+  // the profiles you save rather than among the ranges you buy from.
+  'builtin:my-threads': 'yours',
   'builtin:bw': 'basics',
   'builtin:retro16': 'basics',
   'builtin:websafe': 'basics',
@@ -490,10 +510,11 @@ export const BUILTIN_PROFILE_GROUPS: Readonly<Record<string, ProfileGroup>> = {
  * order instead — which is batch order, not reading order.
  */
 export function profileGroupIndex(id: string, builtin: boolean): number {
-  if (!builtin) return PROFILE_GROUPS.length;
+  const yours = PROFILE_GROUPS.findIndex((g) => g.id === 'yours');
+  if (!builtin) return yours;
   const group = BUILTIN_PROFILE_GROUPS[id];
   const at = PROFILE_GROUPS.findIndex((g) => g.id === group);
-  return at === -1 ? PROFILE_GROUPS.length : at;
+  return at === -1 ? yours : at;
 }
 
 /** The group label a profile renders under, built-in or not. */
@@ -602,7 +623,11 @@ export function builtInProfiles(catalogue: ThreadCatalogue): ColorProfile[] {
   // would break the only thing this profile asserts.
   const transit = dmc('666', '973', '702', '3844', '797', '3607');
   return [
-    profile('dmc', 'DMC', { libraries: ['dmc'] }),
+    // One profile per manufacturer, in catalogue (alphabetical) order.
+    // DMC used to be the only one, which gave the largest range billing
+    // it had not earned — a stitcher buys a colour at a time, and the
+    // nicest colour for a design may be anyone's.
+    ...catalogue.brands.map((b) => profile(b.id, b.name, { libraries: [b.id] })),
     profile('all-threads', 'All threads', { libraries: allBrands }),
     // "My inventory", not "My threads" (MYTHREADS-01): the old name read
     // as "the threads I choose" and sent a new user into a profile that

@@ -110,14 +110,18 @@ early-computing palettes were *specified by somebody*, so a
 colour-space band would misdescribe them. Batches drawn from this pool
 must reach for the rule-shaped candidates deliberately.
 
-### Batch three — DRAFTED 2026-08-24, UNSIGNED
+### Batch three — SIGNED 2026-08-24 (D206), the gallery reaches 33
 
-**All eight are in `builtInProfiles()` and visible in the app.** They
-ship as code and are **not signed**: the owner curates names and
-membership per batch (D115), exactly as batches 1 and 2 did between
-D139→D140 and D144→D146. Evidence is in
+**All eight shipped as drafted.** The owner signed names and membership
+unchanged, together with the two calls the batch raised: the
+multi-brand hi-vis and the menu split. Evidence is in
 `bench-reports/audit-m15-gallery-01-*.json` and reproduces with
 `npm run audit`.
+
+Do **not** re-propose these; and note two entries carry standing
+decisions that a later pass must not quietly undo — Vermilion's
+residual and hi-vis's single Ariadna thread, both recorded below and in
+the source comments.
 
 **Three changed under the evidence, which is what the run is for.**
 
@@ -140,19 +144,21 @@ D139→D140 and D144→D146. Evidence is in
   tan at 36 % and **Delft blue** with white at 38.9 % for exactly the
   same reason. Judge this one on a photograph before changing it.
 
-**One profile leaves DMC, and the reason is the name.** High-visibility
-safety uses `ariadna:1697` for its fluoro yellow-green because DMC's
-nearest is ΔE ≈ 36 (Lemon — a plain yellow) against Ariadna's ΔE ≈ 7.
-A hi-vis profile whose signature colour is a plain yellow would lie
-about what it is. Orange, black and silver stay DMC, so the shopping
-list costs exactly one extra manufacturer. **This is an owner call** —
-every other curated built-in in the gallery is single-brand.
+**One profile leaves DMC, signed as the deliberate exception.**
+High-visibility safety uses `ariadna:1697` for its fluoro yellow-green
+because DMC's nearest is ΔE ≈ 36 (Lemon — a plain yellow) against
+Ariadna's ΔE ≈ 7. A hi-vis profile whose signature colour is a plain
+yellow would lie about what it is. Orange and black stay DMC, so the
+shopping list costs exactly one extra manufacturer. Every other curated
+built-in is single-brand: this is **the** exception, signed as such —
+do not "correct" it to DMC, because that renames the profile.
 
-**The menu grew a group.** All eight land in style territory, which
-took MENU-01's "Style and era" from 8 to 16 and tripped its ≤ 12 test.
-Split three ways as MENU-01 anticipated: **Art and craft** (6),
-**Design and era** (4), **Screen and signal** (6). Nothing exceeds
-eight; the existing sixteen were re-homed, not renamed.
+**The menu grew a group, and the split is signed with the batch.** All
+eight land in style territory, which took MENU-01's "Style and era"
+from 8 to 16 and tripped its ≤ 12 test. Split three ways as MENU-01
+anticipated: **Art and craft** (6), **Design and era** (4), **Screen
+and signal** (6). Nothing exceeds eight; the existing sixteen were
+re-homed, not renamed, and no id moved, so no saved design moved.
 
 The batch as drafted, with every entry closing a named gap:
 

@@ -583,12 +583,18 @@ export function builtInProfiles(catalogue: ThreadCatalogue): ColorProfile[] {
   // the way heraldry lists them — metals first, then the colours —
   // rather than light to dark: this is not a ladder (D46).
   const heraldic = dmc('973', 'BLANC', '666', '797', '701', '552', '310');
-  // The only entry in the batch that leaves DMC, and the reason is
-  // the name. Hi-vis IS fluorescent yellow-green; DMC's nearest is
-  // ΔE ~36 (Lemon — a plain yellow), which would make this a
-  // profile that lies about what it is. Ariadna 1697 lands at ΔE
-  // ~7. The orange, black and silver stay DMC, so the shopping list
-  // costs exactly one extra manufacturer.
+  // The only entry in the whole gallery that leaves DMC, and the
+  // reason is the name. Hi-vis IS fluorescent yellow-green; DMC's
+  // nearest is ΔE ~36 (Lemon — a plain yellow), which would make this
+  // a profile that lies about what it is. Ariadna 1697 lands at ΔE
+  // ~7. Orange and black stay DMC, so the shopping list costs exactly
+  // one extra manufacturer.
+  //
+  // Three entries, not four: retroreflective silver is real workwear,
+  // but DMC 415 took 57.7 % of the evidence card against the fluoro's
+  // 14.5 % — grey with accents, not hi-vis. Signed as the gallery's
+  // deliberate multi-brand exception (D206); do not "correct" it to
+  // DMC without asking, because that quietly renames the profile.
   const hiVis = ['ariadna:1697', ...dmc('971', '310')];
   // Membership as a stated rule: one entry per hue sextant at
   // maximum mutual separation, in wheel order from red. Six, and
@@ -702,14 +708,13 @@ export function builtInProfiles(catalogue: ThreadCatalogue): ColorProfile[] {
     profile('mid-century', 'Mid-century modern', { include: midCentury }),
     profile('fair-isle', 'Fair Isle', { include: fairIsle }),
     profile('fluoro-spot', 'Fluoro spot print', { include: fluoroSpot }),
-    // --- ICE-PROFILES-02 batch 3 — drafted 2026-08-24, UNSIGNED ------
+    // --- ICE-PROFILES-02 batch 3 — owner-signed 2026-08-24 (D206) ----
     // Picked against the gaps the first sixteen left: no red, no
     // violet, no achromatic ladder, no all-hue dark, one two-pole
     // shape, and nothing from industry. Four rules and four curated,
-    // the batch-2 split. None ships until the owner signs names and
-    // membership (D115) — they are here as code so the evidence run
-    // can judge them, which is the only way a candidate is ever
-    // judged (D139: two of batch 1 changed under exactly this).
+    // the batch-2 split. Names and membership stand as drafted, the
+    // multi-brand hi-vis included; three were retuned under the
+    // evidence run before signature (D139's lesson, twice over).
     //
     // The achromatic gap. Black & white is two entries and Greys is
     // four generated levels; nothing thread-backed spanned the range.

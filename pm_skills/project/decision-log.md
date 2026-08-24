@@ -1612,3 +1612,58 @@ beyond the menu's contents. `check` green (1498 tests).
 **Link:** backlog → ICE-PROFILES-02 stays iceboxed, its queue down to 92
 unsigned candidates; batch three awaits the owner's signature on names,
 membership, the multi-brand hi-vis call, and the Vermilion residual.
+
+---
+
+## D206 — batch three signed as drafted; the gallery reaches 33 and the menu carries six groups (2026-08-24)
+
+**Decision:** the owner signed all eight batch-3 candidates unchanged —
+Grisaille, Chiaroscuro, Vermilion and madder, Teal and orange,
+Anodised aluminium, Heraldic tinctures, High-visibility safety, Transit
+map lines. Names and membership stand as drafted (D205). They are
+shipped built-ins, not provisional. The gallery is **33**.
+
+**Two calls the batch raised were signed with it**, both of which the
+draft named rather than slipped in.
+
+**The multi-brand exception.** High-visibility safety keeps
+`ariadna:1697` for its fluoro yellow-green. DMC's nearest is ΔE ≈ 36 —
+Lemon, a plain yellow — against Ariadna's ΔE ≈ 7, and a hi-vis profile
+whose signature colour is a plain yellow lies about what it is. It is
+the **only** entry in the gallery that leaves DMC, and it is signed as
+the deliberate exception: correcting it back to DMC would rename the
+profile, so it does not happen without asking. The shopping list costs
+one extra manufacturer, on three entries.
+
+**The menu split.** "Style and era" reached 16 of 33 and tripped
+MENU-01's ≤ 12 bound — the bound behaving exactly as designed, a signal
+rather than a defect. Signed at six groups: Your threads (3), Basics
+(6), Nature and place (8), **Art and craft** (6), **Design and era**
+(4), **Screen and signal** (6), plus Your profiles when the store has
+any. Nothing exceeds eight. The existing sixteen were re-homed, never
+renamed, and no id moved — no saved design moved with them.
+
+**One standing residual, in the D140 pattern.** Vermilion and madder's
+largest share on the evidence card is a mahogany at 42 %, not a
+vermilion. That is the card, not the rule: it is 56 % full-hue sweep, so
+a red-only profile must map every green and blue on it to the nearest
+red — the shipped Autumn leaves leads with a tan at 36 % and Delft blue
+with white at 38.9 % for the same reason. Signed as-is with the
+residual named. **Judge it on a photograph (D147's six-image preview)
+before retuning it**; four rounds of tuning against this card already
+made it narrower without making it redder.
+
+**What the signature does not close.** ICE-PROFILES-02 stays iceboxed
+with 92 unsigned candidates. Batch four would take Style-side groups
+past the bound again, so the next batch either leans nature-and-place or
+carries its own split — and at that point ICE-PICKER-01's trigger (one
+group past ~25, or the owner's standing expectation of 100+) is the
+better answer than a fourth re-balance.
+
+**Scope:** `src/core/color-profile.ts` comments only — the code was
+already the signed state — plus the ticket, this entry, and the
+candidate sheet's status column. No behaviour change from the
+signature itself. `check` green.
+
+**Link:** backlog → ICE-PROFILES-02 stays iceboxed at 92 candidates;
+MENU-01 shipped at D205's split and needs no further work.

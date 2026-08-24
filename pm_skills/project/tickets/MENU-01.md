@@ -5,10 +5,12 @@ built-ins today, 33 if ICE-PROFILES-02's batch three ships, and 125 if
 that ticket's whole queue were ever built. Grouping is what keeps the
 menu usable as the gallery grows — and it is worth doing at 25.
 
-Scoped 2026-08-24 with the mechanics verified in the tree. **Every
-design decision below carries a recommendation; a build session may
-proceed on those recommendations without a further sitting.** Only the
-taxonomy (decision 1) is worth the owner's eye before it lands.
+Scoped 2026-08-24 with the mechanics verified in the tree, and revised
+the same day once the fuller picture came out: there are **four**
+profile selects, not two. **Every design decision below carries a
+recommendation; a build session may proceed on those recommendations
+without a further sitting.** Only the taxonomy (decision 1) is worth
+the owner's eye before it lands.
 
 ## Why now
 
@@ -24,27 +26,53 @@ new profiles, and no owner signature on membership.
 
 ## Current mechanics — verified, not assumed
 
-**Two selects list colour profiles.**
+**Four selects list profiles.** Only the two colour ones are in this
+ticket's scope, but the wider picture matters, because the
+option-building is hand-rolled in every one of them:
 
-- `src/ui/colour-section.ts:168` — the Colour section's own select,
-  `id="colour-profile"`. Options rebuild only when a fingerprint moves
-  (`optionsFp`, line ~447), keyed on `[id, name, builtin][]`,
-  `profileRef`, `edited` and `inventoryEmpty`.
-- `src/ui/profile-editor.ts:129` — the editor's switcher,
-  `id="<kind>-profile-switcher"`, rebuilt by `renderSwitcher()` (line
-  ~197). **This switcher is shared by all three profile kinds.**
+| Select | Where | Lists |
+| --- | --- | --- |
+| `#colour-profile` | `ui/colour-section.ts:169` | 25 built-ins + user |
+| `#dither-profile` | `main.ts:1932` | 7 built-ins + user |
+| `#adjust-profile` | `main.ts:2040` | 9 built-ins + user |
+| `#<kind>-profile-switcher` | `ui/profile-editor.ts:130` | the kind's list; one instance per kind |
+
+Each section select sits beside its own "Edit profiles…" button that
+opens the takeover editor (M15-UI-02 — "a view swap, not a dialog"),
+so a section select and the switcher are **never visible together**.
+
+**In scope: `#colour-profile` and the colour switcher.** The Colour
+section's select rebuilds only when a fingerprint moves (`optionsFp`,
+`colour-section.ts` ~447), keyed on `[id, name, builtin][]`,
+`profileRef`, `edited` and `inventoryEmpty`. The switcher rebuilds in
+`renderSwitcher()` (`profile-editor.ts` ~197) and **is shared by all
+three kinds**, so it must group *conditionally* — by kind, not by list
+length, since a length threshold would make the menu restructure
+itself as a user saves profiles.
 
 **The list is built in `main.ts`.** `refreshProfilesCache()` (line
 ~2176) merges `builtInProfiles(CATALOGUE)` with
-`library.listProfiles('colour')`, and the section receives the
-projection `SectionProfile { id, name, builtin }`
-(`colour-section.ts:19`). The editor receives `ProfileView { id, name,
-builtin, revision }` (`profile-editor.ts:28`).
+`library.listProfiles('colour')`; the section receives the projection
+`SectionProfile { id, name, builtin }` (`colour-section.ts:19`) and the
+editor `ProfileView { id, name, builtin, revision }`
+(`profile-editor.ts:28`). Neither carries a group today.
 
-**Only colour needs grouping.** Built-in counts: **colour 25**,
-**dither 7**, **adjust 9**. The shared switcher must therefore group
-*conditionally* — by kind, or by list length — rather than
-unconditionally, or it will fragment two short lists for nothing.
+**The section selects and the switcher are different verbs, and must
+stay separate.** A section select *applies a profile to the design* —
+it changes the picture. The switcher *opens a profile for editing*,
+and guards the move with `confirmDiscard()`, reverting the select when
+the user cancels. Merging them would conflate "what my design uses"
+with "what I am editing"; the discard guard is the proof they are not
+the same control.
+
+**The option-building, though, is duplicated four ways and already
+drifting.** `colour-section.ts` builds labels inline and carries the
+sentinel, the inventory empty-state and `(edited)`; `main.ts` builds
+from pre-computed `[value, label]` pairs twice, with a `Custom`
+sentinel and a disabled state; `profile-editor.ts` builds inline with
+only the `(built-in)` suffix. That divergence is why the suffix and
+the sentinel handling differ between them today, and it is why
+grouping would otherwise be written twice.
 
 **Four special cases the option loops already carry.** Any grouping
 must preserve all of them:
@@ -136,8 +164,32 @@ explicit per-kind flag rather than a length threshold — a threshold
 would make the menu restructure itself as a user saves profiles, which
 is worse than either shape.
 
+### 6. How far to converge the four option loops
+
+Grouping has to land in two places (`#colour-profile` and the colour
+switcher), so writing it twice is the default and the wrong answer.
+Recommended: **extract one option-rendering helper covering those two
+only**, and leave `#dither-profile` and `#adjust-profile` alone.
+
+That is the minimum that stops grouping being written twice, and it
+keeps the blast radius at the two selects the feature actually
+touches. Converging all four is a genuine cleanup — they have drifted,
+and the drift is why the `(built-in)` suffix and the sentinel handling
+differ — but the dither and adjust selects gain nothing from grouping,
+and pulling them into a shared helper inside a feature change makes
+the diff harder to review and lets the two fail together. **Record the
+four-way convergence as its own cleanup item instead of doing it
+here.**
+
+The controls themselves stay separate regardless: apply-to-design and
+open-for-editing are different verbs (see the mechanics above).
+
 ## The build
 
+0. **Extract the option-rendering helper** for the two colour selects
+   first (decision 6), so the grouping that follows is a one-place
+   change rather than two. Land it as its own commit with no behaviour
+   change, so the grouping diff is legible on top of it.
 1. **Category on the built-ins.** Add a field to the built-in
    definitions in `core/color-profile.ts`. Keep it off the persisted
    `ColorProfile` shape if possible — a built-ins-only lookup keyed by

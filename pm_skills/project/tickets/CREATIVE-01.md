@@ -20,7 +20,7 @@
 > on `toneEngaged`. ADJUST-01's curve is a *different* curve (source
 > remap in the adjust stage); do not fold them.
 >
-> **ADJUST-01 build landed 2026-08-24 (D202, schema v13).** The stage
+> **ADJUST-01 shipped 2026-08-24 (D202 build, D203 signature; schema v13).** The stage
 > is `src/core/pipeline/adjust.ts` (one lightness curve + saturation,
 > in Lab, with a tabled hot loop and a documented ≤ 1 sRGB-level
 > tolerance — it is the only stage doing per-pixel colour maths at
@@ -33,7 +33,7 @@
 > For the later slices: the three-point curve maths now lives in
 > `src/core/color/curve.ts` and its control in
 > `src/ui/curve-control.ts` (tone re-exports the maths, so no caller
-> changed); the takeover editor is a kind map, so a fourth kind costs
+> changed — and its keyboard behaviour is proved once for both); the takeover editor is a kind map, so a fourth kind costs
 > one branch; `fullRgbVariant` keeps `adjust`, and both content-keyed
 > caches (`selectionGeometryKey`, the router's `geometryKey`) carry an
 > adjustment fingerprint while the LUT key deliberately does not.

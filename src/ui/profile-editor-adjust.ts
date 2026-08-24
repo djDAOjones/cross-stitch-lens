@@ -7,9 +7,8 @@
  * shell takes it without change.
  *
  * The nine shipped presets seed the read-only built-ins with their
- * basis lines kept as the editor's "Why:" (the D61/D116 pattern);
- * their final membership and names are the owner's sitting item
- * (D200), so they are working labels, not signatures.
+ * basis lines kept as the editor's "Why:" (the D61/D116 pattern).
+ * Membership and names were signed at D203.
  *
  * No inline tuning outside the editor (D116): the design's Processing
  * section carries a profile select and this editor, nothing more.

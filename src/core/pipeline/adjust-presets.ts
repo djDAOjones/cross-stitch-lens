@@ -4,17 +4,14 @@
  * matching that keeps a design honest about which one it is on.
  *
  * The nine are the CREATIVE-01 prototype's candidates, carried over
- * with their working names and their basis lines (the "Why:" the
- * editor shows, the D61/D116 pattern). Each is one three-point curve
- * plus one saturation factor, because that is the whole of slice 2a.
+ * with their basis lines (the "Why:" the editor shows, the D61/D116
+ * pattern). Each is one three-point curve plus one saturation factor,
+ * because that is the whole of slice 2a.
  *
- * **Working names, not signatures.** D200 leaves "the adjustment
- * starter set's final membership and names" open to the owner's
- * sitting; the prototype measured that every non-None candidate
- * changes 3–8 of 8 palette picks on the sample card, which is the
- * evidence the sitting judges — not a signature. Ids are identity and
- * never change with a label, and matching is structural
- * (`sameAdjust`), so a rename cannot orphan a saved reference.
+ * **Signed 2026-08-24 (D203)** — membership and names as they stand,
+ * on the gallery's before/afters. Ids are identity and never change
+ * with a label, and matching is structural (`sameAdjust`), so a later
+ * rename cannot orphan a saved reference.
  *
  * Pure data + pure comparison; no UI in here.
  */

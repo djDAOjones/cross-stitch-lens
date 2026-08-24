@@ -1416,3 +1416,31 @@ demonstrably the adjusted picture; the editor opens read-only with its
 and a `.pmproj` round trip restores curve, saturation and ref at v13.
 Human checks left: keyboard activation of the curve points, and the
 owner's sitting.
+
+## D203 — ADJUST-01 signs and ships: the nine adjustment presets stand as they are, the curve's keyboard pass is green (2026-08-24)
+
+**Signed.** The owner signed the starter set on the gallery's
+before/afters (`adjust-01-gallery-*.html`, nine candidates × adjusted
+and stitched): **membership and names exactly as built** — None,
+Contrast stretch, Punch, Faded, High key, Low key, Muted, Vivid, Mono
+prep. This closes the last of D200's in-slice items for 2a; the ids
+were already identity and matching is structural (`sameAdjust`), so
+the signature costs no migration and a later rename still cannot
+orphan a saved reference.
+
+**Passed.** The human keyboard check D202 left open — Tab to a curve
+point, arrows nudge — is green on the profile editor's Lightness
+curve. Because the control is now one shared component
+(`ui/curve-control.ts`, D202), tone mode's own curve points are the
+same code in a different mount and are covered by construction; the
+tone **ramp cut handles** are a different control (44 px sliders) and
+remain untested, so they stay TONE-01's.
+
+**Shipped.** ADJUST-01's done-when is met in all three parts: the
+signed starter set ships as built-ins, the frame holds ~7–8 updates/s
+at the source size the ≥ 4/s promise binds at (D202's profile), and
+the LUT fingerprint is proved untouched. The item leaves the backlog.
+CREATIVE-01's ticket stays — it is the five slices' shared spec and
+dies with the last of them (D149 exception), and ADJUST-02, PICK-01,
+SHEET-01 and COMPARE-ERR-01 are still to come. TONE-01 stays open on
+its four naming items and the ramp-handle keyboard pass.

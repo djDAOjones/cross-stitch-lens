@@ -30,6 +30,15 @@ the worktree round its scoping tickets open before any of them ran.
   candidates judged on before/afters. The slices are Track D items
   TONE-01, ADJUST-01/02, PICK-01, SHEET-01, COMPARE-ERR-01; PAINT-01
   scopes separately. See D200.
+- ADJUST-01 (2026-08-24) — image adjustments as the third profile
+  kind at schema v13: the adjust stage wakes as one three-point
+  lightness curve (its ends are the black and white points) plus
+  saturation, in Lab, ahead of the resize; nine signed built-ins with
+  editable copies in the Processing section; the selection source and
+  the compare half are the adjusted picture while the LUT fingerprint
+  stays untouched. The hot loop is tabled on a recorded profile
+  (189 → 70 ms/MP) at a documented 1-level tolerance. Signed and
+  keyboard-passed the same day. See D202, D203.
 - ICE-RECOLOUR-01 (2026-08-23) — the colour swap, layer A: a pure
   `swap` stage after the colour stage remaps the sidecar through a
   render palette (selected entries + render-only targets); a design

@@ -401,6 +401,85 @@ export function resolveProfileMembership(
 }
 
 /**
+ * Menu groups for the built-in profiles (MENU-01).
+ *
+ * The gallery reached 25 built-ins in a flat select. Grouping is
+ * presentation only — it never touches membership, and the project
+ * file stores a `profileRef` by id, so regrouping cannot alter a
+ * saved design.
+ *
+ * The split is *what a user is asking for*: where colours come from
+ * (`threads`), the plain utility sets (`basics`), and then styles
+ * halved into `nature` and `style`. That last split is the one that
+ * earns the grouping — a single "Styles" group would have held 19 of
+ * the 25 and left the scrolling untouched. The sixteen gallery
+ * profiles fall 8/8 across it, which is the same axis
+ * ICE-PROFILES-02's pool A already uses for its own candidates.
+ *
+ * A profile that genuinely straddles goes to `style`: `nature` stays
+ * literal, or it stops meaning anything.
+ */
+export type ProfileGroup = 'threads' | 'basics' | 'nature' | 'style';
+
+/** Group labels in menu order. Order here is the menu's order. */
+export const PROFILE_GROUPS: readonly { id: ProfileGroup; label: string }[] = [
+  { id: 'threads', label: 'Your threads' },
+  { id: 'basics', label: 'Basics' },
+  { id: 'nature', label: 'Nature and place' },
+  { id: 'style', label: 'Style and era' },
+];
+
+/**
+ * Which group each built-in sits in, by profile id.
+ *
+ * Deliberately a lookup beside `builtInProfiles()` rather than a field
+ * on `ColorProfile`: built-ins are computed from code, user profiles
+ * are persisted, and a field would push a presentation concern into
+ * the saved shape for no gain. User profiles are not keyed here — they
+ * all render under one "Your profiles" group.
+ *
+ * A built-in missing from this map is a defect, not a default; the
+ * test asserts the two lists match exactly.
+ */
+export const BUILTIN_PROFILE_GROUPS: Readonly<Record<string, ProfileGroup>> = {
+  'builtin:dmc': 'threads',
+  'builtin:all-threads': 'threads',
+  'builtin:my-threads': 'threads',
+  'builtin:bw': 'basics',
+  'builtin:retro16': 'basics',
+  'builtin:websafe': 'basics',
+  'builtin:sepia': 'basics',
+  'builtin:pastels': 'basics',
+  'builtin:classic': 'basics',
+  'builtin:autumn-leaves': 'nature',
+  'builtin:golden-hour': 'nature',
+  'builtin:winter-frost': 'nature',
+  'builtin:deep-sea': 'nature',
+  'builtin:rainforest': 'nature',
+  'builtin:spring-meadow': 'nature',
+  'builtin:moorland': 'nature',
+  'builtin:gemstones': 'nature',
+  'builtin:neon-noir': 'style',
+  'builtin:de-stijl': 'style',
+  'builtin:delft-blue': 'style',
+  'builtin:ukiyo-e': 'style',
+  'builtin:art-deco': 'style',
+  'builtin:mid-century': 'style',
+  'builtin:fair-isle': 'style',
+  'builtin:fluoro-spot': 'style',
+};
+
+/** The group label a profile renders under, built-in or not. */
+export function profileGroupLabel(id: string, builtin: boolean): string {
+  if (!builtin) return 'Your profiles';
+  const group = BUILTIN_PROFILE_GROUPS[id];
+  const found = PROFILE_GROUPS.find((g) => g.id === group);
+  // An ungrouped built-in is a defect the test catches, but at runtime
+  // it must still reach the menu rather than vanish from it.
+  return found?.label ?? 'Your profiles';
+}
+
+/**
  * The read-only built-in profiles (D114/D115). Computed against the
  * live catalogue so the brand-wide entries follow catalogue releases;
  * "Classic cross stitch" is an honest agent-chosen DMC starter set

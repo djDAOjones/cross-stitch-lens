@@ -26,8 +26,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  PROFILE_GROUPS,
   builtInProfiles,
   emptyRecipe,
+  profileGroupLabel,
   resolveProfileMembership,
   type ColorProfile,
 } from '../../src/core/color-profile.ts';
@@ -54,6 +56,8 @@ const COLOR_LIMIT = 8;
 /** One profile's row: what it offers, and what it actually chose. */
 interface ProfileEvidence {
   name: string;
+  /** Menu group (MENU-01) — the sheet reads in the menu's order. */
+  group: string;
   /** Resolved table size — the eligible universe, not the palette. */
   entries: number;
   /** Distinct colours among them: what the bounds count (D139). */
@@ -99,6 +103,7 @@ describe.skipIf(!AUDIT)('M15-GALLERY-01 profile gallery evidence (AUDIT=1)', () 
       const stats = computeStats(runPipeline(source, buildStages(config)), palette);
       return {
         name: profile.name,
+        group: profileGroupLabel(profile.id, true),
         entries: resolved.entries.length,
         distinct: new Set(resolved.entries.map((t) => t.hex)).size,
         picks: stats.perColor.map((c) => ({
@@ -130,13 +135,24 @@ describe.skipIf(!AUDIT)('M15-GALLERY-01 profile gallery evidence (AUDIT=1)', () 
         `M15-GALLERY-01 evidence — sample card ${String(GRID)}×${String(GRID)}, ` +
           `limit ${String(COLOR_LIMIT)}, lab, floyd-steinberg; ` +
           `catalogue holds ${String(catalogueDistinct)} distinct colours`,
-        ...rows.flatMap((row) => [
-          '',
-          `## ${row.name} — ${String(row.entries)} entries / ${String(row.distinct)} distinct`,
-          ...row.picks.map((p) =>
-            `   ${p.hex} ${p.percent.toFixed(1).padStart(5)}%  ${p.ref} ${p.label}`.trimEnd(),
-          ),
-        ]),
+        // Grouped to match the profile menu (MENU-01): reading the
+        // evidence in a different order from the control it describes
+        // is how a gallery drifts out of shape without anyone noticing.
+        ...PROFILE_GROUPS.flatMap((group) => {
+          const inGroup = rows.filter((row) => row.group === group.label);
+          if (inGroup.length === 0) return [];
+          return [
+            '',
+            `# ${group.label} (${String(inGroup.length)})`,
+            ...inGroup.flatMap((row) => [
+              '',
+              `## ${row.name} — ${String(row.entries)} entries / ${String(row.distinct)} distinct`,
+              ...row.picks.map((p) =>
+                `   ${p.hex} ${p.percent.toFixed(1).padStart(5)}%  ${p.ref} ${p.label}`.trimEnd(),
+              ),
+            ]),
+          ];
+        }),
       ].join('\n'),
     );
 

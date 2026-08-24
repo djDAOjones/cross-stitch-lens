@@ -13,6 +13,7 @@
 
 import {
   builtInProfiles,
+  profileGroupLabel,
   emptyRecipe,
   resolveProfileMembership,
   type ColorProfileRecipe,
@@ -187,17 +188,22 @@ export function createColourKindAdapter(
         ...builtins.map((b): [string, string] => [b.id, b.name]),
         ...stored.map((r): [string, string] => [r.id, r.name]),
       ]);
+      // The group is what makes the switcher render optgroups
+      // (MENU-01). Supplying it here is what distinguishes this kind
+      // from dither and adjust, whose short lists stay flat.
       return [
         ...builtins.map((b) => ({
           id: b.id,
           name: b.name,
           builtin: true,
           revision: b.revision,
+          group: profileGroupLabel(b.id, true),
         })),
         ...stored.map((r) => ({
           id: r.id,
           name: r.name,
           builtin: false,
+          group: profileGroupLabel(r.id, false),
           revision: r.revision,
         })),
       ];

@@ -24,6 +24,7 @@
  */
 
 import { confirmDangerModal, textPromptModal } from './modal.ts';
+import { renderProfileOptions } from './profile-options.ts';
 
 /** One profile as the switcher lists it. */
 export interface ProfileView {
@@ -31,6 +32,14 @@ export interface ProfileView {
   name: string;
   builtin: boolean;
   revision: number;
+  /**
+   * Menu group label (MENU-01). Supplied by the colour kind, whose 25
+   * built-ins need grouping; omitted by dither (7) and adjust (9),
+   * whose lists render flat. Grouping is therefore decided by the
+   * data, not by a flag or a length threshold — a threshold would make
+   * the menu restructure itself as a user saves profiles.
+   */
+  group?: string | undefined;
 }
 
 /** What a kind mounts into the shell's form region. */
@@ -195,14 +204,21 @@ export function createProfileEditor(
 
   /** Rebuild the switcher options (list changes are user acts). */
   function renderSwitcher(): void {
-    switcher.replaceChildren();
-    for (const profile of profiles) {
-      const option = doc.createElement('option');
-      option.value = profile.id;
-      option.textContent = profile.builtin ? `${profile.name} (built-in)` : profile.name;
-      switcher.append(option);
-    }
-    if (currentId !== null) switcher.value = currentId;
+    // "(built-in)" survives only where the list is flat — dither and
+    // adjust, whose 7 and 9 built-ins carry no group to say it. Where
+    // groups exist they already do, and repeating it on 25 options is
+    // the duplicated noise the Colour section dropped (MENU-01).
+    renderProfileOptions(doc, switcher, {
+      items: profiles.map((profile) => ({
+        id: profile.id,
+        label:
+          profile.builtin && profile.group === undefined
+            ? `${profile.name} (built-in)`
+            : profile.name,
+        group: profile.group,
+      })),
+      value: currentId ?? undefined,
+    });
     const builtin = isBuiltin();
     renameButton.disabled = builtin;
     deleteButton.disabled = builtin;

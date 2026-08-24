@@ -221,17 +221,30 @@ open-for-editing are different verbs (see the mechanics above).
    exists.
 5. **Group the audit table** in `tests/audits/profile-gallery.audit.test.ts`
    to match, so the evidence sheet and the menu tell the same story.
-6. **Add a UI-STANDARDS line.** There is currently **no standard on
-   long lists or grouping** — this is the first, and the next long
-   select should not have to re-derive it.
+6. **Capture a doc-delta, do not edit UI-STANDARDS.** There is
+   currently no standard on long lists or grouping, and there should
+   be — but `UI-STANDARDS.md` is an edit-on-request protected doc
+   (`pm_skills/project/doc-deltas.md` already carries entries against
+   it), so an agent captures a one-line delta and the maintainer
+   reconciles it in a doc-sync pass. **This ticket originally said to
+   add the line directly; that was wrong.**
 
 ## Testing
 
-**The option-building code has no DOM-level test today.**
-`tests/profile-editor.test.ts` covers pure helpers only
-(`parseHexQuery`, `browseUniverse`, the readout fingerprints), and no
-test references `#colour-profile` or `#<kind>-profile-switcher`. This
-work should bring the first, covering:
+**A DOM-level test is not available, and that changed the plan.** The
+vitest environment is `environment: 'node'` with no DOM implementation
+installed, and A11Y-01 forbids adding one — `a11y-names.test.ts`
+records the same constraint and works around it by scanning source.
+This ticket originally asked for "the first DOM-level test of the
+option structure"; that is not achievable without a dependency the
+project has declined.
+
+What ships instead, and is enough: the renderer is a pure function of
+(items → element tree), so a **stub document** of the four calls it
+makes (`createElement`, `append`, `replaceChildren`, four properties)
+holds the structure faithfully with no dependency. Real
+`<select>`/`<optgroup>` behaviour stays the browser matrix's half, as
+it is for the rest of the UI. Cover:
 
 - every profile appears exactly once, in the right group;
 - the unlinked option appears only when `profileRef === null`, and

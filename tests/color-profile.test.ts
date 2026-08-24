@@ -8,11 +8,14 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  BUILTIN_PROFILE_GROUPS,
+  PROFILE_GROUPS,
   builtInProfiles,
   emptyRecipe,
   matchesRanges,
   pinIntoRecipe,
   policyToRecipe,
+  profileGroupLabel,
   resolveProfileMembership,
   rgbToHsb,
   unpinFromRecipe,
@@ -546,5 +549,52 @@ describe('policyToRecipe (the PERSIST-01 / UI-01 bridge)', () => {
     const mapped = policyToRecipe(policy, { catalogue });
     expect(mapped.include).toEqual([]);
     expect(mapped.exclude).toEqual([]);
+  });
+});
+
+describe('menu groups (MENU-01)', () => {
+  it('groups exactly the built-ins that exist — no orphans, no ghosts', () => {
+    // The map and the definitions live in one file precisely so this
+    // can be an equality, not a subset: a new built-in that forgets
+    // its group fails here rather than silently landing in the wrong
+    // half of the menu.
+    const ids = builtInProfiles(catalogue).map((p) => p.id);
+    expect(new Set(Object.keys(BUILTIN_PROFILE_GROUPS))).toEqual(new Set(ids));
+  });
+
+  it('names every group it uses', () => {
+    const known = new Set(PROFILE_GROUPS.map((g) => g.id));
+    for (const [id, group] of Object.entries(BUILTIN_PROFILE_GROUPS)) {
+      expect(known.has(group), `${id} sits in unknown group ${group}`).toBe(true);
+    }
+  });
+
+  it('keeps no group longer than the flat list it replaced', () => {
+    // The point of the exercise. The first taxonomy put 19 of the 25
+    // under one heading, which tidied the edges and left the scrolling
+    // alone; the shipped split holds nothing over eight. If a batch
+    // pushes a group past twelve, re-balance or take the picker
+    // (ICE-PICKER-01) — this bound is the trigger, not decoration.
+    const sizes = new Map<string, number>();
+    for (const group of Object.values(BUILTIN_PROFILE_GROUPS)) {
+      sizes.set(group, (sizes.get(group) ?? 0) + 1);
+    }
+    for (const [group, n] of sizes) {
+      expect(n, `group ${group} holds ${String(n)}`).toBeLessThanOrEqual(12);
+    }
+    expect(Math.max(...sizes.values())).toBe(8);
+  });
+
+  it('labels user profiles as their own group, built-ins by their own', () => {
+    expect(profileGroupLabel('builtin:dmc', true)).toBe('Your threads');
+    expect(profileGroupLabel('builtin:autumn-leaves', true)).toBe('Nature and place');
+    expect(profileGroupLabel('builtin:art-deco', true)).toBe('Style and era');
+    expect(profileGroupLabel('p-whatever', false)).toBe('Your profiles');
+  });
+
+  it('does not lose an unknown built-in from the menu', () => {
+    // A defect the equality test above catches at build time — but at
+    // runtime a profile must still reach the menu rather than vanish.
+    expect(profileGroupLabel('builtin:not-a-real-profile', true)).toBe('Your profiles');
   });
 });

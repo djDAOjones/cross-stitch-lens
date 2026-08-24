@@ -62,6 +62,7 @@ import { renderPalette, type ThreadSwap } from './core/pipeline/swap.ts';
 import {
   builtInProfiles,
   emptyRecipe,
+  profileGroupLabel,
   paletteToProfile,
   pinIntoRecipe,
   resolveProfileMembership,
@@ -505,7 +506,14 @@ function build(app: HTMLElement): void {
   let libraryPalettes: LibraryPalette[] = [];
   let userColorsMap = new Map<string, Thread>();
   /** Built-ins + stored profiles, for the select and the copies. */
-  let colourProfiles: { id: string; name: string; builtin: boolean; revision: number }[] = [];
+  let colourProfiles: {
+    id: string;
+    name: string;
+    builtin: boolean;
+    revision: number;
+    /** Menu group label (MENU-01) — presentation only. */
+    group: string;
+  }[] = [];
   const profileRecipes = new Map<string, ColorProfileRecipe>();
   let library: LibraryStore = new MemoryStore();
   /**
@@ -2192,8 +2200,20 @@ function build(app: HTMLElement): void {
       });
     }
     colourProfiles = [
-      ...builtins.map((b) => ({ id: b.id, name: b.name, builtin: true, revision: b.revision })),
-      ...stored.map((r) => ({ id: r.id, name: r.name, builtin: false, revision: r.revision })),
+      ...builtins.map((b) => ({
+        id: b.id,
+        name: b.name,
+        builtin: true,
+        revision: b.revision,
+        group: profileGroupLabel(b.id, true),
+      })),
+      ...stored.map((r) => ({
+        id: r.id,
+        name: r.name,
+        builtin: false,
+        revision: r.revision,
+        group: profileGroupLabel(r.id, false),
+      })),
     ];
     // A linked design re-derives its edited flag against the live
     // library (drift is reported by the flag, never repaired — D55).

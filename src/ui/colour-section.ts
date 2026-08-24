@@ -11,6 +11,7 @@
  * carried by its successor.
  */
 
+import { renderProfileOptions } from './profile-options.ts';
 import type { PaletteConflict } from '../core/palette-policy.ts';
 import { createBrowseTable, type BrowseRow, type BrowseTable } from './browse-table.ts';
 import { toggleField } from './controls.ts';
@@ -20,6 +21,8 @@ export interface SectionProfile {
   id: string;
   name: string;
   builtin: boolean;
+  /** Menu group label (MENU-01); omitted renders the option ungrouped. */
+  group?: string | undefined;
 }
 
 /** The section's view of the design's colour state. */
@@ -445,49 +448,49 @@ export function createColourSection(
     // Profile select: options rebuild only when the list moved; the
     // (edited) suffix rides the linked option's label (EXT-43).
     const optionsFp = JSON.stringify([
-      next.profiles.map((p) => [p.id, p.name, p.builtin]),
+      next.profiles.map((p) => [p.id, p.name, p.builtin, p.group]),
       next.profileRef,
       next.edited,
       next.inventoryEmpty,
     ]);
     if (optionsFp !== lastOptionsFp) {
       lastOptionsFp = optionsFp;
-      profileSelect.replaceChildren();
-      if (next.profileRef === null) {
+      renderProfileOptions(doc, profileSelect, {
         // An unlinked design (a migrated old file, or a deleted
         // profile's orphan) names itself honestly rather than
-        // wearing the first option's name.
-        const option = doc.createElement('option');
-        option.value = UNLINKED_DESIGN;
-        option.textContent = 'This design’s colours';
-        profileSelect.append(option);
-      }
-      for (const profile of next.profiles) {
-        const option = doc.createElement('option');
-        option.value = profile.id;
-        const suffix =
-          profile.id === next.profileRef && next.edited
-            ? ' (edited)'
-            : profile.builtin
-              ? ' (built-in)'
-              : '';
-        option.textContent = `${profile.name}${suffix}`;
-        // An empty inventory makes "My inventory" a dead end
-        // (MYTHREADS-01): a fresh pick is refused with the reason in
-        // the label; a design already linked to it (a loaded file)
-        // keeps its option selectable, labelled, and the preview
-        // banner offers the way out.
-        if (profile.id === MY_INVENTORY_PROFILE && next.inventoryEmpty) {
-          if (profile.id === next.profileRef) {
-            option.textContent += ' — empty in this browser';
-          } else {
-            option.disabled = true;
-            option.textContent += ' — empty: mark threads as owned first';
+        // wearing the first option's name. It is not a profile, so it
+        // sits above every group rather than inside one.
+        leading:
+          next.profileRef === null
+            ? { value: UNLINKED_DESIGN, label: 'This design’s colours' }
+            : undefined,
+        items: next.profiles.map((profile) => {
+          // "(built-in)" retired here at MENU-01: the groups carry
+          // that now, and repeating it on 25 of the options was
+          // duplicated noise. "(edited)" stays — it says something no
+          // group can (EXT-43).
+          let label =
+            profile.id === next.profileRef && next.edited
+              ? `${profile.name} (edited)`
+              : profile.name;
+          let disabled = false;
+          // An empty inventory makes "My inventory" a dead end
+          // (MYTHREADS-01): a fresh pick is refused with the reason in
+          // the label; a design already linked to it (a loaded file)
+          // keeps its option selectable, labelled, and the preview
+          // banner offers the way out.
+          if (profile.id === MY_INVENTORY_PROFILE && next.inventoryEmpty) {
+            if (profile.id === next.profileRef) {
+              label += ' — empty in this browser';
+            } else {
+              disabled = true;
+              label += ' — empty: mark threads as owned first';
+            }
           }
-        }
-        profileSelect.append(option);
-      }
-      profileSelect.value = next.profileRef ?? UNLINKED_DESIGN;
+          return { id: profile.id, label, group: profile.group, disabled };
+        }),
+        value: next.profileRef ?? UNLINKED_DESIGN,
+      });
     }
     editedRow.hidden = !next.edited;
     // Updating a built-in in place is impossible — the store refuses;

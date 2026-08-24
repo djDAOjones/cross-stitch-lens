@@ -15,6 +15,7 @@ import {
   matchesRanges,
   pinIntoRecipe,
   policyToRecipe,
+  profileGroupIndex,
   profileGroupLabel,
   resolveProfileMembership,
   rgbToHsb,
@@ -588,8 +589,29 @@ describe('menu groups (MENU-01)', () => {
   it('labels user profiles as their own group, built-ins by their own', () => {
     expect(profileGroupLabel('builtin:dmc', true)).toBe('Your threads');
     expect(profileGroupLabel('builtin:autumn-leaves', true)).toBe('Nature and place');
-    expect(profileGroupLabel('builtin:art-deco', true)).toBe('Style and era');
+    expect(profileGroupLabel('builtin:art-deco', true)).toBe('Design and era');
+    expect(profileGroupLabel('builtin:ukiyo-e', true)).toBe('Art and craft');
+    expect(profileGroupLabel('builtin:transit', true)).toBe('Screen and signal');
     expect(profileGroupLabel('p-whatever', false)).toBe('Your profiles');
+  });
+
+  it('sorts into the declared group order, not batch order', () => {
+    // The renderer takes group order from first appearance, so the menu
+    // follows whatever order the caller supplies. Without this sort it
+    // would follow builtInProfiles() — batch order — and a gallery
+    // batch would silently reshuffle the menu.
+    const ordered = builtInProfiles(catalogue)
+      .map((p) => ({ id: p.id, at: profileGroupIndex(p.id, true) }))
+      .sort((a, b) => a.at - b.at);
+    const labels = [...new Set(ordered.map((p) => profileGroupLabel(p.id, true)))];
+    expect(labels).toEqual(PROFILE_GROUPS.map((g) => g.label));
+  });
+
+  it('puts user profiles after every built-in group', () => {
+    expect(profileGroupIndex('p-mine', false)).toBe(PROFILE_GROUPS.length);
+    for (const p of builtInProfiles(catalogue)) {
+      expect(profileGroupIndex(p.id, true)).toBeLessThan(PROFILE_GROUPS.length);
+    }
   });
 
   it('does not lose an unknown built-in from the menu', () => {

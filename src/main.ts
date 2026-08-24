@@ -62,6 +62,7 @@ import { renderPalette, type ThreadSwap } from './core/pipeline/swap.ts';
 import {
   builtInProfiles,
   emptyRecipe,
+  profileGroupIndex,
   profileGroupLabel,
   paletteToProfile,
   pinIntoRecipe,
@@ -2214,7 +2215,10 @@ function build(app: HTMLElement): void {
         revision: r.revision,
         group: profileGroupLabel(r.id, false),
       })),
-    ];
+      // Stable sort into menu order (MENU-01): the renderer takes group
+      // order from first appearance, so the list must arrive grouped or
+      // the menu follows builtInProfiles() batch order instead.
+    ].sort((a, b) => profileGroupIndex(a.id, a.builtin) - profileGroupIndex(b.id, b.builtin));
     // A linked design re-derives its edited flag against the live
     // library (drift is reported by the flag, never repaired — D55).
     if (profileRef !== null) {

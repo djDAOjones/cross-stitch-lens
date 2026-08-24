@@ -1539,3 +1539,76 @@ UI change, no schema change, no protected file touched.
 candidates; a live triage page in the app and per-profile category
 tags were both raised at the pick and are **unscoped** — neither is
 decided here.
+
+---
+
+## D205 — ICE-PROFILES-02 batch three drafted and unsigned; the menu splits to absorb it (2026-08-24)
+
+**Decision:** eight built-in colour profiles are drafted into
+`builtInProfiles()` — four rule-shaped (Grisaille, Chiaroscuro,
+Vermilion and madder, Teal and orange) and four curated (Anodised
+aluminium, Heraldic tinctures, High-visibility safety, Transit map
+lines). They ship as code and are **unsigned**: the owner curates names
+and membership per batch (D115), as at D139→D140 and D144→D146. The
+gallery is 25 → 33 built-ins.
+
+**Picked against the gaps, not down a list** — the D144 method. The
+sixteen left no red, no violet, no achromatic ladder, no all-hue dark,
+one two-pole shape and nothing from industry; each of the eight closes
+one of those.
+
+**Three changed under the evidence, which is the whole reason the run
+exists.** Chiaroscuro first read as pastel rather than shadow — its
+high-key band admitted pale terracotta, yellow-green and lavender, which
+took the top three shares; tightened to saturation ≤ 10 / brightness
+≥ 92 it reads as darks against near-whites with no middle.
+High-visibility safety gave Pearl Grey 57.7 % against the fluoro's
+14.5 % — grey with accents, not hi-vis; the grey is dropped and it ships
+as three entries at black 51.7 % / fluoro 39.5 %. Vermilion and madder
+was retuned four times and **ships with its residual named**, in the
+Neon noir (D140) and Art deco (D146) pattern.
+
+**That residual is the sample card, and it is now evidenced rather than
+assumed.** Vermilion's largest share is a mahogany at 42 %, not a
+vermilion. The card is **56 % full-hue sweep** (`ui/sample.ts`), so a
+red-only profile must map every green and blue on it to the nearest
+red. The two shipped narrow-hue profiles do the same thing: **Autumn
+leaves** leads with a tan at 36 %, **Delft blue** with white at 38.9 %.
+So a concentrated leader is what this card does to a narrow band, not
+what the rule does to the style — judge it on a photograph (D147's
+six-image preview) before changing it.
+
+**One profile leaves DMC, and the reason is the name.** Hi-vis uses
+`ariadna:1697` for its fluoro yellow-green: DMC's nearest is ΔE ≈ 36
+(Lemon, a plain yellow) against Ariadna's ΔE ≈ 7, and a hi-vis profile
+whose signature colour is a plain yellow lies about what it is. Its
+orange, black and silver stay DMC, so the shopping list costs one extra
+manufacturer. Every other curated built-in is single-brand, so **this
+is an owner call**, named rather than slipped in.
+
+**The menu split, as MENU-01 said it would.** All eight land in style
+territory, taking "Style and era" from 8 to 16 and tripping the ≤ 12
+bound that ticket's test carries. Split three ways — **Art and craft**
+(6), **Design and era** (4), **Screen and signal** (6) — so nothing
+exceeds eight and the gallery reads in six groups. The existing sixteen
+were re-homed, never renamed; ids are untouched, so no saved design
+moves. The bound behaved exactly as designed: it failed, and the failure
+was the signal to re-balance rather than a defect to suppress.
+
+**A menu-order bug surfaced and is fixed.** The option renderer takes
+group order from first appearance, so the menu was following
+`builtInProfiles()` **batch** order — Screen and signal ahead of Art and
+craft — rather than the order `PROFILE_GROUPS` declares.
+`profileGroupIndex` plus a stable sort in the two callers fixes it, with
+a test asserting the rendered group order equals the declared one, since
+without it any future batch would silently reshuffle the menu.
+
+**Scope:** `src/core/color-profile.ts` (eight profiles, the group
+split, `profileGroupIndex`), `src/main.ts` and
+`src/ui/profile-editor-colour.ts` (the sort), `tests/color-profile.test.ts`
+(+4), and the ticket. No schema change, no migration, no UI change
+beyond the menu's contents. `check` green (1498 tests).
+
+**Link:** backlog → ICE-PROFILES-02 stays iceboxed, its queue down to 92
+unsigned candidates; batch three awaits the owner's signature on names,
+membership, the multi-brand hi-vis call, and the Vermilion residual.

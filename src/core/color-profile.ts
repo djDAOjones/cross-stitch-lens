@@ -419,14 +419,16 @@ export function resolveProfileMembership(
  * A profile that genuinely straddles goes to `style`: `nature` stays
  * literal, or it stops meaning anything.
  */
-export type ProfileGroup = 'threads' | 'basics' | 'nature' | 'style';
+export type ProfileGroup = 'threads' | 'basics' | 'nature' | 'art' | 'design' | 'signal';
 
 /** Group labels in menu order. Order here is the menu's order. */
 export const PROFILE_GROUPS: readonly { id: ProfileGroup; label: string }[] = [
   { id: 'threads', label: 'Your threads' },
   { id: 'basics', label: 'Basics' },
   { id: 'nature', label: 'Nature and place' },
-  { id: 'style', label: 'Style and era' },
+  { id: 'art', label: 'Art and craft' },
+  { id: 'design', label: 'Design and era' },
+  { id: 'signal', label: 'Screen and signal' },
 ];
 
 /**
@@ -459,15 +461,40 @@ export const BUILTIN_PROFILE_GROUPS: Readonly<Record<string, ProfileGroup>> = {
   'builtin:spring-meadow': 'nature',
   'builtin:moorland': 'nature',
   'builtin:gemstones': 'nature',
-  'builtin:neon-noir': 'style',
-  'builtin:de-stijl': 'style',
-  'builtin:delft-blue': 'style',
-  'builtin:ukiyo-e': 'style',
-  'builtin:art-deco': 'style',
-  'builtin:mid-century': 'style',
-  'builtin:fair-isle': 'style',
-  'builtin:fluoro-spot': 'style',
+  'builtin:neon-noir': 'signal',
+  'builtin:de-stijl': 'design',
+  'builtin:delft-blue': 'art',
+  'builtin:ukiyo-e': 'art',
+  'builtin:art-deco': 'design',
+  'builtin:mid-century': 'design',
+  'builtin:fair-isle': 'art',
+  'builtin:fluoro-spot': 'signal',
+  // Batch 3 (unsigned).
+  'builtin:grisaille': 'art',
+  'builtin:chiaroscuro': 'art',
+  'builtin:vermilion-madder': 'art',
+  'builtin:teal-orange': 'signal',
+  'builtin:anodised': 'design',
+  'builtin:heraldic': 'signal',
+  'builtin:hi-vis': 'signal',
+  'builtin:transit': 'signal',
 };
+
+/**
+ * Menu position of a profile's group: its index in {@link PROFILE_GROUPS},
+ * or one past the end for user profiles, which always come last.
+ *
+ * Callers sort by this before rendering. The option renderer takes group
+ * order from first appearance and never sorts behind the caller's back,
+ * so without this the menu would follow `builtInProfiles()` definition
+ * order instead — which is batch order, not reading order.
+ */
+export function profileGroupIndex(id: string, builtin: boolean): number {
+  if (!builtin) return PROFILE_GROUPS.length;
+  const group = BUILTIN_PROFILE_GROUPS[id];
+  const at = PROFILE_GROUPS.findIndex((g) => g.id === group);
+  return at === -1 ? PROFILE_GROUPS.length : at;
+}
 
 /** The group label a profile renders under, built-in or not. */
 export function profileGroupLabel(id: string, builtin: boolean): string {
@@ -544,6 +571,30 @@ export function builtInProfiles(catalogue: ThreadCatalogue): ColorProfile[] {
   // instead (D115's naming rule): fluorescent spot inks overprinted
   // on off-white stock. Pink, yellow, green, blue, black, paper.
   const fluoroSpot = dmc('3865', '307', '3805', '996', '912', '310');
+  // The violet gap, curated because dyed metal is a specific set,
+  // not a band. DMC 3746 is the closest the catalogue comes to an
+  // anodised violet (ΔE ~27 from a true one) — the saturation of
+  // dyed aluminium is simply outside what thread does. Kept
+  // single-brand: the colour is imperfect either way, so there is
+  // nothing to buy a second manufacturer for.
+  const anodised = dmc('3820', '415', '907', '817', '3746');
+  // Seven tinctures, a system fixed for eight centuries, and the
+  // second thing in this batch that supplies violet. Ordered by ink
+  // the way heraldry lists them — metals first, then the colours —
+  // rather than light to dark: this is not a ladder (D46).
+  const heraldic = dmc('973', 'BLANC', '666', '797', '701', '552', '310');
+  // The only entry in the batch that leaves DMC, and the reason is
+  // the name. Hi-vis IS fluorescent yellow-green; DMC's nearest is
+  // ΔE ~36 (Lemon — a plain yellow), which would make this a
+  // profile that lies about what it is. Ariadna 1697 lands at ΔE
+  // ~7. The orange, black and silver stay DMC, so the shopping list
+  // costs exactly one extra manufacturer.
+  const hiVis = ['ariadna:1697', ...dmc('971', '310')];
+  // Membership as a stated rule: one entry per hue sextant at
+  // maximum mutual separation, in wheel order from red. Six, and
+  // six is the claim — adding a black or a grey "for completeness"
+  // would break the only thing this profile asserts.
+  const transit = dmc('666', '973', '702', '3844', '797', '3607');
   return [
     profile('dmc', 'DMC', { libraries: ['dmc'] }),
     profile('all-threads', 'All threads', { libraries: allBrands }),
@@ -651,6 +702,52 @@ export function builtInProfiles(catalogue: ThreadCatalogue): ColorProfile[] {
     profile('mid-century', 'Mid-century modern', { include: midCentury }),
     profile('fair-isle', 'Fair Isle', { include: fairIsle }),
     profile('fluoro-spot', 'Fluoro spot print', { include: fluoroSpot }),
+    // --- ICE-PROFILES-02 batch 3 — drafted 2026-08-24, UNSIGNED ------
+    // Picked against the gaps the first sixteen left: no red, no
+    // violet, no achromatic ladder, no all-hue dark, one two-pole
+    // shape, and nothing from industry. Four rules and four curated,
+    // the batch-2 split. None ships until the owner signs names and
+    // membership (D115) — they are here as code so the evidence run
+    // can judge them, which is the only way a candidate is ever
+    // judged (D139: two of batch 1 changed under exactly this).
+    //
+    // The achromatic gap. Black & white is two entries and Greys is
+    // four generated levels; nothing thread-backed spanned the range.
+    // Chroma ≤ 8 rather than 0 because a dye lot is never neutral —
+    // it resolves 138, the narrowest rule in the gallery, and that is
+    // the catalogue's honest supply of near-neutrals, not a mistuning.
+    profile('grisaille', 'Grisaille', {
+      libraries: allBrands,
+      ranges: [{ saturation: [0, 8] }],
+    }),
+    // The all-hue dark gap: every dark profile shipped is hue-locked
+    // (Deep sea cool, Rainforest green). Two bands with a deliberate
+    // hole between them — the style is shadow against a small bright
+    // relief, so the mid-tones are what it must exclude.
+    profile('chiaroscuro', 'Chiaroscuro', {
+      libraries: allBrands,
+      ranges: [{ brightness: [0, 22] }, { saturation: [0, 10], brightness: [92, 100] }],
+    }),
+    // The red gap. Autumn leaves opens at hue 10 and is orange in
+    // practice, so nothing owned red. Wraps through 0 by design.
+    profile('vermilion-madder', 'Vermilion and madder', {
+      libraries: allBrands,
+      ranges: [{ hue: [350, 15], saturation: [58, 100], brightness: [32, 86] }],
+    }),
+    // The two-pole gap: Neon noir is the only pole shape shipped and
+    // it is magenta/cyan. This is the warm/cool grade — a skin arc
+    // against a shadow arc, with the greens and magentas left out.
+    profile('teal-orange', 'Teal and orange', {
+      libraries: allBrands,
+      ranges: [
+        { hue: [15, 40], saturation: [35, 100], brightness: [30, 95] },
+        { hue: [175, 205], saturation: [30, 100], brightness: [20, 80] },
+      ],
+    }),
+    profile('anodised', 'Anodised aluminium', { include: anodised }),
+    profile('heraldic', 'Heraldic tinctures', { include: heraldic }),
+    profile('hi-vis', 'High-visibility safety', { include: hiVis }),
+    profile('transit', 'Transit map lines', { include: transit }),
   ];
 }
 

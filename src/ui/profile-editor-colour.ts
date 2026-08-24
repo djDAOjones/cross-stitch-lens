@@ -13,6 +13,7 @@
 
 import {
   builtInProfiles,
+  profileGroupIndex,
   profileGroupLabel,
   emptyRecipe,
   resolveProfileMembership,
@@ -206,7 +207,8 @@ export function createColourKindAdapter(
           group: profileGroupLabel(r.id, false),
           revision: r.revision,
         })),
-      ];
+        // Menu order, not batch order — see profileGroupIndex.
+      ].sort((a, b) => profileGroupIndex(a.id, a.builtin) - profileGroupIndex(b.id, b.builtin));
     },
 
     draftOf(id: string): Promise<unknown> {

@@ -110,9 +110,51 @@ early-computing palettes were *specified by somebody*, so a
 colour-space band would misdescribe them. Batches drawn from this pool
 must reach for the rule-shaped candidates deliberately.
 
-### Proposed batch three (4 rule + 4 curated)
+### Batch three — DRAFTED 2026-08-24, UNSIGNED
 
-The batch-2 split, with every entry closing a named gap:
+**All eight are in `builtInProfiles()` and visible in the app.** They
+ship as code and are **not signed**: the owner curates names and
+membership per batch (D115), exactly as batches 1 and 2 did between
+D139→D140 and D144→D146. Evidence is in
+`bench-reports/audit-m15-gallery-01-*.json` and reproduces with
+`npm run audit`.
+
+**Three changed under the evidence, which is what the run is for.**
+
+- **Chiaroscuro** first read as *pastel*, not shadow: its high-key band
+  was saturation ≤ 25 / brightness ≥ 90, which admitted pale terracotta,
+  yellow-green and lavender — they took the top three shares. Tightened
+  to saturation ≤ 10 / brightness ≥ 92, it now reads as darks against
+  near-whites with no middle, which is the style.
+- **High-visibility safety** gave Pearl Grey 57.7 % and the fluoro only
+  14.5 % — grey with accents, not hi-vis. Retroreflective silver is real
+  workwear, but not at the cost of the name: the grey is dropped and it
+  ships as three entries (fluoro yellow-green, fluoro orange, black) at
+  black 51.7 % / fluoro 39.5 %.
+- **Vermilion and madder** was retuned four times and is **signed-off
+  material with a residual named**, in the Neon noir and Art deco
+  pattern. Its largest share is a mahogany at 42 %, not a vermilion.
+  That is the sample card, not the rule: the card is **56 % full-hue
+  sweep**, so a red-only profile must map every green and blue on it to
+  the nearest red. The shipped, signed **Autumn leaves** leads with a
+  tan at 36 % and **Delft blue** with white at 38.9 % for exactly the
+  same reason. Judge this one on a photograph before changing it.
+
+**One profile leaves DMC, and the reason is the name.** High-visibility
+safety uses `ariadna:1697` for its fluoro yellow-green because DMC's
+nearest is ΔE ≈ 36 (Lemon — a plain yellow) against Ariadna's ΔE ≈ 7.
+A hi-vis profile whose signature colour is a plain yellow would lie
+about what it is. Orange, black and silver stay DMC, so the shopping
+list costs exactly one extra manufacturer. **This is an owner call** —
+every other curated built-in in the gallery is single-brand.
+
+**The menu grew a group.** All eight land in style territory, which
+took MENU-01's "Style and era" from 8 to 16 and tripped its ≤ 12 test.
+Split three ways as MENU-01 anticipated: **Art and craft** (6),
+**Design and era** (4), **Screen and signal** (6). Nothing exceeds
+eight; the existing sixteen were re-homed, not renamed.
+
+The batch as drafted, with every entry closing a named gap:
 
 | Candidate | Shape | Closes |
 | --- | --- | --- |

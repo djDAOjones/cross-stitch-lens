@@ -67,6 +67,16 @@ order, their spec shared in `tickets/CREATIVE-01.md` (the D149
 shared-file exception; it dies with the last slice). PAINT-01 still
 scopes separately.
 
+**Interleaved 2026-08-24, ahead of the slices:** MENU-01 is not part of
+the creative programme. It sits here because it is small, stands alone,
+and is the precondition for ICE-PROFILES-02's batch three — the menu it
+fixes is already a 25-item flat list, and that batch is what makes it
+visibly worse.
+
+- [ ] **MENU-01 Group the profile menu so it stays scannable** [detail] (2026-08-24)
+  Intent: the colour-profile select is a flat list of every profile — 25 built-ins today, 33 after ICE-PROFILES-02's batch three. Group it (`<optgroup>`) on four groups that follow the recipe shape rather than any taste call: Your threads / Simple sets / Styles / Your profiles. Verified as low-risk: the project file stores only `profileRef {id, revision}`, so no schema change and no migration; `ui-baseline` pins engine and export bytes, not DOM. Two selects carry it, and the editor's switcher is shared with dither (7) and adjust (9), which stay flat. The ticket carries a recommendation for every decision — a build session may proceed on them; only the taxonomy is worth the owner's eye first.
+  Done when: both selects group the colour profiles, the four special cases still behave (the unlinked "This design's colours" option, My inventory's empty state, the `(edited)` suffix, and the `(built-in)` suffix which the groups make redundant in the Colour section), the dither and adjust switchers are untouched, the audit table matches the menu, a UI-STANDARDS line records the rule — there is none on long lists today — and `check` is green with the first DOM-level test of the option structure.
+
 - [~] **TONE-01 Tone mode: the weighted metric, the ramp and the curve** [detail] (2026-08-23)
   Intent: slice 1 (D200), schema v12 — the colour↔tone slider in the metric with the count-limit selection carrying the same weight, ladder mode with cut handles on the ramp (control and provenance in one), natural cuts + Equalise, target shares at source-lightness quantiles, the three-point curve, the colour-use floor, re-pick from the current frame. Dither diffuses in the weighted space (the prototype's confirmed call); the LUT key carries the weight (D46).
   Done when: a ladder profile maps a photograph as tone at the end-stop, the ramp readout shows achieved shares under dither, and the in-slice naming items (mode name, floor label/unit, confetti wording, ramp shape) are settled with the owner.

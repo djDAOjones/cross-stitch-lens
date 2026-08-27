@@ -1849,3 +1849,60 @@ the record rather than asserting the fact.
 removed); `tickets/BATCH-E0.md` deleted with the batch;
 DEV-INFRASTRUCTURE.md → "Supply-chain pins" and the advisory-triage
 cadence under "Security baseline".
+
+## D210 — What BATCH-E0's first three pushes taught: the local gate cannot see a clean checkout (2026-08-27)
+
+**Decision:** the three red CI runs after D209 are recorded as a class,
+not as three slips. Each was a green local gate and a red CI, and none
+was reachable from this machine — so the lesson is procedural: a
+change touching fixtures, generated docs, or anything encoded is not
+verified until CI has run it, and on a push-deploys repository that
+means watching the run rather than assuming the local green.
+
+**The three, and what each teaches.**
+
+1. **Encoded bytes are not portable.** The new baseline suite asserted
+   that a freshly encoded fixture PNG hashes to the committed one.
+   `encodePng` ends in `deflateSync`, and a DEFLATE stream is not
+   byte-identical across zlib versions — the assertion compared macOS
+   against the Linux runner. Fixed by pinning what is actually stable:
+   `sourcePixels` hashes the raw seeded RGBA (pure arithmetic, portable
+   anywhere) and the PNG is pinned as a committed *file*, read and
+   never re-derived. The generator gained the matching rule — rewrite
+   the PNG only when its content moved, never because this machine's
+   zlib differs, or every generator run would churn a protected fixture
+   with a diff that reads as real.
+2. **The file map can name a file that exists only here.**
+   `gen-file-map.mjs` discovers untracked-but-unignored files by
+   design, so the refresh mapped a local-only Codex hooks file;
+   `check-docs` then failed in every clean checkout while passing
+   locally, because locally the file is there.
+3. **The note about the trap was the trap.** The wish-list line
+   describing (2) named the file in backticks, and `check-docs`
+   resolves every backticked path-shaped code span in a tracked
+   `.md` — red again, one commit later. The decision log is exempt
+   (append-only sources legitimately name files that no longer exist),
+   which is why this entry may say what the wish-list may not.
+
+**Rationale:** all three share one shape — the local machine has
+something CI does not (a file, a zlib build), so "green here" tested a
+different world. Worth the entry because the natural reading of three
+reds in a row is carelessness, and the useful reading is that this
+class is invisible to the gate by construction.
+
+**Alternatives:** adding the Codex path to `check-docs`'s IGNORE list
+(rejected — that decides the file will never be committed, which is
+the owner's call, and its hook points at the committed
+`scripts/cloud-setup.sh`); committing it (same, not ours). Left alone;
+both it and the generator trap are on the wish-list.
+
+**Verification:** CI green and deployed at `a8b9caf`. The pinned
+wasm-pack step — fixed asset, checksum verified — succeeded on all
+four runs, including the three that failed later in the gate, so
+CI-01's mechanism is proven independently of the reds.
+
+**Standing annotation, not a regression:** `checkout`, `setup-node` and
+`cache` at v4 target Node 20 and the runner force-upgrades them, with a
+deprecation warning per run. The `@v4` tags already resolved to these
+SHAs, so pinning did not cause it; the major bump is its own commit
+under the DEV-INFRASTRUCTURE procedure and is on the wish-list.

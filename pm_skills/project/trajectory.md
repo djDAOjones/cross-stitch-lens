@@ -33,6 +33,11 @@ public-surface group.
   the palette page's last third-party request gone; same-file
   re-selection fixed and the editor's async selection guarded; the
   demo README's provenance corrected — see decision-log D209.
+- BATCH-E0 CI follow-ups (2026-08-27) — three green-locally / red-on-CI
+  pushes fixed and recorded as a class: encoded bytes are not portable
+  across zlib builds, the file map can name a file that exists only on
+  one machine, and the note describing that trap tripped the same
+  checker. CI green and deployed at `a8b9caf` — see decision-log D210.
 
 ## Track D — Creative control of the image (IN PROGRESS)
 

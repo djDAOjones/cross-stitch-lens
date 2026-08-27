@@ -18,7 +18,6 @@
 <!-- 323 file(s) across 13 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 13 file(s)
 - `.claude` — 2 file(s)
-- `.codex` — 1 file(s)
 - `.githooks` — 1 file(s)
 - `.github` — 1 file(s)
 - `.windsurf` — 1 file(s)
@@ -52,17 +51,13 @@
 - `.claude/launch.json` — dev-server and preview launch configs for agent browser preview, incl. the Pages base-path preview (serves a `dist` built with the same `--base`)
 - `.claude/settings.json` — project agent settings: the SessionStart hook that provisions cloud sessions
 
-## .codex
-
-- `.codex/hooks.json` — Codex CLI session hook (untracked): runs `scripts/cloud-setup.sh` at session start. Not part of the app or the gate.
-
 ## .githooks
 
 - `.githooks/pre-commit` — runs `npm run check` before every commit
 
 ## .github
 
-- `.github/workflows/lint.yml` — CI: `npm run check` on Node 22 per push/PR; a green default-branch push then rebuilds with the Pages base and `PM_PUBLIC_BUNDLE=1` (no harness) and publishes `dist` to GitHub Pages (D172), then `verify-deploy` confirms the live build id (D180)
+- `.github/workflows/lint.yml` — CI: `npm run check` per push/PR on a fully pinned supply chain (action SHAs, `ubuntu-24.04`, Node/Rust versions, checksum-verified wasm-pack — CI-01/D209; bump procedure in DEV-INFRASTRUCTURE); a green default-branch push then rebuilds with the Pages base and `PM_PUBLIC_BUNDLE=1` (no harness) and publishes `dist` to GitHub Pages (D172), then `verify-deploy` confirms the live build id (D180)
 
 ## .windsurf
 

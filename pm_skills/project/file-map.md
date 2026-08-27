@@ -15,19 +15,20 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 311 file(s) across 12 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 323 file(s) across 13 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 13 file(s)
 - `.claude` — 2 file(s)
+- `.codex` — 1 file(s)
 - `.githooks` — 1 file(s)
 - `.github` — 1 file(s)
 - `.windsurf` — 1 file(s)
 - `_transcripts` — 1 file(s)
 - `crates` — 4 file(s)
-- `docs` — 16 file(s)
-- `public` — 7 file(s)
-- `scripts` — 22 file(s)
-- `src` — 113 file(s)
-- `tests` — 130 file(s)
+- `docs` — 17 file(s)
+- `public` — 8 file(s)
+- `scripts` — 23 file(s)
+- `src` — 115 file(s)
+- `tests` — 136 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -50,6 +51,10 @@
 
 - `.claude/launch.json` — dev-server and preview launch configs for agent browser preview, incl. the Pages base-path preview (serves a `dist` built with the same `--base`)
 - `.claude/settings.json` — project agent settings: the SessionStart hook that provisions cloud sessions
+
+## .codex
+
+- `.codex/hooks.json` — Codex CLI session hook (untracked): runs `scripts/cloud-setup.sh` at session start. Not part of the app or the gate.
 
 ## .githooks
 
@@ -86,6 +91,7 @@
 - `docs/catalogue-sweep.md` — DATA-01 owner worklist written by the committed sweep: unnamed catalogue rows and same-brand hex pairs (D155)
 - `docs/dither-evaluation.md` — M8-SPIKE-01 evidence: method, findings, committed set, control surface (D61)
 - `docs/measurement-contract.md` — boundary contract (bv2): workload ID grammar, matrix blocks, report schema + run validity, budget bindings, browser rehearsal
+- `docs/palette-candidates.csv` — the 128-row colour-profile candidate list behind ICE-PROFILES-02 — the spreadsheet the reasoning page links to.
 - `docs/performance-evidence.md` — measured evidence: bv1 history (M5 audits, M5C decisions) + the bv2 re-baseline (M13-MEAS-01)
 - `docs/requirements.md` — full combined requirements spec (reference only)
 - `docs/ui-audit.md` — M14-AUDIT-01 findings record: surface × state matrix, 22 ranked findings, style inventory, baseline hashes + re-run rules
@@ -95,6 +101,7 @@
 
 ## public
 
+- `public/palette-candidates.html` — standalone reasoning page for the profile queue. Self-contained since FONT-01: system font stacks, no external request.
 - `public/profile-demo/README.md` — names the four owner-supplied preview photos the editor rig looks for (M15-UI-04)
 - `public/profile-demo/graphic.jpg` — demo slot: flat-colour graphic, the banding and posterisation case.
 - `public/profile-demo/landscape-1.jpg` — demo slot: first landscape; also the agreed source for M8-GOLD-02's golden crop.
@@ -123,6 +130,7 @@
 - `scripts/cloud-setup.sh` — SessionStart hook body: `npm ci` inside a cloud session only; no-op locally
 - `scripts/gen-golden-hello.mjs` — one-time generator of the M0 hello fixtures
 - `scripts/gen-symbol-evidence.mjs` — M9 print-evidence generator: renders the glyph catalogue as a vector PDF (batch pages + distinctness page) to bench-reports/ for owner signature (`symbols:evidence`)
+- `scripts/gen-ui-baseline.mjs` — the ONLY writer of the UI-baseline artefacts (TEST-01). Refuses in CI and without a stated reason; `--check` reports drift. Protected fixtures — owner approval required.
 - `scripts/save-transcript.mjs` — saves a chat-session transcript into _transcripts/ (`npm run transcript`)
 - `scripts/verify-deploy.d.mts` — types for the verify-deploy helpers (plain-JS module, typed for the test suite — the bench-auto-lib.d.mts pattern)
 - `scripts/verify-deploy.mjs` — post-deploy verification CLI + pure helpers: fetch the live index, resolve the hashed entry asset, read its build id, compare the SHA with the pushed commit; `--wait` polls; exit 0/1/2 (PUB-05)
@@ -213,6 +221,7 @@
 - `src/ui/dither-model.ts` — pure Dither-controls model: algorithm options, per-family strength, evidence-bearing presets, session memory
 - `src/ui/import.ts` — import routes → decode: filter (pure) + blob→PixelBuffer
 - `src/ui/info-panel.ts` — "Colours used" table content: pure row model + thin DOM half, hosted by a section (M14-EXT-41); the live symbol key column (ICE-SYMBOL-UI-01); the Swap… verb and "swapped from" note (ICE-RECOLOUR-01); focus kept across rebuilds, following a swap to its target
+- `src/ui/latest-wins.ts` — generation gate for async selection (UI-NITS-01): take a token, apply only while newest. UI-local by intent — STATE-01 signs the app-wide convention.
 - `src/ui/modal.ts` — Carbon modals (text prompt, choices, danger confirm, live-apply form): trap arithmetic pure, focus restore, Escape/backdrop cancel
 - `src/ui/notices.ts` — licences and notices: `?raw` imports of `LICENSE` + `THIRD-PARTY-NOTICES.md`, a pure document parser, the Close-only dialog and the ghost header button (PUB-01)
 - `src/ui/notification.ts` — Carbon inline notification (CAPTURE-END-01): one sentence, kind edge, text Dismiss with deliberate focus return; role=status
@@ -223,6 +232,7 @@
 - `src/ui/profile-editor-dither.ts` — dither profile kind: three-field form, basis lines, palette-context line; mounts the shared shell unchanged (M15-DITH-02)
 - `src/ui/profile-editor-preview.ts` — kind-generic judgement preview: slots, offline states, test card, ÷1/÷4/÷16 grid, debounced real-pipeline renders
 - `src/ui/profile-editor.ts` — kind-agnostic takeover editor shell: switcher + verbs, draft-then-Save, D117 Save contract, no frame-facing API
+- `src/ui/profile-options.ts` — the shared `<option>` renderer for profile selects, with group support (MENU-01).
 - `src/ui/sample.ts` — deterministic drawn test-card for "Try a sample"; feeds the normal source path
 - `src/ui/scales.ts` — The four resolutions kept apart — pattern/capture/preview/export — with unit-named fields, reference-sharing updaters, and the visible label set.
 - `src/ui/shell.ts` — Shell state reduced to the cold flag (M14-EXT-31/32); `visibility()` is the single composition rule for what the cold surface hides.
@@ -288,6 +298,7 @@
 - `tests/capture-pump.test.ts` — pump gate policy: busy/pending/drop/reset transitions
 - `tests/capture-session.test.ts` — capture pure half: error messages, surface labels
 - `tests/capture-surface.test.ts` — grab-surface reuse: one canvas across N grabs, in-place resize, context failure
+- `tests/check-secrets.test.ts` — the secret scanner’s own suite (SCAN-01): every shape trips, near-misses do not, exceptions stay narrow.
 - `tests/color-convert.test.ts` — golden: Lab reference values + round-trips
 - `tests/color-profile.test.ts` — profile resolver: every narrowing step + sentence, ordering contract, built-ins non-empty, policy→recipe bridge; recipe pin helpers + pins-only inventory warning (MUST-01)
 - `tests/color-sources.test.ts` — map identity/count/ordering pins, exact-match naming incl. lime/green, namespace collision guard
@@ -326,10 +337,12 @@
 - `tests/helpers/golden.ts` — golden harness: fixture load + tolerance compare
 - `tests/helpers/lut-f32.ts` — f32 mirror of the WGSL LUT arithmetic (fround per op)
 - `tests/helpers/project-fixture.ts` — compact v10 project fixture for the container/history suites
+- `tests/helpers/sample-credentials.ts` — credential shapes assembled at RUNTIME so no literal is on disk for the scanner to match (SCAN-01). Shared by the redaction and scanner suites.
 - `tests/helpers/threads.ts` — Thread fixtures — one place identity-carrying test palettes are built
 - `tests/helpers/wgsl-reserved.ts` — WGSL reserved-word list + identifier scan (GPU-free shader guard)
 - `tests/highlight.test.ts` — highlight-mask invariants: scrim membership, compare composition, index keying (M14-EXT-17)
 - `tests/info-panel.test.ts` — row cap/overflow, thread-vs-hex labels, percent format
+- `tests/latest-wins.test.ts` — the async-selection guard against a deferred adapter — the hazard is latent while adapters resolve synchronously.
 - `tests/library-records.test.ts` — Library file round trips, corrupt/oversized import, merge, collisions, memory store
 - `tests/lut-cache.test.ts` — cache identity by palette content, LRU bound, GPU-LUT sanity rejection
 - `tests/matrix/rows.ts` — the correctness matrix: row definitions with `proves` text, adversarial palettes, seeded sources
@@ -343,6 +356,7 @@
 - `tests/pipeline-config.test.ts` — preset order, full-RGB, dither-replaces-reduce
 - `tests/pipeline-hello.test.ts` — M0 acceptance: identity golden + purity invariants
 - `tests/profile-editor.test.ts` — editor pure halves: browse rows, hex parsing, readout fingerprints, grid divisors, absent-vs-broken slots
+- `tests/profile-options.test.ts` — the shared option renderer’s row model and grouping.
 - `tests/profile-store.test.ts` — kind-aware store contract, generic profiles file round-trip, builtin rejection, My colours, paletteToProfile
 - `tests/project-package.test.ts` — `.pmproj` container: byte-identical round trip, legacy JSON detection, refusals for compressed/encrypted/zip64/truncated packages (DUR-01)
 - `tests/project.test.ts` — project file: byte-identical round trip, validation errors, version refusal, v10 migration, title/fallback naming (SAVE-01)
@@ -366,12 +380,14 @@
 - `tests/ui-baseline/exports/design-200x200@4x.png` — M14 baseline capture: enlarged PNG at scale 4
 - `tests/ui-baseline/exports/project-200x200.json` — M14 baseline capture: saved project (compare field-wise, D74)
 - `tests/ui-baseline/hashes.json` — Committed SHA-256 pins the baseline test asserts; never regenerated
+- `tests/ui-baseline/reference.ts` — the single definition of what the UI baseline pins; imported by both the suite (compares) and the generator (writes).
 - `tests/ui-baseline/source-gradient-256.png` — Deterministic fixture the browser walks import; write-once
 - `tests/ui-baseline/source.ts` — Seeded fixture generator + minimal PNG encoder for the baseline
 - `tests/ui-import.test.ts` — image-file filtering (pure half of import)
 - `tests/ui-styles.test.ts` — stylesheet invariant greps: [hidden]!important, no CSS order, dev-shell absence, import order
 - `tests/verify-deploy.test.ts` — verify-deploy pure helpers with the network off: entry-script discovery, build-id parsing, SHA prefix match, verdict line, arg parsing (PUB-05)
 - `tests/viewport.test.ts` — viewport maths exact cases (fit/anchor/clamp)
+- `tests/wasm-dither-lifetime.test.ts` — proves the Rust handle is freed exactly once — on success and on a throwing getter (WASM-01). Fake module, so it runs without the pkg.
 - `tests/wasm-dither.test.ts` — wasm↔TS bit-exact parity: golden fixture, metrics/scan modes, full DMC Lab
 - `tests/webgpu-lut.test.ts` — GPU tolerance suite: f32-mirror near-tie bound, static shader scans, skipIf real-GPU parity
 - `tests/worker-executor.test.ts` — executor end-to-end, LUT cache, coalescer

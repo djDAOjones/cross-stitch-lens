@@ -17,6 +17,7 @@
     "audit": "AUDIT=1 vitest run tests/audits",
     "matrix": "MATRIX_FULL=1 vitest run tests/acceptance-matrix.test.ts",
     "matrix:write": "node scripts/write-acceptance-matrix.mjs",
+    "baseline:write": "node scripts/gen-ui-baseline.mjs",
     "symbols:evidence": "node scripts/gen-symbol-evidence.mjs",
     "build:wasm": "wasm-pack build crates/stitch-engine --target web",
     "check": "npm run check:types && npm run check:lint && npm run check:wasm && npm run check:test && npm run check:build && npm run check:docs && npm run check:contrast && npm run check:secrets",

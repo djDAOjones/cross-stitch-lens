@@ -23,6 +23,7 @@
  * (M15-UI-04), which renders into its own strip.
  */
 
+import { latestWins } from './latest-wins.ts';
 import { confirmDangerModal, textPromptModal } from './modal.ts';
 import { renderProfileOptions } from './profile-options.ts';
 
@@ -224,9 +225,23 @@ export function createProfileEditor(
     deleteButton.disabled = builtin;
   }
 
+  /**
+   * Selection generation (UI-NITS-01). `draftOf` is async, so two
+   * selections in flight settle in completion order, not request
+   * order: the slower one lands last and the editor shows a draft the
+   * switcher does not name. Latent today — every shipped adapter
+   * resolves synchronously — but the seam is async by contract, and a
+   * deferred adapter would make it a real defect that presents as
+   * "the editor opened the wrong profile".
+   */
+  const selection = latestWins();
+
   async function selectProfile(id: string): Promise<void> {
+    const isNewest = selection.begin();
     currentId = id;
-    draft = await adapter.draftOf(id);
+    const next = await adapter.draftOf(id);
+    if (!isNewest()) return; // superseded — drop it
+    draft = next;
     savedSnapshot = JSON.stringify(draft);
     switcher.value = id;
     const builtin = isBuiltin();

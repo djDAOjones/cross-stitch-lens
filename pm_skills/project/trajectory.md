@@ -17,6 +17,23 @@
      (Prune) moves the oldest phases to archive/trajectory/trajectory-NNNN-<range>.md
      and adds a row to archive/INDEX.md. Archives are append-only; never rewrite. -->
 
+## Track E — Hardening (IN PROGRESS)
+
+**Outcome:** opened 2026-08-27 (D208) from the 2026-08-26 external
+review; the quick eight cleared first, leaving the state spine and the
+public-surface group.
+
+- BATCH-E0 (2026-08-27) — the hardening quick eight, gate green: the
+  deploy workflow's supply chain fully pinned (SHAs, runner, Node,
+  Rust, and a checksum-verified wasm-pack replacing `curl | sh`); the
+  UI baseline fails closed with regeneration moved to
+  `npm run baseline:write`; the secret scan reaches zero warnings with
+  its patterns untouched; six dev advisories cleared non-breaking and
+  an advisory cadence stated; the WASM handle freed in a `finally`;
+  the palette page's last third-party request gone; same-file
+  re-selection fixed and the editor's async selection guarded; the
+  demo README's provenance corrected — see decision-log D209.
+
 ## Track D — Creative control of the image (IN PROGRESS)
 
 **Outcome:** opened 2026-08-23 (D188/D189); the gate was made safe for

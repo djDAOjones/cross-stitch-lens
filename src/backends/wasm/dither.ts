@@ -20,8 +20,12 @@ import type { InitInput } from 'stitch-engine-wasm';
 
 type WasmModule = typeof import('stitch-engine-wasm');
 
-/** Build the StageFn over an initialised module. */
-function wasmDither(mod: WasmModule) {
+/**
+ * Build the StageFn over an initialised module. Exported for the
+ * lifetime test (WASM-01), which drives it with a fake module; the
+ * app reaches it only through `registerWasmDither`.
+ */
+export function wasmDither(mod: WasmModule) {
   return (input: PixelBuffer, params: DitherParams): PixelBuffer => {
     // The crate implements exactly Floyd–Steinberg at strength 1.
     // Routing already prefers 'ts' for anything else (M8-ALG-01), but a
@@ -44,18 +48,31 @@ function wasmDither(mod: WasmModule) {
       params.metric === 'lab',
       params.serpentine,
     );
-    // The crate returns the palette-index sidecar alongside the pixels
-    // so this backend identifies threads exactly as the TS reference
-    // does. Deriving indices here from the output RGB instead would be
-    // a guess, and a wrong one wherever two brands share a colour.
-    const pixels = out.pixels;
-    const indices = out.indices;
-    return {
-      width: input.width,
-      height: input.height,
-      data: new Uint8ClampedArray(pixels.buffer, pixels.byteOffset, pixels.length),
-      indices: new Uint16Array(indices.buffer, indices.byteOffset, indices.length),
-    };
+    // `out` is a Rust-owned handle. Both getters copy out of wasm
+    // memory (`.slice()` in the generated glue), so the arrays below
+    // outlive it safely — but the struct itself is freed only on
+    // request. Without this `finally` the allocation waits on
+    // `FinalizationRegistry`, i.e. on GC noticing, which under a live
+    // preview means the wasm heap grows a result per frame and is
+    // reclaimed on nobody's schedule (WASM-01). `finally` and not a
+    // trailing call, so a throwing getter leaks nothing either.
+    try {
+      // The crate returns the palette-index sidecar alongside the
+      // pixels so this backend identifies threads exactly as the TS
+      // reference does. Deriving indices here from the output RGB
+      // instead would be a guess, and a wrong one wherever two brands
+      // share a colour.
+      const pixels = out.pixels;
+      const indices = out.indices;
+      return {
+        width: input.width,
+        height: input.height,
+        data: new Uint8ClampedArray(pixels.buffer, pixels.byteOffset, pixels.length),
+        indices: new Uint16Array(indices.buffer, indices.byteOffset, indices.length),
+      };
+    } finally {
+      out.free();
+    }
   };
 }
 

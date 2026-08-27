@@ -5,11 +5,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Batch Three and Beyond</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
 <style>
   :root {
+    /* FONT-01: system stacks — this page makes no external request. */
+    --font-sans: system-ui, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font-serif: Georgia, "Iowan Old Style", "Times New Roman", Times, serif;
+    --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
     --ground: #edf0ec;
     --surface: #f7f9f6;
     --surface-sunk: #e3e7e1;
@@ -87,7 +88,7 @@
     margin: 0;
     background: var(--ground);
     color: var(--ink);
-    font-family: "Source Serif 4", Georgia, "Times New Roman", serif;
+    font-family: var(--font-serif);
     font-size: var(--step-2);
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
@@ -113,7 +114,7 @@
   }
 
   .eyebrow {
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-family: var(--font-mono);
     font-size: var(--step-0);
     letter-spacing: 0.13em;
     text-transform: uppercase;
@@ -122,7 +123,7 @@
   }
 
   .masthead h1 {
-    font-family: Archivo, "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font-sans);
     font-weight: 700;
     font-size: var(--step-5);
     line-height: 1.02;
@@ -147,7 +148,7 @@
     margin: 0.4rem 0 0;
     padding: 0;
     list-style: none;
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-family: var(--font-mono);
     font-size: var(--step-0);
     letter-spacing: 0.06em;
     text-transform: uppercase;
@@ -169,7 +170,7 @@
   }
 
   .block > h2 {
-    font-family: Archivo, "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font-sans);
     font-weight: 600;
     font-size: var(--step-4);
     letter-spacing: -0.018em;
@@ -204,7 +205,7 @@
   .brief div { display: flex; flex-direction: column; gap: 0.35rem; }
 
   .brief dt {
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-family: var(--font-mono);
     font-size: var(--step-0);
     letter-spacing: 0.1em;
     text-transform: uppercase;
@@ -240,7 +241,7 @@
   }
 
   .batch-head h2 {
-    font-family: Archivo, "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font-sans);
     font-weight: 600;
     font-size: var(--step-3);
     letter-spacing: -0.012em;
@@ -248,7 +249,7 @@
   }
 
   .batch-head span {
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-family: var(--font-mono);
     font-size: var(--step-0);
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -273,7 +274,7 @@
   }
 
   .batch-grid strong {
-    font-family: Archivo, "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font-sans);
     font-weight: 600;
     font-size: var(--step-2);
     letter-spacing: -0.005em;
@@ -281,7 +282,7 @@
 
   .batch-grid em {
     font-style: normal;
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-family: var(--font-mono);
     font-size: 0.7rem;
     letter-spacing: 0.09em;
     text-transform: uppercase;
@@ -319,7 +320,7 @@
   }
 
   .cat-title h2 {
-    font-family: Archivo, "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font-sans);
     font-weight: 600;
     font-size: var(--step-3);
     letter-spacing: -0.012em;
@@ -328,7 +329,7 @@
   }
 
   .cat-count {
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-family: var(--font-mono);
     font-size: var(--step-0);
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -358,7 +359,7 @@
   }
 
   thead th {
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-family: var(--font-mono);
     font-weight: 500;
     font-size: 0.7rem;
     letter-spacing: 0.1em;
@@ -380,7 +381,7 @@
   tbody tr:last-child td { border-bottom: 1px solid var(--rule); }
 
   .c-name {
-    font-family: Archivo, "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font-sans);
     font-weight: 600;
     font-size: var(--step-2);
     letter-spacing: -0.005em;
@@ -392,7 +393,7 @@
 
   .lean {
     display: inline-block;
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-family: var(--font-mono);
     font-size: 0.68rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -450,7 +451,7 @@
   }
 
   .stack strong {
-    font-family: Archivo, "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font-sans);
     font-weight: 600;
   }
 
@@ -472,7 +473,7 @@
   }
 
   .pairs dt {
-    font-family: Archivo, "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font-sans);
     font-weight: 600;
     font-size: var(--step-1);
   }
@@ -485,7 +486,7 @@
   }
 
   code {
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-family: var(--font-mono);
     font-size: 0.85em;
     background: var(--surface-sunk);
     padding: 0.1em 0.35em;

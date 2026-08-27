@@ -60,100 +60,178 @@ group riding with Track C.
 
 ## Active
 
+<!-- Refactored 2026-08-27 after BATCH-E0 (D209): preambles and item
+     bodies were restating D188/D200/D208. Intent + acceptance here;
+     the why stays in the log. -->
+
 ### Current — Track D Creative control of the image
 
-Opened 2026-08-23 at the icebox triage (D188). One subject: the user
-controls the final picture *inside* the app, beyond nearest-colour
-realism (D149; the first live-app ask, D173). The swap shipped
-(D199); the creative programme is signed (D200) — five slices in
-order, their spec shared in `tickets/CREATIVE-01.md` (the D149
-shared-file exception; it dies with the last slice). PAINT-01 still
-scopes separately.
+The user controls the final picture *inside* the app, beyond
+nearest-colour realism (D188). Five slices signed in order at D200;
+shared spec in `tickets/CREATIVE-01.md`, which dies with the last
+slice. PAINT-01 scopes separately.
 
 - [~] **TONE-01 Tone mode: the weighted metric, the ramp and the curve** [detail] (2026-08-23)
-  Intent: slice 1 (D200), schema v12 — the colour↔tone slider in the metric with the count-limit selection carrying the same weight, ladder mode with cut handles on the ramp (control and provenance in one), natural cuts + Equalise, target shares at source-lightness quantiles, the three-point curve, the colour-use floor, re-pick from the current frame. Dither diffuses in the weighted space (the prototype's confirmed call); the LUT key carries the weight (D46).
-  Done when: a ladder profile maps a photograph as tone at the end-stop, the ramp readout shows achieved shares under dither, and the in-slice naming items (mode name, floor label/unit, confetti wording, ramp shape) are settled with the owner.
-  Status: build landed and verified 2026-08-24 (D201) — everything above works in the app with working labels; open is the owner half of done-when: the four naming items, plus a keyboard pass on the ramp cut handles (the curve points went green at D203 — the control is shared; the driven browser cannot prove native activation).
+  Intent: slice 1, schema v12 — the colour↔tone weight through metric,
+  selection, dither and LUT key; ladder mode with cut handles on the
+  ramp; natural cuts + Equalise; the three-point curve; the colour-use
+  floor.
+  Done when: a ladder profile maps a photograph as tone at the
+  end-stop, the ramp readout shows achieved shares under dither, and
+  the four naming items are settled with the owner.
+  Status: built and verified (D201/D203). Open is the owner half only —
+  mode name, floor label/unit, confetti wording, ramp shape — plus a
+  native keyboard pass on the ramp cut handles.
 - [ ] **ADJUST-02 Adjustments 2b: the six-band H/S/L mixer and the saturation range slider** [detail] (2026-08-23)
-  Intent: slice 2b (D200) — both collapsed by default; the range slider's remap flavour (nominal with a low-S roll-off, lean, vs observed-range) is the design-options fork left open.
-  Done when: both controls ship collapsed and the remap flavour is decided with the owner.
+  Intent: slice 2b — both controls collapsed by default.
+  Done when: both ship collapsed and the range slider's remap flavour
+  (nominal with a low-S roll-off, vs observed-range) is decided with
+  the owner — the one design fork D200 left open.
 - [ ] **PICK-01 Eyedropper: grab a colour from the picture, the design or the screen** (2026-08-23)
-  Intent: slice 3 (D200), no bump — pick from the source picture or the rendered design — and, where the browser has the EyeDropper API, from anything on screen — and resolve it to the nearest threads with their distance, feeding Must-use (pins, D178), swap targets (D182) and the inventory. The preview tool-mode pilot PAINT-01 inherits; the editor's pick-up tool is PAINT-01's.
-  Done when: a picked colour lands in Must-use, a swap target or the inventory with its ΔE shown.
+  Intent: slice 3, no bump — pick from the source, the rendered design,
+  or (where the EyeDropper API exists) anything on screen, resolved to
+  the nearest threads with their distance. Feeds Must-use, swap targets
+  and the inventory; pilots the preview tool-mode PAINT-01 inherits.
+  Done when: a picked colour lands in Must-use, a swap target or the
+  inventory with its ΔE shown.
 - [ ] **SHEET-01 The contact sheet as a mechanism** [detail] (2026-08-23)
-  Intent: slice 4 (D200), no bump — frozen still → labelled variants → a pick adopts, through the worker route; axis 1 the dither presets, axis 2 the adjustment presets, profiles later. The render loop must not yield on frames alone (an occluded window suspends rAF — the prototype's constraint).
-  Done when: both axes ship through the worker, a pick adopts into the design, and the adoption sentence survives the reprocess (STATUS-01 or its equivalent).
+  Intent: slice 4, no bump — frozen still → labelled variants → a pick
+  adopts, through the worker. Axis 1 dither presets, axis 2 adjustment
+  presets. The render loop must not yield on frames alone (an occluded
+  window suspends rAF).
+  Done when: both axes ship through the worker, a pick adopts, and the
+  adoption sentence survives the reprocess (STATUS-01 or equivalent).
 - [ ] **COMPARE-ERR-01 Match-error compare: the ΔE heat map** (2026-08-23)
-  Intent: slice 5 (D200), no bump — a Compare-class decoration (D92) showing where the palette serves the picture worst, which is where a Must-use, a swap or a painted cell earns its place.
+  Intent: slice 5, no bump — a Compare-class decoration (D92) showing
+  where the palette serves the picture worst, which is where a Must-use,
+  a swap or a painted cell earns its place.
   Done when: the heat map ships as a compare mode with an honest label.
 - [ ] **PAINT-01 Scope the pixel editor** [sign-off] [detail] (2026-08-23)
-  Intent: an editor a stitcher can work in, not a demo brush — tools, the interaction model by pointer, keyboard and touch, persistence and clearing, undo, its composition with the swap's render palette (shipped, D199), and the v1 slice. Stills only in v1 (D182-3/4).
-  Done when: the owner signs the v1 tool set, interaction model, persistence and build slices; each slice becomes its own Track D item.
+  Intent: an editor a stitcher can work in, not a demo brush — tools,
+  the interaction model by pointer/keyboard/touch, persistence,
+  clearing, undo, and composition with the swap's render palette
+  (D199). Stills only in v1.
+  Done when: the owner signs the v1 tool set, interaction model,
+  persistence and build slices; each slice becomes its own item.
 
 ### Interleaved — Track E Hardening
 
-Opened 2026-08-27 (D208) from the 2026-08-26 external repository
-review (findings cited PMR-01…18; sampled claims verified in code
-before adoption; the report stays untracked at
-`_user-guff/2026-08-26-repo-review.md` while it maps unfixed surfaces
-of the live app — the critique, the full cut and the owner's eight
-signed calls live in D208 and the programme artifact). Order:
-BATCH-E0 any time; the STATE spine after ADJUST-02 and before Track
-D's remaining slices — SHEET-01 multiplies in-flight requests, the
-defect the spine repairs; the public-surface group rides with Track
-C. No schema version changes anywhere in the track.
+From the 2026-08-26 external review, adopted at D208; the report stays
+untracked at `_user-guff/2026-08-26-repo-review.md` — it maps unfixed
+surfaces of the live app. No schema changes anywhere in the track.
+BATCH-E0 shipped (D209). Order: the STATE spine after ADJUST-02 and
+before Track D's remaining slices — SHEET-01 multiplies in-flight
+requests, the defect the spine repairs; STORE-01 and LIMIT-01/02
+alongside; the public-surface group with Track C.
 
-- [ ] **BATCH-E0 The hardening quick eight** [detail] (2026-08-27)
-  Intent: eight standalone review fixes, no product decisions, disjoint from the spine — CI-01 (pin the deploy workflow's supply chain), TEST-01 (UI baselines fail closed, separate generator), SCAN-01 (zero-warning secret scan), DEPS-01 (dev-advisory refresh, stated cadence, first `cargo audit`), WASM-01 (`free()` in `finally` via regenerated bindings), FONT-01 (the palette page drops Google Fonts), UI-NITS-01 (same-file re-selection; editor selection guard), README-PROV-01 (the demo README says only what is established — wording to the owner). Run sheet: tickets/BATCH-E0.md. Parallel-safe as a worktree round; fine as one burst.
-  Done when: all eight land with `check` green and the run sheet dies with the batch.
 - [ ] **STATE-01 Sign the state and lifecycle design** [sign-off] [detail] (2026-08-27)
-  Intent: one design signed once — immutable per-request snapshots, a source generation token, one `transitionSource()` / `clearSourceState()`, one terminal settlement path per operation, worker-fatal included. The sitting signs the convention and the slice cut (proposed: STATE-02 snapshots → STATE-03 source transitions and capture release, which closes the live capture-retention privacy defect → STATE-04 worker settlement → STATE-05 history queue); each slice then becomes its own item. Serial in `main.ts` — no parallel streams; prototype branch allowed.
-  Done when: the convention and slice order are signed and the slices are spun out.
-  Scope: `src/main.ts`, `src/worker/client.ts`, `src/capture/session.ts`, `src/capture/pump.ts`; no schema change.
+  Intent: one design signed once — immutable per-request snapshots, a
+  source generation token, one `transitionSource()` / one
+  `clearSourceState()`, one terminal settlement path per operation
+  (worker-fatal included). Serial in `main.ts`, no parallel streams;
+  prototype branch allowed.
+  Done when: the convention and slice order are signed and the slices
+  (proposed STATE-02…05 in the ticket) are spun out as items.
+  Scope: `src/main.ts`, `src/worker/client.ts`, `src/capture/session.ts`,
+  `src/capture/pump.ts`; no schema change.
+  Note: STATE-03 closes the live capture-retention privacy defect —
+  every deploy carries it until then (accepted knowingly, D208).
 - [ ] **STORE-01 Persistence is atomic and honest** (2026-08-27)
-  Intent: one-transaction `putReplacing(snapshot, victims)` so eviction cannot outlive a failed replacement; await `transaction.oncomplete` everywhere (the history store carries the pattern); an explicit initialising / persistent / session-only storage state with early writes queued or refused visibly. Library files — parallel-safe beside the spine; the `main.ts` adoption seam lands after STATE-03.
-  Done when: an injected put-failure after victim deletion loses nothing, and "saved" means committed.
+  Intent: one-transaction `putReplacing(snapshot, victims)` so eviction
+  cannot outlive a failed replacement; await `transaction.oncomplete`
+  everywhere; an explicit initialising / persistent / session-only
+  storage state with early writes queued or refused visibly. Library
+  files are parallel-safe beside the spine; the `main.ts` adoption seam
+  lands after STATE-03.
+  Done when: an injected put-failure after victim deletion loses
+  nothing, and "saved" means committed.
 - [ ] **LIMIT-01 The export refuses unpayable page counts** (2026-08-27)
-  Intent: arithmetic page-count precheck before `slicePages` — refuse above 500 pages naming the count, confirm above 60 (the owner's numbers, D208); iterate pages during assembly instead of retaining every PNG. Export-side only — the round-trip invariant forbids clamping on load. PRINT-01 inherits the cap when its plan model replaces `export.pdf`.
-  Done when: an over-cap request is refused before any allocation (instrumented), the boundary passes, and a moderate multi-page export is byte-stable.
+  Intent: arithmetic page-count precheck before `slicePages` — refuse
+  above 500 naming the count, confirm above 60 (D208); iterate pages
+  during assembly instead of retaining every PNG. Export-side only —
+  the round-trip invariant forbids clamping on load; PRINT-01 inherits
+  the cap.
+  Done when: an over-cap request is refused before any allocation
+  (instrumented), the boundary passes, and a moderate multi-page export
+  is byte-stable.
 - [ ] **LIMIT-02 The package parser budgets before it copies** (2026-08-27)
-  Intent: gate `File.size` before `arrayBuffer()`, cap the central-directory aggregate at 256 MiB and `project.json` at 16 MiB (D208), allocate named supported entries only — today sixteen 256 MiB entries are nominally valid and every entry is sliced after the whole file is read.
-  Done when: synthetic oversize headers are refused with no allocation (spies, no giant fixtures) and the limits are documented user-facing.
+  Intent: gate `File.size` before `arrayBuffer()`, cap the central
+  directory aggregate at 256 MiB and `project.json` at 16 MiB (D208),
+  allocate named supported entries only — today sixteen 256 MiB entries
+  are nominally valid and every entry is sliced after the whole file is
+  read.
+  Done when: synthetic oversize headers are refused with no allocation
+  (spies, no giant fixtures) and the limits are documented user-facing.
 
 **With Track C, owner-paced** (D208): the public-surface group.
 
 - [ ] **NOTICE-01 Notices cover the shipped closure** (2026-08-27)
-  Intent: the production bundle ships `@pdf-lib/standard-fonts`, `@pdf-lib/upng`, `pako` and `tslib`; none appear in THIRD-PARTY-NOTICES.md. Reconcile against the resolved closure and add the test that pins it; the owner approves the edit (signed wording, D161/D177).
-  Done when: every bundled runtime package is listed and the closure test is green.
+  Intent: the production bundle ships `@pdf-lib/standard-fonts`,
+  `@pdf-lib/upng`, `pako` and `tslib`; none appear in
+  THIRD-PARTY-NOTICES.md. Reconcile against the resolved closure and
+  pin it with a test; the owner approves the wording (D161/D177).
+  Done when: every bundled runtime package is listed and the closure
+  test is green.
 - [ ] **DIAG-05 Diagnostics honour the disclosure** (2026-08-27)
-  Intent: titles, filenames and capture labels survive in message/scope strings; the newest-80 cut lets frame chatter evict the error that mattered; every frame updates a live region. Allowlist the bundle schema, omit or hash labels, keep errors from the whole ring, sample frame telemetry, announce transitions not frames — and correct the in-app disclosure in the same commit. A11Y-VO-01 gains the re-check line.
-  Done when: a bundle from a realistic-filename session contains none, eighty-plus frame logs cannot evict an error, and announcements per reprocess are bounded.
+  Intent: titles, filenames and capture labels survive in message and
+  scope strings; the newest-80 cut lets frame chatter evict the error
+  that mattered; every frame updates a live region. Allowlist the
+  bundle schema, omit or hash labels, keep errors from the whole ring,
+  sample frame telemetry, announce transitions not frames — and correct
+  the in-app disclosure in the same commit. A11Y-VO-01 gains a re-check
+  line.
+  Done when: a bundle from a realistic-filename session contains none,
+  eighty-plus frame logs cannot evict an error, and announcements per
+  reprocess are bounded.
 - [ ] **CAP-01 Capture is offered only where it can work** (2026-08-27) — preflight `getDisplayMedia`; where absent the control is disabled with a reason instead of failing on use. Done when a browser without the API shows the reason, not a failure.
 - [ ] **CROP-01 Crop pins meet the 44 px rule** (2026-08-27) — the pins measure ~24 px against the AAA 44 × 44 hard rule; invisible hit-area enlargement, no visual change, keyboard crop stays green, a UI-STANDARDS line records the pattern.
 - [ ] **INFRA-04 `check` obeys its own invariant; the reboot verb exists** (2026-08-27)
-  Intent: `check` writes WASM and `dist` against the AGENTS non-mutating rule; a missing local wasm-pack skips green while CI installs it; the documented one-command reboot surface is unimplemented. Conform the code (D208): isolate generated output or split the verbs honestly, fail on missing toolchain with the install pointer, implement reboot-with-readiness; docs reconcile after.
-  Done when: a whole-tree manifest is identical across `check`, missing tooling is a red with instructions, and the reboot command exists and verifies readiness.
+  Intent: `check` writes WASM and `dist` against the AGENTS
+  non-mutating rule; a missing local wasm-pack skips green while CI
+  installs it; the documented one-command reboot surface is
+  unimplemented. Conform the code (D208), docs reconcile after.
+  Done when: a whole-tree manifest is identical across `check`, missing
+  tooling is a red with install instructions, and the reboot command
+  exists and verifies readiness.
 - [ ] **SUPPORT-01 The supported-platform policy** [sign-off] (2026-08-27)
-  Intent: D149 widened the audience and the platform contract lags — ES2020 docs against an ES2022 build, no tested Safari/Firefox/mobile/private-mode matrix, meta-CSP and source-map postures undecided. One sitting, paired with A11Y-VO-01 and M16's; ICE-TAURI-01's wake references the outcome.
-  Done when: the matrix is signed and each gap becomes an item or an accepted limitation.
+  Intent: D149 widened the audience and the platform contract lags —
+  ES2020 docs against an ES2022 build, no tested
+  Safari/Firefox/mobile/private-mode matrix, meta-CSP and source-map
+  postures undecided. One sitting, paired with A11Y-VO-01 and M16's.
+  Done when: the matrix is signed and each gap becomes an item or an
+  accepted limitation.
 - [ ] **PERF-01 Settle the dither differential** (2026-08-27)
-  Intent: the review's controlled A/B kept every HEAD median under its ceiling but left Atkinson +17.5 % and blue-noise +10.9 % unexplained under extreme spread. Quiet-host interleaved pairs (three or more, order-reversed); if it persists, bisect; ceilings move only with an explanation, never to green. `bench:auto` on the reference browser is the [maintainer] half.
-  Done when: three quiet pairs agree and the differential is explained or closed.
+  Intent: the review's A/B kept every HEAD median under its ceiling but
+  left Atkinson +17.5 % and blue-noise +10.9 % unexplained under
+  extreme spread. Quiet-host interleaved pairs (three or more,
+  order-reversed); if it persists, bisect. Ceilings move only with an
+  explanation, never to green. `bench:auto` on the reference browser is
+  the [maintainer] half.
+  Done when: three quiet pairs agree and the differential is explained
+  or closed.
 
 ### Next — Track C Publication
 
-Live since 2026-08-22 at <https://djdaojones.github.io/pattern-mapper/>:
-a green `check` on `main` publishes the built bundle and then verifies
-it (PUB-04/PUB-05, D172/D180). Publication proceeds in this repository
-(D164); `LICENSE` and the notices ship and are readable in-app (D161,
-D177). Both items are the owner's; the 2026-08-22 branch deploy
-overtook the PUB-02 gate, so that one is pressing.
+Live at <https://djdaojones.github.io/pattern-mapper/>: a green `check`
+on `main` publishes the bundle and verifies it (PUB-04/PUB-05, D164).
+Both items are the owner's; the deploy overtook the PUB-02 gate, so
+that one is pressing.
 
 - [ ] **PUB-02 Replace `graphic.jpg` and confirm the photo provenance** [maintainer] (2026-08-11)
-  Intent: the flat-graphic demo slot is third-party fan art with a two-layer rights problem (the artist's copyright and the underlying mark); it gates public deploy (D150) and is already live. The owner replaces it — the plan (2026-08-12): a Blender cube lit by three RGB lights, giving a colour spread and a luminance ramp from primitives alone, so no rights problem remains; the `PHOTO_SLOTS` contract keeps the name, zero code changes.
-  Done when: `graphic.jpg` at HEAD is rights-clean, and the five photographs are confirmed as the owner's own (`landscape-1.jpg` also seeded the M8 golden crop).
+  Intent: the flat-graphic demo slot is third-party fan art with a
+  two-layer rights problem (the artist's copyright and the underlying
+  mark); it gates public deploy (D150) and is already live. The plan
+  (2026-08-12): a Blender cube lit by three RGB lights — a colour
+  spread and a luminance ramp from primitives, no rights problem. The
+  `PHOTO_SLOTS` contract keeps the name, so zero code changes.
+  Done when: `graphic.jpg` at HEAD is rights-clean and the five
+  photographs are confirmed as the owner's own (`landscape-1.jpg` also
+  seeded the M8 golden crop). README-PROV-01 (D209) states the record
+  until then.
 - [ ] **DIAG-03 Set `DEV_EMAIL` to the dedicated alias** [maintainer] (2026-08-23)
-  Intent: one line in `src/ui/diagnostics-button.ts` — a retirable alias, never a personal address (D187); until then "Report a problem" composes with no recipient. Each push deploys.
+  Intent: one line in `src/ui/diagnostics-button.ts` — a retirable
+  alias, never a personal address (D187); until then "Report a problem"
+  composes with no recipient. Each push deploys.
   Done when: a tester's report reaches the alias.
 
 ### Icebox

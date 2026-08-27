@@ -1778,3 +1778,74 @@ tickets/BATCH-E0.md and tickets/STATE-01.md; the review kept
 untracked at `_user-guff/2026-08-26-repo-review.md` while it maps
 unfixed surfaces of the live app; the programme artifact:
 <https://claude.ai/code/artifact/7780e750-3f3b-43ad-a359-dfca9713622e>.
+
+## D209 — BATCH-E0: the hardening quick eight, and the two fixture rules they turn on (2026-08-27)
+
+**Decision:** Track E's eight standalone fixes ship as one serial
+burst, gate green (1,528 tests). CI-01 pins the deploy workflow's
+whole supply chain — five actions by commit SHA with version
+comments, `ubuntu-24.04`, Node 22.18.0 (the `engines` floor, so a
+green gate proves the minimum claimed), Rust 1.97.1, and wasm-pack
+0.15.0 fetched as a fixed release asset whose SHA-256 is verified
+before extraction; the `curl … | sh` installer is gone. TEST-01
+makes the UI baseline **fail closed** and moves regeneration to
+`npm run baseline:write`. SCAN-01 gets the secret scan to zero
+warnings without touching a pattern. DEPS-01, WASM-01, FONT-01,
+UI-NITS-01 and README-PROV-01 land as specified.
+
+**Rationale — the two that were more than chores.** *TEST-01:*
+bootstrap-if-absent was deliberate and documented, but a tripwire
+that writes its own missing oracle cannot detect the loss it exists
+to catch — delete `hashes.json` and the run went green having
+re-derived the expectation from the very code under test. Rehearsed:
+with the oracle removed the suite now fails naming the regenerator,
+and writes nothing. The reference config moved to
+`tests/ui-baseline/reference.ts` so suite and generator compute from
+one definition; two copies is a tripwire that can disagree with its
+own generator. *SCAN-01:* four known-benign warnings on every green
+run train the reader to skim the fifth. The fix is to the fixtures,
+never the detector — sample tokens are now assembled at runtime
+(`tests/helpers/sample-credentials.ts`), the one path exception is
+named with a reason, and a new suite proves every shape still trips
+and the near-misses still don't.
+
+**Smaller whys.** WASM-01: the generated getters `.slice()`, so the
+copies outlive the handle and `free()` in a `finally` is safe — the
+test drives a fake module, which is also the only way to make a
+getter throw. UI-NITS-01: the source input never cleared its value,
+so re-picking a file the user had just edited on disk was silently a
+no-op (the project input had always cleared); the editor's async
+selection guard became `ui/latest-wins.ts`, deliberately UI-local —
+STATE-01 is where a generation convention gets signed app-wide.
+CI-01's `runs-on` is written out per job because that key resolves
+before the `env` context exists.
+
+**Alternatives:** `npm audit fix --force` (banned — it resolves by
+bumping whatever it likes; the existing `js-yaml` override admitted
+the fixed 4.3.2, so all six advisories cleared non-breaking and
+markdownlint-cli2 stayed at 0.22.1); adding jsdom to test the editor
+guard through the DOM (rejected — the house convention is logic in
+node, and it would have been a new dev dependency for one test);
+downloading the wasm-pack tarball to compute its checksum (rejected
+— GitHub's release API serves a server-computed digest, so the pin
+is verified without fetching anything).
+
+**Verification:** `check` green — typecheck, lint, 1,528 tests,
+build, docs, AAA contrast, and a **silent** secret scan over 391
+tracked files. `cargo audit`: 14 crate dependencies against 1,226
+advisories, zero findings. Checksum-gate rehearsal: a wrong digest
+exits 1 under `set -euo pipefail` before extraction. App boots and
+converts in the browser; the file input reads `''` after a change,
+so same-file re-selection now fires.
+
+**Open for the owner:** README-PROV-01's wording is drafted, not
+signed (D208 called it "now", with the owner approving the words).
+The provenance section says `graphic.jpg` is third-party with
+unresolved rights and that the other five are *recorded as* the
+owner's own, pending PUB-02's confirmation — deliberately reporting
+the record rather than asserting the fact.
+
+**Link:** backlog → Interleaved — Track E Hardening (BATCH-E0
+removed); `tickets/BATCH-E0.md` deleted with the batch;
+DEV-INFRASTRUCTURE.md → "Supply-chain pins" and the advisory-triage
+cadence under "Security baseline".

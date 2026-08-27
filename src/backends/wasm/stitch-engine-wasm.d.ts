@@ -17,10 +17,25 @@ declare module 'stitch-engine-wasm' {
     module_or_path: InitInput | Promise<InitInput>;
   }): Promise<unknown>;
 
-  /** RGBA output plus the palette-index sidecar (0xffff = empty). */
+  /**
+   * RGBA output plus the palette-index sidecar (0xffff = empty).
+   *
+   * A Rust-owned handle, not a plain object: both getters copy out of
+   * wasm memory (`.slice()` in the generated glue), and the struct
+   * itself stays allocated until `free()` is called. Declared here
+   * because the alias is typed by hand — the generated
+   * `crates/stitch-engine/pkg/stitch_engine.d.ts` has always carried
+   * it; this file was the half that had not caught up (WASM-01).
+   */
   export interface DitherResult {
     readonly pixels: Uint8Array;
     readonly indices: Uint16Array;
+    /**
+     * Release the Rust allocation. Idempotent in the generated glue
+     * (the pointer is zeroed first), but call it exactly once, in a
+     * `finally`, once the copies are out.
+     */
+    free(): void;
   }
 
   /**

@@ -5620,6 +5620,14 @@ function build(app: HTMLElement): void {
 
   input.addEventListener('change', () => {
     const file = imageFiles(input.files ?? []).at(0);
+    // Clear the selection before importing, not after: a native file
+    // input fires `change` on the *value* changing, so re-picking the
+    // file already showing is silently a no-op — which is exactly what
+    // a user does after editing that file on disk and coming back to
+    // try again. The project input has always done this (UI-NITS-01);
+    // the source input had not. Read `files` first — clearing the
+    // value empties it.
+    input.value = '';
     if (file) void importBlob(file, 'file picker', file.name);
   });
 

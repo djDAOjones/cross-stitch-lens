@@ -212,6 +212,31 @@ no backend** — the surface is small. The baseline is therefore Tier 0:
   files. Non-mutating.
 - **Dependency audit:** `npm audit` on every dependency upgrade;
   approved pins held via `overrides`, never a blanket `--force`.
+- **Advisory-triage cadence (DEPS-01):** the audit above is
+  event-driven, and an event-driven check on a project with weeks
+  between dependency changes is not a cadence — advisories accumulate
+  in the gap. The standing rhythm:
+  - **Monthly, and before any release or publication change:** run
+    `npm audit` and `cargo audit --file crates/stitch-engine/Cargo.lock`.
+  - **Fix in small groups, never `--force`.** `npm audit fix` alone
+    where the resolution is non-breaking; a named version bump with its
+    own commit where it is not. `--force` resolves by downgrading or
+    major-bumping whatever it likes and is banned here.
+  - **Every remainder is accepted in writing.** An advisory left
+    unfixed gets a line in `decision-log.md` saying which one, why
+    (typically: dev-chain only, not reachable from the shipped bundle),
+    and what would change the answer. Silence is not acceptance.
+  - **`cargo audit` is a local tool, not a gate step.** The crate has
+    two direct dependencies and the tool is a several-minute compile to
+    install; putting it in `check` would tax every run for a signal
+    that moves monthly. Install with `cargo install cargo-audit
+    --locked` when the cadence comes round.
+  - **Last run: 2026-08-27.** `npm audit` clean (the six dev-chain
+    advisory nodes of 2026-08-26 — brace-expansion, js-yaml, linkify-it,
+    nanoid, postcss, markdownlint-cli2 — all resolved non-breaking; the
+    existing `js-yaml` override admitted the fixed 4.3.2, so
+    markdownlint-cli2 stayed at 0.22.1). `cargo audit` clean: 14 crate
+    dependencies against 1,226 advisories, zero findings.
 - **Secure context:** `getDisplayMedia` and WebGPU require a secure
   context (fine on `localhost` and any HTTPS deploy). If
   `SharedArrayBuffer` is ever adopted (WASM threads), dev and deploy
@@ -247,6 +272,44 @@ no backend** — the surface is small. The baseline is therefore Tier 0:
 
 The output directory `dist` is **read-only** — never hand-edit it; it
 is overwritten on every build.
+
+---
+
+## Supply-chain pins
+
+`.github/workflows/lint.yml` is the only thing between a push and a
+live deploy, so nothing in it floats (CI-01). Four classes of pin, all
+declared at the top of the workflow:
+
+| Pinned | How | Why |
+| --- | --- | --- |
+| Third-party actions | full commit SHA + `# vX.Y.Z` comment | a tag is a movable pointer; `@v4` becomes whatever the publisher pushes next |
+| Runner image | `runs-on: ubuntu-24.04` | `ubuntu-latest` moves between LTS images without notice |
+| Node | `NODE_VERSION`, the `engines` floor | a green gate should name the version it proved |
+| Rust + wasm-pack | `RUST_VERSION`; `WASM_PACK_VERSION` + `WASM_PACK_SHA256` | the installer this replaced piped an unpinned remote script into `sh` |
+
+The wasm-pack step downloads one fixed release asset, verifies it with
+`sha256sum -c`, and only then unpacks it. The checksum is the gate: a
+mismatch exits non-zero under `set -euo pipefail`, before extraction.
+
+**Bumping a pin** is a deliberate act with its own commit, never a
+drive-by inside another change:
+
+1. Find the new SHA — `gh api repos/<owner>/<repo>/git/ref/tags/<tag>
+   --jq .object.sha` — and the exact version that SHA carries, for the
+   comment beside it. Both must change together; a SHA with a stale
+   version comment is worse than no comment.
+2. For wasm-pack, take the checksum from the release itself rather than
+   from a local download: `gh api
+   repos/wasm-bindgen/wasm-pack/releases/tags/v<version> --jq
+   '.assets[] | select(.name|test("x86_64-unknown-linux-musl")) |
+   .digest'`. GitHub computes that digest server-side.
+3. Bump one class at a time and let CI go green before the next.
+4. Say in the commit message what moved and why.
+
+The `runs-on` value is written out at each job rather than read from
+`env`: that key is resolved before the `env` context exists, so it
+cannot be an expression. It is a pin like the others — change both.
 
 ---
 

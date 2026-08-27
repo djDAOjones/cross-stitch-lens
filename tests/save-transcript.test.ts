@@ -12,19 +12,28 @@ import { describe, expect, it } from 'vitest';
 // @ts-ignore — plain .mjs module, typed by its JSDoc only.
 import { redactText, renderTranscript, RESULT_HEAD } from '../scripts/save-transcript.mjs';
 
+import {
+  SAMPLE_AWS_KEY,
+  SAMPLE_GITHUB_TOKEN,
+  SAMPLE_OPENAI_KEY,
+  SAMPLE_PRIVATE_KEY_BLOCK,
+} from './helpers/sample-credentials.ts';
+
 describe('redactText', () => {
+  // The sample tokens are built at runtime (SCAN-01) — see
+  // `helpers/sample-credentials.ts` for why a literal here is a defect.
   it('scrubs every check-secrets key shape', () => {
     const text = [
-      'an sk-abcdefghijklmnopqrstuvwx here',
-      'an AKIAABCDEFGHIJKLMNOP there',
-      'a ghp_abcdefghijklmnopqrstuvwxyz012345 token',
-      '-----BEGIN RSA PRIVATE KEY-----\nMIIE\n-----END RSA PRIVATE KEY-----',
+      `an ${SAMPLE_OPENAI_KEY} here`,
+      `an ${SAMPLE_AWS_KEY} there`,
+      `a ${SAMPLE_GITHUB_TOKEN} token`,
+      SAMPLE_PRIVATE_KEY_BLOCK,
     ].join('\n');
     const out = redactText(text) as string;
-    expect(out).not.toContain('sk-abcdefghijklmnopqrstuvwx');
-    expect(out).not.toContain('AKIAABCDEFGHIJKLMNOP');
-    expect(out).not.toContain('ghp_');
-    expect(out).not.toContain('BEGIN RSA PRIVATE KEY');
+    expect(out).not.toContain(SAMPLE_OPENAI_KEY);
+    expect(out).not.toContain(SAMPLE_AWS_KEY);
+    expect(out).not.toContain(SAMPLE_GITHUB_TOKEN);
+    expect(out).not.toContain(SAMPLE_PRIVATE_KEY_BLOCK);
     expect(out.match(/\[redacted:/g)?.length).toBe(4);
   });
 
@@ -45,7 +54,7 @@ describe('redactText', () => {
 describe('renderTranscript', () => {
   const lines = [
     { type: 'queue-operation', operation: 'enqueue' }, // meta — dropped
-    { type: 'user', timestamp: 't1', message: { role: 'user', content: 'hello sk-abcdefghijklmnopqrstuvwx' } },
+    { type: 'user', timestamp: 't1', message: { role: 'user', content: `hello ${SAMPLE_OPENAI_KEY}` } },
     {
       type: 'assistant',
       message: {
@@ -72,7 +81,7 @@ describe('renderTranscript', () => {
   });
 
   it('redacts inside the dialogue and elides the heavy payloads', () => {
-    expect(md).not.toContain('sk-abcdefghijklmnopqrstuvwx');
+    expect(md).not.toContain(SAMPLE_OPENAI_KEY);
     expect(md).toContain('[redacted:');
     expect(md).toContain('chars elided]');
     expect(md).toContain('[image elided]');

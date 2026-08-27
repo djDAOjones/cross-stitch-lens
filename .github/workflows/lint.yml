@@ -23,6 +23,28 @@ on:
 permissions:
   contents: read
 
+# Supply-chain pins (CI-01). Every third-party action below is
+# referenced by full commit SHA with its version in a comment beside
+# it: a tag is a movable pointer, and `@v4` silently becomes whatever
+# the publisher pushes next. The toolchain versions are pinned here so
+# a runner-image refresh cannot change what the gate ran against, and
+# wasm-pack is fetched as a fixed release asset whose checksum is
+# verified before it is unpacked — the previous `curl … | sh` executed
+# whatever that URL served at that moment.
+#
+# Bumping any of these is a deliberate act with its own commit; the
+# procedure is in DEV-INFRASTRUCTURE.md -> "Supply-chain pins".
+# (The runner image is written out at each `runs-on` — that key is
+# resolved before the `env` context exists, so it cannot be a
+# variable. It is listed in the bump procedure with the rest.)
+env:
+  # The `engines` floor in package.json: CI proves the minimum we claim.
+  NODE_VERSION: 22.18.0
+  # Matches the toolchain the crate is developed against.
+  RUST_VERSION: 1.97.1
+  WASM_PACK_VERSION: 0.15.0
+  WASM_PACK_SHA256: c09f971ecaed9a2efc80fdcea7a00ef6b53c7fadc8c57d1f61b53a6aa66b668a
+
 # Cancel superseded runs on the same ref: rapid pushes (or PR updates)
 # should not queue redundant runs — only the latest commit matters.
 concurrency:
@@ -32,31 +54,35 @@ concurrency:
 jobs:
   check:
     name: Quality gate (npm run check)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned: `ubuntu-latest` moves between images (CI-01)
     # The gate must stay under ~2 minutes locally; cap the job so a
     # hung runner fails fast instead of consuming the 6-hour default.
     timeout-minutes: 15
     steps:
       - name: Check out
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
       - name: Install dependencies
         run: npm ci
 
       # Rust for the stitch-engine crate (check:wasm). The hosted
-      # runner ships rustup + stable; we only add the wasm target and
-      # wasm-pack (binary installer — no compile).
-      - name: Set up Rust wasm target
-        run: rustup target add wasm32-unknown-unknown
+      # runner ships rustup, but its `stable` moves with the image;
+      # pin the exact toolchain so a green gate names a compiler.
+      - name: Set up Rust
+        run: |
+          rustup toolchain install "$RUST_VERSION" \
+            --profile minimal --target wasm32-unknown-unknown --no-self-update
+          rustup default "$RUST_VERSION"
+          rustc --version
 
       - name: Cache cargo
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             ~/.cargo/registry
@@ -64,8 +90,29 @@ jobs:
             crates/stitch-engine/target
           key: cargo-${{ runner.os }}-${{ hashFiles('crates/stitch-engine/Cargo.lock') }}
 
-      - name: Install wasm-pack
-        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      # A fixed release asset, verified before it runs. The installer
+      # this replaced piped an unpinned remote script into `sh`, so
+      # every CI run — and every deploy behind it — trusted whatever
+      # that URL served at that moment (CI-01). A checksum mismatch is
+      # fatal by construction: `sha256sum -c` is the gate, and the
+      # tarball is never unpacked if it fails.
+      - name: Install wasm-pack (pinned, checksum-verified)
+        run: |
+          set -euo pipefail
+          asset="wasm-pack-v${WASM_PACK_VERSION}-x86_64-unknown-linux-musl"
+          url="https://github.com/wasm-bindgen/wasm-pack/releases/download/v${WASM_PACK_VERSION}/${asset}.tar.gz"
+          curl --proto '=https' --tlsv1.2 -sSfL --retry 3 -o wasm-pack.tar.gz "$url"
+          echo "${WASM_PACK_SHA256}  wasm-pack.tar.gz" | sha256sum -c -
+          mkdir -p wasm-pack-extract "$HOME/.cargo/bin"
+          tar -xzf wasm-pack.tar.gz -C wasm-pack-extract
+          # Locate the binary rather than assuming the archive's layout:
+          # the pin is the checksum, and the extraction should not be a
+          # second, unverified assumption that breaks on a repackage.
+          binary="$(find wasm-pack-extract -type f -name wasm-pack | head -n 1)"
+          test -n "$binary" || { echo "wasm-pack not found in $asset"; exit 1; }
+          install -m 0755 "$binary" "$HOME/.cargo/bin/wasm-pack"
+          rm -rf wasm-pack.tar.gz wasm-pack-extract
+          wasm-pack --version
 
       - name: Quality gate
         run: npm run check
@@ -90,7 +137,7 @@ jobs:
 
       - name: Upload the Pages artifact
         if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
-        uses: actions/upload-pages-artifact@v5
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: dist
 
@@ -99,7 +146,7 @@ jobs:
     # `needs` makes a red gate a non-deploy, not a broken site.
     needs: check
     if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned: `ubuntu-latest` moves between images (CI-01)
     timeout-minutes: 10
     permissions:
       contents: read
@@ -111,7 +158,7 @@ jobs:
     steps:
       - name: Deploy
         id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
 
       # Post-deploy verification (PUB-05): the site must now serve the
       # commit this run deployed. These steps run AFTER deploy-pages, so
@@ -120,12 +167,12 @@ jobs:
       # and `npm run verify:deploy` reproduces the check locally. The
       # script has no dependencies, so there is no `npm ci` here.
       - name: Check out
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Verify the live build id
         run: node scripts/verify-deploy.mjs --url "$PAGE_URL" --wait 300 "$GITHUB_SHA"

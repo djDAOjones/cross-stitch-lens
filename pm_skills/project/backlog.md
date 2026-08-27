@@ -53,7 +53,10 @@ The order set on 2026-08-23 (D189): the small UI batch first, then
 **Print** programme (M16's sitting, PRINT-01 → PRINT-02, PRINT-TEST-01)
 waits in the Icebox until the owner schedules it. The numbers stay
 because they are greppable across the tickets and the decision log;
-they no longer imply sequence.
+they no longer imply sequence. Amended 2026-08-27 (D208): **Track E —
+Hardening** interleaves — BATCH-E0 any time, the STATE spine after
+ADJUST-02 and before Track D's remaining slices, the public-surface
+group riding with Track C.
 
 ## Active
 
@@ -66,16 +69,6 @@ realism (D149; the first live-app ask, D173). The swap shipped
 order, their spec shared in `tickets/CREATIVE-01.md` (the D149
 shared-file exception; it dies with the last slice). PAINT-01 still
 scopes separately.
-
-**Interleaved 2026-08-24, ahead of the slices:** MENU-01 is not part of
-the creative programme. It sits here because it is small, stands alone,
-and is the precondition for ICE-PROFILES-02's batch three — the menu it
-fixes is already a 25-item flat list, and that batch is what makes it
-visibly worse.
-
-- [ ] **MENU-01 Group the profile menu so it stays scannable** [detail] (2026-08-24)
-  Intent: the colour-profile select is a flat list of every profile — 25 built-ins today, 33 after ICE-PROFILES-02's batch three. Group it (`<optgroup>`) on five groups, owner-chosen 2026-08-24: Your threads (3) / Basics (6) / Nature and place (8) / Style and era (8) / Your profiles. No group exceeds eight — the first proposal put all 19 non-library built-ins under one "Styles" heading, which tidied the edges and left the scrolling untouched; checked, the sixteen gallery profiles fall 8/8 into nature and culture, the axis ICE-PROFILES-02's pool A already uses. Verified as low-risk: the project file stores only `profileRef {id, revision}`, so no schema change and no migration; `ui-baseline` pins engine and export bytes, not DOM. Two selects carry it, and the editor's switcher is shared with dither (7) and adjust (9), which stay flat. The ticket carries a recommendation for every decision — a build session may proceed on them; the taxonomy is now settled, so a build session can proceed throughout.
-  Done when: both selects group the colour profiles, the four special cases still behave (the unlinked "This design's colours" option, My inventory's empty state, the `(edited)` suffix, and the `(built-in)` suffix which the groups make redundant in the Colour section), the dither and adjust switchers are untouched, the audit table matches the menu, a UI-STANDARDS line records the rule — there is none on long lists today — and `check` is green with the first DOM-level test of the option structure.
 
 - [~] **TONE-01 Tone mode: the weighted metric, the ramp and the curve** [detail] (2026-08-23)
   Intent: slice 1 (D200), schema v12 — the colour↔tone slider in the metric with the count-limit selection carrying the same weight, ladder mode with cut handles on the ramp (control and provenance in one), natural cuts + Equalise, target shares at source-lightness quantiles, the three-point curve, the colour-use floor, re-pick from the current frame. Dither diffuses in the weighted space (the prototype's confirmed call); the LUT key carries the weight (D46).
@@ -96,6 +89,56 @@ visibly worse.
 - [ ] **PAINT-01 Scope the pixel editor** [sign-off] [detail] (2026-08-23)
   Intent: an editor a stitcher can work in, not a demo brush — tools, the interaction model by pointer, keyboard and touch, persistence and clearing, undo, its composition with the swap's render palette (shipped, D199), and the v1 slice. Stills only in v1 (D182-3/4).
   Done when: the owner signs the v1 tool set, interaction model, persistence and build slices; each slice becomes its own Track D item.
+
+### Interleaved — Track E Hardening
+
+Opened 2026-08-27 (D208) from the 2026-08-26 external repository
+review (findings cited PMR-01…18; sampled claims verified in code
+before adoption; the report stays untracked at
+`_user-guff/2026-08-26-repo-review.md` while it maps unfixed surfaces
+of the live app — the critique, the full cut and the owner's eight
+signed calls live in D208 and the programme artifact). Order:
+BATCH-E0 any time; the STATE spine after ADJUST-02 and before Track
+D's remaining slices — SHEET-01 multiplies in-flight requests, the
+defect the spine repairs; the public-surface group rides with Track
+C. No schema version changes anywhere in the track.
+
+- [ ] **BATCH-E0 The hardening quick eight** [detail] (2026-08-27)
+  Intent: eight standalone review fixes, no product decisions, disjoint from the spine — CI-01 (pin the deploy workflow's supply chain), TEST-01 (UI baselines fail closed, separate generator), SCAN-01 (zero-warning secret scan), DEPS-01 (dev-advisory refresh, stated cadence, first `cargo audit`), WASM-01 (`free()` in `finally` via regenerated bindings), FONT-01 (the palette page drops Google Fonts), UI-NITS-01 (same-file re-selection; editor selection guard), README-PROV-01 (the demo README says only what is established — wording to the owner). Run sheet: tickets/BATCH-E0.md. Parallel-safe as a worktree round; fine as one burst.
+  Done when: all eight land with `check` green and the run sheet dies with the batch.
+- [ ] **STATE-01 Sign the state and lifecycle design** [sign-off] [detail] (2026-08-27)
+  Intent: one design signed once — immutable per-request snapshots, a source generation token, one `transitionSource()` / `clearSourceState()`, one terminal settlement path per operation, worker-fatal included. The sitting signs the convention and the slice cut (proposed: STATE-02 snapshots → STATE-03 source transitions and capture release, which closes the live capture-retention privacy defect → STATE-04 worker settlement → STATE-05 history queue); each slice then becomes its own item. Serial in `main.ts` — no parallel streams; prototype branch allowed.
+  Done when: the convention and slice order are signed and the slices are spun out.
+  Scope: `src/main.ts`, `src/worker/client.ts`, `src/capture/session.ts`, `src/capture/pump.ts`; no schema change.
+- [ ] **STORE-01 Persistence is atomic and honest** (2026-08-27)
+  Intent: one-transaction `putReplacing(snapshot, victims)` so eviction cannot outlive a failed replacement; await `transaction.oncomplete` everywhere (the history store carries the pattern); an explicit initialising / persistent / session-only storage state with early writes queued or refused visibly. Library files — parallel-safe beside the spine; the `main.ts` adoption seam lands after STATE-03.
+  Done when: an injected put-failure after victim deletion loses nothing, and "saved" means committed.
+- [ ] **LIMIT-01 The export refuses unpayable page counts** (2026-08-27)
+  Intent: arithmetic page-count precheck before `slicePages` — refuse above 500 pages naming the count, confirm above 60 (the owner's numbers, D208); iterate pages during assembly instead of retaining every PNG. Export-side only — the round-trip invariant forbids clamping on load. PRINT-01 inherits the cap when its plan model replaces `export.pdf`.
+  Done when: an over-cap request is refused before any allocation (instrumented), the boundary passes, and a moderate multi-page export is byte-stable.
+- [ ] **LIMIT-02 The package parser budgets before it copies** (2026-08-27)
+  Intent: gate `File.size` before `arrayBuffer()`, cap the central-directory aggregate at 256 MiB and `project.json` at 16 MiB (D208), allocate named supported entries only — today sixteen 256 MiB entries are nominally valid and every entry is sliced after the whole file is read.
+  Done when: synthetic oversize headers are refused with no allocation (spies, no giant fixtures) and the limits are documented user-facing.
+
+**With Track C, owner-paced** (D208): the public-surface group.
+
+- [ ] **NOTICE-01 Notices cover the shipped closure** (2026-08-27)
+  Intent: the production bundle ships `@pdf-lib/standard-fonts`, `@pdf-lib/upng`, `pako` and `tslib`; none appear in THIRD-PARTY-NOTICES.md. Reconcile against the resolved closure and add the test that pins it; the owner approves the edit (signed wording, D161/D177).
+  Done when: every bundled runtime package is listed and the closure test is green.
+- [ ] **DIAG-05 Diagnostics honour the disclosure** (2026-08-27)
+  Intent: titles, filenames and capture labels survive in message/scope strings; the newest-80 cut lets frame chatter evict the error that mattered; every frame updates a live region. Allowlist the bundle schema, omit or hash labels, keep errors from the whole ring, sample frame telemetry, announce transitions not frames — and correct the in-app disclosure in the same commit. A11Y-VO-01 gains the re-check line.
+  Done when: a bundle from a realistic-filename session contains none, eighty-plus frame logs cannot evict an error, and announcements per reprocess are bounded.
+- [ ] **CAP-01 Capture is offered only where it can work** (2026-08-27) — preflight `getDisplayMedia`; where absent the control is disabled with a reason instead of failing on use. Done when a browser without the API shows the reason, not a failure.
+- [ ] **CROP-01 Crop pins meet the 44 px rule** (2026-08-27) — the pins measure ~24 px against the AAA 44 × 44 hard rule; invisible hit-area enlargement, no visual change, keyboard crop stays green, a UI-STANDARDS line records the pattern.
+- [ ] **INFRA-04 `check` obeys its own invariant; the reboot verb exists** (2026-08-27)
+  Intent: `check` writes WASM and `dist` against the AGENTS non-mutating rule; a missing local wasm-pack skips green while CI installs it; the documented one-command reboot surface is unimplemented. Conform the code (D208): isolate generated output or split the verbs honestly, fail on missing toolchain with the install pointer, implement reboot-with-readiness; docs reconcile after.
+  Done when: a whole-tree manifest is identical across `check`, missing tooling is a red with instructions, and the reboot command exists and verifies readiness.
+- [ ] **SUPPORT-01 The supported-platform policy** [sign-off] (2026-08-27)
+  Intent: D149 widened the audience and the platform contract lags — ES2020 docs against an ES2022 build, no tested Safari/Firefox/mobile/private-mode matrix, meta-CSP and source-map postures undecided. One sitting, paired with A11Y-VO-01 and M16's; ICE-TAURI-01's wake references the outcome.
+  Done when: the matrix is signed and each gap becomes an item or an accepted limitation.
+- [ ] **PERF-01 Settle the dither differential** (2026-08-27)
+  Intent: the review's controlled A/B kept every HEAD median under its ceiling but left Atkinson +17.5 % and blue-noise +10.9 % unexplained under extreme spread. Quiet-host interleaved pairs (three or more, order-reversed); if it persists, bisect; ceilings move only with an explanation, never to green. `bench:auto` on the reference browser is the [maintainer] half.
+  Done when: three quiet pairs agree and the differential is explained or closed.
 
 ### Next — Track C Publication
 
@@ -156,15 +199,17 @@ triage, D197).
 - [ ] **CAPTURE-OMT-01 Off-main-thread capture** — move the surface-sized grab readback and dirty sample off the main thread (`MediaStreamTrackProcessor`-class); an architecture change with its own scope (D135). Wakes on felt stutter, or a captured surface materially over 6.5 MP.
 - [ ] **COUNT-02 Re-select against the held source** — every distinct count step pays a full-RGB refetch plus the FLICKER-01 hold although the distribution does not depend on the count. Wakes on a slider-feel report.
 - [ ] **DUR-02 Accept a deflate-compressed `.pmproj`** — a package re-zipped by Finder or Explorer is refused; `DecompressionStream('deflate-raw')` in an adapter outside core would accept it. Wakes when a user hits it.
-- [ ] **DUR-03 Design-history follow-ups** — remove one design, clear the history, "Keep more designs" outside the near-quota window; a "capture the same window again" offer when a restored capture returns as a still. Wakes on a user ask.
+- [ ] **DUR-03 Design-history follow-ups** — remove one design, clear the history, "Keep more designs" outside the near-quota window; a "capture the same window again" offer when a restored capture returns as a still. Wakes on a user ask; the 2026-08-26 review flags the same retention-visibility gap (D208).
 - [ ] **DIAG-04 One-file report** — `project.json` plus the log inside a store-only `.pmproj` the app loads directly: one download, no multiple-downloads prompt (D187 chose two files). Wakes on tester friction.
 - [ ] **SYMBOL-SWAP-01 Explicit symbol swap** — take another thread's glyph and hand it yours in one act; a model verb beside `setOverride`, the picker lists the unused pool only (D191). Wakes on a user ask.
 - [ ] **STATUS-01 Keep a status sentence across one reprocess** — a sentence set beside a reprocess ("X is stitched as Y.", the Must-use sentences) shows only until the frame's "Preview updated." replaces it a second later; the status line needs a way to hold a user-facing sentence through one frame (from ICE-RECOLOUR-01). Wakes on a user missing an explanation.
+- [ ] **ICE-HEADERS-01 Response-header hardening** [blocked: a hosting decision] (2026-08-27) — CSP, HSTS and frame policies need a host that can set response headers; GitHub Pages cannot. Wakes if hosting moves or a concrete threat model demands it; the meta-CSP slice rides SUPPORT-01 (D208).
+- [ ] **ICE-BUNDLE-01 Profile the 927 KiB client chunk** — before any code-splitting talk (the review agrees: no speculative restructuring). Wakes on a measured cold-load complaint (D208).
 
 **Parked — each wakes on a named trigger** (D188).
 
 - [ ] **ICE-PROFILES-02 More built-in colour profiles: the unbuilt candidates** [detail] (2026-08-09)
-  Forty unsigned candidate names kept when M15-GALLERY-01 closed at sixteen. Wakes when CREATIVE-01's tone-only matching ships or a user asks; done when run through the signed-batch process, or cut.
+  Ninety-two unsigned candidates remain after batch three shipped the gallery to 33 and the manufacturer split followed (D205–D207). Wakes when CREATIVE-01's tone-only matching ships or a user asks; done when run through the signed-batch process, or cut.
 - [ ] **SNAP-01 Snap any profile to one manufacturer's range** [detail] [blocked: a named trigger] (2026-08-24)
   Intent: render any colour profile in the threads you actually buy — the owner's ask at the manufacturer split. Matters more than convenience: every curated built-in is a list of specific threads and all but one are DMC, so the gallery is brand-shaped even after MENU-01 removed DMC's billing from the menu; this removes it from the profiles. Could also retire D206's multi-brand hi-vis exception. **The engine half already exists and is wired to nothing** — `core/thread-equivalents.ts` does nearest-in-CIELAB per brand with a curated-over-computed model, tested, unused. The work is profile-level application, the UI, and the honesty: there is no curated data yet (`thread-map-proposed.csv` is a header), so every snap today is a *suggestion*, and a shopping list is what people spend money on.
   Done when: not scoped — a scoping pass answers where it lives (per-design control, standing preference, or export-only) and the collision rule (two colours snapping to one thread: shrink, second-nearest, or refuse), then produces a build slice. Wakes on the owner scheduling it, on curated cross-reference data arriving (DATA-01), or on a user asking for a design in another brand.

@@ -82,12 +82,19 @@ const SAFE_PATH_RE = /^[\w./-]+$/;
  * elsewhere by design), and `check:docs` is also run on its own, where
  * nothing has built it at all. Citing the folder is a statement about
  * the build, not a reference that can rot (INFRA-02).
+ *
+ * `_user-guff/` is the bench-reports class again: owner-local material
+ * .gitignore keeps out of the repo on purpose, cited from project
+ * memory (e.g. the 2026-08-26 review filed for Track E, D208). A clean
+ * checkout has none of it, so checking those citations would assert
+ * the checkout is the owner's machine and break CI parity.
  */
 const IGNORE = [
   /(^|\/)archive(\/|$)/,
   /(^|\/)tickets(\/|$)/,
   /^bench-reports(\/|$)/,
   /^crates\/stitch-engine\/pkg(\/|$)/,
+  /^_user-guff(\/|$)/,
 ];
 
 /**

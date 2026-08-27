@@ -1729,3 +1729,52 @@ moved. `check` green (1499 tests).
 
 **Link:** backlog → SNAP-01 iceboxed; MENU-01 shipped and now carries
 seven groups; ICE-PROFILES-02 unaffected at 92 candidates.
+
+## D208 — Track E opens: the 2026-08-26 review lands as the hardening programme (2026-08-27)
+
+**Decision:** the external repository review of c0082b0 (18 findings,
+cited PMR-01…18) is adopted as **Track E — Hardening**, interleaved:
+BATCH-E0 (eight standalone fixes) any time; a signed STATE programme
+(immutable request snapshots, a source generation token, one
+transition and one settlement path — the review's structural repair,
+no rewrite) after ADJUST-02 and before Track D's remaining slices;
+STORE-01 and LIMIT-01/02 alongside; the public-surface group
+(NOTICE-01, DIAG-05, CAP-01, CROP-01, INFRA-04, SUPPORT-01, PERF-01)
+with Track C.
+
+**The owner's calls** (a blanket "execute" on the programme's eight
+recommendations, each reversible): (1) the order above — SHEET-01
+waits for the spine it would otherwise build on; (2) deploy posture
+unchanged, pushes stay the owner's word — noted that until STATE-03
+every deploy carries the capture-retention defect; (3) LIMIT-01
+refuse > 500 pages / confirm > 60; LIMIT-02 256 MiB aggregate /
+16 MiB document; (4) README-PROV-01 now, NOTICE-01's edit
+owner-approved at its close; (5) SUPPORT-01 parked to the Track C
+era; (6) the Track E name and IDs as drafted; (7) the crop pins
+conform to the AAA 44 px rule rather than amending it; (8) `check`
+conforms to its non-mutating invariant rather than amending it.
+
+**Rationale:** sampled findings verified in code before adoption —
+the retained in-flight config reference, the 1-stitch/page floor,
+the `curl | sh` installer, the bootstrap-if-absent baseline, the
+never-called `free()`, the four missing notice packages. Findings
+fold into existing homes rather than duplicating: pagination's deep
+fix stays with PRINT-01 (the cap is inherited), retention UX stays
+DUR-03, the VoiceOver list stays A11Y-VO-01.
+
+**Alternatives:** finish all of Track D first (rejected — SHEET-01
+multiplies in-flight requests, the exact PMR-01 hazard, and the live
+privacy defect would stand longer); a pre-sitting capture-stop
+micro-fix (kept available if the sitting slips).
+
+**Refactor riding the entry:** MENU-01 evicted (shipped at D205; the
+eviction was missed) with its trajectory line back-filled and
+tickets/MENU-01.md deleted; ICE-PROFILES-02's count refreshed to 92;
+ICE-HEADERS-01 and ICE-BUNDLE-01 parked with named triggers; DUR-03
+annotated.
+
+**Link:** backlog → Interleaved — Track E Hardening;
+tickets/BATCH-E0.md and tickets/STATE-01.md; the review kept
+untracked at `_user-guff/2026-08-26-repo-review.md` while it maps
+unfixed surfaces of the live app; the programme artifact:
+<https://claude.ai/code/artifact/7780e750-3f3b-43ad-a359-dfca9713622e>.

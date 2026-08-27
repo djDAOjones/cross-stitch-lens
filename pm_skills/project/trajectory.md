@@ -39,6 +39,11 @@ the worktree round its scoping tickets open before any of them ran.
   stays untouched. The hot loop is tabled on a recorded profile
   (189 → 70 ms/MP) at a documented 1-level tolerance. Signed and
   keyboard-passed the same day. See D202, D203.
+- MENU-01 (2026-08-24) — the colour-profile selects group with
+  `<optgroup>`; shipped inside D205's menu split, seven groups after
+  the manufacturer round. Needs no further work (D206). See
+  D205–D207. (Line back-filled at the D208 refactor — the eviction
+  was missed at ship.)
 - ICE-RECOLOUR-01 (2026-08-23) — the colour swap, layer A: a pure
   `swap` stage after the colour stage remaps the sidecar through a
   render palette (selected entries + render-only targets); a design

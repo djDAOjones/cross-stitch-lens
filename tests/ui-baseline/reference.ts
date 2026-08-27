@@ -32,21 +32,40 @@ import { SYMBOL_IDS } from '../../src/core/symbols/glyphs.ts';
 import { executeRequest } from '../../src/worker/execute.ts';
 import { encodePng, sourceBuffer, SOURCE_SIDE } from './source.ts';
 
-/** The four artefacts the tripwire pins, by name. */
+/** The artefacts the tripwire pins, by name. */
 export interface BaselineHashes {
+  /** The committed PNG **file**'s bytes. Read, never re-derived — see below. */
   sourcePng: string;
+  /** The seeded source's raw RGBA. What `sourcePng` used to try to prove. */
+  sourcePixels: string;
   outputPixels: string;
   outputIndices: string;
   projectJson: string;
 }
 
-/** Every key a complete `hashes.json` must carry. */
-export const BASELINE_KEYS: (keyof BaselineHashes)[] = [
-  'sourcePng',
+/**
+ * The hashes that can be **computed** from the code, so a drift in any
+ * of them is a real behaviour change on any machine.
+ *
+ * `sourcePng` is deliberately not among them. Re-encoding the fixture
+ * and comparing the result is not a portable check: `encodePng` ends in
+ * `deflateSync`, and a DEFLATE stream is not byte-identical across zlib
+ * versions or platforms — the same pixels encode differently on macOS
+ * and on the Linux runner. That assertion passed locally and reddened
+ * CI on its first push. `sourcePixels` is the check it was reaching
+ * for: it pins the seeded source's actual content with pure
+ * arithmetic, so it holds anywhere, and the PNG is pinned as what it
+ * is — a committed file whose bytes must not change.
+ */
+export const COMPUTED_KEYS = [
+  'sourcePixels',
   'outputPixels',
   'outputIndices',
   'projectJson',
-];
+] as const;
+
+/** Every key a complete `hashes.json` must carry. */
+export const BASELINE_KEYS: (keyof BaselineHashes)[] = ['sourcePng', ...COMPUTED_KEYS];
 
 export function sha256(bytes: Uint8Array): string {
   return createHash('sha256').update(bytes).digest('hex');
@@ -222,11 +241,16 @@ export function referenceProjectJson(): string {
   return serializeProject(defaultProject(defaultConfig()));
 }
 
-/** Every reference hash, computed fresh. */
-export function computeBaseline(): BaselineHashes {
+/** The seeded source's raw RGBA bytes — no encoder in the path. */
+export function referenceSourcePixels(): string {
+  return sha256(new Uint8Array(sourceBuffer().data.buffer.slice(0)));
+}
+
+/** Every hash the code can compute. Excludes `sourcePng` — see COMPUTED_KEYS. */
+export function computeBaseline(): Pick<BaselineHashes, (typeof COMPUTED_KEYS)[number]> {
   const pipeline = referencePipeline();
   return {
-    sourcePng: sha256(referencePng()),
+    sourcePixels: referenceSourcePixels(),
     outputPixels: pipeline.pixels,
     outputIndices: pipeline.indices,
     projectJson: sha256(new TextEncoder().encode(referenceProjectJson())),

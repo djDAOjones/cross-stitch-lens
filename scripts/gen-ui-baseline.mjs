@@ -67,16 +67,31 @@ try {
   await server.close();
 }
 
-const png = reference.referencePng();
-const next = reference.computeBaseline();
-const previous = existsSync(HASHES)
-  ? JSON.parse(readFileSync(HASHES, 'utf8'))
-  : {};
-
-const changed = reference.BASELINE_KEYS.filter((key) => previous[key] !== next[key]);
+const computed = reference.computeBaseline();
+const previous = existsSync(HASHES) ? JSON.parse(readFileSync(HASHES, 'utf8')) : {};
 const show = (path) => relative(ROOT, path);
 
-if (changed.length === 0 && existsSync(PNG)) {
+// The PNG is rewritten ONLY when its content actually moved, never
+// merely because this machine's zlib would emit different bytes for
+// the same pixels. `encodePng` ends in `deflateSync`, whose output
+// varies across zlib versions and platforms — an unconditional
+// rewrite here would churn a committed protected fixture on every
+// machine that ran the generator, and the diff would look like a real
+// change. `sourcePixels` is the honest trigger.
+const pngMissing = !existsSync(PNG);
+// An ABSENT previous `sourcePixels` is not a moved one — it is a key
+// this oracle predates. Rewriting on that would churn the fixture the
+// first time anyone ran the generator after the key was added.
+const contentMoved =
+  typeof previous.sourcePixels === 'string' && previous.sourcePixels !== computed.sourcePixels;
+const rewritePng = pngMissing || contentMoved;
+
+const png = rewritePng ? reference.referencePng() : readFileSync(PNG);
+const next = { sourcePng: reference.sha256(new Uint8Array(png)), ...computed };
+
+const changed = reference.BASELINE_KEYS.filter((key) => previous[key] !== next[key]);
+
+if (changed.length === 0) {
   console.log('gen-ui-baseline: already current — nothing to write.');
   process.exit(0);
 }
@@ -84,16 +99,23 @@ if (changed.length === 0 && existsSync(PNG)) {
 for (const key of changed) {
   console.log(`  ${key}: ${String(previous[key] ?? '(absent)')} -> ${next[key]}`);
 }
+console.log(
+  rewritePng
+    ? `  ${show(PNG)}: ${pngMissing ? 'absent — will be written' : 'content moved — will be re-encoded'}`
+    : `  ${show(PNG)}: left exactly as committed (content unchanged, or not previously pinned)`,
+);
 
 if (dryRun) {
-  console.log(`gen-ui-baseline: ${String(changed.length)} hash(es) would change. Nothing written (--check).`);
+  console.log(
+    `gen-ui-baseline: ${String(changed.length)} hash(es) would change. Nothing written (--check).`,
+  );
   process.exit(0);
 }
 
-writeFileSync(PNG, png);
+if (rewritePng) writeFileSync(PNG, png);
 writeFileSync(HASHES, `${JSON.stringify(next, null, 2)}\n`);
 console.log(
-  `gen-ui-baseline: wrote ${show(PNG)} and ${show(HASHES)}\n` +
+  `gen-ui-baseline: wrote ${show(HASHES)}${rewritePng ? ` and ${show(PNG)}` : ''}\n` +
     `  reason: ${reason}\n` +
     '  Commit these with that reason in the message, and record the ' +
     'approval in the decision log.',

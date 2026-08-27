@@ -36,6 +36,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import {
   BASELINE_KEYS,
+  COMPUTED_KEYS,
   computeBaseline,
   sha256,
   type BaselineHashes,
@@ -73,7 +74,7 @@ function committedHashes(path: string = hashesPath): BaselineHashes {
 
 describe('M14 UI baseline (byte-identity tripwire)', () => {
   let expected: BaselineHashes;
-  let actual: BaselineHashes;
+  let actual: ReturnType<typeof computeBaseline>;
 
   beforeAll(() => {
     expected = committedHashes();
@@ -84,12 +85,16 @@ describe('M14 UI baseline (byte-identity tripwire)', () => {
     expect(existsSync(pngPath), `${pngPath} is missing — restore it from git`).toBe(true);
   });
 
-  it('pins the committed fixture PNG', () => {
-    const committed = new Uint8Array(readFileSync(pngPath));
-    // Two claims, deliberately: the file on disk has not changed, and
-    // it is still what the seeded source encodes to.
-    expect(sha256(committed)).toBe(expected.sourcePng);
-    expect(actual.sourcePng).toBe(expected.sourcePng);
+  it('pins the committed fixture PNG as a file', () => {
+    // The file's bytes, not a re-encode: `encodePng` ends in
+    // `deflateSync`, whose output is not byte-identical across zlib
+    // versions, so re-deriving this hash compares platforms rather
+    // than behaviour. The content claim is `sourcePixels` below.
+    expect(sha256(new Uint8Array(readFileSync(pngPath)))).toBe(expected.sourcePng);
+  });
+
+  it('pins the seeded source content the fixture encodes', () => {
+    expect(actual.sourcePixels).toBe(expected.sourcePixels);
   });
 
   it('pins the reference pipeline output for the default config', () => {
@@ -104,8 +109,11 @@ describe('M14 UI baseline (byte-identity tripwire)', () => {
 
 describe('the tripwire fails closed (TEST-01)', () => {
   it('names every artefact it pins', () => {
-    expect(BASELINE_KEYS).toHaveLength(4);
-    expect(Object.keys(computeBaseline()).sort()).toEqual([...BASELINE_KEYS].sort());
+    expect(BASELINE_KEYS).toHaveLength(5);
+    expect(Object.keys(computeBaseline()).sort()).toEqual([...COMPUTED_KEYS].sort());
+    // `sourcePng` is pinned but not computed — it is a file property.
+    expect(BASELINE_KEYS).toContain('sourcePng');
+    expect([...COMPUTED_KEYS]).not.toContain('sourcePng');
   });
 
   it('refuses an absent oracle instead of writing one', () => {
@@ -120,7 +128,7 @@ describe('the tripwire fails closed (TEST-01)', () => {
     writeFileSync(partial, JSON.stringify({ sourcePng: 'abc' }));
     try {
       expect(() => committedHashes(partial)).toThrow(
-        /incomplete.*outputPixels, outputIndices, projectJson/s,
+        /incomplete.*sourcePixels, outputPixels, outputIndices, projectJson/s,
       );
     } finally {
       rmSync(partial, { force: true });
@@ -129,9 +137,10 @@ describe('the tripwire fails closed (TEST-01)', () => {
 
   it('accepts only a complete oracle', () => {
     const complete = join(tmpdir(), `pm-baseline-complete-${String(process.pid)}.json`);
-    writeFileSync(complete, JSON.stringify(computeBaseline()));
+    const full = { sourcePng: 'file-hash', ...computeBaseline() };
+    writeFileSync(complete, JSON.stringify(full));
     try {
-      expect(committedHashes(complete)).toEqual(computeBaseline());
+      expect(committedHashes(complete)).toEqual(full);
     } finally {
       rmSync(complete, { force: true });
     }

@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 323 file(s) across 13 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 326 file(s) across 13 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 13 file(s)
 - `.claude` — 2 file(s)
 - `.githooks` — 1 file(s)
@@ -26,8 +26,8 @@
 - `docs` — 17 file(s)
 - `public` — 8 file(s)
 - `scripts` — 23 file(s)
-- `src` — 115 file(s)
-- `tests` — 136 file(s)
+- `src` — 117 file(s)
+- `tests` — 137 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -163,6 +163,7 @@
 - `src/core/color/curve.ts` — the three-point lightness curve primitive shared by tone matching and the adjust stage (two curves, one maths)
 - `src/core/color/lut.ts` — 15-bit RGB→palette-index LUT builder + exact nearest
 - `src/core/color/metrics.ts` — squared colour distances: Euclidean RGB, ΔE76
+- `src/core/color/mixer.ts` — the six-band mixer and saturation-range maths (ADJUST-02). Band centres DERIVED from `srgbToLab` — CIELAB spaces the classic six 22°–110° apart, not 60°. `hueConfidence` is the shared roll-off that stops any hue-dependent control touching a neutral.
 - `src/core/color/tone.ts` — tone mode (TONE-01): weighted metric, ladder cuts/quantiles, histogram, suitability hints; the curve maths comes from `color/curve.ts`
 - `src/core/estimates.ts` — pure fabric sizing + thread/skein estimator (M12): named factors only, per-colour skein round-up, and the disclosure sentence
 - `src/core/grid-presets.ts` — six built-in grid styling presets (paired screen/print halves) + exact-match provenance detector; in core so the v6→v7 migration can label files
@@ -217,6 +218,7 @@
 - `src/ui/import.ts` — import routes → decode: filter (pure) + blob→PixelBuffer
 - `src/ui/info-panel.ts` — "Colours used" table content: pure row model + thin DOM half, hosted by a section (M14-EXT-41); the live symbol key column (ICE-SYMBOL-UI-01); the Swap… verb and "swapped from" note (ICE-RECOLOUR-01); focus kept across rebuilds, following a swap to its target
 - `src/ui/latest-wins.ts` — generation gate for async selection (UI-NITS-01): take a token, apply only while newest. UI-local by intent — STATE-01 signs the app-wide convention.
+- `src/ui/mixer-control.ts` — the two slice-2b reveals, both collapsed by default (D200): the mixer as a fieldset per band, the range as two native sliders that push rather than cross.
 - `src/ui/modal.ts` — Carbon modals (text prompt, choices, danger confirm, live-apply form): trap arithmetic pure, focus restore, Escape/backdrop cancel
 - `src/ui/notices.ts` — licences and notices: `?raw` imports of `LICENSE` + `THIRD-PARTY-NOTICES.md`, a pure document parser, the Close-only dialog and the ghost header button (PUB-01)
 - `src/ui/notification.ts` — Carbon inline notification (CAPTURE-END-01): one sentence, kind edge, text Dismiss with deliberate focus return; role=status
@@ -341,6 +343,7 @@
 - `tests/library-records.test.ts` — Library file round trips, corrupt/oversized import, merge, collisions, memory store
 - `tests/lut-cache.test.ts` — cache identity by palette content, LRU bound, GPU-LUT sanity rejection
 - `tests/matrix/rows.ts` — the correctness matrix: row definitions with `proves` text, adversarial palettes, seeded sources
+- `tests/mixer.test.ts` — the mixer maths — that the centres are derived and NOT evenly spaced, that six identity bands are the identity at every hue, and that the roll-off fades each control to its own neutral.
 - `tests/modal.test.ts` — pure halves: focus-trap decisions + aria-describedby list arithmetic
 - `tests/notices.test.ts` — parser invariants, byte-for-byte pin of the shipped texts to the repo files, no-fetch / no-root-URL guard (D172)
 - `tests/palette-policy.test.ts` — Policy resolution: brands/source/inventory/exclusions and every explained conflict

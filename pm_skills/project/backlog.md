@@ -82,11 +82,6 @@ slice. PAINT-01 scopes separately.
   Status: built and verified (D201/D203). Open is the owner half only —
   mode name, floor label/unit, confetti wording, ramp shape — plus a
   native keyboard pass on the ramp cut handles.
-- [ ] **ADJUST-02 Adjustments 2b: the six-band H/S/L mixer and the saturation range slider** [detail] (2026-08-23)
-  Intent: slice 2b — both controls collapsed by default.
-  Done when: both ship collapsed and the range slider's remap flavour
-  (nominal with a low-S roll-off, vs observed-range) is decided with
-  the owner — the one design fork D200 left open.
 - [ ] **PICK-01 Eyedropper: grab a colour from the picture, the design or the screen** (2026-08-23)
   Intent: slice 3, no bump — pick from the source, the rendered design,
   or (where the EyeDropper API exists) anything on screen, resolved to
@@ -119,10 +114,10 @@ slice. PAINT-01 scopes separately.
 From the 2026-08-26 external review, adopted at D208; the report stays
 untracked at `_user-guff/2026-08-26-repo-review.md` — it maps unfixed
 surfaces of the live app. No schema changes anywhere in the track.
-BATCH-E0 shipped (D209). Order: the STATE spine after ADJUST-02 and
-before Track D's remaining slices — SHEET-01 multiplies in-flight
-requests, the defect the spine repairs; STORE-01 and LIMIT-01/02
-alongside; the public-surface group with Track C.
+BATCH-E0 shipped (D209); ADJUST-02 shipped (D211), so the STATE spine
+is next and comes before Track D's remaining slices — SHEET-01
+multiplies in-flight requests, the defect the spine repairs. STORE-01
+and LIMIT-01/02 run alongside; the public-surface group with Track C.
 
 - [ ] **STATE-01 Sign the state and lifecycle design** [sign-off] [detail] (2026-08-27)
   Intent: one design signed once — immutable per-request snapshots, a

@@ -29,6 +29,13 @@ import type { GridStyleValues } from './grid-style.ts';
 import type { CountMode } from './palette-policy.ts';
 import type { FloorRule } from './palette-selection.ts';
 import { defaultAdjust, MAX_SATURATION, type AdjustParams } from './pipeline/adjust.ts';
+import {
+  BAND_LIMITS,
+  identityMixer,
+  identityRange,
+  type MixerBand,
+  type MixerBands,
+} from './color/mixer.ts';
 import type { DitherConfig, OrderPreset } from './pipeline/config.ts';
 import type { ResizeMode } from './pipeline/resize.ts';
 import type { ThreadSwap } from './pipeline/swap.ts';
@@ -36,7 +43,7 @@ import type { SymbolPair } from './symbols/assignment.ts';
 import type { Provenance, Thread, ThreadStatus } from './types.ts';
 
 /** Current project-file schema version. Bump with a forward migration. */
-export const SCHEMA_VERSION = 13;
+export const SCHEMA_VERSION = 14;
 
 /**
  * The colour-use floor a migrated (or fresh) design starts with: off,
@@ -428,9 +435,15 @@ function canonicalTone(tone: ToneConfig): ToneConfig {
   };
 }
 
-/** Canonical field order for the adjust block (schema v13). */
+/** Canonical field order for the adjust block (schema v14). */
 function canonicalAdjust(adjust: AdjustParams): AdjustParams {
   const points = adjust.curve.map((p): CurvePoint => ({ in: p.in, out: p.out }));
+  const bands = adjust.mixer.map((b): MixerBand => ({
+    hue: b.hue,
+    sat: b.sat,
+    light: b.light,
+  }));
+  const seed = identityMixer();
   return {
     curve: [
       points[0] ?? { in: 0, out: 0 },
@@ -438,6 +451,8 @@ function canonicalAdjust(adjust: AdjustParams): AdjustParams {
       points[2] ?? { in: 100, out: 100 },
     ],
     saturation: adjust.saturation,
+    mixer: seed.map((fallback, i) => bands[i] ?? fallback) as unknown as MixerBands,
+    range: { lo: adjust.range.lo, hi: adjust.range.hi },
   };
 }
 
@@ -981,7 +996,42 @@ function parseAdjust(value: unknown): AdjustParams {
   return {
     curve,
     saturation: asNumber(raw['saturation'], 'pipeline.adjust.saturation', 0, MAX_SATURATION),
+    mixer: parseMixer(raw['mixer']),
+    range: parseSaturationRange(raw['range']),
   };
+}
+
+/**
+ * Validate the v14 six-band mixer. Exactly six bands, in the fixed
+ * R/Y/G/C/B/M order — the band's meaning is its position, so a short
+ * or long array is a refusal, not something to pad.
+ */
+function parseMixer(value: unknown): MixerBands {
+  if (!Array.isArray(value) || value.length !== 6) {
+    fail('pipeline.adjust.mixer', 'exactly six bands');
+  }
+  const bands = value.map((entry, i): MixerBand => {
+    const at = `pipeline.adjust.mixer[${String(i)}]`;
+    const band = asRecord(entry, at);
+    return {
+      hue: asNumber(band['hue'], `${at}.hue`, BAND_LIMITS.hue.min, BAND_LIMITS.hue.max),
+      sat: asNumber(band['sat'], `${at}.sat`, BAND_LIMITS.sat.min, BAND_LIMITS.sat.max),
+      light: asNumber(band['light'], `${at}.light`, BAND_LIMITS.light.min, BAND_LIMITS.light.max),
+    };
+  });
+  return bands as unknown as MixerBands;
+}
+
+/** Validate the v14 saturation range: 0–1, low at or below high. */
+function parseSaturationRange(value: unknown): { lo: number; hi: number } {
+  const raw = asRecord(value, 'pipeline.adjust.range');
+  const lo = asNumber(raw['lo'], 'pipeline.adjust.range.lo', 0, 1);
+  const hi = asNumber(raw['hi'], 'pipeline.adjust.range.hi', 0, 1);
+  // An inverted range is refused rather than straightened: it would
+  // read as a deliberate inversion, and this stage has no such
+  // operation — silently swapping the handles would invent one.
+  if (lo > hi) fail('pipeline.adjust.range', 'lo at or below hi');
+  return { lo, hi };
 }
 
 /**
@@ -1086,12 +1136,48 @@ function migrateProject(raw: Record<string, unknown>, version: number): Record<s
     // saturation 1 states exactly — the stage stays out of the built
     // order, so a migrated file renders byte-for-byte as it did.
     if (at === 13) doc = migrateV12Adjust(doc);
+    // v13 → v14: the six-band mixer and the saturation range arrive
+    // (ADJUST-02). Older files carried neither, which the identity
+    // mixer and the full 0–1 range state exactly — the adjust stage
+    // computes the same pixels, so a migrated file renders
+    // byte-for-byte as it did.
+    if (at === 14) doc = migrateV13Mixer(doc);
     doc = { ...doc, schemaVersion: at };
   }
   return doc;
 }
 
 /** Seed `pipeline.adjust` and its profile ref where absent. */
+/**
+ * Seed `pipeline.adjust.mixer` and `.range` where absent (v13 → v14).
+ *
+ * Field-level, not block-level: a v13 file already HAS an `adjust`
+ * block, so the v12 migration's "is it missing?" test would pass it
+ * through untouched and the validator would then refuse a file that
+ * is simply older. The two seeds are the identity, so nothing renders
+ * differently.
+ */
+function migrateV13Mixer(doc: Record<string, unknown>): Record<string, unknown> {
+  const pipeline = doc['pipeline'];
+  if (pipeline === null || typeof pipeline !== 'object') return doc;
+  const raw = pipeline as Record<string, unknown>;
+  const adjust = raw['adjust'];
+  if (adjust === null || typeof adjust !== 'object') return doc;
+  const block = adjust as Record<string, unknown>;
+  if (block['mixer'] !== undefined && block['range'] !== undefined) return doc;
+  return {
+    ...doc,
+    pipeline: {
+      ...raw,
+      adjust: {
+        ...block,
+        mixer: block['mixer'] ?? identityMixer(),
+        range: block['range'] ?? identityRange(),
+      },
+    },
+  };
+}
+
 function migrateV12Adjust(doc: Record<string, unknown>): Record<string, unknown> {
   const pipeline = doc['pipeline'];
   if (pipeline === null || typeof pipeline !== 'object') return doc;

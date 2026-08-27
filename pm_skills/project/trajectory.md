@@ -44,6 +44,13 @@ public-surface group.
 **Outcome:** opened 2026-08-23 (D188/D189); the gate was made safe for
 the worktree round its scoping tickets open before any of them ran.
 
+- ADJUST-02 (2026-08-27) — slice 2b: the six-band H/S/L mixer and the
+  saturation range, both collapsed, at schema v14. Band centres derived
+  from the project's own converter (CIELAB spaces the classic six from
+  22° to 110° apart, not 60°); every band effect fades out on
+  near-greys through one shared hue-confidence curve; the remap flavour
+  settled nominal-with-roll-off on the owner's call. The slice-2a path
+  is byte-identical and tested as such — see decision-log D211.
 - CREATIVE-01 (2026-08-23) — the creative programme signed on two
   prototypes' evidence (branch `creative-01-proto`, pushed): five
   slices — tone mode (v12), adjustments 2a/2b (v13), the eyedropper,

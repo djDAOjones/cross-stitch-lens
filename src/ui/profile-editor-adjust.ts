@@ -15,11 +15,19 @@
  */
 
 import { defaultAdjust, MAX_SATURATION, type AdjustParams } from '../core/pipeline/adjust.ts';
+import {
+  BAND_LIMITS,
+  identityMixer,
+  identityRange,
+  type MixerBand,
+  type MixerBands,
+} from '../core/color/mixer.ts';
 import { ADJUST_PRESETS, sameAdjust } from '../core/pipeline/adjust-presets.ts';
 import type { CurvePoint, LightnessCurve } from '../core/color/curve.ts';
 import type { ProfileRecord } from '../library/records.ts';
 import type { LibraryStore } from '../library/store.ts';
 import { createCurveControl } from './curve-control.ts';
+import { createMixerControl, createRangeControl } from './mixer-control.ts';
 import type {
   KindFormHandle,
   ProfileKindAdapter,
@@ -67,7 +75,41 @@ export function asAdjustParams(payload: unknown): AdjustParams {
   return {
     curve: [lo, mid, hi] as LightnessCurve,
     saturation: bounded(raw.saturation, 0, MAX_SATURATION, 1),
+    mixer: asMixer((payload as { mixer?: unknown }).mixer),
+    range: asRange((payload as { range?: unknown }).range),
   };
+}
+
+/** Guard a stored mixer: six bands, in range, position-significant. */
+function asMixer(value: unknown): MixerBands {
+  const source = Array.isArray(value) ? value : [];
+  // Position IS the band, so a short array is filled from the
+  // identity rather than shifted — a profile written by an older
+  // build simply has no bands, and reading the fourth as the first
+  // would silently retune the picture.
+  return identityMixer().map((seed, i): MixerBand => {
+    const entry = source[i];
+    if (typeof entry !== 'object' || entry === null) return { ...seed };
+    const band = entry as { hue?: unknown; sat?: unknown; light?: unknown };
+    return {
+      hue: bounded(band.hue, BAND_LIMITS.hue.min, BAND_LIMITS.hue.max, seed.hue),
+      sat: bounded(band.sat, BAND_LIMITS.sat.min, BAND_LIMITS.sat.max, seed.sat),
+      light: bounded(band.light, BAND_LIMITS.light.min, BAND_LIMITS.light.max, seed.light),
+    };
+  }) as unknown as MixerBands;
+}
+
+/** Guard a stored saturation range, straightening a crossed pair. */
+function asRange(value: unknown): { lo: number; hi: number } {
+  const seed = identityRange();
+  if (typeof value !== 'object' || value === null) return seed;
+  const raw = value as { lo?: unknown; hi?: unknown };
+  const lo = bounded(raw.lo, 0, 1, seed.lo);
+  const hi = bounded(raw.hi, 0, 1, seed.hi);
+  // The editor straightens where the schema refuses: a library record
+  // is the user's own data and must always render, whereas a project
+  // file with a crossed range is a corrupt document.
+  return lo <= hi ? { lo, hi } : { lo: hi, hi: lo };
 }
 
 /** Saturation as the slider shows it: a percentage of the original. */
@@ -248,10 +290,32 @@ export function createAdjustKindAdapter(
       basisLine.className = 'meta';
       basisLine.hidden = true;
 
-      container.append(curveControl.element, satField, basisLine);
+      // Slice 2b (ADJUST-02), both collapsed — depth below the two
+      // everyday controls, in the order the maths applies them:
+      // curve, mixer, range, then global saturation.
+      const mixerControl = createMixerControl(doc, 'adjust', (mixer) => {
+        if (readOnly) return;
+        draft = { ...draft, mixer };
+        edited();
+      });
+      const rangeControl = createRangeControl(doc, 'adjust', (range) => {
+        if (readOnly) return;
+        draft = { ...draft, range };
+        edited();
+      });
+
+      container.append(
+        curveControl.element,
+        mixerControl.element,
+        rangeControl.element,
+        satField,
+        basisLine,
+      );
 
       function syncValues(): void {
         curveControl.update(draft.curve, readOnly);
+        mixerControl.update(draft.mixer, readOnly);
+        rangeControl.update(draft.range, readOnly);
         if (doc.activeElement !== satRange) {
           satRange.value = String(saturationToPercent(draft.saturation));
         }

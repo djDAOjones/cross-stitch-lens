@@ -8,7 +8,12 @@
 
 import { describe, expect, it } from 'vitest';
 import { defaultTone } from '../src/core/color/tone.ts';
-import { defaultAdjust, MAX_SATURATION } from '../src/core/pipeline/adjust.ts';
+import {
+  adjustIsIdentity,
+  defaultAdjust,
+  MAX_SATURATION,
+} from '../src/core/pipeline/adjust.ts';
+import { identityMixer, identityRange } from '../src/core/color/mixer.ts';
 import { DEFAULT_GRID_VALUES } from '../src/core/grid-style.ts';
 import {
   DEFAULT_FLOOR,
@@ -50,9 +55,20 @@ function sampleProject(): ProjectFile {
         ],
         cuts: [30.5, 62],
       },
-      // Non-default adjust (v13): a bent curve and a saturation push,
-      // so the round trip proves both halves survive.
+      // Non-default adjust (v14): a bent curve, a saturation push,
+      // two moved mixer bands and a narrowed saturation range, so the
+      // round trip proves every half survives.
       adjust: {
+        ...defaultAdjust(),
+        mixer: [
+          { hue: -12, sat: 1.3, light: 4 },
+          { hue: 0, sat: 1, light: 0 },
+          { hue: 0, sat: 0.6, light: -8 },
+          { hue: 0, sat: 1, light: 0 },
+          { hue: 25, sat: 1, light: 0 },
+          { hue: 0, sat: 1, light: 0 },
+        ],
+        range: { lo: 0.15, hi: 0.85 },
         curve: [
           { in: 8, out: 0 },
           { in: 50, out: 48 },
@@ -422,6 +438,67 @@ describe('parseProject validation', () => {
  * they must load, not throw, and must land on the documented default
  * rather than on whatever the parser happened to leave behind.
  */
+/**
+ * v13 → v14 (ADJUST-02): the six-band mixer and the saturation range.
+ *
+ * A returning user's browser holds v13 designs in the history store,
+ * so this path is the live one, not a theoretical old-file case. It is
+ * also field-level rather than block-level: a v13 file already HAS an
+ * `adjust` block, so a "is it missing?" migration would pass it
+ * straight through and the validator would then refuse a file that is
+ * merely older.
+ */
+describe('migration from schema v13 (mixer and saturation range)', () => {
+  /** A v13 document: the current one with the 2b fields stripped. */
+  function v13Document(): string {
+    const doc = JSON.parse(serializeProject(sampleProject())) as Record<string, unknown>;
+    const pipeline = doc['pipeline'] as Record<string, unknown>;
+    const adjust = { ...(pipeline['adjust'] as Record<string, unknown>) };
+    delete adjust['mixer'];
+    delete adjust['range'];
+    pipeline['adjust'] = adjust;
+    doc['schemaVersion'] = 13;
+    return JSON.stringify(doc);
+  }
+
+  it('loads a v13 file instead of failing on it', () => {
+    expect(() => parseProject(v13Document())).not.toThrow();
+  });
+
+  it('seeds the identity mixer and the full range, and stamps v14', () => {
+    const loaded = parseProject(v13Document());
+    expect(loaded.schemaVersion).toBe(14);
+    expect(loaded.pipeline.adjust.mixer).toEqual(identityMixer());
+    expect(loaded.pipeline.adjust.range).toEqual(identityRange());
+  });
+
+  it('keeps the v13 curve and saturation exactly', () => {
+    const before = JSON.parse(v13Document()) as {
+      pipeline: { adjust: { curve: unknown; saturation: unknown } };
+    };
+    const loaded = parseProject(v13Document());
+    expect(loaded.pipeline.adjust.curve).toEqual(before.pipeline.adjust.curve);
+    expect(loaded.pipeline.adjust.saturation).toBe(before.pipeline.adjust.saturation);
+  });
+
+  it('re-serialises the migrated file without throwing, round-trip stable', () => {
+    // The regression this guards: `canonicalAdjust` maps over
+    // `adjust.mixer`, so a document that reached it without the field
+    // threw `undefined is not a function` on every history write.
+    const migrated = serializeProject(parseProject(v13Document()));
+    expect(serializeProject(parseProject(migrated))).toBe(migrated);
+  });
+
+  it('leaves the migrated design rendering identically', () => {
+    // Both seeds are the identity, so the adjust stage computes the
+    // same pixels — the bump changed the document, not the picture.
+    const loaded = parseProject(v13Document());
+    expect(adjustIsIdentity(loaded.pipeline.adjust)).toBe(
+      adjustIsIdentity({ ...loaded.pipeline.adjust, mixer: identityMixer() }),
+    );
+  });
+});
+
 describe('migration from schema v1', () => {
   /**
    * A v1 document: the current one minus `preview`, with the pre-v4
@@ -1247,6 +1324,7 @@ describe('image adjustments (schema v13, ADJUST-01)', () => {
   it('accepts the boundary values (boundary)', () => {
     const loaded = parseProject(
       adjustDoc(() => ({
+        ...defaultAdjust(),
         curve: [
           { in: 0, out: 100 },
           { in: 0, out: 0 },

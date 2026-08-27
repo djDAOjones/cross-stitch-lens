@@ -62,27 +62,58 @@ import {
   isIdentityCurve,
   type LightnessCurve,
 } from '../color/curve.ts';
+import {
+  blendBands,
+  fadeBand,
+  hueConfidence,
+  identityMixer,
+  identityRange,
+  mixerHasNoHueShift,
+  mixerIsIdentity,
+  NOMINAL_CHROMA,
+  rangeIsIdentity,
+  remapSaturation,
+  type MixerBands,
+  type SaturationRange,
+} from '../color/mixer.ts';
 import type { PixelBuffer, Stage } from '../types.ts';
 import { clonePixelBuffer } from './index.ts';
 
 /**
- * Parameters for {@link adjustStage} (schema v13).
+ * Parameters for {@link adjustStage} (schema v14).
  *
  * `curve` remaps lightness (L\* 0–100 on both axes) and carries the
  * black and white points at its end points; `saturation` scales Lab
  * a/b — 1 leaves colour untouched, 0 is greyscale, above 1 pushes.
+ * `mixer` and `range` are slice 2b (ADJUST-02), both identity by
+ * default and both collapsed in the UI.
+ *
+ * Order of operations, and why: **curve → mixer → range → saturation**.
+ * The curve is the lightness base; the mixer is the per-hue correction
+ * on top of it; the range then rescales the saturation *distribution*
+ * that results; global saturation is the single final multiplier. Any
+ * other order makes one control silently redefine another's units —
+ * a global saturation applied before the range, for instance, would
+ * move what "50 %" means.
  */
 export interface AdjustParams {
   curve: LightnessCurve;
   saturation: number;
+  mixer: MixerBands;
+  range: SaturationRange;
 }
 
 /** Largest saturation factor the controls and the schema allow. */
 export const MAX_SATURATION = 2;
 
-/** A fresh untouched adjustment — the schema-v13 default. */
+/** A fresh untouched adjustment — the schema-v14 default. */
 export function defaultAdjust(): AdjustParams {
-  return { curve: identityCurve(), saturation: 1 };
+  return {
+    curve: identityCurve(),
+    saturation: 1,
+    mixer: identityMixer(),
+    range: identityRange(),
+  };
 }
 
 /**
@@ -95,7 +126,12 @@ export function defaultAdjust(): AdjustParams {
  */
 export function adjustIsIdentity(params: AdjustParams | undefined): boolean {
   if (params === undefined) return true;
-  return params.saturation === 1 && isIdentityCurve(params.curve);
+  return (
+    params.saturation === 1 &&
+    isIdentityCurve(params.curve) &&
+    mixerIsIdentity(params.mixer) &&
+    rangeIsIdentity(params.range)
+  );
 }
 
 /**
@@ -105,7 +141,20 @@ export function adjustIsIdentity(params: AdjustParams | undefined): boolean {
  */
 export function adjustFingerprint(params: AdjustParams | undefined): string {
   if (adjustIsIdentity(params) || params === undefined) return 'off';
-  return `c${curveFingerprint(params.curve)}|s${String(params.saturation)}`;
+  const parts = [`c${curveFingerprint(params.curve)}`, `s${String(params.saturation)}`];
+  // Appended only when engaged, so every fingerprint minted before
+  // slice 2b keeps its exact string and the caches it keys stay warm.
+  if (!mixerIsIdentity(params.mixer)) {
+    parts.push(
+      `m${params.mixer
+        .map((b) => `${String(b.hue)},${String(b.sat)},${String(b.light)}`)
+        .join(';')}`,
+    );
+  }
+  if (!rangeIsIdentity(params.range)) {
+    parts.push(`r${String(params.range.lo)},${String(params.range.hi)}`);
+  }
+  return parts.join('|');
 }
 
 // ---------------------------------------------------------------------
@@ -180,6 +229,18 @@ export function applyAdjust(input: PixelBuffer, params: AdjustParams): PixelBuff
   const curve = params.curve;
   const flat = isIdentityCurve(curve);
   const sat = Number.isFinite(params.saturation) ? Math.max(0, params.saturation) : 1;
+  // Slice 2b, both off by default. When both are off the arithmetic
+  // below is byte-for-byte the slice-2a loop — `a0 * sat` evaluates
+  // exactly as the old `500 * (fx - fy) * sat` did, and nothing else
+  // is touched. That matters: nine shipped presets and every saved
+  // adjustment profile must render identically after this change.
+  const mixer = params.mixer;
+  const range = params.range;
+  const mixerOn = !mixerIsIdentity(mixer);
+  const rangeOn = !rangeIsIdentity(range);
+  // Hue rotation is the only part needing sin/cos per pixel; a mixer
+  // that only moves saturation and lightness skips both.
+  const rotates = mixerOn && !mixerHasNoHueShift(mixer);
   for (let i = 0; i < src.length; i += 4) {
     const alpha = src[i + 3] ?? 0;
     out[i + 3] = alpha;
@@ -202,10 +263,61 @@ export function applyAdjust(input: PixelBuffer, params: AdjustParams): PixelBuff
     const fy = labF(0.2126729 * rl + 0.7151522 * gl + 0.072175 * bl);
     const fz = labF((0.0193339 * rl + 0.119192 * gl + 0.9503041 * bl) / ZN);
     const l = 116 * fy - 16;
-    const a = 500 * (fx - fy) * sat;
-    const b = 200 * (fy - fz) * sat;
-    // Back through Lab with the curved lightness.
-    const gy = ((flat ? l : applyCurve(curve, l)) + 16) / 116;
+    let a0 = 500 * (fx - fy);
+    let b0 = 200 * (fy - fz);
+    let lOut = flat ? l : applyCurve(curve, l);
+
+    if (mixerOn) {
+      // Blend the two bands bracketing this pixel's hue, then apply
+      // all three of their controls at that blended strength — faded
+      // by how much the hue can be trusted, so a neutral is
+      // untouchable. `chroma > 0` would not do it: the tabled
+      // conversion leaves a nominally grey pixel with a small
+      // non-zero a/b, which is enough to pick a band and take its
+      // full lightness offset.
+      const chroma = Math.hypot(a0, b0);
+      const confidence = hueConfidence(chroma / NOMINAL_CHROMA);
+      if (confidence > 0) {
+        const hue = (Math.atan2(b0, a0) * 180) / Math.PI;
+        const band = fadeBand(blendBands(mixer, hue < 0 ? hue + 360 : hue), confidence);
+        if (rotates && band.hue !== 0) {
+          const t = (band.hue * Math.PI) / 180;
+          const cos = Math.cos(t);
+          const sin = Math.sin(t);
+          const rotated = a0 * cos - b0 * sin;
+          b0 = a0 * sin + b0 * cos;
+          a0 = rotated;
+        }
+        if (band.sat !== 1) {
+          a0 *= band.sat;
+          b0 *= band.sat;
+        }
+        // Lightness offset applies to every pixel in the band, so it
+        // sits outside the chroma guard's intent — but a pixel with
+        // no chroma has no band, and tinting a grey by "the red
+        // slider" is exactly what the guard exists to prevent.
+        if (band.light !== 0) lOut += band.light;
+      }
+    }
+
+    if (rangeOn) {
+      const chroma = Math.hypot(a0, b0);
+      if (chroma > 0) {
+        const s0 = Math.min(1, chroma / NOMINAL_CHROMA);
+        const scale = remapSaturation(s0, range) / s0;
+        a0 *= scale;
+        b0 *= scale;
+      }
+    }
+
+    const a = a0 * sat;
+    const b = b0 * sat;
+    // Back through Lab with the curved lightness. The clamp is on the
+    // mixer path only: a band's lightness offset is the sole thing
+    // that can push L\* out of range, and clamping unconditionally
+    // would risk changing a slice-2a result in its last bit wherever
+    // the tabled `labF` lands a hair outside 0–100.
+    const gy = ((mixerOn ? (lOut < 0 ? 0 : lOut > 100 ? 100 : lOut) : lOut) + 16) / 116;
     const x = labFInverse(gy + a / 500) * XN;
     const y = labFInverse(gy);
     const z = labFInverse(gy - b / 200) * ZN;

@@ -26,6 +26,13 @@ import {
   matchBuiltInAdjust,
   sameAdjust,
 } from '../src/core/pipeline/adjust-presets.ts';
+import {
+  BAND_CENTRES,
+  identityMixer,
+  identityRange,
+  NOMINAL_CHROMA,
+  type MixerBands,
+} from '../src/core/color/mixer.ts';
 import type { Palette, PixelBuffer } from '../src/core/types.ts';
 import { thread } from './helpers/threads.ts';
 
@@ -123,8 +130,8 @@ describe('adjust identity', () => {
   it('is the identity at the default, and not once either half moves', () => {
     expect(adjustIsIdentity(undefined)).toBe(true);
     expect(adjustIsIdentity(defaultAdjust())).toBe(true);
-    expect(adjustIsIdentity({ curve: identityCurve(), saturation: 0.99 })).toBe(false);
-    expect(adjustIsIdentity({ curve: curve([0, 1], [50, 50], [100, 100]), saturation: 1 })).toBe(
+    expect(adjustIsIdentity({ ...defaultAdjust(), curve: identityCurve(), saturation: 0.99 })).toBe(false);
+    expect(adjustIsIdentity({ ...defaultAdjust(), curve: curve([0, 1], [50, 50], [100, 100]), saturation: 1 })).toBe(
       false,
     );
   });
@@ -141,9 +148,9 @@ describe('adjust identity', () => {
   it('fingerprints the identity as off, and distinguishes everything else', () => {
     expect(adjustFingerprint(undefined)).toBe('off');
     expect(adjustFingerprint(defaultAdjust())).toBe('off');
-    const a = adjustFingerprint({ curve: identityCurve(), saturation: 1.2 });
-    const b = adjustFingerprint({ curve: identityCurve(), saturation: 1.3 });
-    const c = adjustFingerprint({ curve: curve([5, 0], [50, 50], [95, 100]), saturation: 1.2 });
+    const a = adjustFingerprint({ ...defaultAdjust(), curve: identityCurve(), saturation: 1.2 });
+    const b = adjustFingerprint({ ...defaultAdjust(), curve: identityCurve(), saturation: 1.3 });
+    const c = adjustFingerprint({ ...defaultAdjust(), curve: curve([5, 0], [50, 50], [95, 100]), saturation: 1.2 });
     expect(new Set([a, b, c]).size).toBe(3);
   });
 });
@@ -152,6 +159,7 @@ describe('adjust behaviour', () => {
   it('inverting the curve inverts the picture’s lightness', () => {
     const input = sweep(512);
     const inverted = run(input, {
+      ...defaultAdjust(),
       curve: curve([0, 100], [50, 50], [100, 0]),
       saturation: 1,
     });
@@ -160,12 +168,16 @@ describe('adjust behaviour', () => {
 
   it('saturation 0 is greyscale; above 1 pushes chroma out', () => {
     const input = sweep(512);
-    const grey = run(input, { curve: identityCurve(), saturation: 0 });
+    const grey = run(input, { ...defaultAdjust(), curve: identityCurve(), saturation: 0 });
     expect(meanChroma(grey)).toBeLessThan(0.6);
     // Greyscale must keep the lightness it started with — that is what
     // makes Mono prep the natural feed for tone matching.
     expect(meanL(grey)).toBeCloseTo(meanL(input), 0);
-    const pushed = run(input, { curve: identityCurve(), saturation: MAX_SATURATION });
+    const pushed = run(input, {
+      ...defaultAdjust(),
+      curve: identityCurve(),
+      saturation: MAX_SATURATION,
+    });
     expect(meanChroma(pushed)).toBeGreaterThan(meanChroma(input));
   });
 
@@ -176,7 +188,7 @@ describe('adjust behaviour', () => {
       height: 1,
       data: new Uint8ClampedArray([10, 10, 10, 255, 20, 20, 20, 255, 30, 30, 30, 255]),
     };
-    const out = run(dark, { curve: curve([20, 0], [60, 50], [100, 100]), saturation: 1 });
+    const out = run(dark, { ...defaultAdjust(), curve: curve([20, 0], [60, 50], [100, 100]), saturation: 1 });
     expect(Array.from(out.data.slice(0, 3))).toEqual([0, 0, 0]);
     expect(Array.from(out.data.slice(4, 7))).toEqual([0, 0, 0]);
   });
@@ -187,7 +199,7 @@ describe('adjust behaviour', () => {
       height: 1,
       data: new Uint8ClampedArray([200, 30, 40, 0, 200, 30, 40, 128]),
     };
-    const out = run(input, { curve: curve([10, 0], [50, 50], [90, 100]), saturation: 0 });
+    const out = run(input, { ...defaultAdjust(), curve: curve([10, 0], [50, 50], [90, 100]), saturation: 0 });
     // The transparent cell keeps its bytes *and* its alpha: giving a
     // phantom colour a curved lightness is what D9/D49 forbids.
     expect(Array.from(out.data.slice(0, 4))).toEqual([200, 30, 40, 0]);
@@ -199,13 +211,13 @@ describe('adjust behaviour', () => {
   it('never mutates its input (purity)', () => {
     const input = sweep(128);
     const before = Uint8ClampedArray.from(input.data);
-    run(input, { curve: curve([8, 0], [50, 48], [92, 100]), saturation: 1.4 });
+    run(input, { ...defaultAdjust(), curve: curve([8, 0], [50, 48], [92, 100]), saturation: 1.4 });
     expect(Array.from(input.data)).toEqual(Array.from(before));
   });
 
   it('is deterministic — same input and params, same bytes', () => {
     const input = sweep(256);
-    const params: AdjustParams = { curve: curve([12, 0], [50, 50], [88, 100]), saturation: 0.8 };
+    const params: AdjustParams = { ...defaultAdjust(), curve: curve([12, 0], [50, 50], [88, 100]), saturation: 0.8 };
     expect(Array.from(run(input, params).data)).toEqual(Array.from(run(input, params).data));
   });
 });
@@ -253,8 +265,8 @@ describe('adjust presets', () => {
     for (const preset of ADJUST_PRESETS) {
       expect(matchBuiltInAdjust(structuredClone(preset.params))).toBe(`builtin:${preset.id}`);
     }
-    expect(sameAdjust(defaultAdjust(), { curve: identityCurve(), saturation: 1 })).toBe(true);
-    expect(matchBuiltInAdjust({ curve: identityCurve(), saturation: 1.11 })).toBeNull();
+    expect(sameAdjust(defaultAdjust(), { ...defaultAdjust(), curve: identityCurve(), saturation: 1 })).toBe(true);
+    expect(matchBuiltInAdjust({ ...defaultAdjust(), curve: identityCurve(), saturation: 1.11 })).toBeNull();
   });
 
   it('every non-None candidate actually changes the picture', () => {
@@ -313,9 +325,222 @@ describe('the LUT fingerprint is untouched by an adjustment (D46)', () => {
       palette: PALETTE,
       metric: 'lab',
       dither: { algorithm: 'none' },
-      adjust: { curve: curve([8, 0], [50, 48], [92, 100]), saturation: 1.2 },
+      adjust: { ...defaultAdjust(), curve: curve([8, 0], [50, 48], [92, 100]), saturation: 1.2 },
     });
     const reduce = stages.find((s) => s.stage.name === 'reduce');
     expect(JSON.stringify(reduce?.params)).not.toContain('saturation');
+  });
+});
+
+
+/**
+ * Slice 2b at the stage level (ADJUST-02).
+ *
+ * The load-bearing one is the first: with the mixer and range at
+ * their identity the stage must produce the *same bytes* as before
+ * the slice existed. Nine shipped presets and every saved adjustment
+ * profile are 2a-only, so anything less than byte equality is a
+ * silent re-render of work users have already judged.
+ */
+describe('slice 2b: mixer and saturation range', () => {
+  const input = sweep(2048);
+
+  /** A mixer with one band moved, the rest identity. */
+  function oneBand(index: number, band: { hue?: number; sat?: number; light?: number }): MixerBands {
+    return identityMixer().map((seed, i) =>
+      i === index ? { ...seed, ...band } : seed,
+    ) as unknown as MixerBands;
+  }
+
+  function bytes(buffer: PixelBuffer): string {
+    return Array.from(buffer.data).join(',');
+  }
+
+  it('is byte-identical to slice 2a when both 2b controls are identity', () => {
+    // The 2a settings that actually ship, each run with the 2b fields
+    // present-but-identity. Equality here is the fast path's contract.
+    const cases: [LightnessCurve, number][] = [
+      [identityCurve(), 1],
+      [curve([12, 0], [50, 50], [88, 100]), 1],
+      [curve([4, 0], [50, 52], [96, 100]), 1.4],
+      [identityCurve(), 0],
+      [curve([10, 0], [50, 50], [90, 100]), 0],
+      [curve([0, 100], [50, 50], [100, 0]), MAX_SATURATION],
+    ];
+    for (const [c, saturation] of cases) {
+      const withFields = run(input, {
+        curve: c,
+        saturation,
+        mixer: identityMixer(),
+        range: identityRange(),
+      });
+      // The reference: the same maths with the 2b blocks unreachable.
+      const reference = run(input, { ...defaultAdjust(), curve: c, saturation });
+      expect(bytes(withFields)).toBe(bytes(reference));
+    }
+  });
+
+  it('an identity mixer and range leave the stage identity', () => {
+    expect(adjustIsIdentity(defaultAdjust())).toBe(true);
+    expect(adjustIsIdentity({ ...defaultAdjust(), mixer: oneBand(0, { sat: 1.1 }) })).toBe(false);
+    expect(adjustIsIdentity({ ...defaultAdjust(), range: { lo: 0.1, hi: 1 } })).toBe(false);
+  });
+
+  it('a band\u2019s saturation moves its own hue and leaves the opposite one', () => {
+    // Red up, measured on red and on cyan (two centres away).
+    const red: PixelBuffer = { width: 1, height: 1, data: new Uint8ClampedArray([220, 40, 40, 255]) };
+    const cyan: PixelBuffer = { width: 1, height: 1, data: new Uint8ClampedArray([40, 200, 200, 255]) };
+    const params = { ...defaultAdjust(), mixer: oneBand(0, { sat: 1.6 }) };
+    expect(meanChroma(run(red, params))).toBeGreaterThan(meanChroma(red) * 1.15);
+    expect(meanChroma(run(cyan, params))).toBeCloseTo(meanChroma(cyan), 0);
+  });
+
+  it('a band\u2019s lightness offset lifts only its own hue', () => {
+    const green: PixelBuffer = { width: 1, height: 1, data: new Uint8ClampedArray([40, 180, 60, 255]) };
+    const params = { ...defaultAdjust(), mixer: oneBand(2, { light: 20 }) };
+    expect(meanL(run(green, params))).toBeGreaterThan(meanL(green) + 8);
+  });
+
+  it('a band\u2019s lightness offset never tints a neutral grey', () => {
+    // A grey has no hue, so no band owns it; the guard exists so the
+    // "red" slider cannot colour a grey sky.
+    const grey: PixelBuffer = {
+      width: 1,
+      height: 1,
+      data: new Uint8ClampedArray([128, 128, 128, 255]),
+    };
+    for (let band = 0; band < 6; band++) {
+      const out = run(grey, {
+        ...defaultAdjust(),
+        mixer: oneBand(band, { hue: 60, sat: 2, light: 25 }),
+      });
+      expect(out.data[0]).toBe(128);
+      expect(out.data[1]).toBe(128);
+      expect(out.data[2]).toBe(128);
+    }
+  });
+
+  it('a hue rotation moves the hue by about the amount asked', () => {
+    // Chroma is deliberately NOT asserted to be preserved: the
+    // rotation preserves it in Lab, but the result is re-encoded to
+    // sRGB, and rotating a saturated colour walks it out of gamut
+    // where `encode` clamps. That loss is real and belongs to the
+    // colour space, not to this control.
+    const red: PixelBuffer = { width: 1, height: 1, data: new Uint8ClampedArray([190, 90, 90, 255]) };
+    const out = run(red, { ...defaultAdjust(), mixer: oneBand(0, { hue: 25 }) });
+    const before = new Float32Array(3);
+    const after = new Float32Array(3);
+    srgbToLab(red.data[0] ?? 0, red.data[1] ?? 0, red.data[2] ?? 0, before, 0);
+    srgbToLab(out.data[0] ?? 0, out.data[1] ?? 0, out.data[2] ?? 0, after, 0);
+    const hue = (v: Float32Array): number => {
+      const h = (Math.atan2(v[2] ?? 0, v[1] ?? 0) * 180) / Math.PI;
+      return h < 0 ? h + 360 : h;
+    };
+    expect(hue(after) - hue(before)).toBeGreaterThan(15);
+    expect(hue(after) - hue(before)).toBeLessThan(35);
+  });
+
+  it('fades every band effect out as a pixel approaches neutral', () => {
+    // The same red band, on progressively less saturated reds: the
+    // lightness lift must shrink monotonically towards nothing.
+    const params = { ...defaultAdjust(), mixer: oneBand(0, { light: 20 }) };
+    let previous = Infinity;
+    for (const spread of [70, 50, 30, 14, 6, 2, 0]) {
+      const pixel: PixelBuffer = {
+        width: 1,
+        height: 1,
+        data: new Uint8ClampedArray([128 + spread, 128 - spread, 128 - spread, 255]),
+      };
+      const lift = meanL(run(pixel, params)) - meanL(pixel);
+      expect(lift).toBeLessThanOrEqual(previous + 0.51);
+      previous = lift;
+    }
+    expect(previous).toBeCloseTo(0, 1);
+  });
+
+  it('the range narrows the spread of saturation across the picture', () => {
+    const narrowed = run(input, { ...defaultAdjust(), range: { lo: 0.25, hi: 0.35 } });
+    const spread = (b: PixelBuffer): number => {
+      const lab = new Float32Array(3);
+      let min = Infinity;
+      let max = -Infinity;
+      for (let i = 0; i < b.data.length; i += 4) {
+        srgbToLab(b.data[i] ?? 0, b.data[i + 1] ?? 0, b.data[i + 2] ?? 0, lab, 0);
+        const c = Math.hypot(lab[1] ?? 0, lab[2] ?? 0) / NOMINAL_CHROMA;
+        if (c < min) min = c;
+        if (c > max) max = c;
+      }
+      return max - min;
+    };
+    expect(spread(narrowed)).toBeLessThan(spread(input));
+  });
+
+  it('a raised floor lifts coloured pixels and spares near-greys', () => {
+    const params = { ...defaultAdjust(), range: { lo: 0.45, hi: 1 } };
+    const coloured: PixelBuffer = {
+      width: 1,
+      height: 1,
+      data: new Uint8ClampedArray([150, 90, 90, 255]),
+    };
+    const nearGrey: PixelBuffer = {
+      width: 1,
+      height: 1,
+      data: new Uint8ClampedArray([128, 126, 127, 255]),
+    };
+    expect(meanChroma(run(coloured, params))).toBeGreaterThan(meanChroma(coloured) * 1.5);
+    // The roll-off's whole job: this pixel's hue is noise.
+    expect(meanChroma(run(nearGrey, params))).toBeLessThan(3);
+  });
+
+  it('every band centre is reachable and distinct through the stage', () => {
+    // A saturation lift on band k must affect a pixel at centre k more
+    // than the same lift on any other band does.
+    for (let k = 0; k < BAND_CENTRES.length; k++) {
+      const lifted = run(input, { ...defaultAdjust(), mixer: oneBand(k, { sat: 1.5 }) });
+      expect(meanChroma(lifted)).toBeGreaterThan(meanChroma(input));
+    }
+  });
+
+  it('leaves fully transparent pixels alone, as slice 2a does', () => {
+    const clear: PixelBuffer = { width: 1, height: 1, data: new Uint8ClampedArray([7, 8, 9, 0]) };
+    const out = run(clear, {
+      ...defaultAdjust(),
+      mixer: oneBand(0, { hue: 60, sat: 2, light: 25 }),
+      range: { lo: 0.9, hi: 1 },
+    });
+    expect(Array.from(out.data)).toEqual([7, 8, 9, 0]);
+  });
+
+  it('never mutates its input', () => {
+    const before = Array.from(input.data);
+    run(input, { ...defaultAdjust(), mixer: oneBand(1, { sat: 1.7 }), range: { lo: 0.2, hi: 0.9 } });
+    expect(Array.from(input.data)).toEqual(before);
+  });
+});
+
+describe('slice 2b fingerprints', () => {
+  it('keeps the pre-2b string for a 2a-only adjustment', () => {
+    // A fingerprint minted before this slice must still be minted, or
+    // every warm cache keyed on one is silently invalidated.
+    const params = { ...defaultAdjust(), curve: curve([8, 0], [50, 48], [92, 100]), saturation: 1.2 };
+    expect(adjustFingerprint(params)).toBe(
+      `c${adjustFingerprint(params).split('|')[0]?.slice(1) ?? ''}|s1.2`,
+    );
+    expect(adjustFingerprint(params)).not.toContain('|m');
+    expect(adjustFingerprint(params)).not.toContain('|r');
+  });
+
+  it('separates two adjustments differing only in a band or the range', () => {
+    const base = defaultAdjust();
+    const mixed = {
+      ...base,
+      mixer: identityMixer().map((b, i) =>
+        i === 4 ? { ...b, hue: 12 } : b,
+      ) as unknown as MixerBands,
+    };
+    const ranged = { ...base, range: { lo: 0.1, hi: 0.9 } };
+    expect(adjustFingerprint(mixed)).not.toBe(adjustFingerprint(base));
+    expect(adjustFingerprint(ranged)).not.toBe(adjustFingerprint(base));
+    expect(adjustFingerprint(mixed)).not.toBe(adjustFingerprint(ranged));
   });
 });

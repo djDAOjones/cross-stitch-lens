@@ -14,6 +14,7 @@ import {
 } from '../src/core/color/curve.ts';
 import { applyCurve, identityCurve, isIdentityCurve } from '../src/core/color/tone.ts';
 import { MAX_SATURATION, defaultAdjust } from '../src/core/pipeline/adjust.ts';
+import { BAND_LIMITS, identityMixer, identityRange } from '../src/core/color/mixer.ts';
 import {
   asAdjustParams,
   percentToSaturation,
@@ -58,6 +59,7 @@ describe('asAdjustParams (stored payloads are untrusted)', () => {
 
   it('round-trips a well-formed payload unchanged (happy path)', () => {
     const params = {
+      ...defaultAdjust(),
       curve: [
         { in: 8, out: 0 },
         { in: 50, out: 48 },
@@ -66,6 +68,48 @@ describe('asAdjustParams (stored payloads are untrusted)', () => {
       saturation: 1.2,
     };
     expect(asAdjustParams(structuredClone(params))).toEqual(params);
+  });
+
+  it('round-trips the slice-2b halves too (schema v14)', () => {
+    const params = {
+      ...defaultAdjust(),
+      mixer: [
+        { hue: -20, sat: 1.4, light: 6 },
+        { hue: 0, sat: 1, light: 0 },
+        { hue: 15, sat: 0.5, light: -10 },
+        { hue: 0, sat: 1, light: 0 },
+        { hue: 0, sat: 1, light: 0 },
+        { hue: 60, sat: 2, light: 25 },
+      ],
+      range: { lo: 0.2, hi: 0.9 },
+    };
+    expect(asAdjustParams(structuredClone(params))).toEqual(params);
+  });
+
+  it('fills a short or absent mixer from the identity, by position', () => {
+    // Position IS the band, so a two-entry array must become bands 1
+    // and 2 plus four identities — never shifted or spread.
+    const short = asAdjustParams({ mixer: [{ hue: 10, sat: 1, light: 0 }] });
+    expect(short.mixer).toHaveLength(6);
+    expect(short.mixer[0]).toEqual({ hue: 10, sat: 1, light: 0 });
+    expect(short.mixer.slice(1)).toEqual(identityMixer().slice(1));
+    expect(asAdjustParams({}).mixer).toEqual(identityMixer());
+  });
+
+  it('clamps wild band values and straightens a crossed range', () => {
+    const wild = asAdjustParams({
+      mixer: [{ hue: 999, sat: -5, light: 900 }],
+      range: { lo: 0.8, hi: 0.2 },
+    });
+    expect(wild.mixer[0]).toEqual({
+      hue: BAND_LIMITS.hue.max,
+      sat: BAND_LIMITS.sat.min,
+      light: BAND_LIMITS.light.max,
+    });
+    // The editor straightens where the schema refuses: a library
+    // record must always render.
+    expect(wild.range).toEqual({ lo: 0.2, hi: 0.8 });
+    expect(asAdjustParams({ range: 'nonsense' }).range).toEqual(identityRange());
   });
 });
 

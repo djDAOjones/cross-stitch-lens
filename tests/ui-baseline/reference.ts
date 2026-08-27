@@ -131,7 +131,11 @@ function defaultProject(config: PipelineConfig): ProjectFile {
       ditherProfileRef: { id: 'builtin:none', revision: 0 },
       // Schema v12 (TONE-01): tone disengaged in the stated default —
       // the projectJson pin moved for the bump; the engine hashes never
-      // move.
+      // move. Schema v14 (ADJUST-02) added the mixer and the
+      // saturation range, both identity, and behaved the same way:
+      // projectJson moved, outputPixels/outputIndices did not — which
+      // is the evidence that the bump changed the document and not the
+      // picture.
       tone: defaultTone(),
       adjust: defaultAdjust(),
       adjustProfileRef: null,

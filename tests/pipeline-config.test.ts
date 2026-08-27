@@ -100,7 +100,7 @@ describe('pipeline config builder', () => {
       config({ dither: FS }),
       config({ palette: null }),
       config({ preset: 'reduce-first' }),
-      config({ adjust: { curve: [{ in: 10, out: 0 }, { in: 50, out: 50 }, { in: 90, out: 100 }], saturation: 0 } }),
+      config({ adjust: { ...defaultAdjust(), curve: [{ in: 10, out: 0 }, { in: 50, out: 50 }, { in: 90, out: 100 }], saturation: 0 } }),
     ]) {
       const stages = buildStages(c);
       expect(stages.length).toBeGreaterThan(0);
@@ -187,6 +187,7 @@ describe('swap stage placement (ICE-RECOLOUR-01)', () => {
 
 describe('adjust stage placement (M5-PERF-25, ADJUST-01)', () => {
   const PUNCH: AdjustParams = {
+    ...defaultAdjust(),
     curve: [
       { in: 8, out: 0 },
       { in: 50, out: 48 },

@@ -1906,3 +1906,83 @@ CI-01's mechanism is proven independently of the reds.
 deprecation warning per run. The `@v4` tags already resolved to these
 SHAs, so pinning did not cause it; the major bump is its own commit
 under the DEV-INFRASTRUCTURE procedure and is on the wish-list.
+
+## D211 — ADJUST-02: the six-band mixer, the saturation range, and three things the maths forced (2026-08-27)
+
+**Decision:** slice 2b ships at **schema v14** — `pipeline.adjust`
+gains `mixer` (six bands × hue/saturation/lightness) and `range` (a
+saturation floor and ceiling), both identity by default, both
+**collapsed** in the editor per D200. The remap flavour the sitting
+left open is settled: **nominal with a low-saturation roll-off**, the
+owner's call. Order of operations is fixed and documented: curve →
+mixer → range → global saturation.
+
+**The band centres are derived, not assumed.** The obvious
+implementation spaces the classic six R/Y/G/C/B/M 60° apart. In CIELAB
+they are nowhere near even — Red 40.0°, Yellow 102.9°, Green 136.0°,
+Cyan 196.4°, Blue 306.3°, Magenta 328.2°, so gaps run from 22°
+(Blue→Magenta) to 110° (Cyan→Blue). Even spacing would put the green
+band's centre in the cyans and make the blue slider mostly a magenta
+slider. `color/mixer.ts` computes the centres from this project's own
+`srgbToLab` at load and blends between whichever two actually bracket
+a pixel; the suite re-derives them and asserts they are *not* evenly
+spaced, so the day someone "tidies" them into 60° steps the test says
+why not.
+
+**A `chroma > 0` guard is not a grey guard.** The first implementation
+skipped the mixer for zero-chroma pixels, and a neutral grey came back
+tinted: the adjust stage's tabled conversion leaves a nominally grey
+pixel with a small non-zero a/b, which is enough to pick a band and
+take its full lightness offset. Replaced by `hueConfidence()` — a
+smoothstep over the same low-saturation knee the range uses — and
+every band control fades through it, so a neutral is untouchable by
+construction rather than by a guard someone must remember at each call
+site. This is the classic H/S/L-mixer shadow artefact, avoided.
+
+**Nominal, not observed-range** (the owner's pick): saturation is
+chroma over the most chromatic colour sRGB can express (C\* ≈ 133.8,
+blue), so the same setting means the same thing on every picture and a
+re-crop does not move the result. Observed-range would use the full
+control travel on every image but needs the held source under live
+capture or it flickers, and makes the control's units depend on the
+crop.
+
+**The 2a fast path is byte-identical, and tested as such.** Nine
+shipped presets and every saved adjustment profile are 2a-only, so the
+hot loop keeps the old expression exactly when both 2b controls are
+identity — `a0 * sat` evaluates as `500 * (fx - fy) * sat` did — and
+the L\* clamp the mixer needs is applied on the mixer path only, since
+clamping unconditionally could move a 2a result in its last bit
+wherever the tabled `labF` lands a hair outside 0–100. A test runs six
+real 2a settings and compares whole buffers. `adjustFingerprint`
+appends the 2b parts only when engaged, so fingerprints minted before
+this slice keep their exact string and the caches they key stay warm.
+
+**Alternatives:** a custom dual-thumb slider for the range (rejected —
+two labelled native sliders that push rather than cross are operable
+on the first try, and UI-STANDARDS prefers native); straightening an
+inverted range in the schema (rejected — the loader refuses it, since
+an inversion reads as deliberate and this stage has no such operation;
+the *editor* straightens, because a library record is the user's own
+data and must always render).
+
+**Verification:** `check` green, 1,574 tests. Baseline regenerated with
+a stated reason: `projectJson` moved, `outputPixels`, `outputIndices`
+and `sourcePixels` did **not** — the bump changed the document, not the
+picture. v13 → v14 migration is field-level (a v13 file already has an
+`adjust` block, so a block-level "is it missing?" test would pass it
+through and the validator would then refuse a merely-older file) and
+carries its own regression test, because a returning user's history
+store holds v13 designs. Driven live: 18 uniquely-named sliders, both
+reveals closed by default, the collapsed summary reporting "2 bands
+set" so a closed fold is not a hiding place, the range handles pushing
+rather than crossing, and reset returning to identity.
+
+**Note on the dev-server errors seen during this work:** repeated
+`undefined is not a function` in the history write were HMR staleness —
+old-shaped live config meeting new code across a schema change — not a
+defect. A clean server start is silent, and the migration test proves
+the real path. Worth knowing before someone chases it again.
+
+**Link:** backlog → Track D (ADJUST-02 removed); `tickets/CREATIVE-01.md`
+slice 2b closed; `src/core/color/mixer.ts`, `src/ui/mixer-control.ts`.

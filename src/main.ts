@@ -42,6 +42,7 @@ import {
   type CaptureSession,
 } from './capture/session.ts';
 import type { CurvePoint } from './core/color/curve.ts';
+import type { MixerBands } from './core/color/mixer.ts';
 import {
   adjustFingerprint,
   defaultAdjust,
@@ -3990,6 +3991,14 @@ function build(app: HTMLElement): void {
           out: point.out,
         })) as [CurvePoint, CurvePoint, CurvePoint],
         saturation: file.pipeline.adjust.saturation,
+        // Deep-copied for the same reason as the curve: the loaded
+        // file object must stay exactly what was read (schema v14).
+        mixer: file.pipeline.adjust.mixer.map((band) => ({
+          hue: band.hue,
+          sat: band.sat,
+          light: band.light,
+        })) as unknown as MixerBands,
+        range: { ...file.pipeline.adjust.range },
       };
       adjustRef =
         file.pipeline.adjustProfileRef ??

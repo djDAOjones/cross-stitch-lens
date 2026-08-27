@@ -209,10 +209,12 @@ signs. Where this contradicts a candidate bullet above, this wins.
    quantiles (exact at any N undithered, near with); cuts start
    natural with one Equalise button; re-pick from the current frame;
    the colour-use floor. Folds candidates 1, 3, 5, 9 and the new 12.
-2. **Slices 2a/2b — adjustments** as the third profile kind (v13).
-   2a: black point, white point, tone curve, global saturation.
-   2b: the six-band H/S/L colour mixer and the saturation range
-   slider, both collapsed by default.
+2. **Slices 2a/2b — adjustments** as the third profile kind.
+   2a (v13, shipped D202): black point, white point, tone curve,
+   global saturation. 2b (v14, shipped D211): the six-band H/S/L
+   colour mixer and the saturation range slider, both collapsed by
+   default. Band centres are derived from `srgbToLab`, not assumed
+   60° apart — in CIELAB the classic six sit 22°–110° apart.
 3. **Slice 3 — eyedropper** (PICK-01's in-app half): the preview
    tool-mode pilot PAINT-01 inherits; nearest threads with ΔE feeding
    Must-use, swap targets and the inventory. No bump.
@@ -285,8 +287,12 @@ the mixer and tone mode cover all five.
 ### Open for the sitting (none block the prototype)
 
 The floor's unit and final label; the user-facing names for tone mode
-and ladder-shaped profiles; the confetti-note wording; the
-saturation-range remap flavour.
+and ladder-shaped profiles; the confetti-note wording.
+
+**Settled 2026-08-27 (D211):** the saturation-range remap flavour is
+**nominal with a low-saturation roll-off** — the owner's call. The
+same roll-off became `hueConfidence()`, shared with the mixer, so no
+hue-dependent control can touch a neutral.
 
 ### Prototype plan (agreed)
 

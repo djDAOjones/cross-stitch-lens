@@ -1123,3 +1123,43 @@ main {
 .curve-number input {
   width: 4.5rem;
 }
+
+/* The six-band colour mixer (ADJUST-02, CREATIVE-01 slice 2b).
+
+  Eighteen sliders need structure or they read as one undifferentiated
+  wall. A `<fieldset>` per band gives the grouping to assistive
+  technology as well as to the eye — the legend names the band, so the
+  three sliders inside are heard in its context. The grid wraps rather
+  than scrolls: the editor is already a takeover view with room, and a
+  horizontally scrolling control strip is the thing UI-STANDARDS keeps
+  out of forms. */
+.mixer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: var(--csl-spacing-04);
+  margin-top: var(--csl-spacing-03);
+}
+
+.mixer-band {
+  border: 1px solid var(--csl-border-subtle);
+  border-radius: 2px;
+  padding: var(--csl-spacing-03);
+  margin: 0;
+  min-width: 0;
+}
+
+.mixer-band > legend {
+  padding: 0 var(--csl-spacing-02);
+  font-size: var(--csl-type-label-01-size, 0.75rem);
+  color: var(--csl-text-secondary);
+}
+
+/* Tighter than a top-level field: three axes stacked inside one band
+  should read as one control, not three separate questions. */
+.mixer-axis {
+  margin-bottom: var(--csl-spacing-02);
+}
+
+.mixer-axis:last-child {
+  margin-bottom: 0;
+}

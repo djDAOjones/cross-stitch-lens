@@ -114,30 +114,64 @@ slice. PAINT-01 scopes separately.
 From the 2026-08-26 external review, adopted at D208; the report stays
 untracked at `_user-guff/2026-08-26-repo-review.md` — it maps unfixed
 surfaces of the live app. No schema changes anywhere in the track.
-BATCH-E0 shipped (D209); ADJUST-02 shipped (D211), so the STATE spine
-is next and comes before Track D's remaining slices — SHEET-01
-multiplies in-flight requests, the defect the spine repairs. STORE-01
-and LIMIT-01/02 run alongside; the public-surface group with Track C.
+BATCH-E0 shipped (D209); ADJUST-02 shipped (D211); the spine's
+convention is signed (D212) and runs serially in `main.ts` as
+STATE-02…05 — note the order was swapped on evidence, so STATE-02 is
+the capture work and STATE-03 the snapshots. Track D's remaining
+slices wait on it (SHEET-01 multiplies in-flight requests, the defect
+the spine repairs). STORE-01's library half and LIMIT-01/02 are
+parallel-safe; the public-surface group rides with Track C.
 
-- [ ] **STATE-01 Sign the state and lifecycle design** [sign-off] [detail] (2026-08-27)
-  Intent: one design signed once — immutable per-request snapshots, a
-  source generation token, one `transitionSource()` / one
-  `clearSourceState()`, one terminal settlement path per operation
-  (worker-fatal included). Serial in `main.ts`, no parallel streams;
-  prototype branch allowed.
-  Done when: the convention and slice order are signed and the slices
-  (proposed STATE-02…05 in the ticket) are spun out as items.
-  Scope: `src/main.ts`, `src/worker/client.ts`, `src/capture/session.ts`,
-  `src/capture/pump.ts`; no schema change.
-  Note: STATE-03 closes the live capture-retention privacy defect —
-  every deploy carries it until then (accepted knowingly, D208).
+- [~] **STATE-02 Source transitions and capture release** (2026-08-27)
+  Intent: slice 1 of the signed spine (D212), first because it closes
+  three findings a user can reach today — one `transitionSource(next)`
+  settling and stopping the outgoing source before installing the
+  next, one `clearSourceState()`, cleanup-on-failure around
+  acquisition, and the grab surface cleared once its still is taken.
+  Done when: capture→file / sample / project / capture, a late picker
+  completion and a `video.play()` failure each stop the superseded
+  tracks exactly once (mocked); source-less and corrupt loads leave no
+  previous image in preview, worker input, history bytes or package
+  contents; verified live in Chrome plus one non-Chromium browser with
+  the OS indicator observed off.
+  Scope: `src/main.ts`, `src/capture/session.ts`, `src/capture/pump.ts`.
+  Status: built and verified 2026-08-27 (D213) — the transition lives
+  inside `setStillMaster`, so all four source routes take it; the
+  mocked failure paths and the surface release are green. Open is the
+  human half only: a live capture pass in Chrome plus one non-Chromium
+  browser with the OS indicator observed off after each transition,
+  which an automated browser cannot drive (`getDisplayMedia` needs a
+  real picker).
+- [ ] **STATE-03 Immutable request snapshots** (2026-08-27)
+  Intent: slice 2 (D212) — config, symbols, grid and paging snapshotted
+  at submission as a `RequestSnapshot` in `src/core/`, travelling with
+  the request and returning with the result; results interpreted only
+  against their own snapshot.
+  Done when: a request held pending while every relevant control is
+  mutated completes against its submitted snapshot, and a duplicate-RGB
+  thread test proves identity follows the submitted palette.
+- [ ] **STATE-04 Worker settlement** (2026-08-27)
+  Intent: slice 3 (D212) — every submitted operation reaches exactly
+  one terminal state; `error`, `messageerror` and termination reject
+  pending work, release the pump, and recreate or disable the worker
+  explicitly.
+  Done when: every operation settles once under fake `ProcessError` /
+  `error` / `messageerror` / termination, and the app recovers or says
+  plainly that it can't.
+- [ ] **STATE-05 History queue** (2026-08-27)
+  Intent: slice 4 (D212), last because it has no verified live symptom
+  — snapshots capture synchronously into immutable values, and enqueue
+  returns a promise resolving on commit-or-supersede (a real flush
+  barrier).
+  Done when: rapid design switching under deferred image bytes never
+  mixes JSON, image, title or ID across generations.
 - [ ] **STORE-01 Persistence is atomic and honest** (2026-08-27)
   Intent: one-transaction `putReplacing(snapshot, victims)` so eviction
   cannot outlive a failed replacement; await `transaction.oncomplete`
   everywhere; an explicit initialising / persistent / session-only
   storage state with early writes queued or refused visibly. Library
-  files are parallel-safe beside the spine; the `main.ts` adoption seam
-  lands after STATE-03.
+  files are parallel-safe beside the spine and start now (D212); the
+  `main.ts` adoption seam lands after STATE-02.
   Done when: an injected put-failure after victim deletion loses
   nothing, and "saved" means committed.
 - [ ] **LIMIT-01 The export refuses unpayable page counts** (2026-08-27)

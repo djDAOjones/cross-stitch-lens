@@ -52,6 +52,19 @@ export interface ReusableSurface<C, X> {
   acquire(width: number, height: number): AcquiredSurface<C, X>;
   /** The live surface without touching its size, or null before the first acquire. */
   current(): AcquiredSurface<C, X> | null;
+  /**
+   * Drop the surface and free its pixels **now** (STATE-02).
+   *
+   * A grab surface holds a full copy of the last frame the user
+   * shared, and letting it wait for garbage collection means those
+   * pixels live for as long as the page happens to keep the session
+   * object reachable. Zeroing the dimensions releases the backing
+   * store at the point the app decides it is done with the frame,
+   * which is the only point it can honestly claim to have released
+   * it. Idempotent; `current()` reads null afterwards and a later
+   * `acquire` builds a fresh canvas.
+   */
+  release(): void;
   readonly stats: SurfaceStats;
 }
 
@@ -91,6 +104,15 @@ export function reusableSurface<C extends Resizable, X>(
     },
     current(): AcquiredSurface<C, X> | null {
       return held;
+    },
+    release(): void {
+      if (held === null) return;
+      // Zeroing either dimension reallocates — here, to nothing. Done
+      // before dropping the reference, so the pixels are gone whether
+      // or not anything else still holds the canvas.
+      held.canvas.width = 0;
+      held.canvas.height = 0;
+      held = null;
     },
     get stats(): SurfaceStats {
       return { created, resized };

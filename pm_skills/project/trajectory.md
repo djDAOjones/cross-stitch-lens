@@ -39,6 +39,14 @@ public-surface group.
   one machine, and the note describing that trap tripped the same
   checker. CI green and deployed at `a8b9caf` — see decision-log D210.
 
+- STATE-01/02 (2026-08-27) — the state convention signed on read
+  evidence (D212), with the slice order swapped: capture release first,
+  because three of the five findings are reachable by a user today.
+  Slice 1 landed (D213) — one transition path inside the function all
+  four source routes already call, cleanup-on-failure and a bound
+  around acquisition, and the grab surface released once its rescue is
+  taken. The live capture pass is the human remainder.
+
 ## Track D — Creative control of the image (IN PROGRESS)
 
 **Outcome:** opened 2026-08-23 (D188/D189); the gate was made safe for

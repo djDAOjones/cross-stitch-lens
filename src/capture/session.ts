@@ -84,15 +84,51 @@ export interface CaptureSession {
   snapshot(): PixelBuffer | null;
   /** Stop sharing and release the stream. Idempotent. */
   stop(): void;
+  /**
+   * Free the retained frame pixels (STATE-02). Idempotent.
+   *
+   * The pairing to {@link snapshot}'s deliberate survival of
+   * {@link stop}: the surface must outlive the stream just long
+   * enough for the app to rescue the last frame into a still, and not
+   * one moment longer. Call it once that rescue has been taken;
+   * `snapshot()` reads null afterwards.
+   */
+  releaseFrames(): void;
   /** Called once if sharing ends outside the app (browser stop UI). */
   onEnded(callback: () => void): void;
 }
 
-/** Resolve once the video element has decodable frame data. */
+/**
+ * How long to wait for a shared stream to produce decodable data
+ * before giving up. Generous — a capture normally reaches
+ * `loadeddata` in well under a second — but bounded, which is the
+ * point (STATE-02).
+ */
+export const READY_TIMEOUT_MS = 10_000;
+
+/**
+ * Resolve once the video element has decodable frame data, or reject
+ * once {@link READY_TIMEOUT_MS} has passed.
+ *
+ * The timeout is not defensive padding. Sharing has already begun by
+ * the time this is awaited, so a `loadeddata` that never fires used to
+ * leave the promise pending for ever — meaning `startCapture` never
+ * returned, the caller never got a session, and the user was left
+ * sharing their screen with nothing in the app able to stop it. A
+ * rejection is recoverable; a hang is not.
+ */
 async function whenReady(video: HTMLVideoElement): Promise<void> {
   if (video.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) return;
-  await new Promise<void>((resolve) => {
-    video.addEventListener('loadeddata', () => resolve(), { once: true });
+  await new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      video.removeEventListener('loadeddata', onReady);
+      reject(new Error('the shared stream produced no frames'));
+    }, READY_TIMEOUT_MS);
+    function onReady(): void {
+      clearTimeout(timer);
+      resolve();
+    }
+    video.addEventListener('loadeddata', onReady, { once: true });
   });
 }
 
@@ -119,9 +155,20 @@ export async function startCapture(): Promise<CaptureSession> {
     selfBrowserSurface: 'exclude',
     surfaceSwitching: 'include',
   } as DisplayMediaStreamOptions);
+  // From here on the user IS sharing. Every failure path below must
+  // stop the stream before it throws (STATE-02): the app is the only
+  // thing holding a handle to it, so an early return that skips the
+  // cleanup leaves the share running with nothing able to end it, and
+  // the browser's own indicator saying so. Previously only the
+  // no-video-track branch cleaned up, while the two awaits after it
+  // did not.
+  const stopStream = (): void => {
+    for (const t of stream.getTracks()) t.stop();
+  };
+
   const track = stream.getVideoTracks()[0];
   if (track === undefined) {
-    for (const t of stream.getTracks()) t.stop();
+    stopStream();
     throw new Error('the shared stream has no video track');
   }
 
@@ -130,8 +177,14 @@ export async function startCapture(): Promise<CaptureSession> {
   const video = document.createElement('video');
   video.muted = true;
   video.srcObject = stream;
-  await video.play();
-  await whenReady(video);
+  try {
+    await video.play();
+    await whenReady(video);
+  } catch (error) {
+    stopStream();
+    video.srcObject = null;
+    throw error;
+  }
 
   let stopped = false;
   // One canvas for the whole session (M13-IMPL-01, D135 candidate 1),
@@ -179,8 +232,11 @@ export async function startCapture(): Promise<CaptureSession> {
     stop(): void {
       if (stopped) return;
       stopped = true;
-      for (const t of stream.getTracks()) t.stop();
+      stopStream();
       video.srcObject = null;
+    },
+    releaseFrames(): void {
+      surface.release();
     },
     onEnded(callback: () => void): void {
       track.addEventListener('ended', () => {

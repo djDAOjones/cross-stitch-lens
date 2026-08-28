@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 326 file(s) across 13 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 327 file(s) across 13 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 13 file(s)
 - `.claude` — 2 file(s)
 - `.githooks` — 1 file(s)
@@ -27,7 +27,7 @@
 - `public` — 8 file(s)
 - `scripts` — 23 file(s)
 - `src` — 117 file(s)
-- `tests` — 137 file(s)
+- `tests` — 138 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -288,6 +288,7 @@
 - `tests/bench/env-node.ts` — node build/environment capture + report output dir
 - `tests/bench/run-node.ts` — matrix runner + budget-to-row bindings + cold preparation rows
 - `tests/benchmark.test.ts` — BENCH=1-gated: runs the matrix, writes the report, then asserts validity and budgets
+- `tests/capture-acquire.test.ts` — proves every `startCapture` failure path stops the stream (STATE-02) — a rejecting `play()`, a surface that never produces a frame, a stream with no video track. Fakes, because no real browser fails these ways on demand.
 - `tests/capture-crop.test.ts` — crop geometry: bounds/min-size, handles, hit-test, span
 - `tests/capture-dirty.test.ts` — hash determinism/sensitivity, region-aware signatures, staleness bound
 - `tests/capture-draft.test.ts` — governor hysteresis: enter/exit runs, gap, reset

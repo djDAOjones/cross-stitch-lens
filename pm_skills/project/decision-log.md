@@ -1986,3 +1986,134 @@ the real path. Worth knowing before someone chases it again.
 
 **Link:** backlog → Track D (ADJUST-02 removed); `tickets/CREATIVE-01.md`
 slice 2b closed; `src/core/color/mixer.ts`, `src/ui/mixer-control.ts`.
+
+## D212 — STATE-01 signed: the convention, and the order swapped on evidence (2026-08-27)
+
+**Decision:** the state and lifecycle convention is signed — immutable
+request snapshots, a source generation token, one `transitionSource()`,
+one `clearSourceState()`, one terminal settlement path per operation.
+Four slices spin out, **in a different order from the one the ticket
+proposed**. The sitting's four calls, all as recommended:
+
+1. **All five elements signed, with one amendment:** the generation
+   token reuses `main.ts`'s existing `sourceGeneration` rather than
+   minting a second counter, widening its job from "the history
+   noticed a picture change" to "every async continuation checks
+   this". One clock, two readers — two counters tracking the same
+   event can disagree, and the disagreement would be silent.
+2. **Capture release moves first.** STATE-01's ticket proposed
+   snapshots → transitions; the signed order is transitions →
+   snapshots. Note for anyone grepping: **STATE-02 and STATE-03 have
+   swapped content** relative to that proposal.
+3. **`RequestSnapshot` lives in `src/core/`** — it crosses the worker
+   boundary, so structural cloneability becomes a compile-time fact
+   under core's isolation lint rather than a convention.
+4. **STORE-01's library half starts now**, its `main.ts` adoption
+   wiring after STATE-02 (sooner than planned, because of the swap).
+
+**Rationale — why the order changed.** The review's claims were read
+out of the four files before signing, and two are worse than it
+implied. `capture?.stop()` has exactly one call site (`stopSession`,
+main.ts:5361): `importBlob` — the file, drop *and* paste route — never
+touches it, so importing a picture during a capture leaves the share
+running, the OS indicator on, and the pump still overwriting the
+imported image with screen frames. And `startCapture` has no
+cleanup-on-failure after `getDisplayMedia` resolves: `await
+video.play()` and `await whenReady(video)` follow an already-live
+stream, and `whenReady` waits on a `loadeddata` that may never fire
+with no timeout — the user is sharing and the app never returns an
+object that could stop it. Both are reachable now, on the live site.
+Snapshots repair a real correctness bug (results interpreted against
+state that has since moved) but one needing a user to change a control
+mid-export to see. **Ordering by reach rather than by architecture**
+puts the three live, privacy-shaped findings in the first slice, which
+is also the smaller one.
+
+**The other three findings, verified:** the grab surface is never
+cleared (`snapshot()` "deliberately survives `stop()`" — the rescue is
+load-bearing, so the fix is to clear after the still is taken, not to
+drop it); `worker/client.ts` wires `onmessage` and neither `onerror`
+nor `onmessageerror`, so a fatal worker error leaves every
+`pendingExports` promise unsettled for ever and the coalescer gate
+shut — an export that waits silently and a preview that stops; and
+`inFlight` retains the live config reference while `main.ts` mutates
+config in place, so `FrameResult.config`'s promise to be "the config
+this frame actually ran with" is not kept.
+
+**Alternatives:** the review's order (rejected — leaves three live
+findings standing through a slice); a second generation counter
+(folded in as the amendment instead); a `main.ts`-local snapshot type
+(rejected — it would be defined on one side of the boundary it exists
+to cross).
+
+**Link:** the signed sheet
+<https://claude.ai/code/artifact/54477cd1-9e4b-431f-9786-0d28fa3e626b>;
+backlog → Track E (STATE-01 replaced by STATE-02…05);
+`tickets/STATE-01.md` deleted with the item.
+
+## D213 — STATE-02: the source transition exists, and it lives where every route already passes (2026-08-27)
+
+**Decision:** slice 1 of the signed spine (D212) lands. `transitionSource()`
+settles and stops the outgoing source; `clearSourceState()` drops every
+trace of it; acquisition cleans up on failure; the grab surface is
+released once its rescue has been taken.
+
+**The placement is the decision.** Four routes install a still —
+`importBlob` (file, drop and paste), `loadSample`, the project load and
+`restoreDesign` — and all four already funnel through
+`setStillMaster()`. So the transition goes *inside* that function
+rather than at the four call sites. A convention that has to be
+remembered at each site is one a fifth route will forget, and the
+review's finding was precisely that: `capture?.stop()` had exactly one
+call site, the Stop button, so importing a picture during a capture
+left the share running, the browser's indicator on for a surface the
+app no longer showed, and the pump still overwriting the picture the
+user had just chosen.
+
+**Cleanup-on-failure, and a bound.** The moment `getDisplayMedia`
+resolves the user is sharing and the app holds the only handle that
+can end it. Two awaits followed with nothing around them: a rejecting
+`video.play()` left the share running, and `whenReady` waited on a
+`loadeddata` that might never fire — so `startCapture` never returned,
+the caller never received a session, and the user was sharing with
+nothing able to stop it. Both are wrapped now, and `whenReady` carries
+a 10 s bound. A rejection is recoverable; a hang is not.
+
+**Releasing frames is a pairing, not a reversal.** `snapshot()`
+deliberately survives `stop()` — that is what rescues the last live
+frame into a still when sharing ends externally, and it is
+load-bearing. The fix is not to drop the rescue but to end it:
+`releaseFrames()` zeroes the surface's backing store at the point the
+app has taken what it needs, so a copy of the last shared frame stops
+living for as long as the page does. `endCaptureUi` rescues, then
+releases, in that order.
+
+**A source-less load now clears rather than inherits.** Loading a
+project with no embedded picture (or one that will not decode) left
+the *previous* picture on screen under the *new* project's settings,
+reported it as that project, and would have embedded those pixels in
+the next save. `clearSourceState()` makes the design honestly empty
+and the status says to import one.
+
+**Alternatives:** calling `transitionSource()` at the four call sites
+(rejected — see above); clearing the surface inside `stop()` (rejected
+— it would break the external-end rescue, which is the one moment the
+app can save the user's last frame); no timeout on `whenReady`
+(rejected — an unbounded wait on an already-live share is the worst
+shape this defect can take).
+
+**Verification:** `check` green, 1,584 tests. Five new acquisition
+tests drive the failure paths against fakes, because a real browser
+cannot be made to reject `play()` or withhold `loadeddata` on demand;
+each fails against the previous code (the reject path left the track
+count at zero; the unready path never settled at all). Five surface
+tests pin the release. Two consecutive imports verified live with no
+console errors.
+
+**Outstanding — the human half of done-when:** the live capture pass
+(Chrome plus one non-Chromium browser, OS indicator observed off after
+each transition) cannot be driven from an automated browser —
+`getDisplayMedia` needs a real picker and a real user gesture. STATE-02
+stays `[~]` until that pass is recorded.
+
+**Link:** backlog → Track E; the signed sheet at D212.

@@ -142,3 +142,63 @@ describe('reusableSurface', () => {
     expect(surface.stats).toEqual({ created: 1, resized: 0 });
   });
 });
+
+
+/**
+ * Releasing the surface (STATE-02).
+ *
+ * A grab surface holds a full copy of the last frame the user shared.
+ * Waiting for garbage collection means those pixels live for as long
+ * as something happens to keep the session reachable, which is not a
+ * claim the app can honestly make about released data.
+ */
+describe('release', () => {
+  it('zeroes the backing store rather than waiting for collection', () => {
+    const fake = counting();
+    const surface = reusableSurface(fake.create, fake.context);
+    surface.acquire(64, 48);
+    surface.release();
+    const canvas = fake.canvases[0];
+    expect(canvas?.width).toBe(0);
+    expect(canvas?.height).toBe(0);
+  });
+
+  it('drops the held surface, so nothing can read the old frame back', () => {
+    const fake = counting();
+    const surface = reusableSurface(fake.create, fake.context);
+    surface.acquire(64, 48);
+    expect(surface.current()).not.toBeNull();
+    surface.release();
+    expect(surface.current()).toBeNull();
+  });
+
+  it('is idempotent — two releases are not an error', () => {
+    const fake = counting();
+    const surface = reusableSurface(fake.create, fake.context);
+    surface.acquire(8, 8);
+    surface.release();
+    expect(() => {
+      surface.release();
+    }).not.toThrow();
+    expect(surface.current()).toBeNull();
+  });
+
+  it('is a no-op before the first acquire', () => {
+    const fake = counting();
+    const surface = reusableSurface(fake.create, fake.context);
+    surface.release();
+    expect(fake.canvases).toHaveLength(0);
+  });
+
+  it('lets a later acquire build a fresh surface', () => {
+    // Not a session's normal path — release ends a session — but the
+    // pool must not be left broken by it.
+    const fake = counting();
+    const surface = reusableSurface(fake.create, fake.context);
+    surface.acquire(16, 16);
+    surface.release();
+    surface.acquire(16, 16);
+    expect(fake.canvases).toHaveLength(2);
+    expect(surface.current()).not.toBeNull();
+  });
+});

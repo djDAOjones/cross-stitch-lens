@@ -403,11 +403,64 @@ function build(app: HTMLElement): void {
    * remembering the bytes it was decoded from when there are any. A
    * still arriving is a new design.
    */
+  /**
+   * Install a still as the design's picture — **the** way a new source
+   * arrives (file, drop, paste, sample, project, restored design).
+   *
+   * Every one of those routes already came through here, so this is
+   * where the outgoing source is settled (STATE-02, the D212
+   * convention). It used to install the new picture and leave a live
+   * capture running: the share continued, the browser's indicator
+   * stayed on for a surface the app no longer showed, and the pump
+   * kept overwriting the picture the user had just chosen. Putting
+   * the transition inside the one function they all call means a new
+   * route cannot forget it.
+   */
   function setStillMaster(buffer: PixelBuffer, origin: SourceOrigin | null = null): void {
+    transitionSource();
     masterImage = buffer;
     masterRefill = null;
     sourceOrigin = origin;
     startNewDesign();
+  }
+
+  /**
+   * Settle and stop whatever source is outgoing, before the next one
+   * is installed (STATE-02).
+   *
+   * Ends a running capture through the same path its own Stop button
+   * uses, so the UI reset and focus rescue stay in one place, then
+   * frees the retained frame pixels — the rescue `endCaptureUi` takes
+   * has already been taken by then, and the surface has no reason to
+   * outlive it. Safe to call when there is no capture; that is the
+   * common case.
+   */
+  function transitionSource(): void {
+    const outgoing = capture;
+    if (outgoing === null) return;
+    outgoing.stop();
+    endCaptureUi('Screen capture stopped — the new picture replaced it.');
+    outgoing.releaseFrames();
+    log.info('capture', 'session ended by a source change');
+  }
+
+  /**
+   * Drop every trace of the current source, in one act (STATE-02).
+   *
+   * The counterpart to {@link setStillMaster}: used where a load
+   * produced no picture at all. Leaving the previous one in place
+   * looked harmless — the settings applied, something rendered — but
+   * the picture on screen then belonged to one design and the
+   * settings to another, and the next save would embed those pixels
+   * into the new project's package. An empty design states the truth.
+   */
+  function clearSourceState(): void {
+    transitionSource();
+    masterImage = null;
+    masterRefill = null;
+    sourceOrigin = null;
+    sourceName = null;
+    invalidateSelectionSource();
   }
 
   /**
@@ -4088,9 +4141,16 @@ function build(app: HTMLElement): void {
         ensureSelectionSource();
         updateSourceEntry();
       } else {
-        // A loaded file is a new design even without a picture — the
-        // one on screen stays recoverable in the history.
+        // No picture came with the file, or its picture would not
+        // decode. The one already on screen is NOT this design's
+        // (STATE-02): leaving it there rendered the old picture under
+        // the new project's settings, called it that project, and
+        // would have embedded those pixels in the next save. The
+        // design is empty until the user imports one, and the status
+        // below says so.
+        clearSourceState();
         startNewDesign();
+        updateSourceEntry();
       }
       // The retired order is named at the moment it starts rendering
       // (M14-EXT-44) — the standing line in Processing carries it
@@ -5147,6 +5207,11 @@ function build(app: HTMLElement): void {
     // honest report, never a blank one.
     masterImage = master();
     masterRefill = null;
+    // The rescue above is the surface's whole remaining job. Freeing
+    // it here is what stops a copy of the last shared frame living
+    // for as long as the page does (STATE-02); `transitionSource`
+    // calls this path and then releases too, which is idempotent.
+    capture?.releaseFrames();
     capture?.video.remove();
     capture = null;
     // After `capture` clears: the derived-state check reads it, and
@@ -5262,6 +5327,11 @@ function build(app: HTMLElement): void {
     status.textContent = 'Requesting screen capture…';
     try {
       const session = await startCapture();
+      // A second session while one runs would orphan the first — its
+      // tracks live, its surface holding the last frame, and nothing
+      // left pointing at it (STATE-02). `surfaceSwitching` makes that
+      // reachable, so settle the outgoing one first.
+      transitionSource();
       capture = session;
       // A capture has no bytes of its own (DUR-01): the previous still's
       // must not ride into a save of the live frame. A session is a new

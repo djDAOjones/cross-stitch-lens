@@ -3011,13 +3011,54 @@ function build(app: HTMLElement): void {
   };
   syncPdfPaging();
 
+  /**
+   * Everything an export run must read, captured before it starts
+   * (STATE-03, the D212 convention).
+   *
+   * A full-quality export re-runs the pipeline and takes seconds, and
+   * the user is free to touch every control while it does. The routes
+   * below used to read `chartMode`, `gridPrint`, `pdfPaging`,
+   * `exportState` and the live `config` **after** awaiting the frame,
+   * so a chart could leave with one configuration's pixels and
+   * another's symbols, grid or key — the same mistake COUNT-01 named,
+   * one layer up.
+   *
+   * `gridPrint`, `pdfPaging` and `exportState` are long-lived objects
+   * edited in place, so each is copied. `config` follows the shallow
+   * rule its own snapshot documents; `symbolState` and `chartMode`
+   * are replaced rather than mutated, so their current values are
+   * already stable to hold.
+   */
+  function exportSnapshot(): {
+    config: PipelineConfig;
+    chartMode: ChartMode;
+    gridPrint: GridStyleValues;
+    paging: { pages: 'single' | 'grid'; stitchesPerPage: number; overlapStitches: number };
+    background: string;
+    color: string;
+    symbols: typeof symbolState;
+    pdf: PdfOptions;
+  } {
+    return {
+      config: { ...config },
+      chartMode,
+      gridPrint: { ...gridPrint },
+      paging: { ...pdfPaging },
+      background: exportState.background,
+      color: exportState.color,
+      symbols: symbolState,
+      pdf: { ...pdfOptions },
+    };
+  }
+
   async function exportPng(): Promise<void> {
     const still = master();
     if (still === null) return;
     // Clamp so the output canvas stays within browser limits; say so
     // in the status when it bites rather than failing silently.
+    const run = exportSnapshot();
     const wanted = scales.export.cleanPxPerStitch;
-    const scale = Math.min(wanted, maxScaleFor(config.grid.width, config.grid.height));
+    const scale = Math.min(wanted, maxScaleFor(run.config.grid.width, run.config.grid.height));
     status.textContent = 'Exporting…';
     exportButton.disabled = true;
     try {
@@ -3027,10 +3068,10 @@ function build(app: HTMLElement): void {
           height: still.height,
           data: new Uint8ClampedArray(still.data),
         },
-        config,
+        run.config,
       );
       let out = scale > 1 ? scaleNearest(frame, scale) : frame;
-      if (exportState.background === 'solid') out = flattenBackground(out, exportState.color);
+      if (run.background === 'solid') out = flattenBackground(out, run.color);
       const filename = pngFilename(frame.width, frame.height, scale);
       downloadBlob(document, await encodePngBlob(out), filename);
       status.textContent =
@@ -3040,7 +3081,7 @@ function build(app: HTMLElement): void {
       log.info('export', 'clean png', {
         filename,
         scale,
-        background: exportState.background,
+        background: run.background,
         width: out.width,
         height: out.height,
       });
@@ -3101,10 +3142,11 @@ function build(app: HTMLElement): void {
     // Chart furniture follows the persisted print style (M11) —
     // raster px, never the DPR-scaled screen values. Paper/ink
     // colours are fixed in chart.ts.
+    const run = exportSnapshot();
     const wantedCell = scales.export.chartCellPx;
     const cell = Math.min(
       wantedCell,
-      maxCellPx(config.grid.width, config.grid.height, gridPrint),
+      maxCellPx(run.config.grid.width, run.config.grid.height, run.gridPrint),
     );
     status.textContent = 'Exporting…';
     chartButton.disabled = true;
@@ -3115,10 +3157,10 @@ function build(app: HTMLElement): void {
           height: still.height,
           data: new Uint8ClampedArray(still.data),
         },
-        config,
+        run.config,
       );
       let symbols: ChartSymbols = [];
-      if (chartMode !== 'color') {
+      if (run.chartMode !== 'color') {
         const table = symbolTableFor(frame);
         if ('refusal' in table) {
           status.textContent = table.refusal;
@@ -3130,14 +3172,14 @@ function build(app: HTMLElement): void {
       const filename = chartFilename(frame.width, frame.height);
       downloadBlob(
         document,
-        await encodeChartPng(frame, gridPrint, cell, chartMode, symbols),
+        await encodeChartPng(frame, run.gridPrint, cell, run.chartMode, symbols),
         filename,
       );
       status.textContent =
         cell < wantedCell
           ? `Exported ${filename} (cell size limited to ${cell}).`
           : `Exported ${filename}.`;
-      log.info('export', 'chart png', { filename, cell, mode: chartMode });
+      log.info('export', 'chart png', { filename, cell, mode: run.chartMode });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       status.textContent = `Export failed (${message}). Try again after the preview updates.`;
@@ -3150,6 +3192,7 @@ function build(app: HTMLElement): void {
   async function exportPdf(): Promise<void> {
     const still = master();
     if (still === null) return;
+    const run = exportSnapshot();
     status.textContent = 'Exporting…';
     pdfButton.disabled = true;
     try {
@@ -3159,10 +3202,10 @@ function build(app: HTMLElement): void {
           height: still.height,
           data: new Uint8ClampedArray(still.data),
         },
-        config,
+        run.config,
       );
       let symbols: ChartSymbols = [];
-      if (chartMode !== 'color') {
+      if (run.chartMode !== 'color') {
         const table = symbolTableFor(frame);
         if ('refusal' in table) {
           status.textContent = table.refusal;
@@ -3178,22 +3221,22 @@ function build(app: HTMLElement): void {
       // explain the chart (M9).
       const entries: KeyEntry[] = buildKeyEntries(
         frame,
-        renderPaletteOf(config),
+        renderPaletteOf(run.config),
         BRAND_NAMES,
-        chartMode === 'color' ? undefined : effectiveSymbols(symbolState),
+        run.chartMode === 'color' ? undefined : effectiveSymbols(run.symbols),
       );
       let bytes: Uint8Array;
       let cell: number;
       let pageNote = '';
-      if (pdfPaging.pages === 'grid') {
+      if (run.paging.pages === 'grid') {
         // Multi-page (M10): plan the tiling, render each page's slice
         // at one shared cell size with global coordinates, and hand
         // the tiles to the assembly with a colour overview map.
         const plan = planPages(
-          config.grid.width,
-          config.grid.height,
-          pdfPaging.stitchesPerPage,
-          pdfPaging.overlapStitches,
+          run.config.grid.width,
+          run.config.grid.height,
+          run.paging.stitchesPerPage,
+          run.paging.overlapStitches,
         );
         if (isPlanError(plan)) {
           status.textContent = plan.error;
@@ -3202,14 +3245,14 @@ function build(app: HTMLElement): void {
         const span = Math.max(plan.maxSpanX, plan.maxSpanY);
         cell = Math.max(
           4,
-          Math.min(Math.ceil(2400 / span), 40, maxCellPx(plan.maxSpanX, plan.maxSpanY, gridPrint)),
+          Math.min(Math.ceil(2400 / span), 40, maxCellPx(plan.maxSpanX, plan.maxSpanY, run.gridPrint)),
         );
         const maxLabel = Math.max(frame.width, frame.height);
         const tiles: ChartPageTile[] = [];
         for (const slice of plan.pages) {
           const tileFrame = sliceBuffer(frame, slice.x0, slice.x1, slice.y0, slice.y1);
-          const layout = chartLayout(tileFrame.width, tileFrame.height, gridPrint, cell, maxLabel);
-          const blob = await encodeChartPng(tileFrame, gridPrint, cell, chartMode, symbols, {
+          const layout = chartLayout(tileFrame.width, tileFrame.height, run.gridPrint, cell, maxLabel);
+          const blob = await encodeChartPng(tileFrame, run.gridPrint, cell, run.chartMode, symbols, {
             x: slice.x0,
             y: slice.y0,
           });
@@ -3226,8 +3269,8 @@ function build(app: HTMLElement): void {
         // Overview map: always colour cells — glyphs are illegible at
         // map scale, and the map's job is placement, not stitching.
         const ovCell = Math.max(1, Math.min(4, Math.floor(2000 / maxLabel)));
-        const ovLayout = chartLayout(frame.width, frame.height, gridPrint, ovCell);
-        const ovBlob = await encodeChartPng(frame, gridPrint, ovCell, 'color', []);
+        const ovLayout = chartLayout(frame.width, frame.height, run.gridPrint, ovCell);
+        const ovBlob = await encodeChartPng(frame, run.gridPrint, ovCell, 'color', []);
         bytes = await buildMultiPagePdf(
           tiles,
           plan,
@@ -3242,7 +3285,7 @@ function build(app: HTMLElement): void {
             gridH: frame.height,
           },
           entries,
-          { ...pdfOptions },
+          run.pdf,
         );
         pageNote = ` (${String(plan.pages.length + 1)} pages)`;
       } else {
@@ -3254,15 +3297,13 @@ function build(app: HTMLElement): void {
           Math.min(
             Math.ceil(2400 / Math.max(frame.width, frame.height)),
             40,
-            maxCellPx(config.grid.width, config.grid.height, gridPrint),
+            maxCellPx(run.config.grid.width, run.config.grid.height, run.gridPrint),
           ),
         );
-        const chartL = chartLayout(frame.width, frame.height, gridPrint, cell);
-        const chartBlob = await encodeChartPng(frame, gridPrint, cell, chartMode, symbols);
+        const chartL = chartLayout(frame.width, frame.height, run.gridPrint, cell);
+        const chartBlob = await encodeChartPng(frame, run.gridPrint, cell, run.chartMode, symbols);
         const chartPng = new Uint8Array(await chartBlob.arrayBuffer());
-        bytes = await buildChartPdf(chartPng, chartL.width, chartL.height, entries, {
-          ...pdfOptions,
-        });
+        bytes = await buildChartPdf(chartPng, chartL.width, chartL.height, entries, run.pdf);
       }
       const filename = pdfFilename(frame.width, frame.height);
       // pdf-lib returns a fresh non-shared buffer; cast for Blob's sake.
@@ -3272,11 +3313,11 @@ function build(app: HTMLElement): void {
       log.info('export', 'pdf chart', {
         filename,
         cell,
-        page: pdfOptions.pageSize,
-        orientation: pdfOptions.orientation,
+        page: run.pdf.pageSize,
+        orientation: run.pdf.orientation,
         keyEntries: entries.length,
-        mode: chartMode,
-        pages: pdfPaging.pages,
+        mode: run.chartMode,
+        pages: run.paging.pages,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

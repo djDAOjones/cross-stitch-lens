@@ -142,14 +142,6 @@ parallel-safe; the public-surface group rides with Track C.
   browser with the OS indicator observed off after each transition,
   which an automated browser cannot drive (`getDisplayMedia` needs a
   real picker).
-- [ ] **STATE-03 Immutable request snapshots** (2026-08-27)
-  Intent: slice 2 (D212) — config, symbols, grid and paging snapshotted
-  at submission as a `RequestSnapshot` in `src/core/`, travelling with
-  the request and returning with the result; results interpreted only
-  against their own snapshot.
-  Done when: a request held pending while every relevant control is
-  mutated completes against its submitted snapshot, and a duplicate-RGB
-  thread test proves identity follows the submitted palette.
 - [ ] **STATE-04 Worker settlement** (2026-08-27)
   Intent: slice 3 (D212) — every submitted operation reaches exactly
   one terminal state; `error`, `messageerror` and termination reject

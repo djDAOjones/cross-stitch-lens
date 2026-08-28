@@ -7,6 +7,7 @@
 
 import { log } from '../diagnostics/log.ts';
 import type { PipelineConfig } from '../core/pipeline/config.ts';
+import { requestSnapshot, type RequestSnapshot } from '../core/pipeline/snapshot.ts';
 import type { PixelBuffer } from '../core/types.ts';
 import { Coalescer } from './coalesce.ts';
 import type { GridStyle } from './grid.ts';
@@ -31,6 +32,12 @@ export interface FrameResult {
    * palette change the two differ, and stats read against the wrong
    * palette under-reported the design (COUNT-01's "colours: 2" against
    * a 489-entry render; a must-fix for ICE-RECOLOUR-01, D197).
+   *
+   * This used to be the live config **object**, so the promise above
+   * was not kept: handing back a reference to state the app mutates
+   * means a reader sees whatever is current, which is the very thing
+   * COUNT-01 was about. It is now a snapshot taken at submission
+   * (STATE-03).
    */
   config: PipelineConfig;
 }
@@ -55,6 +62,8 @@ export interface JobObserver {
 interface Job {
   buffer: PixelBuffer;
   config: PipelineConfig;
+  /** Taken at submit, before the job can wait behind another. */
+  snapshot: RequestSnapshot;
   /** Harness-only backend force (M13-PROF-03); app traffic never sets it. */
   force?: BackendForce;
 }
@@ -88,7 +97,7 @@ export class PipelineClient {
    * entry; a map rather than a field so an export response (its own
    * id space, never in here) can never be mistaken for it.
    */
-  private readonly inFlight = new Map<number, PipelineConfig>();
+  private readonly inFlight = new Map<number, RequestSnapshot>();
   /** Export runs awaiting their result, keyed by request id. */
   private readonly pendingExports = new Map<
     number,
@@ -154,9 +163,14 @@ export class PipelineClient {
    * (latest-wins — there is no queue).
    */
   submit(buffer: PixelBuffer, config: PipelineConfig, force?: BackendForce): void {
+    // Snapshot here, not in `post`: a coalesced frame can sit in the
+    // pending slot while the user keeps moving controls, so the
+    // config that reaches `post` may already be a later one than the
+    // caller submitted (STATE-03).
     const startNow = this.coalescer.submit({
       buffer,
       config,
+      snapshot: requestSnapshot(config),
       ...(force === undefined ? {} : { force }),
     });
     if (startNow) this.post(startNow);
@@ -204,7 +218,7 @@ export class PipelineClient {
       config: job.config,
       ...(job.force === undefined ? {} : { force: job.force }),
     };
-    this.inFlight.set(request.id, job.config);
+    this.inFlight.set(request.id, job.snapshot);
     this.observer?.jobStarted(request.id, absNow());
     this.worker.postMessage(request, [request.pixels]);
   }
@@ -225,17 +239,17 @@ export class PipelineClient {
       pending?.reject(new Error(response.message));
       return;
     }
-    const config = this.inFlight.get(response.id);
+    const snapshot = this.inFlight.get(response.id);
     this.inFlight.delete(response.id);
     if (response.type === 'error') {
       log.error('worker', 'frame failed', { message: response.message });
       this.observer?.jobSettled(response.id, absNow(), 'error');
-    } else if (config !== undefined) {
+    } else if (snapshot !== undefined) {
       this.observer?.jobSettled(response.id, absNow(), 'result', response.marks);
       this.onResult?.({
         buffer: toBuffer(response.width, response.height, response.pixels, response.indices),
         timings: response.timings,
-        config,
+        config: snapshot.config,
       });
     }
     const next = this.coalescer.complete();

@@ -46,6 +46,11 @@ public-surface group.
   four source routes already call, cleanup-on-failure and a bound
   around acquisition, and the grab surface released once its rescue is
   taken. The live capture pass is the human remainder.
+- STATE-03 (2026-08-27) — snapshots taken at submit, not at post; the
+  three export routes capture their render options before awaiting.
+  Shallow suffices because main.ts replaces config fields rather than
+  editing them, and that discipline is now asserted against the source
+  instead of trusted — see decision-log D214.
 
 ## Track D — Creative control of the image (IN PROGRESS)
 

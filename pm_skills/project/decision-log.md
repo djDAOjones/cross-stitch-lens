@@ -2117,3 +2117,59 @@ each transition) cannot be driven from an automated browser —
 stays `[~]` until that pass is recorded.
 
 **Link:** backlog → Track E; the signed sheet at D212.
+
+## D214 — STATE-03: shallow is enough, and the reason is a property of the app (2026-08-27)
+
+**Decision:** slice 2 of the spine lands. `RequestSnapshot` lives in
+`src/core/pipeline/snapshot.ts` (the D212 call) and is taken at
+**submit**, not at post; the three export routes capture every mutable
+render option before awaiting and read only from that capture.
+
+**Shallow, and why that is not a shortcut.** `main.ts` owns one
+long-lived `PipelineConfig` and **replaces** its fields — every write
+is `config.tone = { ...currentTone(), weight }` or
+`config.dither = structuredClone(chosen)`. Checked exhaustively:
+nine fields are written, none in place, and there is no
+`config.x.y = z` or `Object.assign(config.…)` anywhere. Under that
+discipline a shallow copy captures everything, because the objects the
+copy points at are never edited — they are swapped. A deep clone
+would also be correct and would copy up to 489 thread records per
+submitted frame for no added safety.
+
+**So the discipline is the load-bearing part, and it is now asserted
+rather than trusted.** `tests/request-snapshot.test.ts` reads
+`main.ts` and fails on any in-place config write at any depth, on any
+mutating method call through a config field, and on any
+`Object.assign` into one. Both regexes were checked against the
+shapes they must catch *and* the legal forms they must ignore, since a
+guard that silently matches nothing is worse than no guard. The day
+someone writes `config.grid.width = n`, that test is what says a
+shallow snapshot no longer suffices.
+
+**Snapshot at submit, not at post.** A coalesced frame can sit in the
+pending slot while the user keeps moving controls, so the config
+reaching `post()` may already be a later one than the caller
+submitted. Taking it in `submit()` is what makes the result describe
+the request.
+
+**The export half was the worse one.** A full-quality export takes
+seconds and every control stays live throughout. `exportPdf` read
+`chartMode`, `pdfPaging`, `pdfOptions`, `gridPrint`, `symbolState`
+*and* called `renderPaletteOf(config)` on the live config after
+awaiting — so the thread key could be built from a palette the pixels
+never saw. One `exportSnapshot()` now feeds all three routes, and a
+test asserts no route reads a mutable option after its await, so a
+fourth route cannot quietly reintroduce it.
+
+**Alternatives:** `structuredClone` per submission (rejected — cost
+without benefit while the discipline holds, and the discipline is now
+enforced); leaving `FrameResult.config` as the live reference and
+fixing readers instead (rejected — the field's own doc-comment already
+promised it was the config the frame ran with; the fix is to make that
+true, not to document the exception).
+
+**Verification:** `check` green, 1,591 tests. All three export routes
+driven live — PNG, chart PNG and PDF each produced a file with no
+console errors.
+
+**Link:** backlog → Track E; the signed sheet at D212.

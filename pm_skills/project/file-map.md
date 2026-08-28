@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 327 file(s) across 13 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 329 file(s) across 13 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 13 file(s)
 - `.claude` — 2 file(s)
 - `.githooks` — 1 file(s)
@@ -26,8 +26,8 @@
 - `docs` — 17 file(s)
 - `public` — 8 file(s)
 - `scripts` — 23 file(s)
-- `src` — 117 file(s)
-- `tests` — 138 file(s)
+- `src` — 118 file(s)
+- `tests` — 139 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -186,6 +186,7 @@
 - `src/core/pipeline/index.ts` — pipeline executor: backend pick + ts fallback
 - `src/core/pipeline/reduce.ts` — reduce stage: LUT + exact paths, alpha passthrough
 - `src/core/pipeline/resize.ts` — resize stage: area-average, 4 modes, empty cells
+- `src/core/pipeline/snapshot.ts` — `RequestSnapshot` — what a request carries and hands back with its result (STATE-03). Documents why a shallow copy is a complete snapshot, and which app discipline that rests on.
 - `src/core/pipeline/swap.ts` — swap stage (ICE-RECOLOUR-01): `renderPalette()` (selected entries + render-only targets, index map, no-chain) and the pure sidecar remap + repaint
 - `src/core/pipeline/threshold-tiles.ts` — Bayer + void-and-cluster blue-noise threshold tiles: fixed data, documented provenance, memoised
 - `src/core/project-package.ts` — store-only zip project package (`.pmproj`): deterministic writer (fixed 1980 stamps), bounded reader with named refusals, format detection, readProjectBytes/writeProjectBytes (DUR-01)
@@ -360,6 +361,7 @@
 - `tests/project-package.test.ts` — `.pmproj` container: byte-identical round trip, legacy JSON detection, refusals for compressed/encrypted/zip64/truncated packages (DUR-01)
 - `tests/project.test.ts` — project file: byte-identical round trip, validation errors, version refusal, v10 migration, title/fallback naming (SAVE-01)
 - `tests/reduce.test.ts` — reduce golden + invariants (membership, fixed point, LUT↔exact)
+- `tests/request-snapshot.test.ts` — the snapshot, plus the guard on the discipline it depends on: fails on any in-place config write in `main.ts`, and on any export route reading a mutable option after its await.
 - `tests/resize.test.ts` — resize golden + geometry/average/bounds invariants
 - `tests/save-transcript.test.ts` — transcript-save script behaviour (paths, redaction guard)
 - `tests/scales.test.ts` — The 4×4 independence matrix (identity, not equality) plus the label-distinctness checks.

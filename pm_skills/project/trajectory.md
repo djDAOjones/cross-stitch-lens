@@ -51,6 +51,11 @@ public-surface group.
   Shallow suffices because main.ts replaces config fields rather than
   editing them, and that discipline is now asserted against the source
   instead of trusted — see decision-log D214.
+- STATE-04 (2026-08-27) — the worker settles: `onerror` and
+  `onmessageerror` reject every pending export, release the frame gate
+  and terminate. Recovery is impossible in-page (the preview canvas
+  transfer is one-way), so the app says so and names the reload —
+  see decision-log D215.
 
 ## Track D — Creative control of the image (IN PROGRESS)
 

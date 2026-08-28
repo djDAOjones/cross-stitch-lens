@@ -1491,6 +1491,16 @@ function build(app: HTMLElement): void {
 
   const client = new PipelineClient();
   client.attachCanvas(canvas);
+  // If the worker dies there is no way back within this page: the
+  // preview canvas went to it through `transferControlToOffscreen`,
+  // which is one-way, so a replacement worker cannot be handed it
+  // (STATE-04). Say that plainly and name the one thing that helps,
+  // rather than leaving a frozen preview and an export button that
+  // waits for ever.
+  client.setOnFatal((reason) => {
+    status.textContent = `The image engine stopped (${reason}). Your work is still in this browser — reload the page to carry on.`;
+    log.error('worker', 'fatal — the page must be reloaded', { reason });
+  });
   // The controller reports its mode and CSS-px-per-stitch back into the
   // scale model; nothing it reports can run the pipeline. The fit
   // gutter is asked live from the grid style (M11) so 3-digit row

@@ -15,7 +15,7 @@
      pm_skills/memory-policy.md. -->
 
 <!-- file-map-index -->
-<!-- 329 file(s) across 13 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
+<!-- 330 file(s) across 13 section(s); regenerate with pm_skills/scaffold/gen-file-map.mjs -->
 - `(root)` — 13 file(s)
 - `.claude` — 2 file(s)
 - `.githooks` — 1 file(s)
@@ -27,7 +27,7 @@
 - `public` — 8 file(s)
 - `scripts` — 23 file(s)
 - `src` — 118 file(s)
-- `tests` — 139 file(s)
+- `tests` — 140 file(s)
 <!-- /file-map-index -->
 
 ## (root)
@@ -393,3 +393,4 @@
 - `tests/webgpu-lut.test.ts` — GPU tolerance suite: f32-mirror near-tie bound, static shader scans, skipIf real-GPU parity
 - `tests/worker-executor.test.ts` — executor end-to-end, LUT cache, coalescer
 - `tests/worker-router.test.ts` — response invariant: every request answered, gate released on each rejection
+- `tests/worker-settlement.test.ts` — every worker failure mode against a fake worker (STATE-04): pending exports reject instead of hanging, repeat failures settle once, a late response delivers no frame, and a per-request error stays recoverable.

@@ -2173,3 +2173,54 @@ driven live — PNG, chart PNG and PDF each produced a file with no
 console errors.
 
 **Link:** backlog → Track E; the signed sheet at D212.
+
+## D215 — STATE-04: the worker cannot be recovered, so it says so (2026-08-27)
+
+**Decision:** slice 3 lands. `PipelineClient` wires `onerror` and
+`onmessageerror`; a fatal failure settles every pending export with a
+rejection, drops the in-flight bookkeeping, releases the coalescer
+gate, terminates the worker, and tells the host once. The host says
+plainly that the page must be reloaded.
+
+**"Recovers, or says plainly that it can't" resolved to the second
+half, and not for want of trying.** The preview canvas reaches the
+worker through `transferControlToOffscreen`, which is **one-way and
+once-only**: a replacement worker cannot be handed the same canvas, so
+recreating the worker inside this class would produce one that can
+never draw. Genuine recovery means building a new canvas element and a
+new client — a decision above this layer. So the client exposes
+`isDead` and `setOnFatal`, and `main.ts` names the one action that
+helps. An honest refusal beats a recovery that half-works.
+
+**Why a rejection, not a retry.** An export promise was previously
+settled only from the response handler, so a dead worker left it
+pending for ever: the button waited with nothing said, and the
+coalescer gate — released only by `complete()`, called from a response
+that was never coming — stayed shut, so the preview stopped too. Two
+silent failures from one cause. A rejection the caller can show is
+strictly better than a promise that never settles.
+
+**Two smaller repairs the reading turned up.** `Coalescer` gained
+`reset()` (it had no way to release a gate held by work that will
+never complete — `PumpGate` already had one, so this closes an
+asymmetry). And `handleResponse` released the gate on *any* response,
+including an id it never issued; it now releases only for a preview
+job it actually started, since completing on an unrecognised id would
+let the next frame run while the real one is still out.
+
+**Alternatives:** recreating the worker (rejected — see the canvas
+constraint; it would look like recovery and silently not be); a
+timeout on every export (rejected — it guesses at a duration that
+depends on design size and machine, and the failure it guards is
+already reported by `onerror`).
+
+**Verification:** `check` green, 1,601 tests. Ten new tests drive the
+failure modes against a fake worker, because a real one cannot be made
+to die on demand: single and multiple pending exports, `error` and
+`messageerror`, repeat failures settling exactly once, a late response
+arriving after death delivering no frame, and a per-request
+`ProcessError` still settling *without* killing the worker — the
+recoverable case must stay recoverable. Verified live: frames flow and
+a control change reprocesses cleanly.
+
+**Link:** backlog → Track E; the signed sheet at D212.

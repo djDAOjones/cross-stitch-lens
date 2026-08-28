@@ -40,6 +40,20 @@ export class Coalescer<T> {
     return null;
   }
 
+  /**
+   * Abandon any pending work and go idle (STATE-04).
+   *
+   * For the case where the running work will never complete — a
+   * worker that died mid-frame. Without this the gate stays shut for
+   * ever, because `complete()` is only ever called from a response
+   * that is no longer coming, and the preview simply stops with no
+   * explanation. Mirrors `PumpGate.reset()`.
+   */
+  reset(): void {
+    this.busy = false;
+    this.pending = null;
+  }
+
   /** Frames dropped by coalescing so far (diagnostics). */
   get droppedCount(): number {
     return this.dropped;

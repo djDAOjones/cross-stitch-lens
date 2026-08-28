@@ -91,6 +91,13 @@ export class PipelineClient {
   private nextId = 0;
   private onResult: ((frame: FrameResult) => void) | null = null;
   private observer: JobObserver | null = null;
+  private onFatal: ((reason: string) => void) | null = null;
+  /**
+   * Set once the worker can no longer answer (STATE-04). Everything
+   * submitted afterwards fails fast and says why, rather than joining
+   * a queue nothing will ever drain.
+   */
+  private dead = false;
   /**
    * The preview job the worker is running, keyed by request id. The
    * coalescer allows one in flight, so this never holds more than one
@@ -111,6 +118,57 @@ export class PipelineClient {
     this.worker.onmessage = (event: MessageEvent) => {
       this.handleResponse(event.data as WorkerResponse);
     };
+    // Without these two the worker could die and take every pending
+    // operation with it, silently (STATE-04): an export promise
+    // settled only from `handleResponse` would never settle at all,
+    // and the coalescer gate would stay shut, so the export button
+    // waited for ever and the preview stopped with nothing said.
+    this.worker.onerror = (event: ErrorEvent) => {
+      this.fatal(event.message === '' ? 'the image worker stopped' : event.message);
+    };
+    this.worker.onmessageerror = () => {
+      this.fatal('the image worker sent a message that could not be read');
+    };
+  }
+
+  /**
+   * Register the host's handler for an unrecoverable worker failure.
+   * Called once, with a reason fit to show a user.
+   *
+   * Recovery is the host's call, not this class's: the preview canvas
+   * reached the worker through `transferControlToOffscreen`, which is
+   * one-way, so a replacement worker cannot be given it back. Coming
+   * back from this means building a new canvas element and a new
+   * client — a decision above this layer.
+   */
+  setOnFatal(callback: (reason: string) => void): void {
+    this.onFatal = callback;
+  }
+
+  /** Whether the worker has failed unrecoverably. */
+  get isDead(): boolean {
+    return this.dead;
+  }
+
+  /**
+   * Settle everything outstanding against a dead worker, once.
+   *
+   * Each pending export is rejected — a rejection the caller can show
+   * beats a promise that never settles — the in-flight preview
+   * bookkeeping is dropped, and the coalescer gate is released so
+   * nothing waits behind work that will never finish.
+   */
+  private fatal(reason: string): void {
+    if (this.dead) return;
+    this.dead = true;
+    log.error('worker', 'worker failed — settling pending work', { reason });
+    const pending = [...this.pendingExports.values()];
+    this.pendingExports.clear();
+    this.inFlight.clear();
+    this.coalescer.reset();
+    for (const { reject } of pending) reject(new Error(reason));
+    this.worker.terminate();
+    this.onFatal?.(reason);
   }
 
   /** Register the sink for processed frames (latest frame only). */
@@ -163,6 +221,7 @@ export class PipelineClient {
    * (latest-wins — there is no queue).
    */
   submit(buffer: PixelBuffer, config: PipelineConfig, force?: BackendForce): void {
+    if (this.dead) return;
     // Snapshot here, not in `post`: a coalesced frame can sit in the
     // pending slot while the user keeps moving controls, so the
     // config that reaches `post` may already be a later one than the
@@ -187,6 +246,9 @@ export class PipelineClient {
     config: PipelineConfig,
     force?: BackendForce,
   ): Promise<PixelBuffer> {
+    if (this.dead) {
+      return Promise.reject(new Error('the image worker has stopped'));
+    }
     const id = this.nextId++;
     return new Promise((resolve, reject) => {
       this.pendingExports.set(id, { resolve, reject });
@@ -239,6 +301,7 @@ export class PipelineClient {
       pending?.reject(new Error(response.message));
       return;
     }
+    const wasInFlight = this.inFlight.has(response.id);
     const snapshot = this.inFlight.get(response.id);
     this.inFlight.delete(response.id);
     if (response.type === 'error') {
@@ -252,6 +315,10 @@ export class PipelineClient {
         config: snapshot.config,
       });
     }
+    // Only a response to a preview job we actually started may
+    // release the gate: completing on an unrecognised id would let
+    // the next frame run while the real one is still out.
+    if (!wasInFlight) return;
     const next = this.coalescer.complete();
     if (next) this.post(next);
   }

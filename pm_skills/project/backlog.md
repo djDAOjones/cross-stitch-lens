@@ -142,14 +142,6 @@ parallel-safe; the public-surface group rides with Track C.
   browser with the OS indicator observed off after each transition,
   which an automated browser cannot drive (`getDisplayMedia` needs a
   real picker).
-- [ ] **STATE-04 Worker settlement** (2026-08-27)
-  Intent: slice 3 (D212) — every submitted operation reaches exactly
-  one terminal state; `error`, `messageerror` and termination reject
-  pending work, release the pump, and recreate or disable the worker
-  explicitly.
-  Done when: every operation settles once under fake `ProcessError` /
-  `error` / `messageerror` / termination, and the app recovers or says
-  plainly that it can't.
 - [ ] **STATE-05 History queue** (2026-08-27)
   Intent: slice 4 (D212), last because it has no verified live symptom
   — snapshots capture synchronously into immutable values, and enqueue
